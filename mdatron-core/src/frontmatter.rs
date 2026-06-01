@@ -23,11 +23,56 @@ use serde_yaml::Value;
 /// - `Ok(Some((frontmatter, body)))` when frontmatter is present and parses cleanly
 /// - `Ok(None)` when no frontmatter is present (or no closing marker found)
 /// - `Err` when the frontmatter is present but malformed YAML
-pub fn parse(_content: &str) -> Result<Option<(Value, &str)>, Error> {
-    todo!(
-        "Phase 2b: parse YAML frontmatter between --- markers; \
-         return Ok(None) if absent or no closing marker; Err on malformed YAML"
-    )
+pub fn parse(content: &str) -> Result<Option<(Value, &str)>, Error> {
+    // The first line must be exactly `---` followed by a newline.
+    if !content.starts_with("---\n") {
+        return Ok(None);
+    }
+
+    // Walk lines from byte 4 (after the opening `---\n`) looking for a closing `---` line.
+    // A closing line is: line content exactly equal to `---`. The line may or may not have a
+    // trailing newline (last-line-of-file case). This handles the empty-frontmatter case
+    // (`---\n---\n`) uniformly with the typical case.
+    let bytes = content.as_bytes();
+    let mut pos = 4usize;
+    let mut yaml_end: Option<usize> = None;
+    let mut after_close: Option<usize> = None;
+
+    while pos <= bytes.len() {
+        let line_end = bytes[pos..]
+            .iter()
+            .position(|&b| b == b'\n')
+            .map(|rel| pos + rel)
+            .unwrap_or(bytes.len());
+
+        if &content[pos..line_end] == "---" {
+            yaml_end = Some(pos);
+            after_close = Some(if line_end < bytes.len() { line_end + 1 } else { line_end });
+            break;
+        }
+
+        if line_end == bytes.len() {
+            break;
+        }
+        pos = line_end + 1;
+    }
+
+    let yaml_end = match yaml_end {
+        Some(e) => e,
+        None => return Ok(None),
+    };
+    let body_start = after_close.unwrap_or(bytes.len());
+
+    let yaml_str = &content[4..yaml_end];
+    let body = content.get(body_start..).unwrap_or("");
+
+    let value: Value = if yaml_str.trim().is_empty() {
+        Value::Mapping(Default::default())
+    } else {
+        serde_yaml::from_str(yaml_str)?
+    };
+
+    Ok(Some((value, body)))
 }
 
 #[cfg(test)]

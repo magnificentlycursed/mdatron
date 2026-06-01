@@ -45,11 +45,47 @@ fn main() -> ExitCode {
     }
 }
 
-fn cmd_verify(_files: Vec<PathBuf>) -> ExitCode {
-    todo!(
-        "Phase 2b: for each file read content, call mdatron_core::frontmatter::parse, \
-         report count + failures; exit 1 if any failure, 0 otherwise"
-    )
+fn cmd_verify(files: Vec<PathBuf>) -> ExitCode {
+    let mut failed = 0usize;
+    let mut parsed = 0usize;
+    let mut no_frontmatter = 0usize;
+
+    for file in &files {
+        let content = match std::fs::read_to_string(file) {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!(
+                    "error[MDATRON-E0070]: cannot read {}: {e}",
+                    file.display()
+                );
+                failed += 1;
+                continue;
+            }
+        };
+
+        match mdatron_core::frontmatter::parse(&content) {
+            Ok(Some(_)) => parsed += 1,
+            Ok(None) => no_frontmatter += 1,
+            Err(e) => {
+                eprintln!(
+                    "error[MDATRON-E0001]: frontmatter-parse-failed\n  --> {}:1\n   = note: {e}",
+                    file.display()
+                );
+                failed += 1;
+            }
+        }
+    }
+
+    println!(
+        "mdatron verify: {parsed} with frontmatter, {no_frontmatter} without, {failed} failed across {} file(s)",
+        files.len()
+    );
+
+    if failed > 0 {
+        ExitCode::from(1)
+    } else {
+        ExitCode::SUCCESS
+    }
 }
 
 fn cmd_explain(code: &str) -> ExitCode {

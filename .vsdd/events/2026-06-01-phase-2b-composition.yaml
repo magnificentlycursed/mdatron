@@ -1,0 +1,54 @@
+# Manual PhaseCompositionDeclared event payload for Phase 2b Green Gate.
+#
+# Per BOOTSTRAP-MITIGATION § Mitigation 3. Bootstrap-period stand-in for the
+# canonical .vsdd/events.jsonl entry.
+#
+# Schema reference: vsdd-cli/DESIGN-SCHEMA.md § Methodology event variants
+# Payload reference: vsdd-cli/DESIGN-OBSERVABILITY.md § Phase lifecycle variants
+
+event_type: PhaseCompositionDeclared
+agent_id: bootstrap-manual
+agent_seq: 2
+timestamp: 2026-06-01T00:00:00Z
+signed_by: null
+signature: null
+capture_source: vsdd-custom-event
+
+payload:
+  phase: phase-2b
+  composed_domains:
+    - software-engineer      # primary per phase-2b primer
+    - quality-engineer       # phase-2b core (test pyramid maintenance)
+    - technical-writer       # phase-2b core (prose surface updates)
+    - documentation-reviewer # phase-2b core (cold-reader pass)
+    - platform-engineer      # phase-2b core (dependency-approval load-bearing)
+    - solution-architect     # always-on baseline
+    - solution-owner         # always-on baseline
+    - performance-engineer   # baseline (project ships code)
+    - ux                     # axes-activated (ui-surface=yes)
+    - accessibility          # axes-activated (ui-surface=yes)
+    - ai-engineer            # operator-directive activation
+  composition_mode: inline-multi-domain
+  memory_isolation: none
+  operator_confirmation: confirmed
+
+bootstrap_period_only:
+  predecessor_event: 2026-06-01-phase-2a-composition.yaml
+  artifact_under_authoring: |
+    mdatron-core + mdatron-cli implementations turning Phase 2a Red Gate green;
+    rust-toolchain.toml + rustfmt.toml; 5 docs/dependencies/<crate>.md retroactive
+    investigations; CHANGELOG.md
+  methodology_deviation_summary: |
+    (1) M1 recurrence #7 — inline-multi-domain composition vs. cluster cold-session.
+        Cost-rubric for M1 amendment is load-bearing per AIE-MITIG-F6.
+    (2) Single-commit Red→Green vs. per-module commit-level visibility. v0.1.0 stubs
+        are small + interdependent (Finding::format_tty calls Severity::label).
+        Recurrence-#1 of "consolidated Phase 2b commit at v0.1.0"; no methodology
+        trigger until second instance.
+  sycophancy_compensation_summary: |
+    Inline-running author of both the rolled-back Step 3 commit AND this remediation
+    Phase 2b commit is biased to declare implementation "correct" because authored
+    once already (in c8f6997). Compensation: cargo test --workspace must show 15/15
+    pass before commit; if cargo clippy --deny warnings fails it must be addressed
+    before commit.
+  full_narrative_in: commit message of closing commit (Phase 2b Green Gate)

@@ -23,7 +23,11 @@ impl Severity {
     /// The string used in TTY-style diagnostic output (rustc convention):
     /// `Error` → `"error"`, `Warning` → `"warning"`, `Lint` → `"info"`.
     pub fn label(self) -> &'static str {
-        todo!("Phase 2b: return rustc convention 'error'/'warning'/'info' per Severity variant")
+        match self {
+            Self::Error => "error",
+            Self::Warning => "warning",
+            Self::Lint => "info",
+        }
     }
 }
 
@@ -40,8 +44,12 @@ pub struct Location {
 
 impl Location {
     /// Construct a whole-file location: the given file at line 1, column 0.
-    pub fn whole_file(_file: impl Into<PathBuf>) -> Self {
-        todo!("Phase 2b: construct Location with given file, line 1, column 0")
+    pub fn whole_file(file: impl Into<PathBuf>) -> Self {
+        Self {
+            file: file.into(),
+            line: 1,
+            column: 0,
+        }
     }
 }
 
@@ -66,9 +74,27 @@ impl Finding {
     /// - Optional `   = help: <help>` line when `help` is `Some`
     /// - Optional `   = explain: mdatron explain <explain_ref>` line when `explain_ref` is `Some`
     pub fn format_tty(&self) -> String {
-        todo!(
-            "Phase 2b: rustc-style format — severity[code]: message + arrow location + optional help + optional explain"
-        )
+        let mut output = format!(
+            "{}[{}]: {}\n  --> {}:{}",
+            self.severity.label(),
+            self.code,
+            self.message,
+            self.location.file.display(),
+            self.location.line,
+        );
+        if self.location.column > 0 {
+            use std::fmt::Write;
+            let _ = write!(output, ":{}", self.location.column);
+        }
+        if let Some(help) = &self.help {
+            use std::fmt::Write;
+            let _ = write!(output, "\n   = help: {help}");
+        }
+        if let Some(explain) = &self.explain_ref {
+            use std::fmt::Write;
+            let _ = write!(output, "\n   = explain: mdatron explain {explain}");
+        }
+        output
     }
 }
 

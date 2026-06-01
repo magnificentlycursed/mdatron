@@ -1,0 +1,58 @@
+# Manual PhaseCompositionDeclared event payload for Phase 2a Red Gate authoring.
+#
+# Per BOOTSTRAP-MITIGATION § Mitigation 3 (audit-trail bootstrap-period markers).
+# This file is the bootstrap-period stand-in for what would normally emit as a
+# JSON-Lines record into .vsdd/events.jsonl via the OTel collector + crosslink
+# event-log substrate. When event-log tooling lands at Step 3+, these YAML files
+# get ingested + canonical events.jsonl becomes the authoritative sink.
+#
+# Schema reference: vsdd-cli/DESIGN-SCHEMA.md § Methodology event variants
+# Payload reference: vsdd-cli/DESIGN-OBSERVABILITY.md § Phase lifecycle variants
+
+event_type: PhaseCompositionDeclared
+agent_id: bootstrap-manual
+agent_seq: 1
+timestamp: 2026-06-01T00:00:00Z
+signed_by: null      # bootstrap-period: signing infra not yet operational
+signature: null
+capture_source: vsdd-custom-event
+
+payload:
+  phase: phase-2a
+  composed_domains:
+    - quality-engineer       # primary per phase-2a primer
+    - software-engineer      # always-on baseline
+    - solution-architect     # always-on baseline
+    - solution-owner         # always-on baseline
+    - platform-engineer      # baseline (project ships code)
+    - performance-engineer   # baseline (project ships code)
+    - ux                     # axes-activated (ui-surface=yes)
+    - accessibility          # axes-activated (ui-surface=yes)
+    - ai-engineer            # operator-directive activation
+  composition_mode: inline-multi-domain
+  memory_isolation: none
+  operator_confirmation: confirmed
+
+# Bootstrap-period-only extension fields. Discarded when canonical event-log
+# tooling ingests these YAML files — methodology_deviation + sycophancy_compensation
+# are not part of the canonical PhaseCompositionDeclared schema; they preserve
+# the manual-period audit-trail rationale.
+bootstrap_period_only:
+  artifact_under_authoring: mdatron-core + mdatron-cli skeleton (stubs) + Red Gate tests
+  predecessor_commit: c8f6997      # rolled back; original Step 3 attempt
+  closing_commit: 03f3712          # Phase 2a Red Gate commit
+  methodology_deviation_summary: |
+    (1) Inline-multi-domain composition vs. cluster-batched cold-session per-domain.
+        M1 recurrence #6 acknowledged; AIE-MITIG-F6 (load-bearing) requires cost-rubric
+        in the M1 methodology amendment.
+    (2) No Phase 1c equivalent for project-level design docs. Red Gate tests assert
+        behaviors named in DESIGN-MDATRON sections rather than per-layer Phase 1c
+        acceptance criteria. Adaptation analogous to 2026-05-27 SA's Phase-5-adapted
+        precedent.
+  sycophancy_compensation_summary: |
+    Inline-running author of both the rolled-back Step 3 commit AND this remediation
+    composition is biased to declare the composition "comprehensive enough." Every
+    domain in composed_domains is justified by either explicit phase-2a-primer rule
+    (QE primary; baseline), axes-driven activation (UX, Accessibility, PE, PerfE), or
+    operator directive (AIE). No domain composed by intuition.
+  full_narrative_in: commit message of closing_commit (Phase 2a Red Gate)
