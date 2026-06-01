@@ -1,0 +1,17 @@
+[package]
+name = "mdatron-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Validator engine for mdatron — typed-markdown validation toolkit (descended from Schematron, not related to the TRON blockchain)"
+keywords = ["markdown", "schema", "validation", "schematron"]
+categories = ["development-tools", "parser-implementations"]
+
+[dependencies]
+serde = { workspace = true }
+serde_yaml = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
