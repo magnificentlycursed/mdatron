@@ -104,7 +104,7 @@ The decision to invert rests on the premise that another methodology / project p
 
 ### SO-F2 — mdatron v1 ship-criterion is unspecified — Open
 
-The originating conversation extensively discussed mdatron's design but never declared what "mdatron v1 ships" means. Specifically: does v1 require LSP integration to be functional? Does v1 require all 6 built-in patterns? Does v1 require the delegate protocol implementation?
+The originating conversation extensively discussed mdatron's design but never declared what "mdatron v1 ships" means. Specifically: does v1 require LSP integration to be functional? Does v1 require all 5 built-in patterns? Does v1 require the delegate protocol implementation?
 
 **Why this matters:** without a ship-criterion, Step 5 (refactor vsdd-cli to use mdatron) has no completion condition. Scope creeps indefinitely.
 

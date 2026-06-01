@@ -1,0 +1,66 @@
+# Live entities registry for orphan-rule + schema_class checks.
+#
+# Per BOOTSTRAP-MITIGATION § Mitigation 1 (Class 2 — orphan reference rows;
+# Class 6 — frontmatter schema_class mistyped).
+#
+# Throwaway manifest; deleted with bootstrap-validator.py at mid-Step-3.
+
+# Valid frontmatter `schema_class` values. Per the artifact-class-split table
+# in BOUNDARY-PREAMBLE § 5: vsdd-cli VSDD-specific classes + mdatron-examples
+# generic classes + the design-doc class used by all DESIGN documents.
+
+schema_classes:
+  # vsdd-cli (VSDD-specific)
+  - review-entry
+  - finding
+  - phase-primer
+  - domain-prompt
+  - supplement
+  - methodology-event-variant
+  - methodology-spec
+  - vsdd-config
+  - exit-signal
+  - error-catalog
+
+  # mdatron-examples (generalized)
+  - design-doc            # used by all DESIGN-*.md files including DESIGN-MDATRON
+  - manual-test
+  - pr-template
+  - changelog
+
+  # bootstrap manifest classes
+  - canonical-counts      # this manifest's own type (for self-validation if needed)
+  - live-entities
+
+# Reference tables whose rows must point to live entities.
+# Each entry: file_suffix (path tail to match), section_heading (exact prefix),
+# live_entries (list of valid first-column values).
+#
+# Bootstrap version intentionally narrow: starts with two high-cascade tables.
+
+reference_tables:
+  - file_suffix: BOUNDARY-PREAMBLE.md
+    section_heading: Artifact class split
+    live_entries:
+      - Review entry
+      - Finding
+      - Phase primer
+      - Domain prompt
+      - Supplement
+      - Methodology event variants
+      - .vsdd/config.yaml
+      - Exit Signal record
+      - DESIGN doc
+      - Methodology spec section
+      - Manual-test
+      - PR template
+      - CHANGELOG (structural)
+
+  - file_suffix: DESIGN-MDATRON.md
+    section_heading: Built-in patterns
+    live_entries:
+      - header-count-matches-following-table
+      - frontmatter-claimed-count-matches-rows
+      - anchor-derived-from-frontmatter-resolves
+      - cross-doc-count-consistency
+      - orphan-rule-detection

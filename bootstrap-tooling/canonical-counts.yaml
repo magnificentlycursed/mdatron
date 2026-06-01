@@ -1,0 +1,52 @@
+# Canonical counts for cross-document count drift detection.
+#
+# Per BOOTSTRAP-MITIGATION § Mitigation 1 (Class 1 — cross-document count drift).
+# Throwaway manifest; deleted with bootstrap-validator.py at mid-Step-3.
+#
+# Each entry has:
+#   - name: human-readable identifier
+#   - canonical: the correct count
+#   - pattern: Python regex with ONE capture group containing the count
+#
+# The validator sweeps every markdown file for matches; mismatches fire BOOT-W0001.
+
+counts:
+  - name: artifact_classes
+    canonical: 13
+    pattern: '(\d+)\s+artifact[- ]classes?\b'
+
+  - name: frontmatter_classes
+    canonical: 12
+    pattern: '(\d+)\s+frontmatter-based\s+classes?\b'
+
+  - name: structural_classes
+    canonical: 1
+    pattern: '(\d+)\s+structural\s+class\s+\(CHANGELOG\)'
+
+  - name: methodology_event_variants
+    canonical: 18
+    pattern: '(\d+)\s+methodology\s+event\s+variants?\b'
+
+  - name: methodology_event_variant_payloads
+    canonical: 18
+    pattern: '(\d+)\s+methodology\s+event\s+variant\s+payloads?\b'
+
+  - name: vsdd_phase_primers
+    canonical: 10
+    pattern: '(\d+)\s+phase\s+primers?\b'
+
+  - name: vsdd_domains_total
+    canonical: 18
+    pattern: '(\d+)\s+domains?\s+\(16\s+role\s+\+\s+2\s+meta\)'
+
+  - name: mdatron_builtin_patterns
+    canonical: 5
+    pattern: '(\d+)\s+built-in\s+patterns?\b'
+
+  - name: mdatron_examples_classes
+    canonical: 4
+    pattern: '(\d+)\s+generaliz(?:ed|able)\s+(?:artifact-class\s+)?(?:schemas?|classes?)\b'
+
+  - name: boundary_preamble_declarations
+    canonical: 8
+    pattern: '(\d+)\s+(?:BOUNDARY-PREAMBLE\s+)?declarations?\s+closing'
