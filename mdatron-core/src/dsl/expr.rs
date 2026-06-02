@@ -221,12 +221,10 @@ pub fn evaluate(expr: &Expr, ctx: &EvalContext) -> Result<Value, EvalError> {
         Expr::Field(inner, name) => {
             let v = evaluate(inner, ctx)?;
             match v {
-                Value::Object(o) => o.get(name).cloned().ok_or_else(|| {
-                    EvalError::FieldNotFound {
-                        field: name.clone(),
-                        on: "object",
-                    }
-                }),
+                // Field-on-Object returns Null when the key is missing
+                // (symmetric with Field-on-Null below). Per Phase 1 of
+                // the binary-first refactor; M4 PE F1 root-cause fix.
+                Value::Object(o) => Ok(o.get(name).cloned().unwrap_or(Value::Null)),
                 Value::Null => Ok(Value::Null),
                 other => Err(EvalError::TypeMismatch {
                     expected: "object",
@@ -322,12 +320,10 @@ fn call_function(name: &str, args: &[Expr], ctx: &EvalContext) -> Result<Value, 
         "defined" => {
             arity(name, args, 1)?;
             let v = evaluate(&args[0], ctx)?;
-            let is_defined = match &v {
-                Value::Null => false,
-                Value::Str(s) => !s.is_empty(),
-                _ => true,
-            };
-            Ok(Value::Bool(is_defined))
+            // Strict not-Null; per Phase 1 of binary-first refactor.
+            // Earlier carve-out treated empty string as undefined, which
+            // conflated "exists" with "non-empty" and broke orthogonality.
+            Ok(Value::Bool(!matches!(v, Value::Null)))
         }
         "union" => {
             arity(name, args, 2)?;
@@ -594,7 +590,10 @@ mod tests {
     }
 
     #[test]
-    fn missing_field_errors() {
+    fn missing_field_returns_null() {
+        // Field-on-Object-missing-key returns Ok(Null), symmetric with the
+        // Field-on-Null branch. Pre-fix this raised EvalError::FieldNotFound;
+        // see binary-first refactor Phase 1 (M4 PE F1 root cause).
         let cv = null_ctx();
         let result = evaluate(
             &Expr::Field(
@@ -602,8 +601,9 @@ mod tests {
                 "missing".into(),
             ),
             &ctx(&cv),
-        );
-        assert!(matches!(result, Err(EvalError::FieldNotFound { .. })));
+        )
+        .unwrap();
+        assert_eq!(result, Value::Null);
     }
 
     // ── Equality ────────────────────────────────────────────────────────────
@@ -765,7 +765,10 @@ mod tests {
     }
 
     #[test]
-    fn defined_returns_false_for_null_and_empty_string() {
+    fn defined_is_strictly_not_null() {
+        // defined(x) returns true iff x is not Null. Empty string is defined.
+        // Pre-fix the empty-string carve-out returned false; see binary-first
+        // refactor Phase 1.
         let cv = null_ctx();
         assert_eq!(
             evaluate(
@@ -781,7 +784,7 @@ mod tests {
                 &ctx(&cv)
             )
             .unwrap(),
-            Value::Bool(false)
+            Value::Bool(true)
         );
     }
 

@@ -237,7 +237,7 @@ fn verify_file(
         Ok(opt) => opt,
         Err(e) => {
             findings.push(Finding {
-                code: "MDATRON-E0002".into(),
+                code: "MDATRON-E0001".into(),
                 severity: Severity::Error,
                 summary: "frontmatter-parse-failed".into(),
                 message: e.to_string(),
@@ -247,7 +247,7 @@ fn verify_file(
                     line: 1,
                     column: 0,
                 },
-                explain_ref: Some("MDATRON-E0002".into()),
+                explain_ref: Some("MDATRON-E0001".into()),
             });
             return Ok(());
         }
@@ -270,7 +270,7 @@ fn verify_file(
         if let Some(schema) = schemas.get(schema_class) {
             for ve in schema.validate(&frontmatter_value) {
                 findings.push(Finding {
-                    code: "MDATRON-E0001".into(),
+                    code: "MDATRON-E0050".into(),
                     severity: Severity::Error,
                     summary: "frontmatter-schema-violation".into(),
                     message: format!("{} ({})", ve.message, ve.instance_path),
@@ -280,7 +280,7 @@ fn verify_file(
                         line: 1,
                         column: 0,
                     },
-                    explain_ref: Some("MDATRON-E0001".into()),
+                    explain_ref: Some("MDATRON-E0050".into()),
                 });
             }
         }
@@ -539,7 +539,7 @@ mod tests {
         let cfg = VerifyConfig::new(&proj.0);
         let findings = verify(&cfg).unwrap();
         assert_eq!(findings.len(), 1);
-        assert_eq!(findings[0].code, "MDATRON-E0001");
+        assert_eq!(findings[0].code, "MDATRON-E0050");
         assert!(findings[0].message.contains("invalid-phase") || findings[0].message.contains("enum"));
     }
 
@@ -620,7 +620,7 @@ pattern:
       let:
         expected: key("composition-matrix", $self.phase)
       assert: every(d in $expected.required, d in $self.relevant_domains)
-      code: MDATRON-E0200
+      code: MDATRON-W0100
       message: "phase {{$self.phase}} missing required domain(s)"
 "#,
         );
@@ -642,7 +642,7 @@ pattern:
         let cfg = VerifyConfig::new(&proj.0);
         let findings = verify(&cfg).unwrap();
         assert_eq!(findings.len(), 1, "expected exactly one finding (the bad primer); got {findings:?}");
-        assert_eq!(findings[0].code, "MDATRON-E0200");
+        assert_eq!(findings[0].code, "MDATRON-W0100");
         assert!(findings[0].location.file.to_string_lossy().contains("bad.md"));
     }
 

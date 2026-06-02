@@ -152,7 +152,7 @@ mod tests {
             err_finding("MDATRON-E0001"),
             err_finding("MDATRON-E0002"),
             warn_finding("MDATRON-W0050"),
-            lint_finding("MDATRON-L0100"),
+            lint_finding("MDATRON-L0050"),
         ];
         let s = Summary::from_findings(&findings, 7);
         assert_eq!(s.error_count, 2);
@@ -190,7 +190,7 @@ mod tests {
     fn exit_code_zero_when_warnings_only_no_errors() {
         // BC-4: warnings alone do not fail the pipeline.
         let env = Output::build(
-            vec![warn_finding("MDATRON-W0001")],
+            vec![warn_finding("MDATRON-W0050")],
             5,
             PipelineStatus::Ok,
             "0.1.0",

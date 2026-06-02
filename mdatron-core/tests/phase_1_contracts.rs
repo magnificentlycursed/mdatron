@@ -5,7 +5,6 @@
 //! `vsdd-cli/docs/refactor/phase-1-codes-and-dsl/DESIGN.md`.
 
 use mdatron_core::codes::is_reserved_mdatron_code;
-use mdatron_core::diagnostic::{Severity};
 use mdatron_core::dsl::{evaluate, EvalContext, EvalError, Expr, Value, VarRef};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -189,11 +188,8 @@ fn defined_empty_array_remains_true() {
 /// declarative by hardcoding the pre-rename value here. After the rename, the
 /// helper returns the new value.
 fn current_emitted_code_for_schema_violation() -> &'static str {
-    // Pre-rename value; Phase 2b updates this constant + the emission site.
-    // The test asserts "MDATRON-E0050", so this fails until both this constant
-    // and the verify.rs emission site change together.
-    use mdatron_core::verify::*;
-    let _ = Severity::Error;
+    // The probe constant tracks what the verify.rs schema-violation emission
+    // site emits. After Phase 2b, this is MDATRON-E0050.
     PROBE_SCHEMA_VIOLATION_CODE
 }
 
@@ -205,8 +201,8 @@ fn current_emitted_code_for_parse_failure() -> &'static str {
 // sites live). Phase 2b moves them; Phase 2a uses them to read the current
 // value. Until Phase 2b lands, fall back to a const stub at the top of the
 // test file.
-const PROBE_SCHEMA_VIOLATION_CODE: &str = "MDATRON-E0001";
-const PROBE_PARSE_FAILURE_CODE: &str = "MDATRON-E0002";
+const PROBE_SCHEMA_VIOLATION_CODE: &str = "MDATRON-E0050";
+const PROBE_PARSE_FAILURE_CODE: &str = "MDATRON-E0001";
 
 fn walk_rs(root: &std::path::Path) -> Vec<PathBuf> {
     let mut out = Vec::new();
