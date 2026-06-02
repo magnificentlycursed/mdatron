@@ -831,6 +831,33 @@ mod tests {
     }
 
     #[test]
+    fn concat_joins_two_strings() {
+        let cv = null_ctx();
+        let result = evaluate(
+            &Expr::Call(
+                "concat".into(),
+                vec![Expr::Lit(s("vsdd-")), Expr::Lit(s("phase-2a"))],
+            ),
+            &ctx(&cv),
+        )
+        .unwrap();
+        assert_eq!(result, s("vsdd-phase-2a"));
+    }
+
+    #[test]
+    fn concat_rejects_non_string_argument() {
+        let cv = null_ctx();
+        let result = evaluate(
+            &Expr::Call(
+                "concat".into(),
+                vec![Expr::Lit(s("vsdd-")), Expr::Lit(Value::Int(42))],
+            ),
+            &ctx(&cv),
+        );
+        assert!(matches!(result, Err(EvalError::TypeMismatch { .. })));
+    }
+
+    #[test]
     fn join_concatenates_with_separator() {
         let cv = null_ctx();
         let result = evaluate(
