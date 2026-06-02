@@ -13,6 +13,7 @@
 //! cleanly; the Red Gate test suite fails-by-default (tests panic on `todo!()`).
 //! Phase 2b implements the bodies to turn the Red Gate green.
 
+pub mod codes;
 pub mod diagnostic;
 pub mod dsl;
 pub mod error;
