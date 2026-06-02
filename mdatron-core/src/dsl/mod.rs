@@ -6,9 +6,11 @@
 //!
 //! See DESIGN-MDATRON.md § DSL specification for the full surface.
 
+pub mod expr;
 pub mod parser;
 pub mod types;
 
+pub use expr::{evaluate, EvalContext, EvalError, Expr, Value, VarRef};
 pub use parser::parse_pattern_file;
 pub use types::{
     ContextSelector, KeyDecl, LocationSpec, Pattern, PatternFile, Rule,
