@@ -4,14 +4,14 @@ use serde::Deserialize;
 use std::collections::BTreeMap;
 
 /// Top-level pattern file: a `mdatron_dsl_version` declaration + a `pattern` block.
-#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 pub struct PatternFile {
     pub mdatron_dsl_version: u32,
     pub pattern: Pattern,
 }
 
 /// A named group of rules sharing a `keys:` declaration + optional `phases:` selection.
-#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 pub struct Pattern {
     pub id: String,
     #[serde(default)]
@@ -25,7 +25,7 @@ pub struct Pattern {
 
 /// A cross-file index declaration. Built once per validation pass; queryable from
 /// any rule in the pattern via `key("<name>", <value>)` expressions.
-#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 pub struct KeyDecl {
     pub name: String,
     /// File path or glob pattern from which entries are extracted.
@@ -37,7 +37,7 @@ pub struct KeyDecl {
 }
 
 /// A single declarative rule.
-#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 pub struct Rule {
     pub id: String,
     pub context: ContextSelector,
@@ -60,7 +60,7 @@ pub struct Rule {
 /// - schema_class slug as a bare string
 /// - file glob as a bare string (contains `*`, `?`, or `/`)
 /// - combined `{ schema_class, path }` object
-#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 #[serde(untagged)]
 pub enum ContextSelector {
     /// String form: either a schema_class slug or a path glob. Disambiguated by
@@ -90,7 +90,7 @@ impl ContextSelector {
 
 /// Override for the source-span location attached to a finding. When absent, the
 /// validator defaults to the whole-artifact span.
-#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 pub struct LocationSpec {
     #[serde(default)]
     pub field: Option<String>,

@@ -18,8 +18,10 @@ pub mod dsl;
 pub mod error;
 pub mod frontmatter;
 pub mod schema;
+pub mod verify;
 
 pub use diagnostic::{Finding, Location, Severity};
 pub use dsl::{parse_pattern_file, PatternFile};
 pub use error::Error;
 pub use schema::{Schema, ValidationError};
+pub use verify::{verify, VerifyConfig, VerifyError};
