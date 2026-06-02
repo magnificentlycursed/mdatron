@@ -40,6 +40,16 @@ enum Command {
         /// File globs (relative to project root) to validate. Defaults to `**/*.md`.
         #[arg(long = "files", value_name = "GLOB", num_args = 1..)]
         files: Vec<String>,
+
+        /// Emit a JSON wire envelope on stdout (Phase 0 wire-format contract).
+        /// Phase 2a Red Gate stub: flag accepted but envelope emission not yet implemented.
+        #[arg(long = "json")]
+        json: bool,
+
+        /// Suppress stderr human-readable diagnostics (machine-only consumers).
+        /// Phase 2a Red Gate stub: flag accepted but behavior not yet implemented.
+        #[arg(long = "quiet", short = 'q')]
+        quiet: bool,
     },
 
     /// Show extended documentation for an error code (rustc --explain pattern).
@@ -57,7 +67,9 @@ fn main() -> ExitCode {
             schemas,
             patterns,
             files,
-        } => cmd_verify(project_root, schemas, patterns, files),
+            json,
+            quiet,
+        } => cmd_verify(project_root, schemas, patterns, files, json, quiet),
         Command::Explain { code } => cmd_explain(&code),
     }
 }
@@ -67,7 +79,12 @@ fn cmd_verify(
     schemas: Option<PathBuf>,
     patterns: Option<PathBuf>,
     files: Vec<String>,
+    _json: bool,
+    _quiet: bool,
 ) -> ExitCode {
+    // Phase 2a Red Gate stub: --json and --quiet are recognized but ignored.
+    // Phase 2b implements envelope emission + quiet semantics.
+
     let root = match project_root.map(Ok).unwrap_or_else(std::env::current_dir) {
         Ok(r) => r,
         Err(e) => {
