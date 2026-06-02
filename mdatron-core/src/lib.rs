@@ -14,10 +14,12 @@
 //! Phase 2b implements the bodies to turn the Red Gate green.
 
 pub mod diagnostic;
+pub mod dsl;
 pub mod error;
 pub mod frontmatter;
 pub mod schema;
 
 pub use diagnostic::{Finding, Location, Severity};
+pub use dsl::{parse_pattern_file, PatternFile};
 pub use error::Error;
 pub use schema::{Schema, ValidationError};
