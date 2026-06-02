@@ -88,7 +88,7 @@ fn parse_envelope(output: &Output) -> serde_json::Value {
     let stdout = String::from_utf8_lossy(&output.stdout);
     serde_json::from_str(&stdout).unwrap_or_else(|e| {
         panic!(
-            "BC-1/BC-2: stdout must contain a parseable JSON envelope (got: {stdout:?}, parse error: {e})"
+            "stdout must contain a parseable JSON envelope (got: {stdout:?}, parse error: {e})"
         )
     })
 }
@@ -106,11 +106,11 @@ fn bc1_envelope_carries_wire_version_field() {
     let version = env
         .get("mdatron_wire_version")
         .and_then(|v| v.as_str())
-        .expect("BC-1: mdatron_wire_version field present");
+        .expect("envelope must carry mdatron_wire_version field");
     let semver_re = regex_lite_match(version, r"^\d+\.\d+\.\d+$");
     assert!(
         semver_re,
-        "BC-1: mdatron_wire_version must match semver (got: {version})"
+        "mdatron_wire_version must match semver (got: {version})"
     );
 }
 
@@ -132,21 +132,21 @@ fn bc2_envelope_top_level_shape_is_complete() {
     ] {
         assert!(
             env.get(required).is_some(),
-            "BC-2: envelope missing required field: {required}"
+            "envelope missing required top-level field: {required}"
         );
     }
 
     let status = env.get("pipeline_status").and_then(|v| v.as_str()).unwrap();
     assert!(
         matches!(status, "ok" | "failed"),
-        "BC-2: pipeline_status must be 'ok' or 'failed' (got: {status})"
+        "pipeline_status must be 'ok' or 'failed' (got: {status})"
     );
 
     let summary = env.get("summary").and_then(|v| v.as_object()).unwrap();
     for count_field in ["error_count", "warning_count", "lint_count", "files_checked"] {
         assert!(
             summary.get(count_field).and_then(|v| v.as_u64()).is_some(),
-            "BC-2: summary missing non-negative integer field: {count_field}"
+            "summary missing non-negative integer field: {count_field}"
         );
     }
 }
@@ -169,11 +169,11 @@ fn bc3_finding_code_prefix_matches_severity() {
             'E' => "error",
             'W' => "warning",
             'L' => "lint",
-            other => panic!("BC-3: unknown code prefix letter {other} in {code} (finding #{i})"),
+            other => panic!("unknown code prefix letter {other} in {code} (finding #{i})"),
         };
         assert_eq!(
             severity, expected_sev,
-            "BC-3: finding #{i} code {code} has severity {severity}; expected {expected_sev}"
+            "finding #{i} code {code} has severity {severity}; expected {expected_sev} (code prefix and severity must agree: E=error, W=warning, L=lint)"
         );
     }
 }
@@ -190,7 +190,7 @@ fn bc4_exit_zero_when_clean() {
     assert_eq!(
         out.status.code(),
         Some(0),
-        "BC-4: clean run must exit 0; got {:?}; stdout: {:?}",
+        "clean run must exit 0; got {:?}; stdout: {:?}",
         out.status,
         String::from_utf8_lossy(&out.stdout)
     );
@@ -206,7 +206,7 @@ fn bc4_exit_one_when_error_findings_exist() {
     assert_eq!(
         out.status.code(),
         Some(1),
-        "BC-4: error findings present must exit 1; got {:?}",
+        "error-severity findings present must exit 1; got {:?}",
         out.status
     );
 }
@@ -221,7 +221,7 @@ fn bc4_exit_two_when_pipeline_failed() {
     assert_eq!(
         out.status.code(),
         Some(2),
-        "BC-4: pipeline failure (missing .mdatron/) must exit 2; got {:?}",
+        "pipeline failure (missing .mdatron/) must exit 2; got {:?}",
         out.status
     );
 }
@@ -235,15 +235,15 @@ fn bc5_stdout_contains_only_envelope_under_json() {
     let out = run_verify_json(&proj);
     let stdout = String::from_utf8_lossy(&out.stdout);
     let trimmed = stdout.trim();
-    // Single JSON object on stdout per BC-5
+    // Single JSON object on stdout under --json
     assert!(
         trimmed.starts_with('{') && trimmed.ends_with('}'),
-        "BC-5: stdout under --json must contain only the JSON envelope; got: {stdout:?}"
+        "stdout under --json must contain only the JSON envelope; got: {stdout:?}"
     );
     // No diagnostic text on stdout
     assert!(
         !stdout.contains("error[MDATRON"),
-        "BC-5: stdout must not contain rustc-shaped diagnostic text under --json"
+        "stdout must not contain rustc-shaped diagnostic text under --json (diagnostics belong on stderr)"
     );
 }
 
@@ -261,14 +261,14 @@ fn bc6_unknown_flag_is_rejected() {
         .expect("mdatron binary executes");
     assert!(
         !out.status.success(),
-        "BC-6: unknown flag must cause non-zero exit; got success with stdout: {:?}",
+        "unknown flag must cause non-zero exit; got success with stdout: {:?}",
         String::from_utf8_lossy(&out.stdout)
     );
     let stderr = String::from_utf8_lossy(&out.stderr);
     assert!(
         stderr.contains("definitely-not-a-real-flag-xyz")
             || stderr.to_lowercase().contains("unexpected"),
-        "BC-6: stderr should name the unknown flag; got: {stderr:?}"
+        "stderr should name the unknown flag; got: {stderr:?}"
     );
 }
 
@@ -306,7 +306,7 @@ fn bc7_mdatron_source_never_emits_vsdd_code_prefix() {
     }
     assert!(
         offenders.is_empty(),
-        "BC-7: mdatron source emits a VSDD-Exxxx code literal in: {offenders:?}"
+        "mdatron source emits a VSDD-Exxxx code literal (namespace separation violated) in: {offenders:?}"
     );
 }
 
@@ -329,12 +329,12 @@ fn bc8_consumer_can_pin_to_wire_version() {
     assert_eq!(
         parts.len(),
         3,
-        "BC-8: wire version must be semver triple; got {version}"
+        "wire version must be semver triple; got {version}"
     );
     for p in parts {
         assert!(
             p.parse::<u32>().is_ok(),
-            "BC-8: wire version component must be a non-negative integer; got {p}"
+            "wire version component must be a non-negative integer; got {p}"
         );
     }
 }
