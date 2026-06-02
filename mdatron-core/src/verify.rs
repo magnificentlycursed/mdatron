@@ -96,6 +96,15 @@ pub enum VerifyError {
 
 /// Run the verification pipeline. Returns findings sorted by file path then code.
 pub fn verify(config: &VerifyConfig) -> Result<Vec<Finding>, VerifyError> {
+    // BC-4 pipeline-fail detection: refuse to proceed when neither schemas nor patterns
+    // directories exist. A project without either has nothing to validate against; this
+    // is a configuration error, not a clean run with zero findings.
+    if !config.schemas_dir.is_dir() && !config.patterns_dir.is_dir() {
+        return Err(VerifyError::SchemaLoad {
+            path: config.schemas_dir.to_string_lossy().into_owned(),
+            error: "no schemas or patterns directory; run `mdatron init` first".into(),
+        });
+    }
     let schemas = load_schemas(&config.schemas_dir)?;
     let patterns = load_patterns(&config.patterns_dir)?;
 
@@ -611,7 +620,7 @@ pattern:
       let:
         expected: key("composition-matrix", $self.phase)
       assert: every(d in $expected.required, d in $self.relevant_domains)
-      code: VSDD-E0200
+      code: MDATRON-E0200
       message: "phase {{$self.phase}} missing required domain(s)"
 "#,
         );
@@ -633,7 +642,7 @@ pattern:
         let cfg = VerifyConfig::new(&proj.0);
         let findings = verify(&cfg).unwrap();
         assert_eq!(findings.len(), 1, "expected exactly one finding (the bad primer); got {findings:?}");
-        assert_eq!(findings[0].code, "VSDD-E0200");
+        assert_eq!(findings[0].code, "MDATRON-E0200");
         assert!(findings[0].location.file.to_string_lossy().contains("bad.md"));
     }
 

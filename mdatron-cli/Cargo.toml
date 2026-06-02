@@ -18,6 +18,4 @@ path = "src/main.rs"
 mdatron-core = { path = "../mdatron-core" }
 clap = { workspace = true }
 serde_yaml = { workspace = true }
-
-[dev-dependencies]
 serde_json = { workspace = true }

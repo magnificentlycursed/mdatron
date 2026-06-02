@@ -46,7 +46,7 @@ impl TempProject {
     fn seed_minimal(&self) {
         self.write(
             ".mdatron/schemas/blog.json",
-            r#"{"type":"object","required":["schema_class"],"properties":{"schema_class":{"const":"blog"}}}"#,
+            r#"{"type":"object","required":["schema_class"],"properties":{"schema_class":{"const":"blog"}},"additionalProperties":false}"#,
         );
     }
 
@@ -88,8 +88,7 @@ fn parse_envelope(output: &Output) -> serde_json::Value {
     let stdout = String::from_utf8_lossy(&output.stdout);
     serde_json::from_str(&stdout).unwrap_or_else(|e| {
         panic!(
-            "BC-1/BC-2: stdout must contain a parseable JSON envelope (got: {:?}, parse error: {})",
-            stdout, e
+            "BC-1/BC-2: stdout must contain a parseable JSON envelope (got: {stdout:?}, parse error: {e})"
         )
     })
 }

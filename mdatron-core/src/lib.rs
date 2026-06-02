@@ -19,6 +19,7 @@ pub mod error;
 pub mod frontmatter;
 pub mod schema;
 pub mod verify;
+pub mod wire;
 
 pub use diagnostic::{Finding, Location, Severity};
 pub use dsl::{parse_pattern_file, PatternFile};

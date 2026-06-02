@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
-use mdatron_core::diagnostic::{Finding, Severity};
+use mdatron_core::diagnostic::Finding;
 use mdatron_core::verify::{verify, VerifyConfig, VerifyError};
 
 #[derive(Parser, Debug)]
@@ -79,16 +79,17 @@ fn cmd_verify(
     schemas: Option<PathBuf>,
     patterns: Option<PathBuf>,
     files: Vec<String>,
-    _json: bool,
-    _quiet: bool,
+    json: bool,
+    quiet: bool,
 ) -> ExitCode {
-    // Phase 2a Red Gate stub: --json and --quiet are recognized but ignored.
-    // Phase 2b implements envelope emission + quiet semantics.
+    use mdatron_core::wire::{Envelope, PipelineStatus};
 
     let root = match project_root.map(Ok).unwrap_or_else(std::env::current_dir) {
         Ok(r) => r,
         Err(e) => {
-            eprintln!("error[MDATRON-E0070]: cannot resolve project root: {e}");
+            if !quiet {
+                eprintln!("error[MDATRON-E0070]: cannot resolve project root: {e}");
+            }
             return ExitCode::from(2);
         }
     };
@@ -104,39 +105,68 @@ fn cmd_verify(
         config.file_globs = files;
     }
 
-    let findings = match verify(&config) {
-        Ok(f) => f,
-        Err(e) => {
-            print_pipeline_error(&e);
-            return ExitCode::from(2);
-        }
+    let (findings, pipeline_status, pipeline_err) = match verify(&config) {
+        Ok(f) => (f, PipelineStatus::Ok, None),
+        Err(e) => (Vec::new(), PipelineStatus::Failed, Some(e)),
     };
 
-    let mut errors = 0usize;
-    let mut warnings = 0usize;
-    for f in &findings {
-        print_finding(f);
-        match f.severity {
-            Severity::Error => errors += 1,
-            Severity::Warning => warnings += 1,
-            Severity::Lint => {}
+    // BC-2: files_checked count. v0.1.0 stub: 0 when pipeline failed; otherwise the
+    // number of unique files referenced in findings (approximation pending a
+    // verify()-level file-count return value in v0.1.x).
+    let files_checked: u32 = if matches!(pipeline_status, PipelineStatus::Failed) {
+        0
+    } else {
+        let mut seen: std::collections::BTreeSet<&std::path::Path> = std::collections::BTreeSet::new();
+        for f in &findings {
+            seen.insert(&f.location.file);
+        }
+        u32::try_from(seen.len()).unwrap_or(u32::MAX)
+    };
+
+    let envelope = Envelope::build(
+        findings,
+        files_checked,
+        pipeline_status,
+        env!("CARGO_PKG_VERSION"),
+    );
+
+    // BC-5 stream contract: --json puts the envelope on stdout; otherwise diagnostics
+    // are rustc-shaped on stderr.
+    if json {
+        match serde_json::to_string(&envelope) {
+            Ok(line) => println!("{line}"),
+            Err(e) => {
+                if !quiet {
+                    eprintln!("error[MDATRON-E0080]: envelope serialization failed\n   = note: {e}");
+                }
+                return ExitCode::from(2);
+            }
         }
     }
 
-    if errors == 0 && warnings == 0 {
-        println!("mdatron verify: clean");
-        ExitCode::SUCCESS
-    } else {
-        eprintln!(
-            "mdatron verify: {errors} error(s), {warnings} warning(s) across {} finding(s)",
-            findings.len()
-        );
-        if errors > 0 {
-            ExitCode::from(1)
+    if !quiet {
+        if let Some(e) = &pipeline_err {
+            print_pipeline_error(e);
         } else {
-            ExitCode::SUCCESS
+            for f in &envelope.findings {
+                print_finding(f);
+            }
+            if envelope.summary.error_count == 0 && envelope.summary.warning_count == 0 {
+                if !json {
+                    println!("mdatron verify: clean");
+                }
+            } else {
+                eprintln!(
+                    "mdatron verify: {} error(s), {} warning(s) across {} finding(s)",
+                    envelope.summary.error_count,
+                    envelope.summary.warning_count,
+                    envelope.findings.len()
+                );
+            }
         }
     }
+
+    ExitCode::from(envelope.derive_exit_code())
 }
 
 fn print_finding(f: &Finding) {
