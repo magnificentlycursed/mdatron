@@ -41,13 +41,11 @@ enum Command {
         #[arg(long = "files", value_name = "GLOB", num_args = 1..)]
         files: Vec<String>,
 
-        /// Emit a JSON wire envelope on stdout (Phase 0 wire-format contract).
-        /// Phase 2a Red Gate stub: flag accepted but envelope emission not yet implemented.
+        /// Emit a JSON output object on stdout (per the Phase 0 output-format contract).
         #[arg(long = "json")]
         json: bool,
 
         /// Suppress stderr human-readable diagnostics (machine-only consumers).
-        /// Phase 2a Red Gate stub: flag accepted but behavior not yet implemented.
         #[arg(long = "quiet", short = 'q')]
         quiet: bool,
     },
@@ -82,7 +80,7 @@ fn cmd_verify(
     json: bool,
     quiet: bool,
 ) -> ExitCode {
-    use mdatron_core::wire::{Envelope, PipelineStatus};
+    use mdatron_core::output::{Output, PipelineStatus};
 
     let root = match project_root.map(Ok).unwrap_or_else(std::env::current_dir) {
         Ok(r) => r,
@@ -123,21 +121,21 @@ fn cmd_verify(
         u32::try_from(seen.len()).unwrap_or(u32::MAX)
     };
 
-    let envelope = Envelope::build(
+    let output = Output::build(
         findings,
         files_checked,
         pipeline_status,
         env!("CARGO_PKG_VERSION"),
     );
 
-    // BC-5 stream contract: --json puts the envelope on stdout; otherwise diagnostics
+    // BC-5 stream contract: --json puts the output on stdout; otherwise diagnostics
     // are rustc-shaped on stderr.
     if json {
-        match serde_json::to_string(&envelope) {
+        match serde_json::to_string(&output) {
             Ok(line) => println!("{line}"),
             Err(e) => {
                 if !quiet {
-                    eprintln!("error[MDATRON-E0080]: envelope serialization failed\n   = note: {e}");
+                    eprintln!("error[MDATRON-E0080]: output serialization failed\n   = note: {e}");
                 }
                 return ExitCode::from(2);
             }
@@ -148,25 +146,25 @@ fn cmd_verify(
         if let Some(e) = &pipeline_err {
             print_pipeline_error(e);
         } else {
-            for f in &envelope.findings {
+            for f in &output.findings {
                 print_finding(f);
             }
-            if envelope.summary.error_count == 0 && envelope.summary.warning_count == 0 {
+            if output.summary.error_count == 0 && output.summary.warning_count == 0 {
                 if !json {
                     println!("mdatron verify: clean");
                 }
             } else {
                 eprintln!(
                     "mdatron verify: {} error(s), {} warning(s) across {} finding(s)",
-                    envelope.summary.error_count,
-                    envelope.summary.warning_count,
-                    envelope.findings.len()
+                    output.summary.error_count,
+                    output.summary.warning_count,
+                    output.findings.len()
                 );
             }
         }
     }
 
-    ExitCode::from(envelope.derive_exit_code())
+    ExitCode::from(output.derive_exit_code())
 }
 
 fn print_finding(f: &Finding) {

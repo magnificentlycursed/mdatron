@@ -1,15 +1,12 @@
-//! Phase 2a Red Gate for the wire-format contract per
-//! `vsdd-cli/docs/refactor/phase-0-wire-format/DESIGN.md` (cross-repo).
+//! Integration tests for `mdatron verify --json` against the output-format
+//! contract documented at
+//! `vsdd-cli/docs/refactor/phase-0-output-format/DESIGN.md`.
 //!
-//! These tests assert behavioral contracts BC-1 through BC-8 against
-//! `mdatron verify --json`. They FAIL by default because Phase 2b
-//! has not yet implemented the envelope emission surface.
-//!
-//! Composition: phase-2a-primer; QE primary; SC baseline. Tests authored
-//! against the operator-confirmed Phase 1c acceptance criteria:
-//!   M1 Envelope shape (BC-1, BC-2, BC-3)
-//!   M2 Process behavior (BC-4, BC-5, BC-6)
-//!   M3 Contract discipline (BC-7, BC-8)
+//! Three test groupings:
+//!   1. Output shape — top-level fields, output version, finding structure
+//!   2. Process behavior — exit codes, stream contract, flag vocabulary
+//!   3. Contract discipline — error-code namespace separation, output-version
+//!      pinnable shape
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -25,7 +22,7 @@ impl TempProject {
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        let path = std::env::temp_dir().join(format!("mdatron-wire-{label}-{nanos}"));
+        let path = std::env::temp_dir().join(format!("mdatron-out-{label}-{nanos}"));
         let _ = fs::remove_dir_all(&path);
         fs::create_dir_all(&path).unwrap();
         Self(path)
@@ -84,47 +81,47 @@ fn run_verify_json(proj: &TempProject) -> Output {
         .expect("mdatron binary executes")
 }
 
-fn parse_envelope(output: &Output) -> serde_json::Value {
+fn parse_output(output: &Output) -> serde_json::Value {
     let stdout = String::from_utf8_lossy(&output.stdout);
     serde_json::from_str(&stdout).unwrap_or_else(|e| {
         panic!(
-            "stdout must contain a parseable JSON envelope (got: {stdout:?}, parse error: {e})"
+            "stdout must contain a parseable JSON output (got: {stdout:?}, parse error: {e})"
         )
     })
 }
 
-// ── M1: Envelope shape (BC-1 / BC-2 / BC-3) ────────────────────────────────────
+// ── Output shape ───────────────────────────────────────────────────────────────
 
 #[test]
-fn bc1_envelope_carries_wire_version_field() {
+fn output_carries_mdatron_output_version_field() {
     let proj = TempProject::new("bc1");
     proj.seed_minimal();
     proj.seed_clean_md("post.md");
 
     let out = run_verify_json(&proj);
-    let env = parse_envelope(&out);
+    let env = parse_output(&out);
     let version = env
-        .get("mdatron_wire_version")
+        .get("mdatron_output_version")
         .and_then(|v| v.as_str())
-        .expect("envelope must carry mdatron_wire_version field");
+        .expect("output must carry mdatron_output_version field");
     let semver_re = regex_lite_match(version, r"^\d+\.\d+\.\d+$");
     assert!(
         semver_re,
-        "mdatron_wire_version must match semver (got: {version})"
+        "mdatron_output_version must match semver (got: {version})"
     );
 }
 
 #[test]
-fn bc2_envelope_top_level_shape_is_complete() {
+fn output_top_level_shape_is_complete() {
     let proj = TempProject::new("bc2");
     proj.seed_minimal();
     proj.seed_clean_md("post.md");
 
     let out = run_verify_json(&proj);
-    let env = parse_envelope(&out);
+    let env = parse_output(&out);
 
     for required in [
-        "mdatron_wire_version",
+        "mdatron_output_version",
         "mdatron_version",
         "pipeline_status",
         "summary",
@@ -132,7 +129,7 @@ fn bc2_envelope_top_level_shape_is_complete() {
     ] {
         assert!(
             env.get(required).is_some(),
-            "envelope missing required top-level field: {required}"
+            "output missing required top-level field: {required}"
         );
     }
 
@@ -152,13 +149,13 @@ fn bc2_envelope_top_level_shape_is_complete() {
 }
 
 #[test]
-fn bc3_finding_code_prefix_matches_severity() {
+fn finding_code_prefix_matches_severity() {
     let proj = TempProject::new("bc3");
     proj.seed_minimal();
     proj.seed_failing_md("bad.md");
 
     let out = run_verify_json(&proj);
-    let env = parse_envelope(&out);
+    let env = parse_output(&out);
     let findings = env.get("findings").and_then(|v| v.as_array()).unwrap();
 
     for (i, f) in findings.iter().enumerate() {
@@ -178,10 +175,10 @@ fn bc3_finding_code_prefix_matches_severity() {
     }
 }
 
-// ── M2: Process behavior (BC-4 / BC-5 / BC-6) ──────────────────────────────────
+// ── Process behavior ───────────────────────────────────────────────────────────
 
 #[test]
-fn bc4_exit_zero_when_clean() {
+fn exit_zero_when_clean() {
     let proj = TempProject::new("bc4-clean");
     proj.seed_minimal();
     proj.seed_clean_md("post.md");
@@ -197,7 +194,7 @@ fn bc4_exit_zero_when_clean() {
 }
 
 #[test]
-fn bc4_exit_one_when_error_findings_exist() {
+fn exit_one_when_error_findings_exist() {
     let proj = TempProject::new("bc4-errors");
     proj.seed_minimal();
     proj.seed_failing_md("bad.md");
@@ -212,7 +209,7 @@ fn bc4_exit_one_when_error_findings_exist() {
 }
 
 #[test]
-fn bc4_exit_two_when_pipeline_failed() {
+fn exit_two_when_pipeline_failed() {
     let proj = TempProject::new("bc4-pipeline-fail");
     // No .mdatron/ at all — pipeline cannot load schemas/patterns
     proj.write("post.md", "---\nschema_class: blog\n---\n");
@@ -227,7 +224,7 @@ fn bc4_exit_two_when_pipeline_failed() {
 }
 
 #[test]
-fn bc5_stdout_contains_only_envelope_under_json() {
+fn stdout_under_json_contains_only_the_output_object() {
     let proj = TempProject::new("bc5");
     proj.seed_minimal();
     proj.seed_clean_md("post.md");
@@ -238,7 +235,7 @@ fn bc5_stdout_contains_only_envelope_under_json() {
     // Single JSON object on stdout under --json
     assert!(
         trimmed.starts_with('{') && trimmed.ends_with('}'),
-        "stdout under --json must contain only the JSON envelope; got: {stdout:?}"
+        "stdout under --json must contain only the JSON output; got: {stdout:?}"
     );
     // No diagnostic text on stdout
     assert!(
@@ -248,7 +245,7 @@ fn bc5_stdout_contains_only_envelope_under_json() {
 }
 
 #[test]
-fn bc6_unknown_flag_is_rejected() {
+fn unknown_flag_is_rejected() {
     let proj = TempProject::new("bc6");
     proj.seed_minimal();
     proj.seed_clean_md("post.md");
@@ -272,10 +269,10 @@ fn bc6_unknown_flag_is_rejected() {
     );
 }
 
-// ── M3: Contract discipline (BC-7 / BC-8) ──────────────────────────────────────
+// ── Contract discipline ────────────────────────────────────────────────────────
 
 #[test]
-fn bc7_mdatron_source_never_emits_vsdd_code_prefix() {
+fn mdatron_source_never_emits_vsdd_code_prefix() {
     // Lint-style fixture: grep mdatron-core + mdatron-cli source for the literal
     // string "VSDD-E" as a quoted literal. mdatron MUST NOT emit VSDD-Exxxx codes.
     use std::collections::HashSet;
@@ -289,7 +286,7 @@ fn bc7_mdatron_source_never_emits_vsdd_code_prefix() {
     let mut allowlist: HashSet<String> = HashSet::new();
     allowlist.insert(
         // The lint MAY hit its own marker string; allowlist tests/ files explicitly.
-        "wire_format.rs".to_string(),
+        "output_format.rs".to_string(),
     );
 
     let mut offenders: Vec<String> = Vec::new();
@@ -311,7 +308,7 @@ fn bc7_mdatron_source_never_emits_vsdd_code_prefix() {
 }
 
 #[test]
-fn bc8_consumer_can_pin_to_wire_version() {
+fn output_version_is_consumer_pinnable_semver() {
     // Smoke check: emitted version is parseable + non-trivial. Phase 2b
     // implementation provides the actual version constant; this asserts the
     // shape so that a downstream consumer (vsdd) can pin against it.
@@ -320,21 +317,21 @@ fn bc8_consumer_can_pin_to_wire_version() {
     proj.seed_clean_md("post.md");
 
     let out = run_verify_json(&proj);
-    let env = parse_envelope(&out);
+    let env = parse_output(&out);
     let version = env
-        .get("mdatron_wire_version")
+        .get("mdatron_output_version")
         .and_then(|v| v.as_str())
         .unwrap();
     let parts: Vec<&str> = version.split('.').collect();
     assert_eq!(
         parts.len(),
         3,
-        "wire version must be semver triple; got {version}"
+        "output version must be semver triple; got {version}"
     );
     for p in parts {
         assert!(
             p.parse::<u32>().is_ok(),
-            "wire version component must be a non-negative integer; got {p}"
+            "output version component must be a non-negative integer; got {p}"
         );
     }
 }

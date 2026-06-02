@@ -1,21 +1,21 @@
-//! Wire-format envelope for `mdatron verify --json`.
+//! Output-format output object for `mdatron verify --json`.
 //!
-//! Implements the Phase 0 wire contract behavioral contracts BC-1 through BC-3 + BC-8 per
-//! `vsdd-cli/docs/refactor/phase-0-wire-format/DESIGN.md` (cross-repo design).
+//! Implements the Phase 0 output contract behavioral contracts BC-1 through BC-3 + BC-8 per
+//! `vsdd-cli/docs/refactor/phase-0-output-format/DESIGN.md` (cross-repo design).
 //!
-//! Phase 2b: this module turns the wire_format Red Gate green for envelope-shape
+//! Phase 2b: this module turns the output_format Red Gate green for output object-shape
 //! contracts. Exit-code semantics (BC-4) + stream contract (BC-5) live at the binary
 //! boundary (mdatron-cli/src/main.rs).
 //!
-//! Wire version stays at 1.0.0 for v0.1.0; subsequent additive optional-field changes
+//! Output version stays at 1.0.0 for v0.1.0; subsequent additive optional-field changes
 //! bump minor; required-field or shape changes bump major.
 
 use serde::{Deserialize, Serialize};
 
 use crate::diagnostic::{Finding, Severity};
 
-/// Wire-version contract value. Semver per SO disposition 2026-06-02 (Raise-to-SO #1).
-pub const WIRE_VERSION: &str = "1.0.0";
+/// Output-version contract value. Semver per SO disposition 2026-06-02 (Raise-to-SO #1).
+pub const OUTPUT_VERSION: &str = "1.0.0";
 
 /// Pipeline status — emitted as the `pipeline_status` field.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -25,7 +25,7 @@ pub enum PipelineStatus {
     Failed,
 }
 
-/// Per-severity finding counts emitted under the envelope's `summary` field.
+/// Per-severity finding counts emitted under the output object's `summary` field.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Summary {
     pub error_count: u32,
@@ -56,29 +56,29 @@ impl Summary {
     }
 }
 
-/// Top-level wire envelope emitted on stdout by `mdatron verify --json`.
+/// Top-level output output object emitted on stdout by `mdatron verify --json`.
 ///
 /// Field order per BC-2:
-/// 1. `mdatron_wire_version` (semver)
+/// 1. `mdatron_output_version` (semver)
 /// 2. `mdatron_version` (mdatron's own crate version)
 /// 3. `pipeline_status` ("ok" / "failed")
 /// 4. `summary` (per-severity counts + files_checked)
 /// 5. `findings` (array of Finding objects)
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Envelope {
-    pub mdatron_wire_version: String,
+pub struct Output {
+    pub mdatron_output_version: String,
     pub mdatron_version: String,
     pub pipeline_status: PipelineStatus,
     pub summary: Summary,
     pub findings: Vec<Finding>,
 }
 
-impl Envelope {
-    /// Construct an envelope from findings + files_checked + pipeline status.
+impl Output {
+    /// Construct an output object from findings + files_checked + pipeline status.
     ///
     /// `mdatron_version` is taken from `CARGO_PKG_VERSION` at the call site so the
-    /// envelope reflects the running binary's crate version. The wire version is the
-    /// compile-time constant [`WIRE_VERSION`].
+    /// output object reflects the running binary's crate version. The output version is the
+    /// compile-time constant [`OUTPUT_VERSION`].
     ///
     /// Pure function — Phase 1b purity-boundary candidate.
     pub fn build(
@@ -89,7 +89,7 @@ impl Envelope {
     ) -> Self {
         let summary = Summary::from_findings(&findings, files_checked);
         Self {
-            mdatron_wire_version: WIRE_VERSION.to_string(),
+            mdatron_output_version: OUTPUT_VERSION.to_string(),
             mdatron_version: mdatron_version.to_string(),
             pipeline_status,
             summary,
@@ -97,7 +97,7 @@ impl Envelope {
         }
     }
 
-    /// Derive the BC-4 exit code from the envelope's pipeline status + error count.
+    /// Derive the BC-4 exit code from the output object's pipeline status + error count.
     ///
     /// Pure function. Returns:
     /// - 0 when pipeline ran + no errors (warnings/lints may exist)
@@ -162,22 +162,22 @@ mod tests {
     }
 
     #[test]
-    fn envelope_build_sets_required_fields() {
-        let env = Envelope::build(vec![], 0, PipelineStatus::Ok, "0.1.0");
-        assert_eq!(env.mdatron_wire_version, WIRE_VERSION);
+    fn output_build_sets_required_fields() {
+        let env = Output::build(vec![], 0, PipelineStatus::Ok, "0.1.0");
+        assert_eq!(env.mdatron_output_version, OUTPUT_VERSION);
         assert_eq!(env.mdatron_version, "0.1.0");
         assert_eq!(env.pipeline_status, PipelineStatus::Ok);
     }
 
     #[test]
     fn exit_code_zero_when_clean() {
-        let env = Envelope::build(vec![], 5, PipelineStatus::Ok, "0.1.0");
+        let env = Output::build(vec![], 5, PipelineStatus::Ok, "0.1.0");
         assert_eq!(env.derive_exit_code(), 0);
     }
 
     #[test]
     fn exit_code_one_when_error_present() {
-        let env = Envelope::build(
+        let env = Output::build(
             vec![err_finding("MDATRON-E0001")],
             5,
             PipelineStatus::Ok,
@@ -189,7 +189,7 @@ mod tests {
     #[test]
     fn exit_code_zero_when_warnings_only_no_errors() {
         // BC-4: warnings alone do not fail the pipeline.
-        let env = Envelope::build(
+        let env = Output::build(
             vec![warn_finding("MDATRON-W0001")],
             5,
             PipelineStatus::Ok,
@@ -200,16 +200,16 @@ mod tests {
 
     #[test]
     fn exit_code_two_when_pipeline_failed() {
-        let env = Envelope::build(vec![], 0, PipelineStatus::Failed, "0.1.0");
+        let env = Output::build(vec![], 0, PipelineStatus::Failed, "0.1.0");
         assert_eq!(env.derive_exit_code(), 2);
     }
 
     #[test]
-    fn wire_version_is_semver_triple() {
-        let parts: Vec<&str> = WIRE_VERSION.split('.').collect();
+    fn output_version_is_semver_triple() {
+        let parts: Vec<&str> = OUTPUT_VERSION.split('.').collect();
         assert_eq!(parts.len(), 3);
         for p in parts {
-            assert!(p.parse::<u32>().is_ok(), "wire version part not numeric: {p}");
+            assert!(p.parse::<u32>().is_ok(), "output version part not numeric: {p}");
         }
     }
 }
