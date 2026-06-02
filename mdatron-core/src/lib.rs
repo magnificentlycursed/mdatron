@@ -16,6 +16,8 @@
 pub mod diagnostic;
 pub mod error;
 pub mod frontmatter;
+pub mod schema;
 
 pub use diagnostic::{Finding, Location, Severity};
 pub use error::Error;
+pub use schema::{Schema, ValidationError};
