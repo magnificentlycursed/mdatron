@@ -217,10 +217,25 @@ fn verify_file(
         error: e.to_string(),
     })?;
 
-    let fm_opt = frontmatter::parse(&content).map_err(|e| VerifyError::Frontmatter {
-        path: path.to_string_lossy().into_owned(),
-        error: e.to_string(),
-    })?;
+    let fm_opt = match frontmatter::parse(&content) {
+        Ok(opt) => opt,
+        Err(e) => {
+            findings.push(Finding {
+                code: "MDATRON-E0002".into(),
+                severity: Severity::Error,
+                summary: "frontmatter-parse-failed".into(),
+                message: e.to_string(),
+                help: None,
+                location: Location {
+                    file: path.to_path_buf(),
+                    line: 1,
+                    column: 0,
+                },
+                explain_ref: Some("MDATRON-E0002".into()),
+            });
+            return Ok(());
+        }
+    };
 
     let frontmatter_value = match fm_opt {
         Some((fm, _body)) => fm,
