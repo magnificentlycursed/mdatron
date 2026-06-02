@@ -99,16 +99,23 @@ pub fn verify(config: &VerifyConfig) -> Result<Vec<Finding>, VerifyError> {
     let schemas = load_schemas(&config.schemas_dir)?;
     let patterns = load_patterns(&config.patterns_dir)?;
 
+    // Canonicalize the project root so globs joined against it produce absolute
+    // patterns. This avoids cwd ambiguity when callers pass a relative root.
+    let project_root = config.project_root.canonicalize().map_err(|e| VerifyError::Io {
+        path: config.project_root.to_string_lossy().into_owned(),
+        error: e.to_string(),
+    })?;
+
     // Build a single registry from the union of all patterns' keys: declarations.
     let mut all_keys = Vec::new();
     for pf in &patterns {
         all_keys.extend(pf.pattern.keys.clone());
     }
-    let registry = IndexRegistry::build(&config.project_root, &all_keys)?;
+    let registry = IndexRegistry::build(&project_root, &all_keys)?;
 
     let mut findings: Vec<Finding> = Vec::new();
     for glob_pattern in &config.file_globs {
-        let absolute = config.project_root.join(glob_pattern);
+        let absolute = project_root.join(glob_pattern);
         let paths = glob::glob(&absolute.to_string_lossy())
             .map_err(|e| VerifyError::Glob(format!("'{glob_pattern}': {e}")))?;
         for entry in paths {
