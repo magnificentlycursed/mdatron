@@ -355,6 +355,12 @@ fn call_function(name: &str, args: &[Expr], ctx: &EvalContext) -> Result<Value, 
             let out: Vec<Value> = a.into_iter().filter(|v| !b.contains(v)).collect();
             Ok(Value::Array(out))
         }
+        "concat" => {
+            arity(name, args, 2)?;
+            let a = expect_string(evaluate(&args[0], ctx)?)?;
+            let b = expect_string(evaluate(&args[1], ctx)?)?;
+            Ok(Value::Str(format!("{a}{b}")))
+        }
         "join" => {
             arity(name, args, 2)?;
             let a = expect_array(evaluate(&args[0], ctx)?)?;
