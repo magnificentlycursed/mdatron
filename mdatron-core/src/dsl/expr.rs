@@ -17,6 +17,8 @@ use std::collections::BTreeMap;
 
 use thiserror::Error;
 
+use super::index::IndexRegistry;
+
 // ── Value ──────────────────────────────────────────────────────────────────────
 
 /// A runtime value produced by evaluating an expression. Maps cleanly to/from
@@ -129,9 +131,11 @@ pub struct EvalContext<'a> {
     pub self_value: &'a Value,
     pub file_value: &'a Value,
     pub project_value: &'a Value,
-    /// `let:` bindings + quantifier bindings; quantifier bindings shadow let bindings
-    /// because the child context is built by `merge_binding`, which inserts after copy.
+    /// `let:` bindings + quantifier bindings.
     pub bindings: BTreeMap<String, Value>,
+    /// Cross-file indices used by `key()` lookups. `None` when no indices are wired
+    /// in (existing tests + simple rules that don't reach across files).
+    pub indices: Option<&'a IndexRegistry>,
 }
 
 impl<'a> EvalContext<'a> {
@@ -145,12 +149,18 @@ impl<'a> EvalContext<'a> {
             file_value,
             project_value,
             bindings: BTreeMap::new(),
+            indices: None,
         }
     }
 
+    /// Wire a cross-file index registry into the context. Required for `key()` lookups.
+    pub fn with_indices(mut self, indices: &'a IndexRegistry) -> Self {
+        self.indices = Some(indices);
+        self
+    }
+
     /// Returns a clone of this context with `(name, value)` added/overridden in bindings.
-    /// Used for quantifier evaluation; small allocations are acceptable at the rule scale
-    /// we target (~100 quantifier evaluations per pattern run).
+    /// Used for quantifier evaluation.
     fn with_binding(&self, name: String, value: Value) -> Self {
         let mut bindings = self.bindings.clone();
         bindings.insert(name, value);
@@ -159,6 +169,7 @@ impl<'a> EvalContext<'a> {
             file_value: self.file_value,
             project_value: self.project_value,
             bindings,
+            indices: self.indices,
         }
     }
 }
@@ -186,6 +197,9 @@ pub enum EvalError {
         expected: usize,
         got: usize,
     },
+
+    #[error("key() called but no IndexRegistry is wired into the EvalContext")]
+    NoIndexRegistry,
 }
 
 // ── Evaluator ──────────────────────────────────────────────────────────────────
@@ -354,6 +368,27 @@ fn call_function(name: &str, args: &[Expr], ctx: &EvalContext) -> Result<Value, 
                 .collect();
             Ok(Value::Str(parts.join(&sep)))
         }
+        "key" => {
+            arity(name, args, 2)?;
+            let registry = ctx.indices.ok_or(EvalError::NoIndexRegistry)?;
+            let index_name = expect_string(evaluate(&args[0], ctx)?)?;
+            let key_value = evaluate(&args[1], ctx)?;
+            let key_str = match key_value {
+                Value::Str(s) => s,
+                other => {
+                    return Err(EvalError::TypeMismatch {
+                        expected: "string (index key)",
+                        got: type_name_str(&other),
+                    });
+                }
+            };
+            // Lookup miss returns Null (per cross-file index semantics);
+            // chained field access on Null propagates Null per existing convention.
+            Ok(registry
+                .lookup(&index_name, &key_str)
+                .cloned()
+                .unwrap_or(Value::Null))
+        }
         other => Err(EvalError::UnknownFunction(other.to_string())),
     }
 }
@@ -501,6 +536,7 @@ mod tests {
             file_value: &file_v,
             project_value: &project_v,
             bindings,
+            indices: None,
         };
         let result =
             evaluate(&Expr::Var(VarRef::Binding("x".to_string())), &context).unwrap();
@@ -922,6 +958,119 @@ mod tests {
 
     // ── End-to-end: classification-universe rule shape ──────────────────────
 
+    // ── key() function ──────────────────────────────────────────────────────
+
+    #[test]
+    fn key_without_registry_errors() {
+        let cv = null_ctx();
+        let result = evaluate(
+            &Expr::Call(
+                "key".into(),
+                vec![Expr::Lit(s("any-index")), Expr::Lit(s("any-key"))],
+            ),
+            &ctx(&cv),
+        );
+        assert!(matches!(result, Err(EvalError::NoIndexRegistry)));
+    }
+
+    #[test]
+    fn key_returns_null_for_unknown_index() {
+        use super::super::index::IndexRegistry;
+        let registry = IndexRegistry::new();
+        let cv = null_ctx();
+        let context = EvalContext::new(&cv.0, &cv.1, &cv.2).with_indices(&registry);
+        let result = evaluate(
+            &Expr::Call(
+                "key".into(),
+                vec![Expr::Lit(s("not-loaded")), Expr::Lit(s("anything"))],
+            ),
+            &context,
+        )
+        .unwrap();
+        assert_eq!(result, Value::Null);
+    }
+
+    #[test]
+    fn key_returns_indexed_value_when_present() {
+        use super::super::index::{Index, IndexRegistry};
+        let mut entries = BTreeMap::new();
+        entries.insert("phase-2a".to_string(), obj([("required", arr([s("se"), s("qe")]))]));
+        let idx = Index {
+            name: "matrix".to_string(),
+            entries,
+        };
+        let mut registry = IndexRegistry::new();
+        registry.insert(idx);
+
+        let cv = null_ctx();
+        let context = EvalContext::new(&cv.0, &cv.1, &cv.2).with_indices(&registry);
+
+        // key("matrix", "phase-2a").required
+        let expr = Expr::Field(
+            Box::new(Expr::Call(
+                "key".into(),
+                vec![Expr::Lit(s("matrix")), Expr::Lit(s("phase-2a"))],
+            )),
+            "required".into(),
+        );
+        let result = evaluate(&expr, &context).unwrap();
+        assert_eq!(result, arr([s("se"), s("qe")]));
+    }
+
+    #[test]
+    fn phase_composition_rule_with_key_lookup_evaluates_end_to_end() {
+        use super::super::index::{Index, IndexRegistry};
+        let mut entries = BTreeMap::new();
+        entries.insert(
+            "phase-2a".to_string(),
+            obj([("required", arr([s("se"), s("qe")]))]),
+        );
+        let idx = Index {
+            name: "composition-matrix".to_string(),
+            entries,
+        };
+        let mut registry = IndexRegistry::new();
+        registry.insert(idx);
+
+        let primer = obj([
+            ("phase", s("phase-2a")),
+            ("relevant_domains", arr([s("se"), s("qe"), s("sa")])),
+        ]);
+        let file_v = Value::Null;
+        let project_v = Value::Null;
+
+        // Simulate the let-binding evaluation: $expected = key("composition-matrix", $self.phase)
+        let key_expr = Expr::Call(
+            "key".into(),
+            vec![
+                Expr::Lit(s("composition-matrix")),
+                Expr::Field(Box::new(Expr::Var(VarRef::SelfVar)), "phase".into()),
+            ],
+        );
+        let mut precompute_ctx =
+            EvalContext::new(&primer, &file_v, &project_v).with_indices(&registry);
+        let expected = evaluate(&key_expr, &precompute_ctx).unwrap();
+        precompute_ctx.bindings.insert("expected".to_string(), expected);
+
+        // Assert: every(d in $expected.required, d in $self.relevant_domains)
+        let assert_expr = Expr::Every(
+            "d".into(),
+            Box::new(Expr::Field(
+                Box::new(Expr::Var(VarRef::Binding("expected".into()))),
+                "required".into(),
+            )),
+            Box::new(Expr::In(
+                Box::new(Expr::Var(VarRef::Binding("d".into()))),
+                Box::new(Expr::Field(
+                    Box::new(Expr::Var(VarRef::SelfVar)),
+                    "relevant_domains".into(),
+                )),
+            )),
+        );
+        let result = evaluate(&assert_expr, &precompute_ctx).unwrap();
+        assert_eq!(result, Value::Bool(true));
+    }
+
     #[test]
     fn classification_universe_rule_passes_for_valid_finding() {
         // finding $self.classification = "resolved"
@@ -946,6 +1095,7 @@ mod tests {
             file_value: &file_v,
             project_value: &project_v,
             bindings,
+            indices: None,
         };
 
         // $self.classification in $expected.classification_universe
@@ -980,6 +1130,7 @@ mod tests {
             file_value: &file_v,
             project_value: &project_v,
             bindings,
+            indices: None,
         };
         let expr = Expr::In(
             Box::new(Expr::Field(

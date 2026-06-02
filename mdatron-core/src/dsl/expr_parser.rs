@@ -805,6 +805,7 @@ mod tests {
             file_value: &file_v,
             project_value: &project_v,
             bindings,
+            indices: None,
         };
 
         let expr =
@@ -833,6 +834,7 @@ mod tests {
             file_value: &file_v,
             project_value: &project_v,
             bindings,
+            indices: None,
         };
 
         let expr = parse_expression(
@@ -862,6 +864,7 @@ mod tests {
             file_value: &file_v,
             project_value: &project_v,
             bindings,
+            indices: None,
         };
 
         let expr = parse_expression(
@@ -886,6 +889,7 @@ mod tests {
             file_value: &file_v,
             project_value: &project_v,
             bindings,
+            indices: None,
         };
 
         let expr = parse_expression(
