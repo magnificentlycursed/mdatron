@@ -6,34 +6,58 @@
 
 use mdatron_core::codes::is_reserved_mdatron_code;
 use mdatron_core::dsl::{evaluate, EvalContext, EvalError, Expr, Value, VarRef};
+use mdatron_core::verify::{verify, VerifyConfig};
 use std::collections::BTreeMap;
+use std::fs;
 use std::path::PathBuf;
 
 // ── Reserved-code drift fix ────────────────────────────────────────────────────
 
 #[test]
 fn schema_violation_emits_e0050() {
-    // Re-runs the in-module verify test from verify.rs but asserts the
-    // post-rename code. Pre-rename impl emits "MDATRON-E0001"; Red Gate fails
-    // because of the prefix-vs-severity strict alignment in BC-3 of the output
-    // contract.
-    let code = current_emitted_code_for_schema_violation();
-    assert_eq!(
-        code, "MDATRON-E0050",
-        "schema-violation must emit MDATRON-E0050 per amended DESIGN-MDATRON.md \
-         (got: {code}; pre-rename impl emits E0001 which is the frontmatter-\
-         parse-failed slot)"
+    // Spawn the verify pipeline against a fixture project that has a real
+    // schema-violation; assert the resulting Finding's code. NOT a probe-
+    // constant comparison — that's what Phase 3 QE caught as circular.
+    let proj = TempFixture::new("schema-violation");
+    proj.write_schema(
+        "blog.json",
+        r#"{"type":"object","required":["schema_class","slug"],
+            "properties":{"schema_class":{"const":"blog"},
+                          "slug":{"type":"string","pattern":"^[a-z0-9-]+$"}},
+            "additionalProperties":false}"#,
+    );
+    proj.write_md("post.md", "---\nschema_class: blog\nslug: Bad Slug!\n---\n");
+
+    let cfg = VerifyConfig::new(proj.root());
+    let findings = verify(&cfg).expect("verify runs");
+    let codes: Vec<&str> = findings.iter().map(|f| f.code.as_str()).collect();
+    assert!(
+        codes.contains(&"MDATRON-E0050"),
+        "schema-violation must emit MDATRON-E0050 per amended DESIGN-MDATRON.md; \
+         got codes: {codes:?}"
     );
 }
 
 #[test]
 fn frontmatter_parse_failure_emits_e0001() {
-    let code = current_emitted_code_for_parse_failure();
-    assert_eq!(
-        code, "MDATRON-E0001",
-        "frontmatter-parse-failed must emit MDATRON-E0001 per DESIGN-MDATRON.md:116 \
-         (got: {code}; pre-rename impl emits E0002 which is reserved for \
-         schema-class-unknown)"
+    // Same shape: spawn the pipeline against a fixture with malformed YAML;
+    // assert the Finding's code.
+    let proj = TempFixture::new("parse-failure");
+    proj.write_schema(
+        "blog.json",
+        r#"{"type":"object","required":["schema_class"],
+            "properties":{"schema_class":{"const":"blog"}}}"#,
+    );
+    // Malformed frontmatter: missing closing quote.
+    proj.write_md("broken.md", "---\nschema_class: \"blog\n---\n");
+
+    let cfg = VerifyConfig::new(proj.root());
+    let findings = verify(&cfg).expect("verify runs (emits finding, not error)");
+    let codes: Vec<&str> = findings.iter().map(|f| f.code.as_str()).collect();
+    assert!(
+        codes.contains(&"MDATRON-E0001"),
+        "frontmatter-parse-failed must emit MDATRON-E0001 per DESIGN-MDATRON.md:116; \
+         got codes: {codes:?}"
     );
 }
 
@@ -116,6 +140,29 @@ fn field_on_null_still_returns_null() {
 }
 
 #[test]
+fn field_on_nested_missing_returns_null() {
+    // Per Phase 3 QE + SE convergence: nested-missing was untested.
+    // Object{a: Object{x: 1}}; access $self.a.missing — the inner Object
+    // exists but the key 'missing' doesn't. Pre-fix raised FieldNotFound;
+    // post-fix returns Null.
+    let inner = Value::Object(BTreeMap::from([("x".to_string(), Value::Int(1))]));
+    let self_v = Value::Object(BTreeMap::from([("a".to_string(), inner)]));
+    let file_v = Value::Null;
+    let project_v = Value::Null;
+    let ctx = EvalContext::new(&self_v, &file_v, &project_v);
+
+    let expr = Expr::Field(
+        Box::new(Expr::Field(
+            Box::new(Expr::Var(VarRef::SelfVar)),
+            "a".into(),
+        )),
+        "missing".into(),
+    );
+    let result = evaluate(&expr, &ctx).unwrap();
+    assert_eq!(result, Value::Null);
+}
+
+#[test]
 fn field_on_non_object_value_still_errors() {
     // Field access on Int / Bool / Array etc. must still raise TypeMismatch.
     let self_v = Value::Int(42);
@@ -181,28 +228,41 @@ fn defined_empty_array_remains_true() {
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-/// Probe what code mdatron currently emits for a schema-violation finding.
-/// Implementation introspects via the in-module verify.rs test path or via a
-/// direct call — but since Phase 2b is what makes the value match the assertion,
-/// the simplest reading is: read the source. Phase 2a Red Gate keeps it
-/// declarative by hardcoding the pre-rename value here. After the rename, the
-/// helper returns the new value.
-fn current_emitted_code_for_schema_violation() -> &'static str {
-    // The probe constant tracks what the verify.rs schema-violation emission
-    // site emits. After Phase 2b, this is MDATRON-E0050.
-    PROBE_SCHEMA_VIOLATION_CODE
+struct TempFixture {
+    root: PathBuf,
 }
 
-fn current_emitted_code_for_parse_failure() -> &'static str {
-    PROBE_PARSE_FAILURE_CODE
+impl TempFixture {
+    fn new(label: &str) -> Self {
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("mdatron-phase-1-{label}-{nanos}"));
+        let _ = fs::remove_dir_all(&root);
+        fs::create_dir_all(root.join(".mdatron/schemas")).unwrap();
+        fs::create_dir_all(root.join(".mdatron/patterns")).unwrap();
+        Self { root }
+    }
+
+    fn root(&self) -> &std::path::Path {
+        &self.root
+    }
+
+    fn write_schema(&self, name: &str, content: &str) {
+        fs::write(self.root.join(".mdatron/schemas").join(name), content).unwrap();
+    }
+
+    fn write_md(&self, rel: &str, content: &str) {
+        fs::write(self.root.join(rel), content).unwrap();
+    }
 }
 
-// These probe constants live in mdatron-core::verify (or wherever the emission
-// sites live). Phase 2b moves them; Phase 2a uses them to read the current
-// value. Until Phase 2b lands, fall back to a const stub at the top of the
-// test file.
-const PROBE_SCHEMA_VIOLATION_CODE: &str = "MDATRON-E0050";
-const PROBE_PARSE_FAILURE_CODE: &str = "MDATRON-E0001";
+impl Drop for TempFixture {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.root);
+    }
+}
 
 fn walk_rs(root: &std::path::Path) -> Vec<PathBuf> {
     let mut out = Vec::new();
