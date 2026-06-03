@@ -116,6 +116,7 @@ Behaviors:
   - Malformed YAML frontmatter → `MDATRON-E0001: frontmatter-parse-failed`
   - Frontmatter `schema_class:` references unknown class → `MDATRON-E0002: schema-class-unknown`
   - Schema file itself malformed → `MDATRON-E0003: schema-malformed` at config-load time (never silent)
+  - Frontmatter violates its declared schema → `MDATRON-E0050: frontmatter-schema-violation` (v0.1.x)
 
 ### Layer 2: Rule-based (DSL)
 
@@ -508,10 +509,22 @@ mdatron's own engine-level codes use the `MDATRON-` prefix:
 | `MDATRON-E0020` — `E0029` | DSL evaluation failures |
 | `MDATRON-E0030` — `E0039` | Delegate protocol failures |
 | `MDATRON-E0040` — `E0049` | Schema load failures |
+| `MDATRON-E0050` — `E0059` | Frontmatter schema validation failures (v0.1.x) |
+| `MDATRON-E0060` — `E0069` | Reserved for future use |
+| `MDATRON-E0070` — `E0079` | IO failures during verify (v0.1.x) |
+| `MDATRON-E0080` — `E0089` | Pipeline orchestration failures (v0.1.x) |
+| `MDATRON-E0090` — `E0099` | Reserved for future use |
 | `MDATRON-W0030` — `W0039` | Delegate-registration warnings (per § 7) |
 | `MDATRON-W0050` — `W0099` | Configuration warnings |
 | `MDATRON-W0100` — `W0199` | Built-in pattern findings |
 | `MDATRON-L0001` — `L0099` | Engine-level lints (e.g., DSL version unspecified) |
+
+Range additions for v0.1.x (Phase 1 of binary-first refactor; crosslink #12):
+`E0050-E0059`, `E0070-E0079`, `E0080-E0089`. The `is_reserved_mdatron_code`
+function at `mdatron-core/src/codes.rs` is the canonical machine-readable
+source; this table is the human-readable doc surface; both must agree.
+Range gaps (`E0060-E0069`, `E0090-E0099`) are explicitly reserved for future
+use to avoid arbitrary allocation.
 
 Full catalog ships in `mdatron-core/catalogs/mdatron.yaml`; per-code explain pages at `docs/error-codes/MDATRON-*.md`.
 
