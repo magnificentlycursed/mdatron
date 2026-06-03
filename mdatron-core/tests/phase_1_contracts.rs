@@ -63,20 +63,36 @@ fn frontmatter_parse_failure_emits_e0001() {
 
 #[test]
 fn all_emitted_codes_are_reserved() {
-    // Static lint: every "MDATRON-" code literal in the source must be reserved.
-    use std::fs;
+    // Static lint: every "MDATRON-" code literal in the workspace must resolve
+    // to a reserved range per DESIGN-MDATRON.md.
+    //
+    // Walk: workspace members from Cargo.toml + the workspace root itself
+    // (catches future siblings per Phase 3 Red-Team + SE finding that the
+    // hardcoded crate list was a supply-chain hole).
+    //
+    // Extensions: .rs / .yaml / .yml / .json / .toml — covers pattern files,
+    // schemas, config, and any non-`.rs` carrier per Phase 3 Red-Team finding.
+    // Excludes .md: design docs legitimately describe ranges + reserved-for-
+    // future-use labels (e.g. range-header forms like the literal-digit codes
+    // in DESIGN-MDATRON.md table) that are reserved-as-future but not yet
+    // class-assigned; treating those as violations would block adding new
+    // spec rows.
 
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
     let workspace_root = PathBuf::from(manifest_dir).parent().unwrap().to_path_buf();
-    let scan_roots = [
-        workspace_root.join("mdatron-core").join("src"),
-        workspace_root.join("mdatron-cli").join("src"),
-    ];
+    let members = workspace_members(&workspace_root);
+    let mut scan_roots: Vec<PathBuf> = members.iter().map(|m| workspace_root.join(m)).collect();
+    scan_roots.push(workspace_root.clone());
 
+    let lint_extensions = ["rs", "yaml", "yml", "json", "toml"];
     let mut violations: Vec<(PathBuf, String)> = Vec::new();
+    let mut seen: std::collections::HashSet<PathBuf> = std::collections::HashSet::new();
+
     for root in scan_roots {
-        for entry in walk_rs(&root) {
-            // The reserved-code table file itself names every code; allowlist.
+        for entry in walk_files(&root, &lint_extensions) {
+            if !seen.insert(entry.clone()) {
+                continue;
+            }
             if entry.ends_with("codes.rs") {
                 continue;
             }
@@ -90,7 +106,7 @@ fn all_emitted_codes_are_reserved() {
     }
     assert!(
         violations.is_empty(),
-        "every MDATRON-* code literal in mdatron source must be in a reserved \
+        "every MDATRON-* literal in the workspace must resolve to a reserved \
          range per DESIGN-MDATRON.md; violations: {violations:?}"
     );
 }
@@ -264,7 +280,7 @@ impl Drop for TempFixture {
     }
 }
 
-fn walk_rs(root: &std::path::Path) -> Vec<PathBuf> {
+fn walk_files(root: &std::path::Path, extensions: &[&str]) -> Vec<PathBuf> {
     let mut out = Vec::new();
     let mut stack = vec![root.to_path_buf()];
     while let Some(dir) = stack.pop() {
@@ -273,10 +289,71 @@ fn walk_rs(root: &std::path::Path) -> Vec<PathBuf> {
         };
         for entry in entries.flatten() {
             let path = entry.path();
+            // Skip well-known build / vcs directories.
+            if let Some(name) = path.file_name().and_then(|s| s.to_str()) {
+                if matches!(name, "target" | ".git" | "node_modules") {
+                    continue;
+                }
+            }
             if path.is_dir() {
                 stack.push(path);
-            } else if path.extension().and_then(|s| s.to_str()) == Some("rs") {
-                out.push(path);
+            } else if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
+                if extensions.contains(&ext) {
+                    out.push(path);
+                }
+            }
+        }
+    }
+    out
+}
+
+/// Read workspace member names from the workspace Cargo.toml. Returns the
+/// member strings as listed (e.g., "mdatron-core", "mdatron-cli"). Falls back
+/// to the empty Vec if Cargo.toml isn't found or parseable; the caller's loop
+/// also scans the workspace root, so absent-members is non-fatal.
+fn workspace_members(workspace_root: &std::path::Path) -> Vec<String> {
+    let cargo_toml = workspace_root.join("Cargo.toml");
+    let Ok(content) = fs::read_to_string(&cargo_toml) else {
+        return Vec::new();
+    };
+    let mut out = Vec::new();
+    let mut in_workspace = false;
+    let mut in_members = false;
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed == "[workspace]" {
+            in_workspace = true;
+            continue;
+        }
+        if trimmed.starts_with('[') && trimmed.ends_with(']') {
+            in_workspace = false;
+            in_members = false;
+            continue;
+        }
+        if !in_workspace {
+            continue;
+        }
+        if trimmed.starts_with("members") {
+            // members = ["a", "b"] or members = [\n "a",\n "b",\n]
+            in_members = true;
+            for piece in trimmed.split(['[', ']', '"', ',']) {
+                let p = piece.trim();
+                if !p.is_empty() && !p.starts_with("members") && !p.starts_with('=') {
+                    out.push(p.to_string());
+                }
+            }
+            if trimmed.contains(']') {
+                in_members = false;
+            }
+        } else if in_members {
+            for piece in trimmed.split(['"', ',', '[', ']']) {
+                let p = piece.trim();
+                if !p.is_empty() {
+                    out.push(p.to_string());
+                }
+            }
+            if trimmed.contains(']') {
+                in_members = false;
             }
         }
     }
@@ -284,18 +361,28 @@ fn walk_rs(root: &std::path::Path) -> Vec<PathBuf> {
 }
 
 fn extract_mdatron_code_literals(content: &str) -> Vec<String> {
+    // Match only well-formed codes: MDATRON- followed by [ELW] and exactly
+    // four digits. Skip placeholder forms in design docs (MDATRON-Exxxx,
+    // MDATRON-Exxx, bare MDATRON-E) and partial matches.
     let mut out = Vec::new();
-    let mut rest = content;
-    while let Some(idx) = rest.find("MDATRON-") {
-        let tail = &rest[idx..];
-        let end = tail
-            .find(|c: char| !c.is_alphanumeric() && c != '-')
-            .unwrap_or(tail.len());
-        let code = &tail[..end];
-        if code.len() > "MDATRON-".len() {
-            out.push(code.to_string());
+    let prefix_len = "MDATRON-".len();
+    let bytes = content.as_bytes();
+    let mut i = 0;
+    while i + prefix_len + 5 <= bytes.len() {
+        if &bytes[i..i + prefix_len] == b"MDATRON-" {
+            let after = &bytes[i + prefix_len..];
+            let letter = after[0];
+            let digits = &after[1..5];
+            if matches!(letter, b'E' | b'W' | b'L')
+                && digits.iter().all(u8::is_ascii_digit)
+            {
+                let code_end = i + prefix_len + 5;
+                out.push(String::from_utf8_lossy(&bytes[i..code_end]).into_owned());
+                i = code_end;
+                continue;
+            }
         }
-        rest = &tail[end..];
+        i += 1;
     }
     out
 }
