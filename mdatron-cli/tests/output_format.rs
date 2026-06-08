@@ -63,13 +63,9 @@ impl Drop for TempProject {
 }
 
 fn mdatron_bin() -> PathBuf {
-    let manifest_dir = env!("CARGO_MANIFEST_DIR");
-    PathBuf::from(manifest_dir)
-        .parent()
-        .unwrap()
-        .join("target")
-        .join("debug")
-        .join("mdatron")
+    // CARGO_BIN_EXE_mdatron resolves to the cargo-built binary regardless of
+    // profile or workspace layout. Per crosslink #13 PE/F5 + AIE/F4 convergence.
+    PathBuf::from(env!("CARGO_BIN_EXE_mdatron"))
 }
 
 fn run_verify_json(proj: &TempProject) -> Output {

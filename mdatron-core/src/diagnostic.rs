@@ -51,6 +51,23 @@ impl Location {
             column: 0,
         }
     }
+
+    /// Render the file path for TTY output with control characters escaped
+    /// to `\xNN` form. Defends against ANSI escape sequences injected via
+    /// attacker-crafted filenames (Unix paths may contain newlines + control
+    /// chars). Per crosslink #13 SEC/F2 + SE/F6 convergence.
+    pub fn safe_display(&self) -> String {
+        let mut out = String::new();
+        for ch in self.file.display().to_string().chars() {
+            if ch.is_control() {
+                use std::fmt::Write;
+                let _ = write!(out, "\\x{:02X}", ch as u32);
+            } else {
+                out.push(ch);
+            }
+        }
+        out
+    }
 }
 
 /// A diagnostic finding emitted by the validator.
@@ -83,15 +100,34 @@ impl Finding {
             self.severity.label(),
             self.code,
             self.summary,
-            self.location.file.display(),
+            self.location.safe_display(),
             self.location.line,
         );
         if self.location.column > 0 {
             let _ = write!(output, ":{}", self.location.column);
         }
-        let _ = write!(output, "\n   = note: {}", self.message);
+        // Per crosslink #13 SE/F4: skip the `= note:` line when the message
+        // is just the summary (no additional info beyond the headline).
+        if self.message != self.summary {
+            // Per crosslink #13 SE/F6: indent continuation lines so multi-line
+            // messages don't break the rustc-shape layout. First line takes
+            // `\n   = note: `; later lines align under the body text.
+            let mut lines = self.message.lines();
+            if let Some(first) = lines.next() {
+                let _ = write!(output, "\n   = note: {first}");
+                for cont in lines {
+                    let _ = write!(output, "\n           {cont}");
+                }
+            }
+        }
         if let Some(help) = &self.help {
-            let _ = write!(output, "\n   = help: {help}");
+            let mut lines = help.lines();
+            if let Some(first) = lines.next() {
+                let _ = write!(output, "\n   = help: {first}");
+                for cont in lines {
+                    let _ = write!(output, "\n           {cont}");
+                }
+            }
         }
         if let Some(explain) = &self.explain_ref {
             let _ = write!(output, "\n   = explain: mdatron explain {explain}");

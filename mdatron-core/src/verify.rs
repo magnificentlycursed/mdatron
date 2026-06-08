@@ -12,7 +12,8 @@
 //!
 //! v0.1.x scope:
 //! - Schema-class dispatch via the `schema_class:` frontmatter field
-//! - Layer 1 emits `MDATRON-E0001: frontmatter-schema-violation` per validation error
+//! - Layer 1 emits `MDATRON-E0050: frontmatter-schema-violation` per validation error
+//!   (E0001 is now exclusively reserved for `frontmatter-parse-failed`; see codes.rs)
 //! - Layer 2 runs every pattern rule whose context matches the file's schema_class
 //!   or path glob; emits the rule's `code` on assertion failure
 //! - Message interpolation via `{{<expression>}}` markers

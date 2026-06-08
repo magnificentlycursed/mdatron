@@ -55,8 +55,45 @@ enum Command {
     /// Show extended documentation for an error code (rustc --explain pattern).
     Explain {
         /// The error code, e.g. MDATRON-E0001 or VSDD-E0017.
+        /// Must match `^[A-Z][A-Z0-9]*-[ELW][0-9]{4}$` — operator-pasted from
+        /// diagnostic output. Rejects ANSI escapes and shell-meta injection
+        /// (crosslink #13 SEC/F1 + RT/F2 convergence).
+        #[arg(value_parser = parse_explain_code)]
         code: String,
     },
+}
+
+fn parse_explain_code(s: &str) -> Result<String, String> {
+    let bytes = s.as_bytes();
+    let prefix_len = bytes.iter().position(|b| *b == b'-').ok_or_else(|| {
+        format!("code must have form '<NAMESPACE>-<L><NNNN>' (e.g. MDATRON-E0001); got: {s}")
+    })?;
+    if prefix_len == 0 {
+        return Err(format!("code namespace is empty; got: {s}"));
+    }
+    let prefix = &bytes[..prefix_len];
+    if !prefix.iter().all(|b| b.is_ascii_uppercase() || b.is_ascii_digit()) {
+        return Err(format!(
+            "code namespace must be [A-Z][A-Z0-9]*; got: {s}"
+        ));
+    }
+    let suffix = &bytes[prefix_len + 1..];
+    if suffix.len() != 5 {
+        return Err(format!(
+            "code body must be one letter + four digits (e.g. E0001); got: {s}"
+        ));
+    }
+    let letter = suffix[0];
+    let digits = &suffix[1..];
+    if !matches!(letter, b'E' | b'L' | b'W') {
+        return Err(format!(
+            "code letter must be one of E (error), L (lint), W (warning); got: {s}"
+        ));
+    }
+    if !digits.iter().all(u8::is_ascii_digit) {
+        return Err(format!("code body digits must be ASCII 0-9; got: {s}"));
+    }
+    Ok(s.to_string())
 }
 
 fn main() -> ExitCode {
@@ -182,10 +219,9 @@ fn print_pipeline_error(e: &VerifyError) {
 
 fn cmd_explain(code: &str) -> ExitCode {
     if let Some(page) = explain::lookup(code) {
-        print!("{page}");
-        if !page.ends_with('\n') {
-            println!();
-        }
+        // Normalize trailing whitespace + write exactly one trailing newline.
+        // Per crosslink #13 SE/F1.
+        println!("{}", page.trim_end());
         return ExitCode::from(0);
     }
     if explain::is_mdatron_namespace(code) {
