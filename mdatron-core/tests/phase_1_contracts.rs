@@ -85,7 +85,7 @@ fn all_emitted_codes_are_reserved() {
     scan_roots.push(workspace_root.clone());
 
     let lint_extensions = ["rs", "yaml", "yml", "json", "toml"];
-    let mut violations: Vec<(PathBuf, String)> = Vec::new();
+    let mut violations: Vec<(PathBuf, usize, String)> = Vec::new();
     let mut seen: std::collections::HashSet<PathBuf> = std::collections::HashSet::new();
 
     for root in scan_roots {
@@ -97,18 +97,27 @@ fn all_emitted_codes_are_reserved() {
                 continue;
             }
             let content = fs::read_to_string(&entry).unwrap_or_default();
-            for code in extract_mdatron_code_literals(&content) {
+            for (line_no, code) in extract_mdatron_code_literals_with_lines(&content) {
                 if !is_reserved_mdatron_code(&code) {
-                    violations.push((entry.clone(), code));
+                    violations.push((entry.clone(), line_no, code));
                 }
             }
         }
     }
-    assert!(
-        violations.is_empty(),
-        "every MDATRON-* literal in the workspace must resolve to a reserved \
-         range per DESIGN-MDATRON.md; violations: {violations:?}"
-    );
+    // Format violations as `path:line: code` per finding (one per line) to
+    // match the rustc-shape diagnostic style used elsewhere in mdatron. Per
+    // crosslink #12 DR/F6 (contributor-friendly error message).
+    if !violations.is_empty() {
+        let formatted = violations
+            .iter()
+            .map(|(path, line, code)| format!("    {}:{}: {}", path.display(), line, code))
+            .collect::<Vec<_>>()
+            .join("\n");
+        panic!(
+            "every MDATRON-* literal in the workspace must resolve to a reserved \
+             range per DESIGN-MDATRON.md; violations:\n{formatted}"
+        );
+    }
 }
 
 // ── DSL Field-access symmetry (M4 PE F1 root cause) ────────────────────────────
@@ -421,29 +430,36 @@ fn workspace_members(workspace_root: &std::path::Path) -> Vec<String> {
     out
 }
 
-fn extract_mdatron_code_literals(content: &str) -> Vec<String> {
-    // Match only well-formed codes: MDATRON- followed by [ELW] and exactly
-    // four digits. Skip placeholder forms in design docs (MDATRON-Exxxx,
-    // MDATRON-Exxx, bare MDATRON-E) and partial matches.
+/// Extract well-formed MDATRON-* code literals along with the 1-based line
+/// number where each appears. Per crosslink #12 DR/F6: contributor seeing
+/// a lint failure needs `path:line: code` not just `path: code` for grep-
+/// to-fix loops.
+fn extract_mdatron_code_literals_with_lines(content: &str) -> Vec<(usize, String)> {
     let mut out = Vec::new();
-    let prefix_len = "MDATRON-".len();
-    let bytes = content.as_bytes();
-    let mut i = 0;
-    while i + prefix_len + 5 <= bytes.len() {
-        if &bytes[i..i + prefix_len] == b"MDATRON-" {
-            let after = &bytes[i + prefix_len..];
-            let letter = after[0];
-            let digits = &after[1..5];
-            if matches!(letter, b'E' | b'W' | b'L')
-                && digits.iter().all(u8::is_ascii_digit)
-            {
-                let code_end = i + prefix_len + 5;
-                out.push(String::from_utf8_lossy(&bytes[i..code_end]).into_owned());
-                i = code_end;
-                continue;
+    for (idx, line) in content.lines().enumerate() {
+        let line_no = idx + 1;
+        let prefix_len = "MDATRON-".len();
+        let bytes = line.as_bytes();
+        let mut i = 0;
+        while i + prefix_len + 5 <= bytes.len() {
+            if &bytes[i..i + prefix_len] == b"MDATRON-" {
+                let after = &bytes[i + prefix_len..];
+                let letter = after[0];
+                let digits = &after[1..5];
+                if matches!(letter, b'E' | b'W' | b'L')
+                    && digits.iter().all(u8::is_ascii_digit)
+                {
+                    let code_end = i + prefix_len + 5;
+                    out.push((
+                        line_no,
+                        String::from_utf8_lossy(&bytes[i..code_end]).into_owned(),
+                    ));
+                    i = code_end;
+                    continue;
+                }
             }
+            i += 1;
         }
-        i += 1;
     }
     out
 }

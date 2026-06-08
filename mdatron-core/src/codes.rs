@@ -2,13 +2,17 @@
 //!
 //! Per `DESIGN-MDATRON.md:506-514` (as amended for v0.1.x), every code emitted
 //! by mdatron must fall in one of these reserved ranges. The
-//! [`is_reserved_mdatron_code`] check is used by integration tests + a future
-//! code-allocation lint to enforce the discipline at compile time.
+//! [`is_reserved_mdatron_code`] check is used by integration tests + the
+//! reserved-range enforcement check at
+//! `mdatron-core/tests/phase_1_contracts.rs::all_emitted_codes_are_reserved`
+//! to enforce the discipline at build time. (Note: not a "lint" in the
+//! adopter-facing MDATRON-L#### sense per crosslink #12 TW/F4 — the
+//! L-range is reserved for runtime adopter findings.)
 
 /// Returns true if `code` is a syntactically valid mdatron-reserved code.
 ///
 /// **Stability: unstable at v0.1.x.** This function is `pub` to enable the
-/// cross-crate reserved-code-allocation lint at
+/// cross-crate reserved-range enforcement check at
 /// `mdatron-core/tests/phase_1_contracts.rs`, but is NOT part of the stable
 /// public API. External crates should not depend on this surface; it may
 /// move, rename, or change signature at any v0.1.x release. Per crosslink
