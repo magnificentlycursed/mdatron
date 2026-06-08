@@ -225,6 +225,57 @@ fn explain_e0080_emits_catalog_page() {
 }
 
 #[test]
+fn explain_json_emits_structured_page_for_baseline_code() {
+    // Per crosslink #13 AIE/F7: --json flag returns the parsed ExplainPage
+    // object. Closes the v0.1.x candidate; structured form is the
+    // agent-loop-consumer surface.
+    let out = run(&["explain", "MDATRON-E0001", "--json"]);
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "explain --json must exit 0 for baseline codes; stderr: {:?}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let value: serde_json::Value = serde_json::from_str(stdout.trim())
+        .unwrap_or_else(|e| panic!("stdout must be a single JSON object; got: {stdout:?}; {e}"));
+    let obj = value.as_object().expect("top-level JSON must be an object");
+    for required in [
+        "code",
+        "severity",
+        "status",
+        "introduced_in",
+        "what_this_means",
+        "how_to_fix",
+        "markdown",
+    ] {
+        assert!(
+            obj.contains_key(required),
+            "explain --json output missing required field '{required}'; got keys: {:?}",
+            obj.keys().collect::<Vec<_>>()
+        );
+    }
+    assert_eq!(
+        obj["code"].as_str(),
+        Some("MDATRON-E0001"),
+        "code field must match the requested code"
+    );
+}
+
+#[test]
+fn explain_json_on_unknown_code_exits_two() {
+    // The --json flag does not change exit-code semantics for unknown codes.
+    let unreserved = format!("{}-{}", "MDATRON", "E9999");
+    let out = run(&["explain", &unreserved, "--json"]);
+    assert_eq!(
+        out.status.code(),
+        Some(2),
+        "explain --json on unknown code must still exit 2; got {:?}",
+        out.status
+    );
+}
+
+#[test]
 fn explain_unknown_code_exits_two_with_not_found_message() {
     // E9999 is not in any reserved range; therefore not in the catalog.
     // Constructed at runtime to keep the unreserved-literal out of source

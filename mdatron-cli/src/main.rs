@@ -60,6 +60,12 @@ enum Command {
         /// (crosslink #13 SEC/F1 + RT/F2 convergence).
         #[arg(value_parser = parse_explain_code)]
         code: String,
+
+        /// Emit the explain page as a structured JSON object on stdout
+        /// (per crosslink #13 AIE/F7). Without this flag, the markdown body
+        /// is printed verbatim.
+        #[arg(long = "json")]
+        json: bool,
     },
 }
 
@@ -107,7 +113,7 @@ fn main() -> ExitCode {
             json,
             quiet,
         } => cmd_verify(project_root, schemas, patterns, files, json, quiet),
-        Command::Explain { code } => cmd_explain(&code),
+        Command::Explain { code, json } => cmd_explain(&code, json),
     }
 }
 
@@ -236,8 +242,21 @@ fn print_pipeline_error(e: &VerifyError) {
     eprintln!("{}", finding.format_tty());
 }
 
-fn cmd_explain(code: &str) -> ExitCode {
-    if let Some(page) = explain::lookup(code) {
+fn cmd_explain(code: &str, json: bool) -> ExitCode {
+    if json {
+        if let Some(structured) = explain::lookup_structured(code) {
+            match serde_json::to_string(&structured) {
+                Ok(line) => {
+                    println!("{line}");
+                    return ExitCode::from(0);
+                }
+                Err(e) => {
+                    eprintln!("error[MDATRON-E0080]: output serialization failed\n   = note: {e}");
+                    return ExitCode::from(2);
+                }
+            }
+        }
+    } else if let Some(page) = explain::lookup(code) {
         // Normalize trailing whitespace + write exactly one trailing newline.
         // Per crosslink #13 SE/F1.
         println!("{}", page.trim_end());
