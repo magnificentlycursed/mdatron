@@ -84,6 +84,42 @@ pub fn is_mdatron_namespace(code: &str) -> bool {
     code.starts_with("MDATRON-")
 }
 
+/// Migration-note pairs surfaced when an operator searches for a code
+/// whose semantic meaning has SHIFTED across emission sites during the
+/// bootstrap period. Each entry pairs `(code, prior-meaning-context)`
+/// — the operator who recalls the prior meaning sees a note pointing at
+/// the current semantic.
+///
+/// Per crosslink #12 UX/F1: an operator who saw "MDATRON-E0001:
+/// frontmatter-schema-violation" in pre-Phase-1 bootstrap output, then
+/// later sees "MDATRON-E0001: frontmatter-parse-failed", needs a
+/// discoverable bridge — searching old logs surfaces correct-but-stale
+/// guidance.
+///
+/// Post-v0.1.0, code semantics become semver-stable per Rust's
+/// E0000-series convention; this table grows by one entry per future
+/// rename event with the previous meaning preserved as the durable
+/// migration record.
+pub const MIGRATION_NOTES: &[(&str, &str)] = &[
+    (
+        "MDATRON-E0001",
+        "Pre-Phase-1 bootstrap snapshots emitted this code for \
+         frontmatter-schema-violation; from Phase 1 onward, E0001 is \
+         exclusively frontmatter-parse-failed and schema-violation \
+         moved to MDATRON-E0050. If you saw E0001 in pre-Phase-1 \
+         output and the message body said 'schema-violation', see \
+         `mdatron explain MDATRON-E0050`.",
+    ),
+];
+
+/// Look up the migration note for a code, if one exists.
+pub fn migration_note(code: &str) -> Option<&'static str> {
+    MIGRATION_NOTES
+        .iter()
+        .find(|(c, _)| *c == code)
+        .map(|(_, note)| *note)
+}
+
 /// Extract the value of a `**<field>:** <value>` line. Returns the trimmed
 /// value or `None` if the field marker isn't present.
 fn extract_field(markdown: &str, field: &str) -> Option<String> {

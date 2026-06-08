@@ -255,6 +255,28 @@ Semantics:
 
 **Predicates:** `defined(x)`, `is_null(x)`.
 
+### Authoring discipline for optional fields
+
+`Field`-on-Object-missing-key and `Field`-on-`Null` both return `Null`
+(symmetric semantics, v0.1.x). This means a rule like
+`every(d in $self.relevant_domains, ...)` silently passes when
+`relevant_domains` is absent — the `every` quantifier over `Null` returns
+true vacuously.
+
+For optional fields where absence has semantic meaning, the rule MUST
+guard with `defined()`:
+
+```yaml
+assert: defined($self.relevant_domains) and every(d in $self.relevant_domains, ...)
+```
+
+Author discipline: when writing rules against frontmatter fields that
+might be omitted, decide upfront whether the rule should fire on absence
+(use `defined()` + the actual check) or silently pass (use the
+unconditional check; the symmetric semantics make this safe). Per
+crosslink #12 AIE/F3 (Field-symmetry shifts authoring discipline from
+fail-loud to silent-Null).
+
 ### Cross-file indices (`keys:`)
 
 Declared at pattern level; built once per validation pass.
@@ -508,8 +530,8 @@ mdatron's own engine-level codes use the `MDATRON-` prefix:
 | `MDATRON-E0010` — `E0019` | Path-confinement violations (per [`BOUNDARY-PREAMBLE.md`](./BOUNDARY-PREAMBLE.md) § 7) |
 | `MDATRON-E0020` — `E0029` | DSL evaluation failures |
 | `MDATRON-E0030` — `E0039` | Delegate protocol failures |
-| `MDATRON-E0040` — `E0049` | Schema load failures |
-| `MDATRON-E0050` — `E0059` | Frontmatter schema validation failures (v0.1.x) |
+| `MDATRON-E0040` — `E0049` | Schema-document load failures (parsing `.json` schema files themselves) |
+| `MDATRON-E0050` — `E0059` | Frontmatter-against-schema validation failures (v0.1.x; the document being validated, not the schema) |
 | `MDATRON-E0060` — `E0069` | Reserved for future use |
 | `MDATRON-E0070` — `E0079` | IO failures during verify (v0.1.x) |
 | `MDATRON-E0080` — `E0089` | Pipeline orchestration failures (v0.1.x) |

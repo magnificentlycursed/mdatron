@@ -260,6 +260,15 @@ fn cmd_explain(code: &str, json: bool) -> ExitCode {
         // Normalize trailing whitespace + write exactly one trailing newline.
         // Per crosslink #13 SE/F1.
         println!("{}", page.trim_end());
+        // Per crosslink #12 UX/F1: if this code has a migration note (its
+        // semantic shifted across emission sites), surface it AFTER the
+        // page so operators recalling the prior meaning see the bridge.
+        if let Some(note) = explain::migration_note(code) {
+            println!();
+            println!("## Migration note");
+            println!();
+            println!("{note}");
+        }
         return ExitCode::from(0);
     }
     if explain::is_mdatron_namespace(code) {
