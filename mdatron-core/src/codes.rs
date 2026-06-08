@@ -7,6 +7,14 @@
 
 /// Returns true if `code` is a syntactically valid mdatron-reserved code.
 ///
+/// **Stability: unstable at v0.1.x.** This function is `pub` to enable the
+/// cross-crate reserved-code-allocation lint at
+/// `mdatron-core/tests/phase_1_contracts.rs`, but is NOT part of the stable
+/// public API. External crates should not depend on this surface; it may
+/// move, rename, or change signature at any v0.1.x release. Per crosslink
+/// #12 PE/F6 (revisit at v0.2). After binary-first Phase 4 collapses the
+/// workspace, this becomes a `pub(crate)` test-only helper.
+///
 /// Reserved ranges:
 /// - `MDATRON-E0001` — `E0009` Frontmatter parsing failures
 /// - `MDATRON-E0010` — `E0019` Path-confinement violations
@@ -19,6 +27,7 @@
 /// - `MDATRON-W0030` — `W0099` Warnings (delegates + configuration)
 /// - `MDATRON-W0100` — `W0199` Built-in pattern findings
 /// - `MDATRON-L0001` — `L0099` Engine-level lints
+#[doc(hidden)]
 pub fn is_reserved_mdatron_code(code: &str) -> bool {
     let Some(suffix) = code.strip_prefix("MDATRON-") else {
         return false;
