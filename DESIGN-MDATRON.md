@@ -258,10 +258,16 @@ Semantics:
 ### Authoring discipline for optional fields
 
 `Field`-on-Object-missing-key and `Field`-on-`Null` both return `Null`
-(symmetric semantics, v0.1.x). This means a rule like
-`every(d in $self.relevant_domains, ...)` silently passes when
-`relevant_domains` is absent — the `every` quantifier over `Null` returns
-true vacuously.
+(symmetric semantics, v0.1.x). `every` and `some` quantifiers over a
+`Null` collection follow standard empty-collection semantics —
+`every(_)` over `Null` is **vacuously true**; `some(_)` over `Null` is
+**vacuously false**. Per crosslink #12 SA/F4: this composes the
+Field-symmetry fix with the quantifier surface so patterns can naturally
+quantify over optional frontmatter fields without crashing.
+
+This means a rule like `every(d in $self.relevant_domains, ...)`
+silently passes when `relevant_domains` is absent — the `every`
+quantifier over `Null` returns true vacuously.
 
 For optional fields where absence has semantic meaning, the rule MUST
 guard with `defined()`:

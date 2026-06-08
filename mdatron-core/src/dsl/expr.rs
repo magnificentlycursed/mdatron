@@ -274,7 +274,16 @@ pub fn evaluate(expr: &Expr, ctx: &EvalContext) -> Result<Value, EvalError> {
         Expr::Call(name, args) => call_function(name, args, ctx),
 
         Expr::Every(binding_name, collection_expr, predicate_expr) => {
-            let collection = expect_array(evaluate(collection_expr, ctx)?)?;
+            // Field-on-Null and Field-on-missing-key both return Null
+            // (crosslink #12 Phase 1). Quantifiers over Null evaluate as
+            // empty-collection — `every` is vacuously true, `some` is
+            // vacuously false. Per crosslink #12 SA/F4: lets patterns
+            // naturally quantify over optional frontmatter fields.
+            let collection_value = evaluate(collection_expr, ctx)?;
+            if matches!(collection_value, Value::Null) {
+                return Ok(Value::Bool(true));
+            }
+            let collection = expect_array(collection_value)?;
             for item in collection {
                 let child_ctx = ctx.with_binding(binding_name.clone(), item);
                 let result = expect_bool(evaluate(predicate_expr, &child_ctx)?)?;
@@ -285,7 +294,11 @@ pub fn evaluate(expr: &Expr, ctx: &EvalContext) -> Result<Value, EvalError> {
             Ok(Value::Bool(true))
         }
         Expr::Some_(binding_name, collection_expr, predicate_expr) => {
-            let collection = expect_array(evaluate(collection_expr, ctx)?)?;
+            let collection_value = evaluate(collection_expr, ctx)?;
+            if matches!(collection_value, Value::Null) {
+                return Ok(Value::Bool(false));
+            }
+            let collection = expect_array(collection_value)?;
             for item in collection {
                 let child_ctx = ctx.with_binding(binding_name.clone(), item);
                 let result = expect_bool(evaluate(predicate_expr, &child_ctx)?)?;

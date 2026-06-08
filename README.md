@@ -104,6 +104,7 @@ pass `--quiet`.
 A minimal blog-post schema that requires `schema_class`, `title`, and
 `published_on`; rejects extra frontmatter fields:
 
+<!-- mdatron-roundtrip:schema-start -->
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -117,9 +118,11 @@ A minimal blog-post schema that requires `schema_class`, `title`, and
   "additionalProperties": false
 }
 ```
+<!-- mdatron-roundtrip:schema-end -->
 
 A markdown post that satisfies it:
 
+<!-- mdatron-roundtrip:md-start -->
 ```md
 ---
 schema_class: blog
@@ -132,6 +135,7 @@ published_on: 2026-06-07
 This file's frontmatter binds to the `blog` schema because the
 `schema_class:` field selects it.
 ```
+<!-- mdatron-roundtrip:md-end -->
 
 Drop both files into a project, run `mdatron verify`, and the file passes
 Layer 1. Add a frontmatter field the schema does not allow (e.g.,
@@ -145,6 +149,7 @@ JSON Schema is great for shapes but cannot express "this `published_on` must
 not be in the future." That is Layer 2 territory — DSL patterns at
 `.mdatron/patterns/<name>.yaml`:
 
+<!-- mdatron-roundtrip:pattern-start -->
 ```yaml
 mdatron_dsl_version: 1
 pattern:
@@ -156,6 +161,7 @@ pattern:
       code: MDATRON-W0100
       message: "title is empty for the blog post"
 ```
+<!-- mdatron-roundtrip:pattern-end -->
 
 `context: blog` selects every file whose frontmatter `schema_class` is `blog`.
 `assert:` fires the diagnostic when the expression evaluates to `false`. See

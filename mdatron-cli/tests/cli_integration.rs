@@ -427,13 +427,16 @@ fn readme_pattern_example_round_trips_against_mdatron_verify() {
     // single-milestone scope; the shared-helper refactor is a Phase 4
     // binary-first-plan candidate when the workspace collapses.
     let readme = readme_text();
-    let schema_fence = extract_fence(&readme, "json")
-        .expect("README must contain at least one ```json fenced schema example");
-    let pattern_fence = extract_fence(&readme, "yaml")
-        .expect("README must contain at least one ```yaml fenced pattern example");
-    let md_fence = extract_fence(&readme, "markdown")
-        .or_else(|| extract_fence(&readme, "md"))
-        .expect("README must contain at least one ```markdown / ```md fenced markdown example");
+    // Per crosslink #13 QE/F8: extract the round-trip-marked fences
+    // explicitly, not by "first matching language". This insulates the
+    // round-trip test from README reorganization that adds other fences
+    // in the same languages.
+    let schema_fence = extract_marked_fence(&readme, "schema")
+        .expect("README must contain a <!-- mdatron-roundtrip:schema-start --> marker");
+    let pattern_fence = extract_marked_fence(&readme, "pattern")
+        .expect("README must contain a <!-- mdatron-roundtrip:pattern-start --> marker");
+    let md_fence = extract_marked_fence(&readme, "md")
+        .expect("README must contain a <!-- mdatron-roundtrip:md-start --> marker");
 
     let proj = TempProject::new("readme-roundtrip");
     proj.write(".mdatron/schemas/example.json", &schema_fence);
@@ -512,14 +515,19 @@ fn verify_quiet_alone_suppresses_all_stderr_output() {
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-/// Extract the first ```<lang> fenced block's body from a markdown string.
-/// Returns the body without surrounding fences. None if no fence with that
-/// language tag is present.
-fn extract_fence(content: &str, lang: &str) -> Option<String> {
-    let open = format!("```{lang}");
-    let start = content.find(&open)?;
-    let after_open = start + open.len();
-    let after_newline = content[after_open..].find('\n')? + after_open + 1;
-    let close = content[after_newline..].find("```")?;
-    Some(content[after_newline..after_newline + close].to_string())
+/// Extract the body of a `<!-- mdatron-roundtrip:<label>-start -->` ...
+/// `<!-- mdatron-roundtrip:<label>-end -->` marked region's first code
+/// fence. Per crosslink #13 QE/F8: README fence ordering is no longer
+/// load-bearing for the round-trip test; only the explicit markers are.
+fn extract_marked_fence(content: &str, label: &str) -> Option<String> {
+    let start_marker = format!("<!-- mdatron-roundtrip:{label}-start -->");
+    let end_marker = format!("<!-- mdatron-roundtrip:{label}-end -->");
+    let region_start = content.find(&start_marker)? + start_marker.len();
+    let region_end = content[region_start..].find(&end_marker)? + region_start;
+    let region = &content[region_start..region_end];
+    // Inside the region, find the first ``` fence open + close
+    let fence_open = region.find("```")?;
+    let after_fence_marker = region[fence_open + 3..].find('\n')? + fence_open + 3 + 1;
+    let fence_close = region[after_fence_marker..].find("```")?;
+    Some(region[after_fence_marker..after_fence_marker + fence_close].to_string())
 }

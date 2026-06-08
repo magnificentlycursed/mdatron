@@ -197,6 +197,67 @@ fn field_on_non_object_value_still_errors() {
     );
 }
 
+// ── Quantifier-over-Null collections (crosslink #12 SA/F4) ─────────────────────
+
+#[test]
+fn every_over_missing_optional_field_does_not_panic() {
+    // Field-on-missing-key returns Null; every() over Null collections
+    // must evaluate as vacuously-true (empty-collection semantic), not
+    // as a TypeMismatch. Per crosslink #12 SA/F4.
+    let self_v = Value::Object(BTreeMap::from([
+        ("present_key".to_string(), Value::Str("x".into())),
+    ]));
+    let file_v = Value::Null;
+    let project_v = Value::Null;
+    let ctx = EvalContext::new(&self_v, &file_v, &project_v);
+
+    // every(d in $self.optional, d == "anything") where optional is absent.
+    let expr = Expr::Every(
+        "d".into(),
+        Box::new(Expr::Field(
+            Box::new(Expr::Var(VarRef::SelfVar)),
+            "optional".into(),
+        )),
+        Box::new(Expr::Eq(
+            Box::new(Expr::Var(VarRef::Binding("d".into()))),
+            Box::new(Expr::Lit(Value::Str("anything".into()))),
+        )),
+    );
+    let result = evaluate(&expr, &ctx).expect("every over Null must not error");
+    assert_eq!(
+        result,
+        Value::Bool(true),
+        "every over Null collection must be vacuously true"
+    );
+}
+
+#[test]
+fn some_over_missing_optional_field_does_not_panic() {
+    // some() over Null collections must evaluate as vacuously-false.
+    let self_v = Value::Object(BTreeMap::new());
+    let file_v = Value::Null;
+    let project_v = Value::Null;
+    let ctx = EvalContext::new(&self_v, &file_v, &project_v);
+
+    let expr = Expr::Some_(
+        "d".into(),
+        Box::new(Expr::Field(
+            Box::new(Expr::Var(VarRef::SelfVar)),
+            "optional".into(),
+        )),
+        Box::new(Expr::Eq(
+            Box::new(Expr::Var(VarRef::Binding("d".into()))),
+            Box::new(Expr::Lit(Value::Str("anything".into()))),
+        )),
+    );
+    let result = evaluate(&expr, &ctx).expect("some over Null must not error");
+    assert_eq!(
+        result,
+        Value::Bool(false),
+        "some over Null collection must be vacuously false"
+    );
+}
+
 // ── defined() carve-out drop ───────────────────────────────────────────────────
 
 #[test]
