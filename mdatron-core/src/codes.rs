@@ -23,13 +23,20 @@ pub fn is_reserved_mdatron_code(code: &str) -> bool {
     let Some(suffix) = code.strip_prefix("MDATRON-") else {
         return false;
     };
-    let Some(letter) = suffix.chars().next() else {
+    // Byte-aware split so non-ASCII bytes at position 0 (homoglyph evasion
+    // or accidental UTF-8) cannot trigger the panic-on-multibyte-slice that
+    // suffix[1..] would have if the first char were multi-byte. Per crosslink
+    // #12 SE/F2 + SEC/F3 convergence.
+    let Some(&letter_byte) = suffix.as_bytes().first() else {
         return false;
     };
-    let number_part = &suffix[1..];
+    let Some(number_part) = suffix.get(1..) else {
+        return false;
+    };
     let Ok(n) = number_part.parse::<u32>() else {
         return false;
     };
+    let letter = letter_byte as char;
     match letter {
         // Ranges per DESIGN-MDATRON.md:506-514 (amended for v0.1.x):
         //   E0001-E0009 frontmatter parsing failures

@@ -288,12 +288,16 @@ fn readme_exists_at_repo_root() {
 #[test]
 fn readme_contains_seven_required_topic_headings() {
     let readme = readme_text();
-    // The seven required topics per Phase 1a § "Required structural sections".
-    // Each topic is identified by a substring match against any markdown
-    // heading line — the exact heading wording is author-discretion;
-    // the requirement is audience-coverage.
+    // Filter to markdown heading lines (start with '#') before substring-matching.
+    // Per crosslink #13 QE/F1: the prior substring-anywhere match would have
+    // passed if the topic appeared only in prose or link text, not as an actual
+    // heading.
+    let heading_lines: Vec<String> = readme
+        .lines()
+        .filter(|l| l.trim_start().starts_with('#'))
+        .map(|l| l.to_lowercase())
+        .collect();
     let required_topics = [
-        // Topic 1 covered via the disambiguation assertion below
         ("Install", "install"),
         ("First run", "first run"),
         ("Schema example (Layer 1)", "schema"),
@@ -301,11 +305,12 @@ fn readme_contains_seven_required_topic_headings() {
         ("Relationship to vsdd", "vsdd"),
         ("Where to go next", "next"),
     ];
-    let lower = readme.to_lowercase();
     for (name, fragment) in required_topics {
         assert!(
-            lower.contains(fragment),
-            "mdatron/README.md must cover topic '{name}' (substring '{fragment}' missing)"
+            heading_lines.iter().any(|h| h.contains(fragment)),
+            "mdatron/README.md must cover topic '{name}' in a heading line \
+             (substring '{fragment}' must appear in a `#`-prefixed line); \
+             headings found: {heading_lines:?}"
         );
     }
 }
@@ -385,16 +390,23 @@ fn readme_pattern_example_round_trips_against_mdatron_verify() {
     proj.write("example.md", &md_fence);
 
     let out = run_verify_tty(&proj);
-    // The README example is allowed to be clean OR to emit a documented
-    // diagnostic; the failure mode this test catches is `mdatron verify`
-    // crashing the pipeline (exit 2) on the README's own example.
-    assert_ne!(
+    // The README's example is intentionally a clean case (title is non-empty;
+    // pattern asserts title != ""). Tighter assertion per crosslink #13 QE/F2:
+    // require exit 0 (clean) rather than just "not exit 2" — locks the
+    // documented "clean run" claim in the README's First run section.
+    assert_eq!(
         out.status.code(),
-        Some(2),
-        "README example must not crash `mdatron verify`'s pipeline (exit 2); \
-         got exit {:?}; stderr: {}",
+        Some(0),
+        "README example must produce a clean run (exit 0); got exit {:?}; \
+         stderr: {}",
         out.status,
         String::from_utf8_lossy(&out.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        stderr.contains("mdatron verify: clean"),
+        "clean run stderr must include the documented `mdatron verify: clean` \
+         summary line; got: {stderr}"
     );
 }
 

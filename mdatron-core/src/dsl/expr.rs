@@ -179,9 +179,12 @@ pub enum EvalError {
     #[error("undefined binding: {0}")]
     UndefinedBinding(String),
 
-    #[error("field '{field}' not found on {on}")]
-    FieldNotFound { field: String, on: &'static str },
-
+    // FieldNotFound was retired in crosslink #12 Phase 1b — the new
+    // Field-on-Object-missing-key behavior returns Ok(Value::Null) symmetric
+    // with Field-on-Null. The variant was unreachable; removed in crosslink
+    // #12 Phase 4-take-2 per SE/F3 + SA/F5 convergence. mdatron-core is
+    // unpublished pre-v0.1.0, so this enum surface is internal-only and the
+    // removal is not a semver break for external consumers.
     #[error("type mismatch: expected {expected}, got {got}")]
     TypeMismatch {
         expected: &'static str,

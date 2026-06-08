@@ -95,16 +95,21 @@ impl Finding {
     /// - Optional `   = explain: mdatron explain <explain_ref>` line when `explain_ref` is `Some`
     pub fn format_tty(&self) -> String {
         use std::fmt::Write;
-        let mut output = format!(
-            "{}[{}]: {}\n  --> {}:{}",
-            self.severity.label(),
-            self.code,
-            self.summary,
-            self.location.safe_display(),
-            self.location.line,
-        );
-        if self.location.column > 0 {
-            let _ = write!(output, ":{}", self.location.column);
+        // Header: `<label>[<code>]: <summary>`
+        let mut output = format!("{}[{}]: {}", self.severity.label(), self.code, self.summary);
+        // Source-span arrow only when the location is a real file:line —
+        // line == 0 marks "no location applicable" (e.g., pipeline-orchestration
+        // findings whose failure precedes any per-file processing).
+        if self.location.line > 0 {
+            let _ = write!(
+                output,
+                "\n  --> {}:{}",
+                self.location.safe_display(),
+                self.location.line,
+            );
+            if self.location.column > 0 {
+                let _ = write!(output, ":{}", self.location.column);
+            }
         }
         // Per crosslink #13 SE/F4: skip the `= note:` line when the message
         // is just the summary (no additional info beyond the headline).

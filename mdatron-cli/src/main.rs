@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
-use mdatron_core::diagnostic::Finding;
+use mdatron_core::diagnostic::{Finding, Location, Severity};
 use mdatron_core::verify::{verify, VerifyConfig, VerifyError};
 
 mod explain;
@@ -190,7 +190,10 @@ fn cmd_verify(
             }
             if output.summary.error_count == 0 && output.summary.warning_count == 0 {
                 if !json {
-                    println!("mdatron verify: clean");
+                    // Summary line on stderr (consistent with the count summary
+                    // below + with rustc convention). Per crosslink #13 QE/F2
+                    // surfacing the inconsistency during README test tightening.
+                    eprintln!("mdatron verify: clean");
                 }
             } else {
                 eprintln!(
@@ -214,7 +217,23 @@ fn print_finding(f: &Finding) {
 }
 
 fn print_pipeline_error(e: &VerifyError) {
-    eprintln!("error[MDATRON-E0080]: verify pipeline failed\n   = note: {e}");
+    // Construct a Finding for the pipeline error so the same format_tty
+    // path that renders per-file diagnostics renders this one too. Single
+    // source of truth for TTY rendering. Per crosslink #13 SE/F5.
+    let finding = Finding {
+        code: "MDATRON-E0080".into(),
+        severity: Severity::Error,
+        summary: "verify pipeline failed".into(),
+        message: e.to_string(),
+        help: None,
+        location: Location {
+            file: std::path::PathBuf::new(),
+            line: 0,
+            column: 0,
+        },
+        explain_ref: None,
+    };
+    eprintln!("{}", finding.format_tty());
 }
 
 fn cmd_explain(code: &str) -> ExitCode {
