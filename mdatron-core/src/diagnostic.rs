@@ -66,32 +66,34 @@ pub struct Finding {
 }
 
 impl Finding {
-    /// Render the finding in rustc-style TTY format.
+    /// Render the finding in rustc-style TTY format. Single source of truth
+    /// for TTY rendering across the engine + CLI per
+    /// `vsdd-cli/docs/refactor/phase-2-mdatron-json/phase-1a-behavioral-spec.md`.
     ///
-    /// Required output structure:
-    /// - Line 1: `<severity_label>[<code>]: <message>`
+    /// Output structure (matches rustc / clippy convention):
+    /// - Line 1: `<severity_label>[<code>]: <summary>`
     /// - Line 2: `  --> <file>:<line>` (column appended as `:<column>` when nonzero)
+    /// - Line 3: `   = note: <message>`
     /// - Optional `   = help: <help>` line when `help` is `Some`
     /// - Optional `   = explain: mdatron explain <explain_ref>` line when `explain_ref` is `Some`
     pub fn format_tty(&self) -> String {
+        use std::fmt::Write;
         let mut output = format!(
             "{}[{}]: {}\n  --> {}:{}",
             self.severity.label(),
             self.code,
-            self.message,
+            self.summary,
             self.location.file.display(),
             self.location.line,
         );
         if self.location.column > 0 {
-            use std::fmt::Write;
             let _ = write!(output, ":{}", self.location.column);
         }
+        let _ = write!(output, "\n   = note: {}", self.message);
         if let Some(help) = &self.help {
-            use std::fmt::Write;
             let _ = write!(output, "\n   = help: {help}");
         }
         if let Some(explain) = &self.explain_ref {
-            use std::fmt::Write;
             let _ = write!(output, "\n   = explain: mdatron explain {explain}");
         }
         output

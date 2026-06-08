@@ -12,6 +12,8 @@ use clap::{Parser, Subcommand};
 use mdatron_core::diagnostic::Finding;
 use mdatron_core::verify::{verify, VerifyConfig, VerifyError};
 
+mod explain;
+
 #[derive(Parser, Debug)]
 #[command(name = "mdatron", about, version, long_about = None)]
 #[command(after_help = "Descended from Schematron (ISO/IEC 19757-3). \
@@ -168,18 +170,10 @@ fn cmd_verify(
 }
 
 fn print_finding(f: &Finding) {
-    eprintln!(
-        "{label}[{code}]: {summary}\n  --> {file}:{line}\n   = note: {message}",
-        label = f.severity.label(),
-        code = f.code,
-        summary = f.summary,
-        file = f.location.file.display(),
-        line = f.location.line,
-        message = f.message,
-    );
-    if let Some(help) = &f.help {
-        eprintln!("   = help: {help}");
-    }
+    // Delegate to Finding::format_tty so the engine + CLI render TTY
+    // diagnostics through one code path. Per Phase 1a behavioral spec
+    // (vsdd-cli/docs/refactor/phase-2-mdatron-json/phase-1a-behavioral-spec.md).
+    eprintln!("{}", f.format_tty());
 }
 
 fn print_pipeline_error(e: &VerifyError) {
@@ -187,6 +181,30 @@ fn print_pipeline_error(e: &VerifyError) {
 }
 
 fn cmd_explain(code: &str) -> ExitCode {
-    eprintln!("mdatron explain {code}: extended docs not yet implemented at v0.1.0");
+    if let Some(page) = explain::lookup(code) {
+        print!("{page}");
+        if !page.ends_with('\n') {
+            println!();
+        }
+        return ExitCode::from(0);
+    }
+    if explain::is_mdatron_namespace(code) {
+        eprintln!(
+            "error[MDATRON-E0080]: no explain page found for {code}\n   \
+             = note: the explain catalog grows by one entry per emitted code; \
+             {code} is not in the v0.1.0 baseline catalog\n   \
+             = help: see DESIGN-MDATRON.md \u{00A7} Reserved mdatron codes for \
+             the structural meaning of unimplemented codes"
+        );
+        return ExitCode::from(2);
+    }
+    // Non-MDATRON namespace (e.g., VSDD-Exxxx): mdatron's catalog covers
+    // its own namespace only per phase-0-output-format/DESIGN.md
+    // namespace-separation contract.
+    eprintln!(
+        "error[MDATRON-E0080]: {code} is outside the mdatron namespace\n   \
+         = note: mdatron explain covers MDATRON-Exxxx codes only; \
+         see `vsdd explain {code}` for the VSDD namespace"
+    );
     ExitCode::from(2)
 }

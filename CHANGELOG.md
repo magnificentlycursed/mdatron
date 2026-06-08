@@ -10,6 +10,55 @@ the TRON blockchain.
 
 ## [Unreleased]
 
+### Added
+
+- `mdatron explain CODE` v0.1.0 baseline catalog — five per-code prose pages
+  embedded via `include_str!` (MDATRON-E0001, E0002, E0050, E0070, E0080); each
+  page carries the four required structural elements (`**Severity:**`,
+  `**Introduced in:**`, `## What this means`, `## How to fix`) per
+  crosslink #13 Phase 1a behavioral spec
+- TTY `= explain: mdatron explain <code>` line in rustc-shape diagnostic
+  output when the finding's `explain_ref` is `Some` — surfaces the explain
+  subcommand affordance at the per-finding diagnostic
+- `mdatron/README.md` — first-author README per DR-F1: install + first run
+  + Layer 1 schema example + Layer 2 pattern example + relationship to vsdd
+  + where to go next; TRON-blockchain disambiguation in section 1 per TW-F3
+- `mdatron-cli/tests/cli_integration.rs` — 18 CLI integration tests
+  covering the `explain` subcommand (5 baseline + unknown + foreign-
+  namespace), the rendered `= explain:` line, README presence + structure
+  + round-trip, and `--quiet --json` flag-combination drive-by
+
+### Changed
+
+- `Finding::format_tty` consolidated to the rustc shape: first line is
+  `<label>[<code>]: <summary>` (was `: <message>`); `<message>` now flows
+  through a `   = note: <message>` line. The rendered output is closer
+  to rustc / clippy convention. `mdatron-cli/src/main.rs:print_finding`
+  delegates to `format_tty` as single source of truth (Phase 2c
+  consolidation per crosslink #13)
+- `cmd_explain`'s not-found message now points to DESIGN-MDATRON.md §
+  Reserved mdatron codes for the structural meaning of unimplemented
+  codes (crosslink #13 Phase 4 Convergence 6: SC F1 + UX F4 + AIE F6
+  + DR F4)
+
+### Methodology notes
+
+- Phase 2 of the binary-first refactor honors the SO disposition recorded
+  2026-06-02 at `vsdd-cli/docs/refactor/phase-0-output-format/DESIGN.md` open
+  question #2: implement explain for v0.1.0; retain the `= explain:` line.
+  This reverses DR-F2's earlier "strip the line" finding
+- `binary-first-plan.md` row 14 amended in this cycle to reflect the
+  disposition reversal (was "Strip"; now "Implement explain catalog +
+  retain line")
+- `OperatorDirectiveApplied{directive: phase-2-explain-disposition-honored}`
+  captured at this commit per the M5 F3+F9 audit-trail-on-act discipline;
+  prose record at `vsdd-cli/docs/refactor/phase-2-mdatron-json/phase-1a-
+  behavioral-spec.md § Operator-directive housekeeping`
+- crosslink #13 cluster-batched Phase 3 cold-session: 18 reviews
+  (`review-log/2026-06-07-<domain>-phase-2-bundle.md`); ~137
+  findings; 0 hallucinations; 4 honest domain-wide dismissals
+  (Accessibility, Localization, Privacy, Performance Engineer-mostly)
+
 ## [0.0.1] - 2026-06-01
 
 ### Added
