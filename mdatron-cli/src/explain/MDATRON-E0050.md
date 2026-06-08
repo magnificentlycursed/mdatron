@@ -28,6 +28,11 @@ Run `mdatron verify` after the fix to confirm; schema violations frequently
 cluster (one wrong required field cascades into several `additionalProperties`
 violations) and the first fix may unlock the rest.
 
+## See also
+
+- [`DESIGN-MDATRON.md` § Layer 1: Structural (JSON Schema)](../../DESIGN-MDATRON.md#layer-1-structural-json-schema)
+  — schema validation semantics + edge cases
+
 ## Related codes
 
 - MDATRON-E0001 — frontmatter could not be parsed (fires before Layer 1)

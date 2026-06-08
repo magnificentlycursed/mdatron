@@ -28,6 +28,11 @@ Round-trip the frontmatter through a YAML parser locally (`yq`, `python -c
 "import yaml; yaml.safe_load(open('your-file.md').read())"`, or any YAML linter)
 to surface the precise parse error.
 
+## See also
+
+- [`DESIGN-MDATRON.md` § Layer 1: Structural (JSON Schema)](../../DESIGN-MDATRON.md#layer-1-structural-json-schema)
+  — frontmatter format + parsing rules
+
 ## Related codes
 
 - MDATRON-E0002 — `schema_class` references an unknown class (next layer up;

@@ -13,21 +13,32 @@ completion; no finding-level diagnostics were emitted for the project files.
 
 ## How to fix
 
-The accompanying `= note:` line names the specific failure shape. Common
-patterns:
+Read the accompanying `= note:` line for the specific failure shape, then
+apply the matching corrective pattern below.
 
-- **Missing `.mdatron/` directory.** The project has not been initialized with
-  the mdatron skeleton. Create `.mdatron/schemas/` and `.mdatron/patterns/` at
-  the project root (v0.1.x: `mdatron init` will scaffold this for you).
+**Common (operator-fixable):**
+
+- **Missing `.mdatron/` directory.** The project has not been initialized.
+  Create `.mdatron/schemas/` and `.mdatron/patterns/` at the project root
+  (v0.1.x: `mdatron init` will scaffold this for you).
 - **Malformed schema or pattern file.** A `.mdatron/schemas/*.json` or
-  `.mdatron/patterns/*.yaml` file failed to parse. Validate the file out-of-band
-  (`jq < schema.json`, `yq < pattern.yaml`) to surface the parse error.
+  `.mdatron/patterns/*.yaml` file failed to parse. Validate the file
+  out-of-band (`jq < schema.json`, `yq < pattern.yaml`) to surface the
+  parse error.
 - **Permission denied on a file mdatron tried to read.** Check filesystem
   permissions on the project's `.mdatron/` tree and the markdown files it
   references.
-- **JSON serialization failure under `--json`** (rare). Open an issue with the
-  finding payload that caused the failure; this is an internal bug not a
+
+**Rare (file an issue):**
+
+- **JSON serialization failure under `--json`.** Open an issue with the
+  finding payload that caused the failure; this is an internal bug, not a
   configuration problem.
+
+## See also
+
+- [`DESIGN-MDATRON.md` § Two-layer architecture](../../DESIGN-MDATRON.md#two-layer-architecture)
+  — how mdatron loads schemas + patterns before the pipeline runs
 
 ## Related codes
 

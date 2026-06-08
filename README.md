@@ -1,8 +1,9 @@
 # mdatron
 
-**A Rust CLI for typed-markdown validation.** Descended from XML's Schematron
-(ISO/IEC 19757-3) and applied to markdown documents with YAML frontmatter; not
-related to the TRON blockchain despite the `-tron` suffix.
+**A Rust CLI that validates markdown documents using JSON Schema (frontmatter)
+and a small Schematron-derived DSL (cross-field rules).** Descended from XML's
+Schematron (ISO/IEC 19757-3); not related to the TRON blockchain despite the
+`-tron` suffix.
 
 mdatron validates markdown documents in two layers:
 
@@ -17,30 +18,39 @@ mdatron validates markdown documents in two layers:
   in `.vsdd/registry/`," "every link target resolves to a heading in the
   project."
 
-Errors are rustc-shaped — codes, source spans, `= help:` hints, `= explain:`
-references to per-code prose, structured JSON output for machine consumers.
+Where mdatron fits relative to neighbouring tooling: markdownlint enforces
+style; Vale catches prose-quality concerns; dprint and mdformat reformat;
+mdatron is the only validator built around the typed-frontmatter + cross-
+document rules pattern. Errors are rustc-shaped — codes, source spans,
+`= help:` hints, `= explain:` references to per-code prose, structured JSON
+output for machine consumers.
 
 ## Install
 
 mdatron is in its bootstrap period (v0.1.0); the crates.io publish is gated
 on Phase 6 of the [binary-first refactor plan](
-../vsdd-cli/docs/refactor/binary-first-plan.md). Install from a local checkout
-for now:
+../vsdd-cli/docs/refactor/binary-first-plan.md). For now, install from a
+local checkout of the `magnificentlycursed` monorepo:
 
 ```
-git clone https://github.com/magnificentlycursed/mdatron
-cargo install --path mdatron/mdatron-cli --locked
+git clone https://github.com/magnificentlycursed/magnificentlycursed
+cargo install --path magnificentlycursed/mdatron/mdatron-cli --locked
 mdatron --version
 ```
+
+(The `mdatron` subdirectory lives inside the parent `magnificentlycursed`
+repo; standalone-`mdatron` packaging lands at Phase 6.)
 
 The `--locked` flag pins transitive dependencies to `Cargo.lock`; recommended
 for reproducible builds and CI.
 
-Once mdatron 0.1.0 is published, the install command becomes:
+Once mdatron 0.1.0 is published to crates.io, the install command becomes:
 
 ```
-cargo install mdatron --locked
+cargo install mdatron --locked --version "0.1.0"
 ```
+
+(Version-pin to avoid unintentional upgrades when the crate publishes.)
 
 ## First run
 
@@ -52,6 +62,10 @@ cd my-typed-docs
 mkdir -p .mdatron/schemas .mdatron/patterns
 ```
 
+The `.mdatron/` directory is required: running `mdatron verify` against a
+project without it exits 2 with `MDATRON-E0080: pipeline-orchestration-
+failure`. (`mdatron init`, v0.1.x, will scaffold this automatically.)
+
 Drop a JSON Schema at `.mdatron/schemas/blog.json` (a Layer 1 example follows
 below), drop a markdown file at the project root with matching frontmatter,
 and run:
@@ -60,10 +74,28 @@ and run:
 mdatron verify
 ```
 
-A clean run prints `mdatron verify: clean` and exits 0. A run with diagnostics
-prints them in rustc-shape on stderr and exits 1; pipeline failures (missing
-schema directory, malformed pattern file, IO failure) print on stderr and exit
-2. The `--json` flag emits a single JSON output object on stdout for machine
+A clean run looks like:
+
+```
+$ mdatron verify
+mdatron verify: clean
+```
+
+A run with diagnostics emits rustc-shape blocks on stderr and exits 1:
+
+```
+$ mdatron verify
+error[MDATRON-E0050]: frontmatter-schema-violation
+  --> bad.md:1
+   = note: Additional properties are not allowed ('extra' was unexpected)
+   = explain: mdatron explain MDATRON-E0050
+mdatron verify: 1 error(s), 0 warning(s) across 1 finding(s)
+```
+
+The `= explain:` line is copyable: paste `mdatron explain MDATRON-E0050` into
+your shell to read the per-code prose. Pipeline failures (missing schema
+directory, malformed pattern file, IO failure) print on stderr and exit 2.
+The `--json` flag emits a single JSON output object on stdout for machine
 consumers; stderr still carries the rustc-shaped diagnostics unless you also
 pass `--quiet`.
 
@@ -74,6 +106,7 @@ A minimal blog-post schema that requires `schema_class`, `title`, and
 
 ```json
 {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "required": ["schema_class", "title", "published_on"],
   "properties": {
@@ -87,7 +120,7 @@ A minimal blog-post schema that requires `schema_class`, `title`, and
 
 A markdown post that satisfies it:
 
-```markdown
+```md
 ---
 schema_class: blog
 title: hello mdatron
@@ -133,9 +166,16 @@ mechanism).
 
 ## Relationship to vsdd
 
-[vsdd](../vsdd-cli/) is the first downstream adopter of mdatron and the source
-of the methodology vocabulary (phase primers, domain prompts, finding
-artifacts, the VSDD whitepaper alignment). vsdd composes mdatron in two ways:
+**mdatron is methodology-agnostic.** The Layer 1 + Layer 2 architecture is
+useful for any "typed markdown documents with cross-reference integrity"
+project — Architecture Decision Records, RFC collections, structured
+changelogs, methodology specs. If you're not adopting VSDD, you can stop
+reading this section here.
+
+If you *are* adopting VSDD: [vsdd](../vsdd-cli/) is the first downstream
+adopter of mdatron and the source of the methodology vocabulary (phase
+primers, domain prompts, finding artifacts, the VSDD whitepaper alignment).
+vsdd composes mdatron in two ways:
 
 - **vsdd's `verify` subcommand spawns `mdatron verify --json`** as a
   subprocess and parses the output object on stdout per the
@@ -148,13 +188,12 @@ artifacts, the VSDD whitepaper alignment). vsdd composes mdatron in two ways:
   methodology is encoded as mdatron schemas + patterns; mdatron is the
   engine, not the methodology.
 
-mdatron itself is methodology-agnostic. The Layer 1 + Layer 2 architecture is
-useful for any "typed markdown documents with cross-reference integrity"
-project — Architecture Decision Records, RFC collections, structured
-changelogs, methodology specs. The mdatron-examples library (v1.0
-candidate; not in v0.1.0 — see [`V1-SHIP-CRITERIA.md`](./V1-SHIP-CRITERIA.md))
-will ship four generalized artifact-class schemas (DESIGN doc, manual-test,
-PR template, CHANGELOG) for non-VSDD adopters.
+The
+[mdatron-examples library](./DESIGN-MDATRON.md#mdatron-examples-library)
+(v1.0 candidate; not in v0.1.0 — see
+[`V1-SHIP-CRITERIA.md`](./V1-SHIP-CRITERIA.md)) will ship four generalized
+artifact-class schemas (DESIGN doc, manual-test, PR template, CHANGELOG) for
+non-VSDD adopters.
 
 ## Where to go next
 

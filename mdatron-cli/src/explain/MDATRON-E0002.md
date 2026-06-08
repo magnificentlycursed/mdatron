@@ -24,6 +24,11 @@ Three corrective paths, listed in order of likelihood:
    remove the `schema_class:` line entirely (a file with no `schema_class`
    skips Layer 1; Layer 2 patterns still apply via path-glob selectors).
 
+## See also
+
+- [`DESIGN-MDATRON.md` § Layer 1: Structural (JSON Schema)](../../DESIGN-MDATRON.md#layer-1-structural-json-schema)
+  — schema routing + `schema_class` frontmatter binding
+
 ## Related codes
 
 - MDATRON-E0001 — frontmatter could not be parsed (fires first if the YAML is

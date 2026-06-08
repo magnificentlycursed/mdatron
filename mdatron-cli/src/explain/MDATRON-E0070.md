@@ -23,6 +23,11 @@ Two corrective paths:
   current-directory default is operator-ergonomic but works only when the
   process's working directory is reachable.
 
+## See also
+
+- [`DESIGN-MDATRON.md` § CLI surface](../../DESIGN-MDATRON.md#cli-surface)
+  — `--project-root` flag semantics
+
 ## Related codes
 
 - MDATRON-E0080 — pipeline orchestration failed AFTER project root was resolved
