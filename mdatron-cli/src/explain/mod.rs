@@ -57,6 +57,36 @@ pub fn lookup(code: &str) -> Option<&'static str> {
     }
 }
 
+/// Render the compact one-liner form of an explain page. Suitable for
+/// PostToolUse hook context budgets + high-density agent-loop scenarios.
+/// Per crosslink #13 AIE/F2.
+///
+/// Form: `<code> <severity>: <summary> — <first-sentence-of-how-to-fix>`.
+/// Returns `None` when the code is not in the catalog.
+pub fn lookup_compact(code: &str) -> Option<String> {
+    let page = lookup_structured(code)?;
+    // Summary derived from the H1 title — the part after the em-dash.
+    let summary = page
+        .markdown
+        .lines()
+        .next()
+        .and_then(|l| l.strip_prefix("# "))
+        .and_then(|l| l.split_once('\u{2014}').or_else(|| l.split_once("-")))
+        .map(|(_, after)| after.trim().to_string())
+        .unwrap_or_else(|| page.code.clone());
+    // First sentence of "How to fix" (up to first . or newline).
+    let first_sentence = page
+        .how_to_fix
+        .split(|c: char| c == '.' || c == '\n')
+        .next()
+        .map(|s| s.trim().to_string())
+        .unwrap_or_default();
+    Some(format!(
+        "{} {}: {} — {}",
+        page.code, page.severity, summary, first_sentence
+    ))
+}
+
 /// Look up + parse the explain page into the structured [`ExplainPage`] form.
 /// Returns `None` if the code is not in the catalog OR if the page is missing
 /// any required structural element (the unit test catches authoring drift).

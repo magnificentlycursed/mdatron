@@ -66,6 +66,12 @@ enum Command {
         /// is printed verbatim.
         #[arg(long = "json")]
         json: bool,
+
+        /// Emit a one-line compact form: `<code> <severity>: <summary> —
+        /// <first-sentence-of-fix>`. Suitable for agent-loop hot paths +
+        /// PostToolUse hook context budgets (per crosslink #13 AIE/F2).
+        #[arg(long = "compact", conflicts_with = "json")]
+        compact: bool,
     },
 }
 
@@ -113,7 +119,11 @@ fn main() -> ExitCode {
             json,
             quiet,
         } => cmd_verify(project_root, schemas, patterns, files, json, quiet),
-        Command::Explain { code, json } => cmd_explain(&code, json),
+        Command::Explain {
+            code,
+            json,
+            compact,
+        } => cmd_explain(&code, json, compact),
     }
 }
 
@@ -242,8 +252,13 @@ fn print_pipeline_error(e: &VerifyError) {
     eprintln!("{}", finding.format_tty());
 }
 
-fn cmd_explain(code: &str, json: bool) -> ExitCode {
-    if json {
+fn cmd_explain(code: &str, json: bool, compact: bool) -> ExitCode {
+    if compact {
+        if let Some(line) = explain::lookup_compact(code) {
+            println!("{line}");
+            return ExitCode::from(0);
+        }
+    } else if json {
         if let Some(structured) = explain::lookup_structured(code) {
             match serde_json::to_string(&structured) {
                 Ok(line) => {

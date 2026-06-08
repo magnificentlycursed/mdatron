@@ -263,6 +263,42 @@ fn explain_json_emits_structured_page_for_baseline_code() {
 }
 
 #[test]
+fn explain_compact_emits_one_liner_for_baseline_code() {
+    // Per crosslink #13 AIE/F2: --compact emits one line suitable for
+    // agent-loop context budgets.
+    let out = run(&["explain", "MDATRON-E0050", "--compact"]);
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "explain --compact must exit 0 for baseline codes"
+    );
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let trimmed = stdout.trim();
+    assert!(
+        !trimmed.contains('\n'),
+        "explain --compact output must be one line; got: {trimmed:?}"
+    );
+    assert!(
+        trimmed.starts_with("MDATRON-E0050 error:"),
+        "compact output must start with `<code> <severity>:`; got: {trimmed:?}"
+    );
+}
+
+#[test]
+fn explain_compact_and_json_are_mutually_exclusive() {
+    let out = run(&["explain", "MDATRON-E0001", "--compact", "--json"]);
+    assert!(
+        !out.status.success(),
+        "--compact + --json must conflict at clap parse time"
+    );
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        stderr.contains("cannot be used with") || stderr.contains("conflicts"),
+        "stderr should name the flag conflict; got: {stderr:?}"
+    );
+}
+
+#[test]
 fn explain_json_on_unknown_code_exits_two() {
     // The --json flag does not change exit-code semantics for unknown codes.
     let unreserved = format!("{}-{}", "MDATRON", "E9999");
