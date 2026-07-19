@@ -12,7 +12,7 @@
 //! - File where closing `---` is missing → `Ok(None)` (no frontmatter detected)
 //! - Dashes inside body without leading newline → not matched as closing
 //!
-//! Phase 2a Red Gate: body stubbed with `todo!()`. Tests below assert the contracts.
+//! Implemented; tests below assert the contracts.
 
 use crate::Error;
 use serde_yaml::Value;

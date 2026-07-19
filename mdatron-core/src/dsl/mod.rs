@@ -1,10 +1,14 @@
-//! Schematron-derived DSL: pattern files parsed into typed AST.
+//! Schematron-derived DSL: pattern files parsed into a typed AST and evaluated.
 //!
-//! v0.1.x ships the parser + AST types. Expression evaluation, the standard library,
-//! and cross-file index land in subsequent iterations. Expressions are stored as
-//! `String` for now; the parser does NOT validate their internal syntax.
+//! Implemented: the pattern-file parser (`parser`), the expression parser
+//! (`expr_parser`) and evaluator (`expr`) with quantifiers (`every`, `some`, `in`),
+//! the value/collection builtins (`defined`, `count`, `len`, `union`, `intersect`,
+//! `difference`, `concat`, `join`), arithmetic and comparison, `let:` bindings,
+//! `{{expr}}` message interpolation, and the path-confined cross-file `key()` index
+//! (`index`). Scope is cross-file and registry validation; body-content extraction
+//! is out of scope (see the DSL falsifiability report and V1-SHIP-CRITERIA).
 //!
-//! See DESIGN-MDATRON.md § DSL specification for the full surface.
+//! See DESIGN-MDATRON.md § DSL specification for the implemented surface.
 
 pub mod expr;
 pub mod expr_parser;

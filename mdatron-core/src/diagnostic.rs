@@ -1,8 +1,7 @@
 //! Diagnostic types: [`Finding`], [`Severity`], [`Location`].
 //!
-//! Phase 2a Red Gate: method bodies are stubbed with `todo!()`. Tests in this module assert
-//! the behavioral contracts; they fail-by-default (panic on `todo!()`). Phase 2b implements
-//! the bodies to turn the Red Gate green.
+//! Implemented; tests in this module assert the behavioral contracts, including the
+//! rustc-shaped `format_tty` rendering.
 
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
