@@ -10,6 +10,9 @@ the TRON blockchain.
 
 ## [Unreleased]
 
+### Fixed
+- Path-confinement helper: fallback and starts_with flaws; traversal test passes only via macOS symlink (L2)
+
 ### Security
 - Competent-demotion refusal asserts an engine signal the engine cannot emit (L41)
 - Demotion falsification and seed conflate pin drift with annotation refusal (L39)
