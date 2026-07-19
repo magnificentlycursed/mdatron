@@ -35,6 +35,7 @@ the TRON blockchain.
 - Inline interpolation does not fit block prefix marking (L4)
 
 ### Added
+- Design increment: conformance-check families (phase 1a cycle) (#1)
 
 - `mdatron explain CODE` v0.1.0 baseline catalog — five per-code prose pages
   embedded via `include_str!` (MDATRON-E0001, E0002, E0050, E0070, E0080); each
