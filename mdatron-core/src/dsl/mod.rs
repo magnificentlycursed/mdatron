@@ -20,6 +20,4 @@ pub use expr::{evaluate, EvalContext, EvalError, Expr, Value, VarRef};
 pub use expr_parser::{parse_expression, ParseError as ExprParseError};
 pub use index::{Index, IndexError, IndexRegistry};
 pub use parser::parse_pattern_file;
-pub use types::{
-    ContextSelector, KeyDecl, LocationSpec, Pattern, PatternFile, Rule,
-};
+pub use types::{ContextSelector, KeyDecl, LocationSpec, Pattern, PatternFile, Rule};

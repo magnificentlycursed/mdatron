@@ -132,10 +132,7 @@ fn field_on_object_missing_key_returns_null() {
     let project_v = Value::Null;
     let ctx = EvalContext::new(&self_v, &file_v, &project_v);
 
-    let expr = Expr::Field(
-        Box::new(Expr::Var(VarRef::SelfVar)),
-        "missing_key".into(),
-    );
+    let expr = Expr::Field(Box::new(Expr::Var(VarRef::SelfVar)), "missing_key".into());
     let result = evaluate(&expr, &ctx);
 
     match result {
@@ -156,10 +153,7 @@ fn field_on_null_still_returns_null() {
     let project_v = Value::Null;
     let ctx = EvalContext::new(&self_v, &file_v, &project_v);
 
-    let expr = Expr::Field(
-        Box::new(Expr::Var(VarRef::SelfVar)),
-        "anything".into(),
-    );
+    let expr = Expr::Field(Box::new(Expr::Var(VarRef::SelfVar)), "anything".into());
     let result = evaluate(&expr, &ctx).unwrap();
     assert_eq!(result, Value::Null);
 }
@@ -195,10 +189,7 @@ fn field_on_non_object_value_still_errors() {
     let project_v = Value::Null;
     let ctx = EvalContext::new(&self_v, &file_v, &project_v);
 
-    let expr = Expr::Field(
-        Box::new(Expr::Var(VarRef::SelfVar)),
-        "anything".into(),
-    );
+    let expr = Expr::Field(Box::new(Expr::Var(VarRef::SelfVar)), "anything".into());
     let result = evaluate(&expr, &ctx);
     assert!(
         matches!(result, Err(EvalError::TypeMismatch { .. })),
@@ -213,9 +204,10 @@ fn every_over_missing_optional_field_does_not_panic() {
     // Field-on-missing-key returns Null; every() over Null collections
     // must evaluate as vacuously-true (empty-collection semantic), not
     // as a TypeMismatch. Per crosslink #12 SA/F4.
-    let self_v = Value::Object(BTreeMap::from([
-        ("present_key".to_string(), Value::Str("x".into())),
-    ]));
+    let self_v = Value::Object(BTreeMap::from([(
+        "present_key".to_string(),
+        Value::Str("x".into()),
+    )]));
     let file_v = Value::Null;
     let project_v = Value::Null;
     let ctx = EvalContext::new(&self_v, &file_v, &project_v);
@@ -446,9 +438,7 @@ fn extract_mdatron_code_literals_with_lines(content: &str) -> Vec<(usize, String
                 let after = &bytes[i + prefix_len..];
                 let letter = after[0];
                 let digits = &after[1..5];
-                if matches!(letter, b'E' | b'W' | b'L')
-                    && digits.iter().all(u8::is_ascii_digit)
-                {
+                if matches!(letter, b'E' | b'W' | b'L') && digits.iter().all(u8::is_ascii_digit) {
                     let code_end = i + prefix_len + 5;
                     out.push((
                         line_no,

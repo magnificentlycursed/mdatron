@@ -417,7 +417,8 @@ fn readme_contains_tron_disambiguation_sentence() {
     let head: String = readme.lines().take(30).collect::<Vec<_>>().join("\n");
     let head_lower = head.to_lowercase();
     assert!(
-        head_lower.contains("tron") && (head_lower.contains("schematron") || head_lower.contains("blockchain")),
+        head_lower.contains("tron")
+            && (head_lower.contains("schematron") || head_lower.contains("blockchain")),
         "mdatron/README.md section 1 must disambiguate from TRON blockchain \
          (cite Schematron lineage OR explicitly mention the blockchain); \
          got section 1: {head}"

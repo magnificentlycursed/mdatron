@@ -73,7 +73,9 @@ pub enum VerifyError {
     #[error("index build error: {0}")]
     IndexBuild(#[from] IndexError),
 
-    #[error("expression parse error in pattern '{pattern_id}' rule '{rule_id}' ({field}): {error}")]
+    #[error(
+        "expression parse error in pattern '{pattern_id}' rule '{rule_id}' ({field}): {error}"
+    )]
     ExprParse {
         pattern_id: String,
         rule_id: String,
@@ -111,10 +113,13 @@ pub fn verify(config: &VerifyConfig) -> Result<Vec<Finding>, VerifyError> {
 
     // Canonicalize the project root so globs joined against it produce absolute
     // patterns. This avoids cwd ambiguity when callers pass a relative root.
-    let project_root = config.project_root.canonicalize().map_err(|e| VerifyError::Io {
-        path: config.project_root.to_string_lossy().into_owned(),
-        error: e.to_string(),
-    })?;
+    let project_root = config
+        .project_root
+        .canonicalize()
+        .map_err(|e| VerifyError::Io {
+            path: config.project_root.to_string_lossy().into_owned(),
+            error: e.to_string(),
+        })?;
 
     // Build a single registry from the union of all patterns' keys: declarations.
     let mut all_keys = Vec::new();
@@ -129,8 +134,7 @@ pub fn verify(config: &VerifyConfig) -> Result<Vec<Finding>, VerifyError> {
         let paths = glob::glob(&absolute.to_string_lossy())
             .map_err(|e| VerifyError::Glob(format!("'{glob_pattern}': {e}")))?;
         for entry in paths {
-            let path =
-                entry.map_err(|e| VerifyError::Glob(format!("'{glob_pattern}': {e}")))?;
+            let path = entry.map_err(|e| VerifyError::Glob(format!("'{glob_pattern}': {e}")))?;
             verify_file(&path, &schemas, &patterns, &registry, &mut findings)?;
         }
     }
@@ -326,8 +330,8 @@ fn verify_rule(
     rc: &RuleContext,
     findings: &mut Vec<Finding>,
 ) -> Result<(), VerifyError> {
-    let mut ctx = EvalContext::new(rc.self_value, rc.file_value, rc.project_value)
-        .with_indices(rc.registry);
+    let mut ctx =
+        EvalContext::new(rc.self_value, rc.file_value, rc.project_value).with_indices(rc.registry);
 
     // Evaluate let bindings in declared order (BTreeMap iterates by key — not strictly the
     // declared order, but stable; for v0.1.x this is acceptable).
@@ -346,13 +350,12 @@ fn verify_rule(
         ctx.bindings.insert(name.clone(), value);
     }
 
-    let assert_expr =
-        parse_expression(&rule.assert).map_err(|e| VerifyError::ExprParse {
-            pattern_id: pf.pattern.id.clone(),
-            rule_id: rule.id.clone(),
-            field: "assert".into(),
-            error: e.message,
-        })?;
+    let assert_expr = parse_expression(&rule.assert).map_err(|e| VerifyError::ExprParse {
+        pattern_id: pf.pattern.id.clone(),
+        rule_id: rule.id.clone(),
+        field: "assert".into(),
+        error: e.message,
+    })?;
     let result = evaluate(&assert_expr, &ctx).map_err(|e| VerifyError::Eval {
         pattern_id: pf.pattern.id.clone(),
         rule_id: rule.id.clone(),
@@ -361,14 +364,13 @@ fn verify_rule(
 
     let passed = matches!(result, Value::Bool(true));
     if !passed {
-        let message = interpolate_message(&rule.message, &ctx).map_err(|e| {
-            VerifyError::ExprParse {
+        let message =
+            interpolate_message(&rule.message, &ctx).map_err(|e| VerifyError::ExprParse {
                 pattern_id: pf.pattern.id.clone(),
                 rule_id: rule.id.clone(),
                 field: "message".into(),
                 error: e,
-            }
-        })?;
+            })?;
         findings.push(Finding {
             code: rule.code.clone(),
             severity: Severity::Error,
@@ -397,7 +399,10 @@ fn context_matches(context: &ContextSelector, schema_class: Option<&str>, path: 
                 schema_class.map(|sc| sc == s).unwrap_or(false)
             }
         }
-        ContextSelector::Combined { schema_class: sc, path: p } => {
+        ContextSelector::Combined {
+            schema_class: sc,
+            path: p,
+        } => {
             let schema_ok = sc
                 .as_deref()
                 .map(|expected| schema_class.map(|sc| sc == expected).unwrap_or(false))
@@ -479,8 +484,7 @@ mod tests {
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
                 .as_nanos();
-            let path =
-                std::env::temp_dir().join(format!("mdatron-verify-{label}-{nanos}"));
+            let path = std::env::temp_dir().join(format!("mdatron-verify-{label}-{nanos}"));
             std::fs::create_dir_all(&path).unwrap();
             Self(path)
         }
@@ -517,7 +521,10 @@ mod tests {
     #[test]
     fn clean_project_returns_zero_findings() {
         let proj = TempProject::new("clean");
-        proj.write(".mdatron/schemas/phase-primer.json", minimal_phase_primer_schema());
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
         proj.write(
             "primer.md",
             "---\nschema_class: phase-primer\nphase: phase-1a\nrelevant_domains: [se]\n---\n# body\n",
@@ -525,13 +532,19 @@ mod tests {
 
         let cfg = VerifyConfig::new(&proj.0);
         let findings = verify(&cfg).unwrap();
-        assert!(findings.is_empty(), "expected no findings; got {findings:?}");
+        assert!(
+            findings.is_empty(),
+            "expected no findings; got {findings:?}"
+        );
     }
 
     #[test]
     fn schema_violation_emits_mdatron_e0001() {
         let proj = TempProject::new("schema-fail");
-        proj.write(".mdatron/schemas/phase-primer.json", minimal_phase_primer_schema());
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
         proj.write(
             "bad.md",
             "---\nschema_class: phase-primer\nphase: invalid-phase\nrelevant_domains: [se]\n---\n",
@@ -541,7 +554,9 @@ mod tests {
         let findings = verify(&cfg).unwrap();
         assert_eq!(findings.len(), 1);
         assert_eq!(findings[0].code, "MDATRON-E0050");
-        assert!(findings[0].message.contains("invalid-phase") || findings[0].message.contains("enum"));
+        assert!(
+            findings[0].message.contains("invalid-phase") || findings[0].message.contains("enum")
+        );
     }
 
     #[test]
@@ -599,7 +614,10 @@ pattern:
 
         let cfg = VerifyConfig::new(&proj.0);
         let findings = verify(&cfg).unwrap();
-        assert!(findings.is_empty(), "no findings expected; got {findings:?}");
+        assert!(
+            findings.is_empty(),
+            "no findings expected; got {findings:?}"
+        );
     }
 
     #[test]
@@ -642,16 +660,30 @@ pattern:
 
         let cfg = VerifyConfig::new(&proj.0);
         let findings = verify(&cfg).unwrap();
-        assert_eq!(findings.len(), 1, "expected exactly one finding (the bad primer); got {findings:?}");
+        assert_eq!(
+            findings.len(),
+            1,
+            "expected exactly one finding (the bad primer); got {findings:?}"
+        );
         assert_eq!(findings[0].code, "MDATRON-W0100");
-        assert!(findings[0].location.file.to_string_lossy().contains("bad.md"));
+        assert!(findings[0]
+            .location
+            .file
+            .to_string_lossy()
+            .contains("bad.md"));
     }
 
     #[test]
     fn file_without_frontmatter_is_skipped() {
         let proj = TempProject::new("no-fm");
-        proj.write(".mdatron/schemas/phase-primer.json", minimal_phase_primer_schema());
-        proj.write("plain.md", "# Just a plain markdown file\nNo frontmatter here.\n");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(
+            "plain.md",
+            "# Just a plain markdown file\nNo frontmatter here.\n",
+        );
 
         let cfg = VerifyConfig::new(&proj.0);
         let findings = verify(&cfg).unwrap();
@@ -723,8 +755,7 @@ pattern:
         let file_v = Value::Null;
         let project_v = Value::Null;
         let ctx = EvalContext::new(&self_v, &file_v, &project_v);
-        let result =
-            interpolate_message("got phase: {{$self.phase}}", &ctx).unwrap();
+        let result = interpolate_message("got phase: {{$self.phase}}", &ctx).unwrap();
         assert_eq!(result, "got phase: phase-2a");
     }
 
@@ -747,8 +778,7 @@ pattern:
         let file_v = Value::Null;
         let project_v = Value::Null;
         let ctx = EvalContext::new(&self_v, &file_v, &project_v);
-        let result =
-            interpolate_message("no interpolation markers here", &ctx).unwrap();
+        let result = interpolate_message("no interpolation markers here", &ctx).unwrap();
         assert_eq!(result, "no interpolation markers here");
     }
 }

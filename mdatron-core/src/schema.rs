@@ -129,7 +129,10 @@ mod tests {
         .unwrap();
         let fm = yaml("name: example");
         let errors = schema.validate(&fm);
-        assert!(errors.is_empty(), "valid frontmatter should produce zero errors; got {errors:?}");
+        assert!(
+            errors.is_empty(),
+            "valid frontmatter should produce zero errors; got {errors:?}"
+        );
     }
 
     #[test]
@@ -145,7 +148,11 @@ mod tests {
         .unwrap();
         let fm = yaml("name: example");
         let errors = schema.validate(&fm);
-        assert_eq!(errors.len(), 1, "missing one required field should produce one error");
+        assert_eq!(
+            errors.len(),
+            1,
+            "missing one required field should produce one error"
+        );
         // The validator's message should name the missing field.
         assert!(
             errors[0].message.contains("version"),
@@ -183,7 +190,10 @@ mod tests {
         .unwrap();
         let fm = yaml("status: pending");
         let errors = schema.validate(&fm);
-        assert!(!errors.is_empty(), "enum violation should produce at least one error");
+        assert!(
+            !errors.is_empty(),
+            "enum violation should produce at least one error"
+        );
         assert_eq!(errors[0].instance_path, "/status");
     }
 

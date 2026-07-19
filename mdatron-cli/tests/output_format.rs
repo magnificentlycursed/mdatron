@@ -80,9 +80,7 @@ fn run_verify_json(proj: &TempProject) -> Output {
 fn parse_output(output: &Output) -> serde_json::Value {
     let stdout = String::from_utf8_lossy(&output.stdout);
     serde_json::from_str(&stdout).unwrap_or_else(|e| {
-        panic!(
-            "stdout must contain a parseable JSON output (got: {stdout:?}, parse error: {e})"
-        )
+        panic!("stdout must contain a parseable JSON output (got: {stdout:?}, parse error: {e})")
     })
 }
 
@@ -136,7 +134,12 @@ fn output_top_level_shape_is_complete() {
     );
 
     let summary = env.get("summary").and_then(|v| v.as_object()).unwrap();
-    for count_field in ["error_count", "warning_count", "lint_count", "files_checked"] {
+    for count_field in [
+        "error_count",
+        "warning_count",
+        "lint_count",
+        "files_checked",
+    ] {
         assert!(
             summary.get(count_field).and_then(|v| v.as_u64()).is_some(),
             "summary missing non-negative integer field: {count_field}"
@@ -156,8 +159,14 @@ fn finding_code_prefix_matches_severity() {
 
     for (i, f) in findings.iter().enumerate() {
         let code = f.get("code").and_then(|v| v.as_str()).expect("code");
-        let severity = f.get("severity").and_then(|v| v.as_str()).expect("severity");
-        let prefix = code.chars().nth("MDATRON-".len()).expect("code has prefix letter");
+        let severity = f
+            .get("severity")
+            .and_then(|v| v.as_str())
+            .expect("severity");
+        let prefix = code
+            .chars()
+            .nth("MDATRON-".len())
+            .expect("code has prefix letter");
         let expected_sev = match prefix {
             'E' => "error",
             'W' => "warning",

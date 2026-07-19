@@ -139,11 +139,7 @@ pub struct EvalContext<'a> {
 }
 
 impl<'a> EvalContext<'a> {
-    pub fn new(
-        self_value: &'a Value,
-        file_value: &'a Value,
-        project_value: &'a Value,
-    ) -> Self {
+    pub fn new(self_value: &'a Value, file_value: &'a Value, project_value: &'a Value) -> Self {
         Self {
             self_value,
             file_value,
@@ -515,12 +511,7 @@ mod tests {
     }
 
     fn obj(pairs: impl IntoIterator<Item = (&'static str, Value)>) -> Value {
-        Value::Object(
-            pairs
-                .into_iter()
-                .map(|(k, v)| (k.to_string(), v))
-                .collect(),
-        )
+        Value::Object(pairs.into_iter().map(|(k, v)| (k.to_string(), v)).collect())
     }
 
     // ── Literals + variable refs ────────────────────────────────────────────
@@ -556,8 +547,7 @@ mod tests {
             bindings,
             indices: None,
         };
-        let result =
-            evaluate(&Expr::Var(VarRef::Binding("x".to_string())), &context).unwrap();
+        let result = evaluate(&Expr::Var(VarRef::Binding("x".to_string())), &context).unwrap();
         assert_eq!(result, Value::Int(42));
     }
 
@@ -612,10 +602,7 @@ mod tests {
         // see binary-first refactor Phase 1 (M4 PE F1 root cause).
         let cv = null_ctx();
         let result = evaluate(
-            &Expr::Field(
-                Box::new(Expr::Lit(obj([("x", s("y"))]))),
-                "missing".into(),
-            ),
+            &Expr::Field(Box::new(Expr::Lit(obj([("x", s("y"))]))), "missing".into()),
             &ctx(&cv),
         )
         .unwrap();
@@ -726,7 +713,10 @@ mod tests {
     fn in_with_null_haystack_returns_false() {
         let cv = null_ctx();
         let result = evaluate(
-            &Expr::In(Box::new(Expr::Lit(s("x"))), Box::new(Expr::Lit(Value::Null))),
+            &Expr::In(
+                Box::new(Expr::Lit(s("x"))),
+                Box::new(Expr::Lit(Value::Null)),
+            ),
             &ctx(&cv),
         )
         .unwrap();
@@ -899,10 +889,7 @@ mod tests {
     #[test]
     fn unknown_function_errors() {
         let cv = null_ctx();
-        let result = evaluate(
-            &Expr::Call("nonexistent".into(), vec![]),
-            &ctx(&cv),
-        );
+        let result = evaluate(&Expr::Call("nonexistent".into(), vec![]), &ctx(&cv));
         assert!(matches!(result, Err(EvalError::UnknownFunction(_))));
     }
 
@@ -1046,7 +1033,10 @@ mod tests {
     fn key_returns_indexed_value_when_present() {
         use super::super::index::{Index, IndexRegistry};
         let mut entries = BTreeMap::new();
-        entries.insert("phase-2a".to_string(), obj([("required", arr([s("se"), s("qe")]))]));
+        entries.insert(
+            "phase-2a".to_string(),
+            obj([("required", arr([s("se"), s("qe")]))]),
+        );
         let idx = Index {
             name: "matrix".to_string(),
             entries,
@@ -1102,7 +1092,9 @@ mod tests {
         let mut precompute_ctx =
             EvalContext::new(&primer, &file_v, &project_v).with_indices(&registry);
         let expected = evaluate(&key_expr, &precompute_ctx).unwrap();
-        precompute_ctx.bindings.insert("expected".to_string(), expected);
+        precompute_ctx
+            .bindings
+            .insert("expected".to_string(), expected);
 
         // Assert: every(d in $expected.required, d in $self.relevant_domains)
         let assert_expr = Expr::Every(

@@ -47,7 +47,11 @@ pub fn parse(content: &str) -> Result<Option<(Value, &str)>, Error> {
 
         if &content[pos..line_end] == "---" {
             yaml_end = Some(pos);
-            after_close = Some(if line_end < bytes.len() { line_end + 1 } else { line_end });
+            after_close = Some(if line_end < bytes.len() {
+                line_end + 1
+            } else {
+                line_end
+            });
             break;
         }
 

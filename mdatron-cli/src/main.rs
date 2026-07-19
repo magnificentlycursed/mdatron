@@ -84,10 +84,11 @@ fn parse_explain_code(s: &str) -> Result<String, String> {
         return Err(format!("code namespace is empty; got: {s}"));
     }
     let prefix = &bytes[..prefix_len];
-    if !prefix.iter().all(|b| b.is_ascii_uppercase() || b.is_ascii_digit()) {
-        return Err(format!(
-            "code namespace must be [A-Z][A-Z0-9]*; got: {s}"
-        ));
+    if !prefix
+        .iter()
+        .all(|b| b.is_ascii_uppercase() || b.is_ascii_digit())
+    {
+        return Err(format!("code namespace must be [A-Z][A-Z0-9]*; got: {s}"));
     }
     let suffix = &bytes[prefix_len + 1..];
     if suffix.len() != 5 {
@@ -169,7 +170,8 @@ fn cmd_verify(
     let files_checked: u32 = if matches!(pipeline_status, PipelineStatus::Failed) {
         0
     } else {
-        let mut seen: std::collections::BTreeSet<&std::path::Path> = std::collections::BTreeSet::new();
+        let mut seen: std::collections::BTreeSet<&std::path::Path> =
+            std::collections::BTreeSet::new();
         for f in &findings {
             seen.insert(&f.location.file);
         }

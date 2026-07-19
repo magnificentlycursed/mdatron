@@ -209,7 +209,10 @@ mod tests {
         let parts: Vec<&str> = OUTPUT_VERSION.split('.').collect();
         assert_eq!(parts.len(), 3);
         for p in parts {
-            assert!(p.parse::<u32>().is_ok(), "output version part not numeric: {p}");
+            assert!(
+                p.parse::<u32>().is_ok(),
+                "output version part not numeric: {p}"
+            );
         }
     }
 }

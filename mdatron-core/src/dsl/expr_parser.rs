@@ -214,12 +214,10 @@ impl<'a> Parser<'a> {
             // Distinguish `.field` (postfix field access) from a `.` that begins something else.
             // Only consume `.` when followed by an identifier start.
             let after_dot = self.pos + 1;
-            let dot_is_field = self.peek_char() == Some('.')
-                && after_dot < self.input.len()
-                && {
-                    let c = self.input[after_dot..].chars().next();
-                    matches!(c, Some(ch) if ch.is_alphabetic() || ch == '_')
-                };
+            let dot_is_field = self.peek_char() == Some('.') && after_dot < self.input.len() && {
+                let c = self.input[after_dot..].chars().next();
+                matches!(c, Some(ch) if ch.is_alphabetic() || ch == '_')
+            };
             if !dot_is_field {
                 break;
             }
@@ -316,7 +314,10 @@ impl<'a> Parser<'a> {
         if !self.consume_str(",") {
             return Err(ParseError::new(
                 self.pos,
-                format!("expected ',' separating collection from predicate in {}", kind.name()),
+                format!(
+                    "expected ',' separating collection from predicate in {}",
+                    kind.name()
+                ),
             ));
         }
         self.skip_whitespace();
@@ -329,7 +330,9 @@ impl<'a> Parser<'a> {
             ));
         }
         Ok(match kind {
-            QuantifierKind::Every => Expr::Every(binding, Box::new(collection), Box::new(predicate)),
+            QuantifierKind::Every => {
+                Expr::Every(binding, Box::new(collection), Box::new(predicate))
+            }
             QuantifierKind::Some => Expr::Some_(binding, Box::new(collection), Box::new(predicate)),
         })
     }
@@ -548,8 +551,14 @@ mod tests {
 
     #[test]
     fn parses_bool_literals() {
-        assert_eq!(parse_expression("true").unwrap(), Expr::Lit(Value::Bool(true)));
-        assert_eq!(parse_expression("false").unwrap(), Expr::Lit(Value::Bool(false)));
+        assert_eq!(
+            parse_expression("true").unwrap(),
+            Expr::Lit(Value::Bool(true))
+        );
+        assert_eq!(
+            parse_expression("false").unwrap(),
+            Expr::Lit(Value::Bool(false))
+        );
     }
 
     #[test]
@@ -837,10 +846,8 @@ mod tests {
             indices: None,
         };
 
-        let expr = parse_expression(
-            "every(d in $expected.required, d in $self.relevant_domains)",
-        )
-        .unwrap();
+        let expr = parse_expression("every(d in $expected.required, d in $self.relevant_domains)")
+            .unwrap();
         let result = evaluate(&expr, &context).unwrap();
         assert_eq!(result, Value::Bool(true));
     }
@@ -867,10 +874,8 @@ mod tests {
             indices: None,
         };
 
-        let expr = parse_expression(
-            "every(d in $expected.required, d in $self.relevant_domains)",
-        )
-        .unwrap();
+        let expr = parse_expression("every(d in $expected.required, d in $self.relevant_domains)")
+            .unwrap();
         let result = evaluate(&expr, &context).unwrap();
         assert_eq!(result, Value::Bool(false));
     }
