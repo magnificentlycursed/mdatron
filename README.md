@@ -165,10 +165,12 @@ pattern:
 
 `context: blog` selects every file whose frontmatter `schema_class` is `blog`.
 `assert:` fires the diagnostic when the expression evaluates to `false`. See
-[`DESIGN-MDATRON.md`](./DESIGN-MDATRON.md) § DSL specification for the full
-operator + function reference (`every`, `some`, `key`, `match`, `slug`,
-`headings`, `tables`, `links`, and the path-confined `key()` cross-file index
-mechanism).
+[`DESIGN-MDATRON.md`](./DESIGN-MDATRON.md) § DSL specification for the
+operator + function reference (`every`, `some`, `in`, `defined`, `count`,
+`len`, `union`, `intersect`, `difference`, `concat`, `join`, and the
+path-confined `key()` cross-file index mechanism). The DSL's scope is
+cross-file and registry validation; body-content extraction functions are
+out of scope.
 
 ## Relationship to vsdd
 
