@@ -6,7 +6,7 @@
 
 ## Why this dependency
 
-The de-facto Rust serialization framework. Used for `Serialize`/`Deserialize` derives on `mdatron-core`'s public types (`Finding`, `Severity`, `Location`) so they can round-trip across JSON / YAML / SARIF output formats per DESIGN-MDATRON § Output formats.
+The de-facto Rust serialization framework. Used for `Serialize`/`Deserialize` derives on `mdatron-core`'s public types (`Finding`, `Severity`, `Location`) so they can round-trip across JSON / YAML / SARIF output formats per DESIGN.md § Diagnostics are a versioned contract.
 
 **Alternatives considered:**
 

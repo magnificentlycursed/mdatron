@@ -25,7 +25,7 @@ Two corrective paths:
 
 ## See also
 
-- [`DESIGN-MDATRON.md` § CLI surface](../../DESIGN-MDATRON.md#cli-surface)
+- [`DESIGN.md` § Summary](../../DESIGN.md#summary)
   — `--project-root` flag semantics
 
 ## Related codes

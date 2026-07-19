@@ -411,7 +411,7 @@ fn readme_contains_tron_disambiguation_sentence() {
         "mdatron/README.md must contain the TRON-blockchain disambiguation \
          (TW-F3); got readme without 'tron' substring"
     );
-    // The discipline per DESIGN-MDATRON.md:63 is the first README sentence
+    // The discipline per DESIGN.md § Summary (the disambiguation discipline) is the first README sentence
     // states this explicitly — assert the disambiguation appears in the
     // first ~30 lines (section 1 region).
     let head: String = readme.lines().take(30).collect::<Vec<_>>().join("\n");

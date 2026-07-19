@@ -18,7 +18,7 @@ Three corrective paths, listed in order of likelihood:
    classes; correct the typo in the file's frontmatter.
 2. **You need to register a new class.** Add a JSON Schema file at
    `.mdatron/schemas/<your-class>.json` — see the project's existing schemas
-   for the shape, or DESIGN-MDATRON.md § Layer 1.
+   for the shape, or DESIGN.md § Five check families.
 3. **The class name is intentional but mdatron should ignore the file.** Move
    the file outside the configured `file_globs` in `.mdatron/config.yaml`, or
    remove the `schema_class:` line entirely (a file with no `schema_class`
@@ -26,7 +26,7 @@ Three corrective paths, listed in order of likelihood:
 
 ## See also
 
-- [`DESIGN-MDATRON.md` § Layer 1: Structural (JSON Schema)](../../DESIGN-MDATRON.md#layer-1-structural-json-schema)
+- [`DESIGN.md` § Five check families](../../DESIGN.md#five-check-families)
   — schema routing + `schema_class` frontmatter binding
 
 ## Related codes

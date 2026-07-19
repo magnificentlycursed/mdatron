@@ -30,7 +30,7 @@ to surface the precise parse error.
 
 ## See also
 
-- [`DESIGN-MDATRON.md` § Layer 1: Structural (JSON Schema)](../../DESIGN-MDATRON.md#layer-1-structural-json-schema)
+- [`DESIGN.md` § Five check families](../../DESIGN.md#five-check-families)
   — frontmatter format + parsing rules
 
 ## Related codes

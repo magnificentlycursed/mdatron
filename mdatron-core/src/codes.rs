@@ -1,6 +1,6 @@
 //! Reserved error-code allocation table for mdatron.
 //!
-//! Per `DESIGN-MDATRON.md:506-514` (as amended for v0.1.x), every code emitted
+//! Per `DESIGN.md` § Diagnostics are a versioned contract, every code emitted
 //! by mdatron must fall in one of these reserved ranges. The
 //! [`is_reserved_mdatron_code`] check is used by integration tests + the
 //! reserved-range enforcement check at
@@ -51,7 +51,7 @@ pub fn is_reserved_mdatron_code(code: &str) -> bool {
     };
     let letter = letter_byte as char;
     match letter {
-        // Ranges per DESIGN-MDATRON.md:506-514 (amended for v0.1.x):
+        // Ranges per DESIGN.md § Diagnostics are a versioned contract:
         //   E0001-E0009 frontmatter parsing failures
         //   E0010-E0019 path-confinement violations
         //   E0020-E0029 DSL evaluation failures

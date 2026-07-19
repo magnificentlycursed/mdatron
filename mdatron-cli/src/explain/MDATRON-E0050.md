@@ -30,7 +30,7 @@ violations) and the first fix may unlock the rest.
 
 ## See also
 
-- [`DESIGN-MDATRON.md` § Layer 1: Structural (JSON Schema)](../../DESIGN-MDATRON.md#layer-1-structural-json-schema)
+- [`DESIGN.md` § Five check families](../../DESIGN.md#five-check-families)
   — schema validation semantics + edge cases
 
 ## Related codes

@@ -10,6 +10,27 @@ the TRON blockchain.
 
 ## [Unreleased]
 
+### Security
+- Competent-demotion refusal asserts an engine signal the engine cannot emit (L41)
+- Demotion falsification and seed conflate pin drift with annotation refusal (L39)
+- Demotion annotation has no specified home (L38)
+- Competent manifest demotions are silent; the loud bar fails for removals (L37)
+- Seeds exercise only the split leg (L36)
+- Completeness lemma false: consumers split on FS/GS/RS (escape set) (L35)
+- Budget scope over dependent-closure traversal ambiguous (L25)
+- Partition demotions escape the loud-governance channels (L24)
+- Manifest self-hash is a fixed point; the anchor must be stated (L23)
+- Compact truncation vs marking invariant unspecified (L22)
+- Escaping and line-splitting cannot share one alphabet; a partition is required (L21)
+- Handle confinement component-wise unstated (L11)
+- Governance weakening is grep-loud only (L10)
+- Init manifest self-pinning unstated (L9)
+- Annotation owner unauthenticated; annotation text unmarked channel (L8)
+- Extras scan bound dimension unnamed; no real-tree fixture (L7)
+- Aggregate snapshot memory and concurrent count unbounded (L6)
+- Escaping and line-splitting alphabet excludes Zl/Zp separators (L5)
+- Inline interpolation does not fit block prefix marking (L4)
+
 ### Added
 
 - `mdatron explain CODE` v0.1.0 baseline catalog — five per-code prose pages
@@ -29,6 +50,27 @@ the TRON blockchain.
   + round-trip, and `--quiet --json` flag-combination drive-by
 
 ### Changed
+- Spec-review round 7 (conformance-engine rev 7, confirmation: the claim reduction) (L7)
+- Spec-review round 6 (conformance-engine rev 6, final: security, two paragraphs) (L6)
+- Spec-review round 5 (conformance-engine rev 5, final targeted: security) (L5)
+- Spec-review round 4 (conformance-engine rev 4, targeted) (L4)
+- Spec-review round 3 (conformance-engine rev 3) (L3)
+- Revision line and evidence base stale (L33)
+- Compact output not pinned to the verify command (L32)
+- Reverse rule-reference direction unfixtured (L31)
+- Trace-escaping falsification unowned by any criterion (L30)
+- Mutation fixtures need a declared test seam (L29)
+- Weakening lint universality contradicts incremental soundness (L28)
+- Alphabet seeds omit Zp (U+2029) (L27)
+- Concurrent-invocation-count bound has no exceedance seed (L26)
+- Fixture-corpus completeness clause is partly circular and unaudited (L19)
+- Agnosticism scope word documentation unqualified (L18)
+- Normal-case performance rests on measurement without threshold (L17)
+- Milestone conversion criterion omission is silent (L16)
+- Governance-edge dependent propagation unfixtured; reverse direction unexercised (L15)
+- Conflicting-data precedence outcomes unasserted (L14)
+- Concurrency criterion passes trivially without in-flight mutation (L13)
+- Snapshot property has no mutation-in-flight falsification (L12)
 
 - `Finding::format_tty` consolidated to the rustc shape: first line is
   `<label>[<code>]: <summary>` (was `: <message>`); `<message>` now flows

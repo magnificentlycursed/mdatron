@@ -33,7 +33,7 @@ fn schema_violation_emits_e0050() {
     let codes: Vec<&str> = findings.iter().map(|f| f.code.as_str()).collect();
     assert!(
         codes.contains(&"MDATRON-E0050"),
-        "schema-violation must emit MDATRON-E0050 per amended DESIGN-MDATRON.md; \
+        "schema-violation must emit MDATRON-E0050 per DESIGN.md § Diagnostics are a versioned contract; \
          got codes: {codes:?}"
     );
 }
@@ -56,7 +56,7 @@ fn frontmatter_parse_failure_emits_e0001() {
     let codes: Vec<&str> = findings.iter().map(|f| f.code.as_str()).collect();
     assert!(
         codes.contains(&"MDATRON-E0001"),
-        "frontmatter-parse-failed must emit MDATRON-E0001 per DESIGN-MDATRON.md:116; \
+        "frontmatter-parse-failed must emit MDATRON-E0001 per DESIGN.md § Five check families (schema conformance); \
          got codes: {codes:?}"
     );
 }
@@ -64,7 +64,7 @@ fn frontmatter_parse_failure_emits_e0001() {
 #[test]
 fn all_emitted_codes_are_reserved() {
     // Static lint: every "MDATRON-" code literal in the workspace must resolve
-    // to a reserved range per DESIGN-MDATRON.md.
+    // to a reserved range per DESIGN.md § Diagnostics are a versioned contract.
     //
     // Walk: workspace members from Cargo.toml + the workspace root itself
     // (catches future siblings per Phase 3 Red-Team + SE finding that the
@@ -74,7 +74,7 @@ fn all_emitted_codes_are_reserved() {
     // schemas, config, and any non-`.rs` carrier per Phase 3 Red-Team finding.
     // Excludes .md: design docs legitimately describe ranges + reserved-for-
     // future-use labels (e.g. range-header forms like the literal-digit codes
-    // in DESIGN-MDATRON.md table) that are reserved-as-future but not yet
+    // in the DESIGN.md reserved-range table) that are reserved-as-future but not yet
     // class-assigned; treating those as violations would block adding new
     // spec rows.
 
@@ -115,7 +115,7 @@ fn all_emitted_codes_are_reserved() {
             .join("\n");
         panic!(
             "every MDATRON-* literal in the workspace must resolve to a reserved \
-             range per DESIGN-MDATRON.md; violations:\n{formatted}"
+             range per DESIGN.md; violations:\n{formatted}"
         );
     }
 }

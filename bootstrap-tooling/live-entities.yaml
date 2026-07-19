@@ -23,7 +23,7 @@ schema_classes:
   - error-catalog
 
   # mdatron-examples (generalized)
-  - design-doc            # used by all DESIGN-*.md files including DESIGN-MDATRON
+  - design-doc            # used by all DESIGN-*.md files including the standing DESIGN.md
   - manual-test
   - pr-template
   - changelog
@@ -56,7 +56,7 @@ reference_tables:
       - PR template
       - CHANGELOG (structural)
 
-  - file_suffix: DESIGN-MDATRON.md
+  - file_suffix: DESIGN.md
     section_heading: Built-in patterns
     live_entries:
       - header-count-matches-following-table

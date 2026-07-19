@@ -96,5 +96,6 @@
     }
   },
   "signing_enforcement": "audit",
+  "tracker_remote": "local-only",
   "tracking_mode": "strict"
 }

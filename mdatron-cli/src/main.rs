@@ -291,7 +291,7 @@ fn cmd_explain(code: &str, json: bool, compact: bool) -> ExitCode {
             "error[MDATRON-E0080]: no explain page found for {code}\n   \
              = note: the explain catalog grows by one entry per emitted code; \
              {code} is not in the v0.1.0 baseline catalog\n   \
-             = help: see DESIGN-MDATRON.md \u{00A7} Reserved mdatron codes for \
+             = help: see DESIGN.md \u{00A7} Diagnostics are a versioned contract for \
              the structural meaning of unimplemented codes"
         );
         return ExitCode::from(2);

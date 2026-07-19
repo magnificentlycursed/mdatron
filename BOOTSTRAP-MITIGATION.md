@@ -10,7 +10,7 @@
 
 The bootstrap plan has 5 steps:
 
-1. Write DESIGN-MDATRON
+1. Write DESIGN.md
 2. Adjust vsdd-cli scope for standalone mdatron
 3. Implement vsdd-cli init
 4. Use vsdd-cli init to develop mdatron
@@ -25,7 +25,7 @@ Risks (from the 2026-06-01 multi-domain review):
 | SEC-F3 | Audit-trail integrity claim partially false during bootstrap; structural drift can land without any validator firing |
 | AIE-F2 | "Easy for agents to author" DSL claim untested |
 | M2 | Methodology's "not honor-system; not authoring discipline alone" claim partially untrue during bootstrap |
-| M4 | ~30+ new coinages from DESIGN-MDATRON authoring land unregistered; would surface as a wave at Step 5 |
+| M4 | ~30+ new coinages from DESIGN.md authoring land unregistered; would surface as a wave at Step 5 |
 
 The four mitigations below close each risk under bounded scope.
 
@@ -113,16 +113,16 @@ Without these markers, future audit reads of `.vsdd/events.jsonl` would see stru
 
 ## Mitigation 4: DSL falsifiability check (closes AIE-F2)
 
-Before Step 1 closes (DESIGN-MDATRON authoring complete), run the AIE-F2 falsifiability test:
+Before Step 1 closes (DESIGN.md authoring complete), run the AIE-F2 falsifiability test:
 
 1. **Identify** 5-10 candidate cross-field validation rules from vsdd-cli's existing DESIGN-VERIFICATION (e.g., classification-universe, validator-pair-match, count-drift, header-vs-table, anchor-resolution).
-2. **Spin up a cold-context Claude Code session** with ONLY the DSL spec section of DESIGN-MDATRON as reference (no prior conversation; no implementation; no examples beyond what's in the spec).
+2. **Spin up a cold-context Claude Code session** with ONLY the DSL spec section of DESIGN.md as reference (no prior conversation; no implementation; no examples beyond what's in the spec).
 3. **Ask the cold session to author each rule** as DSL YAML.
 4. **Measure:** how many rules compile cleanly under the spec's syntax? How many require multiple iterations? Where does the cold session misread the spec?
 
 **Acceptance criterion:** ≥80% of rules authorable in one pass from the spec alone. Below that, the DSL spec needs revision before Step 2.
 
-The test is itself a throwaway artifact; results land in `mdatron/dsl-falsifiability-report.md` and inform a DESIGN-MDATRON revision commit. The test does NOT need to pass for Step 1 to be declared complete — it needs to **run** and produce findings that route either to "DSL spec accepted" or to "DSL spec revision required."
+The test is itself a throwaway artifact; results land in `mdatron/dsl-falsifiability-report.md` and inform a DESIGN.md revision commit. The test does NOT need to pass for Step 1 to be declared complete — it needs to **run** and produce findings that route either to "DSL spec accepted" or to "DSL spec revision required."
 
 **Why this matters beyond AIE-F2:** the falsifiability check itself becomes a recurring practice. Every DSL revision triggers a cold-context author-from-spec pass; the pass-rate is the DSL's quality signal.
 

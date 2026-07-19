@@ -6,7 +6,7 @@
 
 ## Why this dependency
 
-CLI argument parsing for the `mdatron` binary subcommand surface (`verify`, `explain`, future `init` / `registry` / `schema` / `skill-preamble` / `verify hook` / `verify test-error-catalog` / `lsp-serve` / `mcp-serve`). Per DESIGN-MDATRON § CLI surface, the subcommand structure with `#[derive(Subcommand)]` lands on clap.
+CLI argument parsing for the `mdatron` binary subcommand surface (`verify`, `explain`, future `init` / `registry` / `schema` / `skill-preamble` / `verify hook` / `verify test-error-catalog` / `lsp-serve` / `mcp-serve`). Per DESIGN.md § Summary (the subcommand surface: verify, explain, init), the subcommand structure with `#[derive(Subcommand)]` lands on clap.
 
 **Alternatives considered:**
 

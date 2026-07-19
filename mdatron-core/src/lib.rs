@@ -1,6 +1,6 @@
 //! mdatron-core — validator engine for the mdatron typed-markdown validation toolkit.
 //!
-//! Two-layer architecture per DESIGN-MDATRON.md: JSON Schema for structural validation
+//! Two-layer architecture per DESIGN.md § Summary: JSON Schema for structural validation
 //! (Layer 1); a Schematron-derived DSL for cross-field, cross-file, and cross-document
 //! semantic rules (Layer 2).
 //!

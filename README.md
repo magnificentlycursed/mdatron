@@ -165,7 +165,7 @@ pattern:
 
 `context: blog` selects every file whose frontmatter `schema_class` is `blog`.
 `assert:` fires the diagnostic when the expression evaluates to `false`. See
-[`DESIGN-MDATRON.md`](./DESIGN-MDATRON.md) § DSL specification for the
+[`DESIGN.md`](./DESIGN.md) § Cross-file semantics stay narrowed for the
 operator + function reference (`every`, `some`, `in`, `defined`, `count`,
 `len`, `union`, `intersect`, `difference`, `concat`, `join`, and the
 path-confined `key()` cross-file index mechanism). The DSL's scope is
@@ -197,7 +197,7 @@ vsdd composes mdatron in two ways:
   engine, not the methodology.
 
 The
-[mdatron-examples library](./DESIGN-MDATRON.md#mdatron-examples-library)
+mdatron-examples library (deferred to adopter evidence; see [`DESIGN.md`](./DESIGN.md) § References, absorption ledger)
 (v1.0 candidate; not in v0.1.0 — see
 [`V1-SHIP-CRITERIA.md`](./V1-SHIP-CRITERIA.md)) will ship four generalized
 artifact-class schemas (DESIGN doc, manual-test, PR template, CHANGELOG) for
@@ -205,7 +205,7 @@ non-VSDD adopters.
 
 ## Where to go next
 
-- [`DESIGN-MDATRON.md`](./DESIGN-MDATRON.md) — the canonical design: two-layer
+- [`DESIGN.md`](./DESIGN.md) — the standing design: agent-first conformance engine, check families, two-layer
   architecture, DSL reference, error catalog format, agent-loop integration,
   built-in patterns, path-confinement discipline
 - [`V1-SHIP-CRITERIA.md`](./V1-SHIP-CRITERIA.md) — what v1.0 ships and what

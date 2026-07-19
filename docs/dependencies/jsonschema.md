@@ -6,7 +6,7 @@
 
 ## Why this dependency
 
-Layer 1 structural validation per DESIGN-MDATRON § Two-layer architecture requires JSON Schema draft 2020-12 compliance. Hand-rolling a draft-2020-12-complete validator would be ~5000 LoC; this dep is the canonical Rust choice.
+Layer 1 structural validation per DESIGN.md § Five check families requires JSON Schema draft 2020-12 compliance. Hand-rolling a draft-2020-12-complete validator would be ~5000 LoC; this dep is the canonical Rust choice.
 
 **Alternatives considered:**
 

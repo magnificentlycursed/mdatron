@@ -6,7 +6,7 @@
 
 ## Why this dependency
 
-JSON Schema files (Layer 1 structural validation per DESIGN-MDATRON § Two-layer architecture) ship as `.json` files at `.mdatron/schemas/<class>.json`. Adopters consuming SARIF output (per DESIGN-MDATRON § Output formats) need JSON serialization. Both paths require a JSON library.
+JSON Schema files (Layer 1 structural validation per DESIGN.md § Five check families) ship as `.json` files at `.mdatron/schemas/<class>.json`. Adopters consuming SARIF output (per DESIGN.md § Diagnostics are a versioned contract) need JSON serialization. Both paths require a JSON library.
 
 **Alternatives considered:**
 

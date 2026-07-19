@@ -1130,7 +1130,7 @@ mod tests {
         // assert: $self.classification in $domain.classification_universe
         //
         // We model `$domain` here as a let-binding "expected" (per the pattern shape in
-        // DESIGN-MDATRON example). Cross-file `key()` is deferred; tests bind it directly.
+        // DESIGN.md § Cross-file semantics stay narrowed example). Cross-file `key()` is deferred; tests bind it directly.
         let finding = obj([("classification", s("resolved"))]);
         let domain = obj([(
             "classification_universe",

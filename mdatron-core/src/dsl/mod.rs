@@ -8,7 +8,7 @@
 //! (`index`). Scope is cross-file and registry validation; body-content extraction
 //! is out of scope (see the DSL falsifiability report and V1-SHIP-CRITERIA).
 //!
-//! See DESIGN-MDATRON.md § DSL specification for the implemented surface.
+//! See DESIGN.md § Cross-file semantics stay narrowed for the implemented surface (the canonical construct inventory).
 
 pub mod expr;
 pub mod expr_parser;

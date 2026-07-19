@@ -37,7 +37,7 @@ apply the matching corrective pattern below.
 
 ## See also
 
-- [`DESIGN-MDATRON.md` § Two-layer architecture](../../DESIGN-MDATRON.md#two-layer-architecture)
+- [`DESIGN.md` § Summary](../../DESIGN.md#summary)
   — how mdatron loads schemas + patterns before the pipeline runs
 
 ## Related codes

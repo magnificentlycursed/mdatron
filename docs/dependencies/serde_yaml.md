@@ -6,7 +6,7 @@
 
 ## Why this dependency
 
-Parses YAML frontmatter in markdown documents (`mdatron-core::frontmatter::parse`) and YAML config files (`.mdatron/config.yaml`, `.mdatron/patterns/*.yaml`, `.mdatron/catalogs/*.yaml`). Required for Layer 1 structural validation per DESIGN-MDATRON § Two-layer architecture.
+Parses YAML frontmatter in markdown documents (`mdatron-core::frontmatter::parse`) and YAML config files (`.mdatron/config.yaml`, `.mdatron/patterns/*.yaml`, `.mdatron/catalogs/*.yaml`). Required for Layer 1 structural validation per DESIGN.md § Five check families.
 
 **Alternatives considered:**
 
