@@ -1,6 +1,6 @@
 # mdatron v1 Ship Criteria
 
-**Status:** governing ship criteria. Originally decided 2026-06-01 (Step 0.5, closing SO-F2); re-cut 2026-07-19 under the ratified respec (vsdd-cli `.design/agent-first-vsdd-toolkit.md` @ a39c3eb) and the mdatron cleanup cycle (this tracker, issues #6 and #7). The 2026-06-01 decision history is preserved in git; this document states the current cut.
+**Status:** transitional coordination document (operator ruling 2026-07-19: standing documents are README and DESIGN; coordination artifacts retire when superseded by design or converted to tracked work). Originally decided 2026-06-01 (Step 0.5); re-cut 2026-07-19 under the ratified respec (vsdd-cli `.design/agent-first-vsdd-toolkit.md` @ a39c3eb). Retires at the design increment's ratification: the acceptance criteria become a crosslink v1.0 milestone with tracked issues, the waiver record migrates to the falsifiability report, and the decision history stays in git.
 
 ## Decision
 
