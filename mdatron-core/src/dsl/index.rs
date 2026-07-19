@@ -18,13 +18,21 @@
 //! live in an [`IndexRegistry`] keyed by `name`. Rules reference indices via the
 //! `key()` standard-library function (`key("domain-prompts", "software-engineer")`).
 //!
-//! Path-confinement (BOUNDARY-PREAMBLE § 7): every resolved path is verified
-//! under `project_root`; escapes return `IndexError::PathTraversal`.
+//! Path-confinement (DESIGN.md § Five check families; carried from
+//! BOUNDARY-PREAMBLE § 7): sources are confined lexically before any
+//! filesystem access — absolute paths and parent segments are rejected
+//! whether or not the target exists — and every read goes through a
+//! validated no-follow handle from [`crate::confine`], so a symlink at any
+//! path component is refused.
 
 use std::collections::BTreeMap;
+use std::fs::File;
+use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use thiserror::Error;
+
+use crate::confine;
 
 use super::expr::Value;
 use super::types::KeyDecl;
@@ -95,9 +103,21 @@ pub enum IndexError {
     #[error("file parse at '{path}': {error}")]
     Parse { path: String, error: String },
 
-    /// Maps to MDATRON-E0011: key-source-parent-traversal per BOUNDARY-PREAMBLE § 7.
+    /// Maps to MDATRON-E0010: key-source-absolute-path per DESIGN.md § Five
+    /// check families (carried from BOUNDARY-PREAMBLE § 7).
+    #[error("path confinement: absolute source path '{path}' is rejected; sources resolve relative to the project root (MDATRON-E0010)")]
+    AbsoluteSource { path: String },
+
+    /// Maps to MDATRON-E0011: key-source-parent-traversal per DESIGN.md § Five
+    /// check families (carried from BOUNDARY-PREAMBLE § 7). Decided lexically,
+    /// so non-existent targets are rejected on the same basis as existing ones.
     #[error("path traversal: '{path}' escapes project root (MDATRON-E0011)")]
     PathTraversal { path: String },
+
+    /// Maps to MDATRON-E0012: key-source-symlink-refused. No-follow resolution
+    /// refuses a symlink at any component, whatever its target.
+    #[error("path confinement: symlink component '{component}' in '{path}' is refused under no-follow resolution (MDATRON-E0012)")]
+    SymlinkRefused { path: String, component: String },
 
     #[error("unsupported file type at '{path}' (extension: '{ext}')")]
     UnsupportedFileType { path: String, ext: String },
@@ -116,9 +136,19 @@ fn build_index(project_root: &Path, decl: &KeyDecl) -> Result<Index, IndexError>
     let source = decl.source.trim();
     let mut entries: BTreeMap<String, Value> = BTreeMap::new();
 
-    let paths = resolve_source(project_root, source)?;
-    for path in paths {
-        extract_into(&path, &decl.select, &decl.indexed_by, &mut entries)?;
+    for rel in resolve_source(project_root, source)? {
+        let display = project_root.join(&rel);
+        let file = confine::open_confined(project_root, &rel).map_err(|v| match v {
+            confine::OpenViolation::Symlink { component } => IndexError::SymlinkRefused {
+                path: display.to_string_lossy().into_owned(),
+                component: component.to_string_lossy().into_owned(),
+            },
+            confine::OpenViolation::Io(e) => IndexError::Io {
+                path: display.to_string_lossy().into_owned(),
+                error: e.to_string(),
+            },
+        })?;
+        extract_into(&display, file, &decl.select, &decl.indexed_by, &mut entries)?;
     }
 
     Ok(Index {
@@ -127,12 +157,25 @@ fn build_index(project_root: &Path, decl: &KeyDecl) -> Result<Index, IndexError>
     })
 }
 
+/// Resolve a source declaration to root-relative paths. Confinement is decided
+/// lexically here — before glob expansion and without touching the filesystem —
+/// so absolute paths and parent segments are rejected whether or not the
+/// target exists, and glob patterns may not contain parent segments.
 fn resolve_source(project_root: &Path, source: &str) -> Result<Vec<PathBuf>, IndexError> {
+    let rel = confine::confine_lexically(Path::new(source)).map_err(|v| match v {
+        confine::LexicalViolation::Absolute => IndexError::AbsoluteSource {
+            path: source.to_string(),
+        },
+        confine::LexicalViolation::ParentSegment => IndexError::PathTraversal {
+            path: source.to_string(),
+        },
+    })?;
+
     let is_glob = source.contains('*') || source.contains('?') || source.contains('[');
 
     let mut out = Vec::new();
     if is_glob {
-        let pattern = project_root.join(source);
+        let pattern = project_root.join(&rel);
         let pattern_str = pattern.to_string_lossy().into_owned();
         let glob_paths = glob::glob(&pattern_str).map_err(|e| IndexError::Glob {
             pattern: source.to_string(),
@@ -143,39 +186,29 @@ fn resolve_source(project_root: &Path, source: &str) -> Result<Vec<PathBuf>, Ind
                 pattern: source.to_string(),
                 error: e.to_string(),
             })?;
-            confine_under_root(&path, project_root)?;
-            out.push(path);
+            // Matches are textual expansions of the root-joined pattern;
+            // re-derive the root-relative path for the handle-based open.
+            let rel = path
+                .strip_prefix(project_root)
+                .map_err(|_| IndexError::PathTraversal {
+                    path: path.to_string_lossy().into_owned(),
+                })?;
+            out.push(rel.to_path_buf());
         }
     } else {
-        let path = project_root.join(source);
-        confine_under_root(&path, project_root)?;
-        out.push(path);
+        out.push(rel);
     }
     Ok(out)
 }
 
-/// Canonicalize and verify the path is under `root`. Rejects symlinks that point
-/// outside the project tree (symlink-confinement per BOUNDARY-PREAMBLE § 7).
-fn confine_under_root(path: &Path, root: &Path) -> Result<(), IndexError> {
-    // Use canonicalize when the path exists; otherwise fall back to a textual prefix check
-    // since the glob crate only returns existing paths but single-source paths may not exist.
-    let canonical_root = root.canonicalize().unwrap_or_else(|_| root.to_path_buf());
-    let canonical_path = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
-    if !canonical_path.starts_with(&canonical_root) {
-        return Err(IndexError::PathTraversal {
-            path: path.to_string_lossy().into_owned(),
-        });
-    }
-    Ok(())
-}
-
 fn extract_into(
     path: &Path,
+    file: File,
     select: &str,
     indexed_by: &str,
     out: &mut BTreeMap<String, Value>,
 ) -> Result<(), IndexError> {
-    let parsed = parse_file_to_value(path)?;
+    let parsed = parse_file_to_value(path, file)?;
     let selected = apply_select(&parsed, select).map_err(|e| IndexError::Selection {
         path: path.to_string_lossy().into_owned(),
         select: select.to_string(),
@@ -201,12 +234,11 @@ fn extract_into(
         }
     } else {
         // Selected is one entry; extract its key via indexed_by select.
-        let key_value =
-            apply_select(&selected, indexed_by).map_err(|e| IndexError::Selection {
-                path: path.to_string_lossy().into_owned(),
-                select: indexed_by.to_string(),
-                error: e,
-            })?;
+        let key_value = apply_select(&selected, indexed_by).map_err(|e| IndexError::Selection {
+            path: path.to_string_lossy().into_owned(),
+            select: indexed_by.to_string(),
+            error: e,
+        })?;
         let key_str = match key_value {
             Value::Str(s) => s,
             other => {
@@ -227,11 +259,17 @@ fn extract_into(
 
 // ── File parsing ───────────────────────────────────────────────────────────────
 
-fn parse_file_to_value(path: &Path) -> Result<Value, IndexError> {
-    let content = std::fs::read_to_string(path).map_err(|e| IndexError::Io {
-        path: path.to_string_lossy().into_owned(),
-        error: e.to_string(),
-    })?;
+/// Parse from an already-confined handle; `path` is display-only. Reading
+/// through the handle keeps confinement decided on the handle rather than on
+/// a path re-walked at read time (the check-then-read gap, DESIGN.md
+/// § Verification is fast where it is invoked).
+fn parse_file_to_value(path: &Path, mut file: File) -> Result<Value, IndexError> {
+    let mut content = String::new();
+    file.read_to_string(&mut content)
+        .map_err(|e| IndexError::Io {
+            path: path.to_string_lossy().into_owned(),
+            error: e.to_string(),
+        })?;
 
     let ext = path
         .extension()
@@ -327,9 +365,7 @@ pub(crate) fn yaml_to_value(yaml: &serde_yaml::Value) -> Value {
             }
         }
         serde_yaml::Value::String(s) => Value::Str(s.clone()),
-        serde_yaml::Value::Sequence(seq) => {
-            Value::Array(seq.iter().map(yaml_to_value).collect())
-        }
+        serde_yaml::Value::Sequence(seq) => Value::Array(seq.iter().map(yaml_to_value).collect()),
         serde_yaml::Value::Mapping(map) => {
             let mut obj = BTreeMap::new();
             for (k, v) in map {
@@ -432,12 +468,15 @@ mod tests {
 
     #[test]
     fn select_nested_field() {
-        let inner: BTreeMap<String, Value> =
-            [("required".to_string(), Value::Array(vec![Value::Str("se".into())]))]
-                .into_iter()
-                .collect();
-        let outer: BTreeMap<String, Value> =
-            [("matrix".to_string(), Value::Object(inner))].into_iter().collect();
+        let inner: BTreeMap<String, Value> = [(
+            "required".to_string(),
+            Value::Array(vec![Value::Str("se".into())]),
+        )]
+        .into_iter()
+        .collect();
+        let outer: BTreeMap<String, Value> = [("matrix".to_string(), Value::Object(inner))]
+            .into_iter()
+            .collect();
         let v = Value::Object(outer);
         assert_eq!(
             apply_select(&v, "$.matrix.required").unwrap(),
@@ -453,9 +492,7 @@ mod tests {
 
     #[test]
     fn select_on_null_propagates_null() {
-        let v = Value::Object(
-            [("matrix".to_string(), Value::Null)].into_iter().collect(),
-        );
+        let v = Value::Object([("matrix".to_string(), Value::Null)].into_iter().collect());
         assert_eq!(apply_select(&v, "$.matrix.required").unwrap(), Value::Null);
     }
 
@@ -527,7 +564,12 @@ mod tests {
         assert!(registry.indices.get("nothing").unwrap().is_empty());
     }
 
-    // ── Path-confinement (MDATRON-E0011) ────────────────────────────────────
+    // ── Path-confinement (MDATRON-E0010/E0011/E0012) ────────────────────────
+    //
+    // Rejection is lexical, so none of the traversal tests depend on
+    // canonicalization divergence (the predecessor test passed only because
+    // macOS's temp_dir sits behind the /var → /private/var symlink; see the
+    // path-confinement defect issue in this tracker).
 
     #[test]
     fn path_traversal_via_parent_dots_is_rejected() {
@@ -538,6 +580,148 @@ mod tests {
             IndexError::PathTraversal { .. } => {}
             other => panic!("expected PathTraversal, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn parent_traversal_rejected_when_target_exists() {
+        // The escaping target really exists one level above the root: the
+        // rejection must not depend on the non-existence fallback either.
+        let temp = TempDir::new("escape-existent");
+        let sibling = temp
+            .path()
+            .parent()
+            .unwrap()
+            .join("mdatron-escape-existent.yaml");
+        std::fs::write(&sibling, "k: v\n").unwrap();
+        let d = decl("escape", "../mdatron-escape-existent.yaml", "$", "$key");
+        let err = IndexRegistry::build(temp.path(), &[d]).unwrap_err();
+        std::fs::remove_file(&sibling).unwrap();
+        assert!(matches!(err, IndexError::PathTraversal { .. }));
+    }
+
+    #[test]
+    fn deep_parent_traversal_with_nonexistent_target_is_rejected() {
+        // The predecessor fell back to the un-normalized textual path for
+        // non-existent targets, and component-wise starts_with let
+        // `root/../..` pass. Lexical rejection needs no filesystem at all.
+        let temp = TempDir::new("escape-absent");
+        let d = decl("escape", "../../no-such-file-anywhere.yaml", "$", "$key");
+        let err = IndexRegistry::build(temp.path(), &[d]).unwrap_err();
+        assert!(matches!(err, IndexError::PathTraversal { .. }));
+    }
+
+    #[test]
+    fn interior_parent_segment_rejected_even_when_non_escaping() {
+        let temp = TempDir::new("interior-dots");
+        temp.write("matrix.yaml", "matrix:\n  a: 1\n");
+        let d = decl("m", "sub/../matrix.yaml", "$.matrix", "$key");
+        let err = IndexRegistry::build(temp.path(), &[d]).unwrap_err();
+        assert!(matches!(err, IndexError::PathTraversal { .. }));
+    }
+
+    #[test]
+    fn glob_pattern_with_parent_segment_is_rejected() {
+        let temp = TempDir::new("glob-dots");
+        let d = decl("g", "../*.yaml", "$", "$key");
+        let err = IndexRegistry::build(temp.path(), &[d]).unwrap_err();
+        assert!(matches!(err, IndexError::PathTraversal { .. }));
+    }
+
+    #[test]
+    fn absolute_source_rejected_even_when_inside_root() {
+        // Absolute paths are rejected outright (MDATRON-E0010), including
+        // absolute spellings of in-root files.
+        let temp = TempDir::new("absolute");
+        let inside = temp.write("inside.yaml", "k: v\n");
+        let d = decl("abs", &inside.to_string_lossy(), "$", "$key");
+        let err = IndexRegistry::build(temp.path(), &[d]).unwrap_err();
+        assert!(matches!(err, IndexError::AbsoluteSource { .. }));
+    }
+
+    #[test]
+    fn absolute_source_with_nonexistent_target_rejected() {
+        let temp = TempDir::new("absolute-absent");
+        let d = decl("abs", "/no-such-mdatron-target.yaml", "$", "$key");
+        let err = IndexRegistry::build(temp.path(), &[d]).unwrap_err();
+        assert!(matches!(err, IndexError::AbsoluteSource { .. }));
+    }
+
+    #[test]
+    fn confined_but_missing_source_is_io_not_traversal() {
+        // A non-existent target inside the root is an IO condition, not a
+        // confinement violation — no silent degradation, no false traversal.
+        let temp = TempDir::new("missing-confined");
+        let d = decl("m", "missing.yaml", "$", "$key");
+        let err = IndexRegistry::build(temp.path(), &[d]).unwrap_err();
+        assert!(matches!(err, IndexError::Io { .. }));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn symlink_source_refused_even_when_target_is_inside_root() {
+        // No-follow is unconditional: a symlink is refused whatever its
+        // target, so escape detection never depends on resolving it.
+        let temp = TempDir::new("symlink-inside");
+        temp.write("real.yaml", "k: v\n");
+        std::os::unix::fs::symlink(
+            temp.path().join("real.yaml"),
+            temp.path().join("alias.yaml"),
+        )
+        .unwrap();
+        let d = decl("s", "alias.yaml", "$", "$key");
+        let err = IndexRegistry::build(temp.path(), &[d]).unwrap_err();
+        assert!(matches!(err, IndexError::SymlinkRefused { .. }));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn symlink_source_pointing_outside_root_refused() {
+        let temp = TempDir::new("symlink-escape");
+        let outside = TempDir::new("symlink-escape-target");
+        outside.write("target.yaml", "k: v\n");
+        std::os::unix::fs::symlink(
+            outside.path().join("target.yaml"),
+            temp.path().join("link.yaml"),
+        )
+        .unwrap();
+        let d = decl("s", "link.yaml", "$", "$key");
+        let err = IndexRegistry::build(temp.path(), &[d]).unwrap_err();
+        assert!(matches!(err, IndexError::SymlinkRefused { .. }));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn symlinked_intermediate_component_refused() {
+        // Component-wise resolution: a symlinked directory in the middle of
+        // the path is as confined as a symlinked final component.
+        let temp = TempDir::new("symlink-mid");
+        let outside = TempDir::new("symlink-mid-target");
+        outside.write("data.yaml", "k: v\n");
+        std::os::unix::fs::symlink(outside.path(), temp.path().join("sub")).unwrap();
+        let d = decl("s", "sub/data.yaml", "$", "$key");
+        let err = IndexRegistry::build(temp.path(), &[d]).unwrap_err();
+        match err {
+            IndexError::SymlinkRefused { component, .. } => assert_eq!(component, "sub"),
+            other => panic!("expected SymlinkRefused, got {other:?}"),
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn glob_matched_symlink_refused() {
+        // Glob expansion may match a symlink; the handle-based open still
+        // refuses it (closed-world no-follow, DESIGN.md § Five check families).
+        let temp = TempDir::new("glob-symlink");
+        let outside = TempDir::new("glob-symlink-target");
+        outside.write("target.yaml", "k: v\n");
+        std::os::unix::fs::symlink(
+            outside.path().join("target.yaml"),
+            temp.path().join("linked.yaml"),
+        )
+        .unwrap();
+        let d = decl("g", "*.yaml", "$", "$key");
+        let err = IndexRegistry::build(temp.path(), &[d]).unwrap_err();
+        assert!(matches!(err, IndexError::SymlinkRefused { .. }));
     }
 
     // ── File-type errors ────────────────────────────────────────────────────
@@ -565,10 +749,7 @@ mod tests {
     #[test]
     fn registry_holds_multiple_indices() {
         let temp = TempDir::new("multi");
-        temp.write(
-            "matrix.yaml",
-            "matrix:\n  phase-1a:\n    required: [so]\n",
-        );
+        temp.write("matrix.yaml", "matrix:\n  phase-1a:\n    required: [so]\n");
         temp.write(
             ".claude/commands/vsdd-domain-software-engineer.md",
             "---\ndomain_slug: software-engineer\ntier: core\nvalidator_pair: sa\n---\n",

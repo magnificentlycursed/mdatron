@@ -31,6 +31,5 @@ Two corrective paths:
 ## Related codes
 
 - MDATRON-E0080 — pipeline orchestration failed AFTER project root was resolved
-- MDATRON-E0010 / E0011 — path-confinement violations within an otherwise valid
-  project root (reserved for v0.1.x path-confinement check; explain pages land
-  when the check ships)
+- MDATRON-E0010 / E0011 / E0012 — path-confinement violations within an
+  otherwise valid project root

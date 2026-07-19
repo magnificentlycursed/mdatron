@@ -14,13 +14,14 @@
 //! and rustc-shaped + JSON output. See CHANGELOG.md for the surface shipped per release.
 
 pub mod codes;
+pub mod confine;
 pub mod diagnostic;
 pub mod dsl;
 pub mod error;
 pub mod frontmatter;
+pub mod output;
 pub mod schema;
 pub mod verify;
-pub mod output;
 
 pub use diagnostic::{Finding, Location, Severity};
 pub use dsl::{parse_pattern_file, PatternFile};

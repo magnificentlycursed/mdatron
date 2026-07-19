@@ -1,8 +1,10 @@
 //! Embedded `mdatron explain CODE` catalog.
 //!
-//! v0.1.0 baseline: five reserved + emitted codes (MDATRON-E0001, E0002, E0050,
-//! E0070, E0080). The catalog grows by one entry per newly-emitted code per
-//! the Phase 0 DESIGN open question #2 SO disposition (2026-06-02).
+//! v0.1.x catalog: MDATRON-E0001, E0002, E0010, E0011, E0012, E0050, E0070,
+//! E0080. The catalog grows by one entry per newly-emitted code per the
+//! Phase 0 DESIGN open question #2 SO disposition (2026-06-02); the
+//! path-confinement trio (E0010/E0011/E0012) landed with the confinement
+//! rework (the path-confinement defect issue in this tracker).
 //!
 //! Pages are author-Markdown with four required structural elements per the
 //! Phase 1a behavioral spec:
@@ -22,6 +24,9 @@ use serde::{Deserialize, Serialize};
 
 const E0001: &str = include_str!("MDATRON-E0001.md");
 const E0002: &str = include_str!("MDATRON-E0002.md");
+const E0010: &str = include_str!("MDATRON-E0010.md");
+const E0011: &str = include_str!("MDATRON-E0011.md");
+const E0012: &str = include_str!("MDATRON-E0012.md");
 const E0050: &str = include_str!("MDATRON-E0050.md");
 const E0070: &str = include_str!("MDATRON-E0070.md");
 const E0080: &str = include_str!("MDATRON-E0080.md");
@@ -50,6 +55,9 @@ pub fn lookup(code: &str) -> Option<&'static str> {
     match code {
         "MDATRON-E0001" => Some(E0001),
         "MDATRON-E0002" => Some(E0002),
+        "MDATRON-E0010" => Some(E0010),
+        "MDATRON-E0011" => Some(E0011),
+        "MDATRON-E0012" => Some(E0012),
         "MDATRON-E0050" => Some(E0050),
         "MDATRON-E0070" => Some(E0070),
         "MDATRON-E0080" => Some(E0080),
@@ -77,7 +85,7 @@ pub fn lookup_compact(code: &str) -> Option<String> {
     // First sentence of "How to fix" (up to first . or newline).
     let first_sentence = page
         .how_to_fix
-        .split(|c: char| c == '.' || c == '\n')
+        .split(['.', '\n'])
         .next()
         .map(|s| s.trim().to_string())
         .unwrap_or_default();
@@ -130,17 +138,15 @@ pub fn is_mdatron_namespace(code: &str) -> bool {
 /// E0000-series convention; this table grows by one entry per future
 /// rename event with the previous meaning preserved as the durable
 /// migration record.
-pub const MIGRATION_NOTES: &[(&str, &str)] = &[
-    (
-        "MDATRON-E0001",
-        "Pre-Phase-1 bootstrap snapshots emitted this code for \
+pub const MIGRATION_NOTES: &[(&str, &str)] = &[(
+    "MDATRON-E0001",
+    "Pre-Phase-1 bootstrap snapshots emitted this code for \
          frontmatter-schema-violation; from Phase 1 onward, E0001 is \
          exclusively frontmatter-parse-failed and schema-violation \
          moved to MDATRON-E0050. If you saw E0001 in pre-Phase-1 \
          output and the message body said 'schema-violation', see \
          `mdatron explain MDATRON-E0050`.",
-    ),
-];
+)];
 
 /// Look up the migration note for a code, if one exists.
 pub fn migration_note(code: &str) -> Option<&'static str> {
@@ -182,6 +188,9 @@ mod tests {
     const BASELINE: &[&str] = &[
         "MDATRON-E0001",
         "MDATRON-E0002",
+        "MDATRON-E0010",
+        "MDATRON-E0011",
+        "MDATRON-E0012",
         "MDATRON-E0050",
         "MDATRON-E0070",
         "MDATRON-E0080",
@@ -219,7 +228,10 @@ mod tests {
             assert_eq!(parsed.code, *code);
             assert!(!parsed.severity.is_empty(), "{code} severity empty");
             assert!(!parsed.status.is_empty(), "{code} status empty");
-            assert!(!parsed.introduced_in.is_empty(), "{code} introduced_in empty");
+            assert!(
+                !parsed.introduced_in.is_empty(),
+                "{code} introduced_in empty"
+            );
             assert!(
                 parsed.what_this_means.len() >= 30,
                 "{code} 'what this means' section under minimum prose length"
