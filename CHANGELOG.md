@@ -54,6 +54,7 @@ the TRON blockchain.
   + round-trip, and `--quiet --json` flag-combination drive-by
 
 ### Changed
+- mdatron cleanup: truth reconciliation + chassis onboarding (layer 0, pulled forward) (#2)
 - Spec-review round 7 (conformance-engine rev 7, confirmation: the claim reduction) (L7)
 - Spec-review round 6 (conformance-engine rev 6, final: security, two paragraphs) (L6)
 - Spec-review round 5 (conformance-engine rev 5, final targeted: security) (L5)
