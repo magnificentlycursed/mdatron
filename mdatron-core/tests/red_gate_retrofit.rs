@@ -56,7 +56,12 @@ fn is_confinement_class(err: &IndexError) -> bool {
 #[test]
 fn rg_parent_traversal_absent_target_rejected_as_confinement() {
     let root = canonical_temp_root("escape-absent");
-    let d = decl("escape", "../mdatron-redgate-no-such-file.yaml", "$", "$key");
+    let d = decl(
+        "escape",
+        "../mdatron-redgate-no-such-file.yaml",
+        "$",
+        "$key",
+    );
     let result = IndexRegistry::build(&root, &[d]);
     std::fs::remove_dir_all(&root).unwrap();
     match result {
@@ -191,9 +196,9 @@ fn rg_symlink_source_outside_root_refused() {
     std::fs::remove_dir_all(&outside).unwrap();
     match result {
         Err(ref e) if is_confinement_class(e) => {}
-        other => panic!(
-            "contract: symlink escaping the root refused, content never read; got {other:?}"
-        ),
+        other => {
+            panic!("contract: symlink escaping the root refused, content never read; got {other:?}")
+        }
     }
 }
 
@@ -210,9 +215,9 @@ fn rg_symlinked_intermediate_component_refused() {
     std::fs::remove_dir_all(&outside).unwrap();
     match result {
         Err(ref e) if is_confinement_class(e) => {}
-        other => panic!(
-            "contract: symlinked intermediate as confined as symlinked leaf; got {other:?}"
-        ),
+        other => {
+            panic!("contract: symlinked intermediate as confined as symlinked leaf; got {other:?}")
+        }
     }
 }
 

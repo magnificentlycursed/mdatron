@@ -148,6 +148,11 @@ pub enum IndexError {
 // ── Build pipeline ─────────────────────────────────────────────────────────────
 
 fn build_index(project_root: &Path, decl: &KeyDecl) -> Result<Index, IndexError> {
+    // Trim incidental whitespace a YAML scalar may carry around the source
+    // value. Consequence (accepted): a target whose real name begins or ends
+    // with a space is unreachable via this declaration — a pathological name we
+    // do not support as a source; confinement and the rest of the pipeline see
+    // the trimmed value.
     let source = decl.source.trim();
     let mut entries: BTreeMap<String, Value> = BTreeMap::new();
 
@@ -288,14 +293,14 @@ fn resolve_glob(
 /// public path; it is reported rather than silently dropped.
 fn classify_segment(name: &std::ffi::OsStr) -> Result<Segment, IndexError> {
     let s = name.to_str().ok_or_else(|| IndexError::Glob {
-        pattern: name.to_string_lossy().into_owned(),
+        pattern: escape_path_text(&name.to_string_lossy()),
         error: "glob pattern component is not valid UTF-8".to_string(),
     })?;
     if s == "**" {
         Ok(Segment::Recursive)
     } else if s.contains('*') || s.contains('?') || s.contains('[') {
         let pattern = glob::Pattern::new(s).map_err(|e| IndexError::Glob {
-            pattern: s.to_string(),
+            pattern: escape_path_text(s),
             error: e.to_string(),
         })?;
         Ok(Segment::Wildcard(pattern))
@@ -432,7 +437,7 @@ fn list_for_walk(
         .count();
     if depth > MAX_WALK_DEPTH {
         return Err(IndexError::WalkBounded {
-            pattern: source.to_string(),
+            pattern: escape_path_text(source),
             bound: "depth",
             limit: MAX_WALK_DEPTH,
         });
@@ -462,7 +467,7 @@ fn list_for_walk(
     *entries_seen += entries.len();
     if *entries_seen > MAX_WALK_ENTRIES {
         return Err(IndexError::WalkBounded {
-            pattern: source.to_string(),
+            pattern: escape_path_text(source),
             bound: "entries",
             limit: MAX_WALK_ENTRIES,
         });

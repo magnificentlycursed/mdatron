@@ -153,7 +153,16 @@ fn open_confined_impl(root: &Path, components: &[&std::ffi::OsStr]) -> Result<Fi
         if directory {
             flags |= libc::O_DIRECTORY;
         }
-        let fd = unsafe { libc::openat(dirfd.as_raw_fd(), c_name.as_ptr(), flags) };
+        // Retry on EINTR: signal delivery mid-syscall must not surface as a
+        // spurious transient Io. Misclassification stays fail-closed — the
+        // retry only re-attempts the same no-follow open, never grants access.
+        let fd = loop {
+            let fd = unsafe { libc::openat(dirfd.as_raw_fd(), c_name.as_ptr(), flags) };
+            if fd < 0 && io::Error::last_os_error().raw_os_error() == Some(libc::EINTR) {
+                continue;
+            }
+            break fd;
+        };
         if fd < 0 {
             let err = io::Error::last_os_error();
             // O_NOFOLLOW on a symlink: ELOOP on Linux and macOS, EMLINK on
@@ -293,49 +302,24 @@ pub fn list_dir(root: &Path, rel: &Path) -> Result<Vec<DirEntryInfo>, ListViolat
         })
         .collect();
 
-    // Decide confinement on no-follow handles first: a symlinked intermediate
-    // is refused before any directory content is read.
-    validate_dir_chain(root, &components)?;
-
-    // The chain is validated symlink-free; read entries by path. `DirEntry`'s
-    // `file_type` does not traverse symlinks, so an entry that is itself a
-    // symlink is reported as one.
-    let dir_path = root.join(rel);
-    let read_dir = match std::fs::read_dir(&dir_path) {
-        Ok(rd) => rd,
-        Err(e) if e.kind() == io::ErrorKind::NotFound => return Err(ListViolation::NotFound),
-        Err(e) => return Err(ListViolation::Io(e)),
-    };
-
-    let mut out = Vec::new();
-    for entry in read_dir {
-        let entry = entry.map_err(ListViolation::Io)?;
-        let ft = entry.file_type().map_err(ListViolation::Io)?;
-        let file_type = if ft.is_symlink() {
-            EntryType::Symlink
-        } else if ft.is_dir() {
-            EntryType::Dir
-        } else if ft.is_file() {
-            EntryType::File
-        } else {
-            EntryType::Other
-        };
-        out.push(DirEntryInfo {
-            name: entry.file_name(),
-            file_type,
-        });
-    }
+    let mut out = list_dir_impl(root, rel, &components)?;
     out.sort_by(|a, b| a.name.cmp(&b.name));
     Ok(out)
 }
 
 /// Prove every component of `rel` is a no-follow-openable directory under
-/// `root`, refusing a symlinked component. The unix path opens each component
-/// relative to its parent's handle with `O_NOFOLLOW | O_DIRECTORY`; the
-/// non-unix fallback stats each component (weaker: a swap between check and
-/// read is not caught — the same tolerance `open_confined` documents).
+/// `root`, refusing a symlinked component, and return the final validated
+/// directory handle. The unix path opens each component relative to its
+/// parent's handle with `O_NOFOLLOW | O_DIRECTORY` and hands the leaf handle
+/// back so the caller enumerates through it (no re-resolution by path); the
+/// non-unix fallback stats each component and returns `()`, leaving the caller
+/// to read by path (weaker: a swap between check and read is not caught — the
+/// same tolerance `open_confined` documents).
 #[cfg(unix)]
-fn validate_dir_chain(root: &Path, components: &[&OsStr]) -> Result<(), ListViolation> {
+fn validate_dir_chain(
+    root: &Path,
+    components: &[&OsStr],
+) -> Result<std::os::fd::OwnedFd, ListViolation> {
     use std::ffi::CString;
     use std::os::fd::{AsRawFd, FromRawFd, OwnedFd};
     use std::os::unix::ffi::OsStrExt;
@@ -349,7 +333,14 @@ fn validate_dir_chain(root: &Path, components: &[&OsStr]) -> Result<(), ListViol
             ))
         })?;
         let flags = libc::O_RDONLY | libc::O_NOFOLLOW | libc::O_CLOEXEC | libc::O_DIRECTORY;
-        let fd = unsafe { libc::openat(dirfd.as_raw_fd(), c_name.as_ptr(), flags) };
+        // Retry on EINTR (see open_confined_impl): fail-closed, access never granted.
+        let fd = loop {
+            let fd = unsafe { libc::openat(dirfd.as_raw_fd(), c_name.as_ptr(), flags) };
+            if fd < 0 && io::Error::last_os_error().raw_os_error() == Some(libc::EINTR) {
+                continue;
+            }
+            break fd;
+        };
         if fd < 0 {
             let err = io::Error::last_os_error();
             // O_NOFOLLOW on a symlink: ELOOP on Linux/macOS, EMLINK on
@@ -398,13 +389,110 @@ fn validate_dir_chain(root: &Path, components: &[&OsStr]) -> Result<(), ListViol
     };
 
     // Thread the handle down the chain: each component is opened relative to
-    // its parent's handle. The final handle drops here — the path is proven
-    // symlink-free and the caller reads the directory by path. Fold (rather
-    // than a `mut` accumulator) so an empty component list is lint-clean.
-    components
+    // its parent's handle, and the final validated directory handle is returned
+    // for handle-based enumeration. Fold (rather than a `mut` accumulator) so
+    // an empty component list is lint-clean — for an empty chain the root
+    // handle itself is the validated directory.
+    let final_dir = components
         .iter()
         .try_fold(root_handle, |dir, name| open_child_dir(&dir, name))?;
-    Ok(())
+    Ok(final_dir)
+}
+
+/// Enumerate the validated directory through its no-follow handle — never by
+/// re-resolving the path — so a component swapped after validation cannot
+/// redirect the read (`open_confined`'s check-then-read closure, extended to
+/// enumeration). `fdopendir` adopts the handle (`closedir` closes it); per
+/// POSIX the raw fd is not used directly afterwards, so `dirfd` recovers it for
+/// the per-entry no-follow classification.
+#[cfg(unix)]
+fn list_dir_impl(
+    root: &Path,
+    _rel: &Path,
+    components: &[&OsStr],
+) -> Result<Vec<DirEntryInfo>, ListViolation> {
+    use std::os::fd::{IntoRawFd, OwnedFd};
+    use std::os::unix::ffi::OsStrExt;
+
+    let dir_fd: OwnedFd = validate_dir_chain(root, components)?;
+
+    let raw = dir_fd.into_raw_fd();
+    let dirp = unsafe { libc::fdopendir(raw) };
+    if dirp.is_null() {
+        let e = io::Error::last_os_error();
+        unsafe { libc::close(raw) };
+        return Err(ListViolation::Io(e));
+    }
+    // Guard so `closedir` runs on every exit path (including the `?` returns
+    // below), releasing the handle exactly once.
+    struct DirGuard(*mut libc::DIR);
+    impl Drop for DirGuard {
+        fn drop(&mut self) {
+            unsafe { libc::closedir(self.0) };
+        }
+    }
+    let _guard = DirGuard(dirp);
+    let dfd = unsafe { libc::dirfd(dirp) };
+
+    let mut out = Vec::new();
+    loop {
+        // `readdir` returns NULL both at end-of-stream and on error; reset errno
+        // first so a mid-enumeration error is not mistaken for the end (no
+        // silent truncation of the listing).
+        unsafe { *errno_location() = 0 };
+        let ent = unsafe { libc::readdir(dirp) };
+        if ent.is_null() {
+            let e = io::Error::last_os_error();
+            if e.raw_os_error().unwrap_or(0) != 0 {
+                return Err(ListViolation::Io(e));
+            }
+            break;
+        }
+        let name_bytes = unsafe { std::ffi::CStr::from_ptr((*ent).d_name.as_ptr()) }.to_bytes();
+        if name_bytes == b"." || name_bytes == b".." {
+            continue;
+        }
+        let c_name = std::ffi::CString::new(name_bytes).map_err(|_| {
+            ListViolation::Io(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "directory entry name contains NUL",
+            ))
+        })?;
+        // No-follow classification through the validated directory fd, so an
+        // entry that is itself a symlink is reported as one, never resolved.
+        let mut st: libc::stat = unsafe { std::mem::zeroed() };
+        let rc = unsafe { libc::fstatat(dfd, c_name.as_ptr(), &mut st, libc::AT_SYMLINK_NOFOLLOW) };
+        let file_type = if rc != 0 {
+            EntryType::Other
+        } else {
+            match st.st_mode & libc::S_IFMT {
+                libc::S_IFLNK => EntryType::Symlink,
+                libc::S_IFDIR => EntryType::Dir,
+                libc::S_IFREG => EntryType::File,
+                _ => EntryType::Other,
+            }
+        };
+        out.push(DirEntryInfo {
+            name: OsStr::from_bytes(name_bytes).to_os_string(),
+            file_type,
+        });
+    }
+    Ok(out)
+}
+
+/// Pointer to the thread-local `errno`, per platform (`libc` exposes different
+/// accessors). Used to distinguish `readdir`'s end-of-stream NULL from an error
+/// NULL.
+#[cfg(unix)]
+fn errno_location() -> *mut libc::c_int {
+    #[cfg(any(target_os = "linux", target_os = "android", target_os = "emscripten"))]
+    {
+        unsafe { libc::__errno_location() }
+    }
+    #[cfg(not(any(target_os = "linux", target_os = "android", target_os = "emscripten")))]
+    {
+        unsafe { libc::__error() }
+    }
 }
 
 #[cfg(not(unix))]
@@ -430,6 +518,46 @@ fn validate_dir_chain(root: &Path, components: &[&OsStr]) -> Result<(), ListViol
         }
     }
     Ok(())
+}
+
+/// Non-unix: validate the chain by path (weaker — see `validate_dir_chain`),
+/// then read the directory by path. The check-to-read window `open_confined`'s
+/// fallback documents applies to enumeration here too, tolerated only where the
+/// platform offers no handle-relative no-follow open.
+#[cfg(not(unix))]
+fn list_dir_impl(
+    root: &Path,
+    rel: &Path,
+    components: &[&OsStr],
+) -> Result<Vec<DirEntryInfo>, ListViolation> {
+    validate_dir_chain(root, components)?;
+
+    let dir_path = root.join(rel);
+    let read_dir = match std::fs::read_dir(&dir_path) {
+        Ok(rd) => rd,
+        Err(e) if e.kind() == io::ErrorKind::NotFound => return Err(ListViolation::NotFound),
+        Err(e) => return Err(ListViolation::Io(e)),
+    };
+
+    let mut out = Vec::new();
+    for entry in read_dir {
+        let entry = entry.map_err(ListViolation::Io)?;
+        let ft = entry.file_type().map_err(ListViolation::Io)?;
+        let file_type = if ft.is_symlink() {
+            EntryType::Symlink
+        } else if ft.is_dir() {
+            EntryType::Dir
+        } else if ft.is_file() {
+            EntryType::File
+        } else {
+            EntryType::Other
+        };
+        out.push(DirEntryInfo {
+            name: entry.file_name(),
+            file_type,
+        });
+    }
+    Ok(out)
 }
 
 #[cfg(test)]
@@ -572,6 +700,88 @@ mod tests {
         // — the fix rejects traversal without breaking legitimate access.
         assert!(open_confined(&root, &confined("secret.yaml")).is_ok());
 
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    // SE-F7: intermediate-handle threading for a path deeper than the two-level
+    // case the other tests cover.
+    #[test]
+    fn opens_deeply_nested_file() {
+        use std::io::Read;
+        let root = temp_root("deep");
+        std::fs::create_dir_all(root.join("a/b/c/d")).unwrap();
+        std::fs::write(root.join("a/b/c/d/deep.yaml"), "k: deep\n").unwrap();
+
+        let mut file = open_confined(&root, &confined("a/b/c/d/deep.yaml")).unwrap();
+        let mut content = String::new();
+        file.read_to_string(&mut content).unwrap();
+        assert_eq!(content, "k: deep\n");
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    // SE-F7: a directory as the leaf opens (unix permits O_RDONLY on a
+    // directory); the not-a-file nature surfaces as EISDIR when the caller
+    // reads — the parse stage's error, not a confinement violation.
+    #[cfg(unix)]
+    #[test]
+    fn directory_as_leaf_opens_but_read_is_eisdir() {
+        use std::io::Read;
+        let root = temp_root("dir-leaf");
+        std::fs::create_dir_all(root.join("adir")).unwrap();
+
+        let mut file = open_confined(&root, &confined("adir")).unwrap();
+        let mut buf = Vec::new();
+        let err = file.read_to_end(&mut buf).unwrap_err();
+        assert_eq!(err.raw_os_error(), Some(libc::EISDIR));
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    // SEC-F6 / invariant I7: the handle walks (open_confined) and the
+    // handle-based enumeration (list_dir, via fdopendir/closedir) must release
+    // every descriptor — success, symlink-refusal, and not-found paths alike.
+    #[cfg(unix)]
+    fn open_fd_count() -> usize {
+        let dir = if Path::new("/proc/self/fd").exists() {
+            "/proc/self/fd"
+        } else {
+            "/dev/fd"
+        };
+        std::fs::read_dir(dir).map(|rd| rd.count()).unwrap_or(0)
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn confine_ops_do_not_leak_fds() {
+        use std::io::Read;
+        let root = temp_root("fd-leak");
+        std::fs::create_dir_all(root.join("a/b")).unwrap();
+        std::fs::write(root.join("a/b/x.yaml"), "k: v\n").unwrap();
+        std::os::unix::fs::symlink("x.yaml", root.join("a/b/link.yaml")).unwrap();
+
+        let exercise = |root: &Path| {
+            if let Ok(mut f) = open_confined(root, &confined("a/b/x.yaml")) {
+                let mut s = String::new();
+                let _ = f.read_to_string(&mut s);
+            }
+            let _ = open_confined(root, &confined("a/b/link.yaml")); // refused mid-walk
+            let _ = open_confined(root, &confined("a/b/absent.yaml")); // NotFound
+            let _ = list_dir(root, Path::new("a/b")); // handle-based enumeration
+            let _ = list_dir(root, Path::new("no-such")); // NotFound
+        };
+
+        // Warm up (first-call allocations) before measuring.
+        for _ in 0..20 {
+            exercise(&root);
+        }
+        let before = open_fd_count();
+        for _ in 0..300 {
+            exercise(&root);
+        }
+        let after = open_fd_count();
+        assert!(
+            after <= before + 2,
+            "descriptor leak across 300 confine ops: {before} -> {after} (invariant I7)"
+        );
         std::fs::remove_dir_all(&root).unwrap();
     }
 
