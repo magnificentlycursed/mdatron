@@ -15,7 +15,7 @@ pub enum Error {
     Io(#[from] std::io::Error),
 
     #[error("yaml parse error: {0}")]
-    Yaml(#[from] serde_yaml::Error),
+    Yaml(#[from] serde_yaml_ng::Error),
 
     #[error("json error: {0}")]
     Json(#[from] serde_json::Error),

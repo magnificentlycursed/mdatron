@@ -22,7 +22,7 @@ use super::index::IndexRegistry;
 // ── Value ──────────────────────────────────────────────────────────────────────
 
 /// A runtime value produced by evaluating an expression. Maps cleanly to/from
-/// `serde_json::Value` and `serde_yaml::Value`; we use our own type so the evaluator
+/// `serde_json::Value` and `serde_yaml_ng::Value`; we use our own type so the evaluator
 /// can return owned values without leaking the serde representation through its API.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value {

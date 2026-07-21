@@ -18,5 +18,5 @@ path = "src/main.rs"
 mdatron-core = { path = "../mdatron-core" }
 clap = { workspace = true }
 serde = { workspace = true }
-serde_yaml = { workspace = true }
+serde_yaml_ng = { workspace = true }
 serde_json = { workspace = true }

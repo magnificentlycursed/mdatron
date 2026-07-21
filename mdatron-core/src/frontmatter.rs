@@ -15,7 +15,7 @@
 //! Implemented; tests below assert the contracts.
 
 use crate::Error;
-use serde_yaml::Value;
+use serde_yaml_ng::Value;
 
 /// Parse YAML frontmatter from markdown content.
 ///
@@ -73,7 +73,7 @@ pub fn parse(content: &str) -> Result<Option<(Value, &str)>, Error> {
     let value: Value = if yaml_str.trim().is_empty() {
         Value::Mapping(Default::default())
     } else {
-        serde_yaml::from_str(yaml_str)?
+        serde_yaml_ng::from_str(yaml_str)?
     };
 
     Ok(Some((value, body)))
@@ -147,6 +147,20 @@ mod tests {
         assert!(
             result.is_err(),
             "malformed YAML between markers should return Err"
+        );
+    }
+
+    // Pins the parser's duplicate-key contract across dependency changes
+    // (#69: serde_yaml -> serde_yaml_ng). A duplicate mapping key is rejected,
+    // not silently last-wins — the safe behavior a validation tool wants, and
+    // an uncovered edge before this test.
+    #[test]
+    fn duplicate_mapping_key_returns_err() {
+        let content = "---\ntitle: a\ntitle: b\n---\n";
+        let result = parse(content);
+        assert!(
+            result.is_err(),
+            "a duplicate mapping key must be rejected, not silently resolved"
         );
     }
 }

@@ -573,8 +573,8 @@ fn parse_file_to_value(path: &Path, mut file: File) -> Result<Value, IndexError>
 
     match ext.as_str() {
         "yaml" | "yml" => {
-            let yaml: serde_yaml::Value =
-                serde_yaml::from_str(&content).map_err(|e| IndexError::Parse {
+            let yaml: serde_yaml_ng::Value =
+                serde_yaml_ng::from_str(&content).map_err(|e| IndexError::Parse {
                     path: escape_path_text(&path.to_string_lossy()),
                     error: e.to_string(),
                 })?;
@@ -646,11 +646,11 @@ fn apply_select(value: &Value, select: &str) -> Result<Value, String> {
 
 // ── Value conversions ──────────────────────────────────────────────────────────
 
-pub(crate) fn yaml_to_value(yaml: &serde_yaml::Value) -> Value {
+pub(crate) fn yaml_to_value(yaml: &serde_yaml_ng::Value) -> Value {
     match yaml {
-        serde_yaml::Value::Null => Value::Null,
-        serde_yaml::Value::Bool(b) => Value::Bool(*b),
-        serde_yaml::Value::Number(n) => {
+        serde_yaml_ng::Value::Null => Value::Null,
+        serde_yaml_ng::Value::Bool(b) => Value::Bool(*b),
+        serde_yaml_ng::Value::Number(n) => {
             if let Some(i) = n.as_i64() {
                 Value::Int(i)
             } else {
@@ -658,9 +658,11 @@ pub(crate) fn yaml_to_value(yaml: &serde_yaml::Value) -> Value {
                 Value::Null
             }
         }
-        serde_yaml::Value::String(s) => Value::Str(s.clone()),
-        serde_yaml::Value::Sequence(seq) => Value::Array(seq.iter().map(yaml_to_value).collect()),
-        serde_yaml::Value::Mapping(map) => {
+        serde_yaml_ng::Value::String(s) => Value::Str(s.clone()),
+        serde_yaml_ng::Value::Sequence(seq) => {
+            Value::Array(seq.iter().map(yaml_to_value).collect())
+        }
+        serde_yaml_ng::Value::Mapping(map) => {
             let mut obj = BTreeMap::new();
             for (k, v) in map {
                 if let Some(k_str) = k.as_str() {

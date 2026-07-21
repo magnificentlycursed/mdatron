@@ -11,7 +11,7 @@
 
 use crate::Error;
 use serde_json::Value as JsonValue;
-use serde_yaml::Value as YamlValue;
+use serde_yaml_ng::Value as YamlValue;
 
 /// A compiled JSON Schema ready for validation against many instances.
 ///
@@ -77,7 +77,7 @@ impl Schema {
     }
 }
 
-/// Convert a `serde_yaml::Value` to a `serde_json::Value` via serde's interconversion.
+/// Convert a `serde_yaml_ng::Value` to a `serde_json::Value` via serde's interconversion.
 /// Returns `None` only for YAML values that have no JSON representation (rare for
 /// frontmatter content).
 fn yaml_to_json(yaml: &YamlValue) -> Option<JsonValue> {
@@ -90,7 +90,7 @@ mod tests {
     use serde_json::json;
 
     fn yaml(s: &str) -> YamlValue {
-        serde_yaml::from_str(s).unwrap()
+        serde_yaml_ng::from_str(s).unwrap()
     }
 
     #[test]

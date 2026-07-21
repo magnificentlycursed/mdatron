@@ -9,7 +9,7 @@ use crate::Error;
 /// expected shape. Expression strings inside rules are NOT validated; that is the
 /// evaluator's responsibility.
 pub fn parse_pattern_file(yaml: &str) -> Result<PatternFile, Error> {
-    let parsed: PatternFile = serde_yaml::from_str(yaml)?;
+    let parsed: PatternFile = serde_yaml_ng::from_str(yaml)?;
     Ok(parsed)
 }
 
