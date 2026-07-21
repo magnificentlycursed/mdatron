@@ -37,6 +37,7 @@ the TRON blockchain.
 - Inline interpolation does not fit block prefix marking (L4)
 
 ### Added
+- docs(README): pre-commit integration guide recommending a fail-closed wrapper (block the commit when the `mdatron` binary is missing, rather than skip silently), from the first external-adopter field report (#60)
 - Design increment: conformance-check families (phase 1a cycle) (#1)
 
 - `mdatron explain CODE` v0.1.0 baseline catalog — five per-code prose pages

@@ -99,6 +99,31 @@ The `--json` flag emits a single JSON output object on stdout for machine
 consumers; stderr still carries the rustc-shaped diagnostics unless you also
 pass `--quiet`.
 
+## Pre-commit integration
+
+Wire `mdatron verify` into your pre-commit hook so typed-document errors block
+the commit that introduces them. Make the wrapper **fail closed**: if the
+`mdatron` binary is missing — not yet installed, off `PATH`, or absent from the
+hook's shell environment — block the commit rather than skip the check
+silently. A validator that silently skips is invisible in exactly the moment it
+is needed.
+
+```sh
+#!/bin/sh
+# .git/hooks/pre-commit  (or your pre-commit-framework entry)
+if ! command -v mdatron >/dev/null 2>&1; then
+    echo "pre-commit: mdatron not found on PATH — refusing to commit unverified." >&2
+    echo "  install it (see Install above) or bypass explicitly with 'git commit --no-verify'." >&2
+    exit 1
+fi
+mdatron verify
+```
+
+`mdatron verify` exits `0` when clean, `1` on findings, and `2` on a pipeline
+failure (see First run). The wrapper above blocks on all three of a missing
+binary, findings, and pipeline failure. Reserve `git commit --no-verify` for a
+deliberate, visible bypass rather than letting a missing checker pass unseen.
+
 ## Schema example (Layer 1)
 
 A minimal blog-post schema that requires `schema_class`, `title`, and
