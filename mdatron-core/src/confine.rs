@@ -20,6 +20,7 @@
 //!    handle (`DESIGN.md` § Verification is fast where it is invoked), not on
 //!    a path that could be swapped between check and read.
 
+use std::ffi::{OsStr, OsString};
 use std::fs::File;
 use std::io;
 use std::path::{Component, Path, PathBuf};
@@ -225,6 +226,212 @@ fn open_confined_impl(root: &Path, components: &[&std::ffi::OsStr]) -> Result<Fi
     File::open(&current).map_err(OpenViolation::Io)
 }
 
+// ── Closed-world directory enumeration ──────────────────────────────────────────
+//
+// The engine-owned, no-follow, bounded walk primitive that `dsl::index`'s glob
+// resolution and the extras scan build on. `DESIGN.md` § Five check families:
+// the engine enumerates rather than discovering the tree — symlinks are not
+// followed during enumeration, so symlink cycles cannot extend a walk. Listing
+// is decided on validated no-follow handles exactly as `open_confined` decides
+// a read: a symlinked intermediate directory is refused, never enumerated
+// through, so an out-of-tree directory's contents are never disclosed.
+
+/// No-follow file-type classification of a directory entry. A symbolic link is
+/// reported as [`EntryType::Symlink`] whatever its target — never as the
+/// target's type — so a caller enforcing closed-world discipline can refuse or
+/// skip it without resolving it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EntryType {
+    Dir,
+    File,
+    Symlink,
+    Other,
+}
+
+/// One entry returned by [`list_dir`]: its name and its no-follow file type.
+#[derive(Debug, Clone)]
+pub struct DirEntryInfo {
+    pub name: OsString,
+    pub file_type: EntryType,
+}
+
+/// A violation surfaced while listing a directory under the governed root for
+/// closed-world enumeration.
+#[derive(Debug)]
+pub enum ListViolation {
+    /// A component of the listed path was a symbolic link. Refused no-follow
+    /// exactly as [`open_confined`] refuses a symlinked component — the
+    /// directory is never enumerated through. MDATRON-E0012 territory.
+    Symlink { component: PathBuf },
+    /// The directory (or a component of its path) does not exist. Kept
+    /// distinct from other IO so glob enumeration can treat a missing
+    /// directory as "no matches" (closed-world: enumerate what is present)
+    /// rather than a hard error, while a real IO failure is still reported.
+    NotFound,
+    /// Ordinary IO failure (permission, not-a-directory, …). Reported, never
+    /// silently skipped (`DESIGN.md` § Agents are the first consumer: no
+    /// silent degradation).
+    Io(io::Error),
+}
+
+/// List the immediate entries of `root`/`rel` through validated no-follow
+/// handles, returning each entry's name and no-follow file type.
+///
+/// Every component of `rel` is opened relative to its parent with no-follow
+/// semantics before the directory is read, so a symlinked intermediate
+/// directory is refused ([`ListViolation::Symlink`]) rather than followed —
+/// the closed-world discipline of `DESIGN.md` § Five check families. `rel` must
+/// be a [`confine_lexically`] result (relative, no parent segments); `root` is
+/// engine-supplied and trusted, so symlinks in the root path itself are
+/// permitted. Entries are returned in a deterministic (name-sorted) order.
+pub fn list_dir(root: &Path, rel: &Path) -> Result<Vec<DirEntryInfo>, ListViolation> {
+    let components: Vec<&OsStr> = rel
+        .components()
+        .filter_map(|c| match c {
+            Component::Normal(name) => Some(name),
+            _ => None,
+        })
+        .collect();
+
+    // Decide confinement on no-follow handles first: a symlinked intermediate
+    // is refused before any directory content is read.
+    validate_dir_chain(root, &components)?;
+
+    // The chain is validated symlink-free; read entries by path. `DirEntry`'s
+    // `file_type` does not traverse symlinks, so an entry that is itself a
+    // symlink is reported as one.
+    let dir_path = root.join(rel);
+    let read_dir = match std::fs::read_dir(&dir_path) {
+        Ok(rd) => rd,
+        Err(e) if e.kind() == io::ErrorKind::NotFound => return Err(ListViolation::NotFound),
+        Err(e) => return Err(ListViolation::Io(e)),
+    };
+
+    let mut out = Vec::new();
+    for entry in read_dir {
+        let entry = entry.map_err(ListViolation::Io)?;
+        let ft = entry.file_type().map_err(ListViolation::Io)?;
+        let file_type = if ft.is_symlink() {
+            EntryType::Symlink
+        } else if ft.is_dir() {
+            EntryType::Dir
+        } else if ft.is_file() {
+            EntryType::File
+        } else {
+            EntryType::Other
+        };
+        out.push(DirEntryInfo {
+            name: entry.file_name(),
+            file_type,
+        });
+    }
+    out.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(out)
+}
+
+/// Prove every component of `rel` is a no-follow-openable directory under
+/// `root`, refusing a symlinked component. The unix path opens each component
+/// relative to its parent's handle with `O_NOFOLLOW | O_DIRECTORY`; the
+/// non-unix fallback stats each component (weaker: a swap between check and
+/// read is not caught — the same tolerance `open_confined` documents).
+#[cfg(unix)]
+fn validate_dir_chain(root: &Path, components: &[&OsStr]) -> Result<(), ListViolation> {
+    use std::ffi::CString;
+    use std::os::fd::{AsRawFd, FromRawFd, OwnedFd};
+    use std::os::unix::ffi::OsStrExt;
+    use std::os::unix::fs::OpenOptionsExt;
+
+    fn open_child_dir(dirfd: &OwnedFd, name: &OsStr) -> Result<OwnedFd, ListViolation> {
+        let c_name = CString::new(name.as_bytes()).map_err(|_| {
+            ListViolation::Io(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "path component contains NUL",
+            ))
+        })?;
+        let flags = libc::O_RDONLY | libc::O_NOFOLLOW | libc::O_CLOEXEC | libc::O_DIRECTORY;
+        let fd = unsafe { libc::openat(dirfd.as_raw_fd(), c_name.as_ptr(), flags) };
+        if fd < 0 {
+            let err = io::Error::last_os_error();
+            // O_NOFOLLOW on a symlink: ELOOP on Linux/macOS, EMLINK on
+            // FreeBSD-lineage. With O_DIRECTORY, macOS reports a
+            // symlink-to-directory as ENOTDIR — disambiguate from a genuine
+            // non-directory with a handle-relative no-follow stat (mirrors
+            // `open_confined`).
+            let symlink = match err.raw_os_error() {
+                Some(libc::ELOOP) | Some(libc::EMLINK) => true,
+                Some(libc::ENOTDIR) => {
+                    let mut st: libc::stat = unsafe { std::mem::zeroed() };
+                    let rc = unsafe {
+                        libc::fstatat(
+                            dirfd.as_raw_fd(),
+                            c_name.as_ptr(),
+                            &mut st,
+                            libc::AT_SYMLINK_NOFOLLOW,
+                        )
+                    };
+                    rc == 0 && (st.st_mode & libc::S_IFMT) == libc::S_IFLNK
+                }
+                _ => false,
+            };
+            if symlink {
+                return Err(ListViolation::Symlink {
+                    component: PathBuf::from(name),
+                });
+            }
+            if err.kind() == io::ErrorKind::NotFound {
+                return Err(ListViolation::NotFound);
+            }
+            return Err(ListViolation::Io(err));
+        }
+        // SAFETY: fd is a freshly-opened, owned descriptor.
+        Ok(unsafe { OwnedFd::from_raw_fd(fd) })
+    }
+
+    let root_handle: OwnedFd = match std::fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_DIRECTORY)
+        .open(root)
+    {
+        Ok(f) => f.into(),
+        Err(e) if e.kind() == io::ErrorKind::NotFound => return Err(ListViolation::NotFound),
+        Err(e) => return Err(ListViolation::Io(e)),
+    };
+
+    // Thread the handle down the chain: each component is opened relative to
+    // its parent's handle. The final handle drops here — the path is proven
+    // symlink-free and the caller reads the directory by path. Fold (rather
+    // than a `mut` accumulator) so an empty component list is lint-clean.
+    components
+        .iter()
+        .try_fold(root_handle, |dir, name| open_child_dir(&dir, name))?;
+    Ok(())
+}
+
+#[cfg(not(unix))]
+fn validate_dir_chain(root: &Path, components: &[&OsStr]) -> Result<(), ListViolation> {
+    let mut current = root.to_path_buf();
+    for name in components {
+        current.push(name);
+        match std::fs::symlink_metadata(&current) {
+            Ok(meta) if meta.file_type().is_symlink() => {
+                return Err(ListViolation::Symlink {
+                    component: PathBuf::from(name),
+                });
+            }
+            Ok(meta) if meta.is_dir() => {}
+            Ok(_) => {
+                return Err(ListViolation::Io(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "not a directory",
+                )));
+            }
+            Err(e) if e.kind() == io::ErrorKind::NotFound => return Err(ListViolation::NotFound),
+            Err(e) => return Err(ListViolation::Io(e)),
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -402,5 +609,69 @@ mod tests {
         }
         std::fs::remove_dir_all(&root).unwrap();
         std::fs::remove_dir_all(&outside).unwrap();
+    }
+
+    // ── list_dir: no-follow closed-world enumeration ────────────────────────
+
+    fn names(entries: &[DirEntryInfo]) -> Vec<String> {
+        entries
+            .iter()
+            .map(|e| e.name.to_string_lossy().into_owned())
+            .collect()
+    }
+
+    #[test]
+    fn list_dir_returns_sorted_entries_with_types() {
+        let root = temp_root("list-basic");
+        std::fs::write(root.join("b.yaml"), "k: v\n").unwrap();
+        std::fs::write(root.join("a.yaml"), "k: v\n").unwrap();
+        std::fs::create_dir(root.join("d")).unwrap();
+
+        let entries = list_dir(&root, Path::new("")).unwrap();
+        assert_eq!(names(&entries), vec!["a.yaml", "b.yaml", "d"]);
+        assert_eq!(entries[0].file_type, EntryType::File);
+        assert_eq!(entries[2].file_type, EntryType::Dir);
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn list_dir_missing_directory_is_not_found() {
+        let root = temp_root("list-missing");
+        let err = list_dir(&root, Path::new("no-such-dir")).unwrap_err();
+        assert!(matches!(err, ListViolation::NotFound));
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn list_dir_through_symlinked_component_is_refused_without_disclosure() {
+        // The closed-world guarantee: a symlinked intermediate directory is
+        // refused before any entry of its target is read, so an out-of-tree
+        // directory's filenames are never enumerated.
+        let root = temp_root("list-symlink");
+        let outside = temp_root("list-symlink-outside");
+        std::fs::write(outside.join("secret.yaml"), "k: v\n").unwrap();
+        std::os::unix::fs::symlink(&outside, root.join("sub")).unwrap();
+
+        let err = list_dir(&root, Path::new("sub")).unwrap_err();
+        match err {
+            ListViolation::Symlink { component } => assert_eq!(component, PathBuf::from("sub")),
+            other => panic!("expected Symlink refusal, got {other:?}"),
+        }
+        std::fs::remove_dir_all(&root).unwrap();
+        std::fs::remove_dir_all(&outside).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn list_dir_reports_symlink_entry_as_symlink_not_its_target() {
+        let root = temp_root("list-symlink-entry");
+        std::fs::write(root.join("real.yaml"), "k: v\n").unwrap();
+        std::os::unix::fs::symlink(root.join("real.yaml"), root.join("alias.yaml")).unwrap();
+
+        let entries = list_dir(&root, Path::new("")).unwrap();
+        let alias = entries.iter().find(|e| e.name == "alias.yaml").unwrap();
+        assert_eq!(alias.file_type, EntryType::Symlink);
+        std::fs::remove_dir_all(&root).unwrap();
     }
 }
