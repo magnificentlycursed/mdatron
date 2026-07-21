@@ -14,6 +14,8 @@ the TRON blockchain.
 - Path-confinement helper: fallback and starts_with flaws; traversal test passes only via macOS symlink (L2)
 
 ### Security
+- index: glob enumeration semantics unpinned — closed-world discipline not enforced or tested; replaced glob::glob with an engine-owned no-follow bounded walk (absorbs #54: glob metacharacters in the project-root path parsed as pattern syntax, and non-UTF8 roots degraded before matching) (#55)
+- confine: open_confined silently sanitizes non-Normal components instead of rejecting them (#53)
 - Competent-demotion refusal asserts an engine signal the engine cannot emit (L41)
 - Demotion falsification and seed conflate pin drift with annotation refusal (L39)
 - Demotion annotation has no specified home (L38)
@@ -54,6 +56,7 @@ the TRON blockchain.
   + round-trip, and `--quiet --json` flag-combination drive-by
 
 ### Changed
+- ops: repair the hollow chassis install (crosslink init --force) (#58)
 - mdatron cleanup: truth reconciliation + chassis onboarding (layer 0, pulled forward) (#2)
 - Spec-review round 7 (conformance-engine rev 7, confirmation: the claim reduction) (L7)
 - Spec-review round 6 (conformance-engine rev 6, final: security, two paragraphs) (L6)
