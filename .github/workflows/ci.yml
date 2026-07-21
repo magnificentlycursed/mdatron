@@ -61,9 +61,12 @@ jobs:
       fail-fast: false
       matrix:
         # unix confinement (openat/O_NOFOLLOW handle walks) is the primary
-        # security path — exercised on both Linux and macOS. The non-unix
-        # fallback is unverified here (no Windows target; see #64).
-        os: [ubuntu-latest, macos-latest]
+        # security path — exercised on Linux and macOS. windows-latest builds
+        # and tests the non-unix fallback (symlink_metadata + open / path-based
+        # list_dir), so it no longer bit-rots unbuilt; the unix-only tests are
+        # cfg-gated off there. The fallback's weaker TOCTOU posture is the
+        # documented carve-out (#56) pending the handle-based Windows walk (#64).
+        os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
 
