@@ -1,0 +1,4 @@
+# mdatron configuration — managed by `mdatron init`.
+# Adopter schemas live in .mdatron/schemas/, patterns in .mdatron/patterns/.
+file_globs:
+  - "**/*.md"

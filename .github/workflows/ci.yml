@@ -103,3 +103,36 @@ jobs:
 
       - name: Audit dependencies (RustSec advisories)
         run: cargo audit
+
+  self-validate:
+    # The self-hosting gate (#46): mdatron verifies its OWN typed-markdown
+    # corpus (review-log/*.md) against its OWN committed .mdatron/ config,
+    # using the mdatron built from this very checkout. A schema violation in
+    # any review-log entry fails the build — the blocking release gate. This
+    # is what let the throwaway bootstrap-validator be retired.
+    name: Self-validation (mdatron verify on this repo)
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain (pinned to the project MSRV)
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.88"
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build the mdatron CLI
+        run: cargo build -p mdatron-cli --locked
+
+      # init on the already-initialized repo must be a clean no-op: it proves
+      # the committed managed partition (.mdatron/config.yaml) still matches
+      # its manifest hash — i.e. no un-recorded drift landed. A drifted managed
+      # file exits 1 (MDATRON-E0060) and fails here.
+      - name: Managed partition intact (init is a no-op, not drift)
+        run: cargo run -q -p mdatron-cli --locked -- init --project-root .
+
+      # The gate: every review-log entry must satisfy schemas/review-entry.json.
+      - name: Verify this repo against its own .mdatron/ config
+        run: cargo run -q -p mdatron-cli --locked -- verify --project-root .
