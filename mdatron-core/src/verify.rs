@@ -711,7 +711,7 @@ pattern:
       let:
         expected: key("composition-matrix", $self.phase)
       assert: every(d in $expected.required, d in $self.relevant_domains)
-      code: MDATRON-W0100
+      code: MDATRON-W0050
       message: "phase {{$self.phase}} missing required domain(s)"
 "#,
         );
@@ -737,7 +737,7 @@ pattern:
             1,
             "expected exactly one finding (the bad primer); got {findings:?}"
         );
-        assert_eq!(findings[0].code, "MDATRON-W0100");
+        assert_eq!(findings[0].code, "MDATRON-W0050");
         assert!(findings[0]
             .location
             .file
