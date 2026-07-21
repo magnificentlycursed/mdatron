@@ -17,7 +17,9 @@
 //! - Layer 2 runs every pattern rule whose context matches the file's schema_class
 //!   or path glob; emits the rule's `code` on assertion failure
 //! - Message interpolation via `{{<expression>}}` markers
-//! - Source-span: line 1 column 0 for v0.1.x (precise location lands later)
+//! - Source-span: `MDATRON-E0050` resolves the violation's precise source line
+//!   from its schema pointer (#65); other findings still land at line 1 column 0
+//!   pending their own precise-location work
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -274,6 +276,12 @@ fn verify_file(
     if let Some(schema_class) = &schema_class_opt {
         if let Some(schema) = schemas.get(schema_class) {
             for ve in schema.validate(&frontmatter_value) {
+                // Resolve the schema pointer to a source line so the diagnostic
+                // is directly actionable for the fixing agent (#65); fall back
+                // to the frontmatter block's start line if it doesn't resolve.
+                let (line, column) =
+                    crate::frontmatter::resolve_pointer_location(&content, &ve.instance_path)
+                        .unwrap_or((1, 0));
                 findings.push(Finding {
                     code: "MDATRON-E0050".into(),
                     severity: Severity::Error,
@@ -282,8 +290,8 @@ fn verify_file(
                     help: None,
                     location: Location {
                         file: path.to_path_buf(),
-                        line: 1,
-                        column: 0,
+                        line,
+                        column,
                     },
                     explain_ref: Some("MDATRON-E0050".into()),
                 });
@@ -556,6 +564,33 @@ mod tests {
         assert_eq!(findings[0].code, "MDATRON-E0050");
         assert!(
             findings[0].message.contains("invalid-phase") || findings[0].message.contains("enum")
+        );
+    }
+
+    #[test]
+    fn schema_violation_reports_source_line_not_block_start() {
+        // #65: the E0050 diagnostic must point at the violation's SOURCE LINE so
+        // the fixing agent edits directly, rather than the frontmatter block's
+        // start. Here the bad `phase` is on file line 6, not line 1. (Red gate:
+        // against the prior hardcoded `line: 1` this fails, expecting 6.)
+        let proj = TempProject::new("e0050-line");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(
+            "primer.md",
+            "---\nschema_class: phase-primer\nrelevant_domains:\n  - se\n  - pe\nphase: invalid-phase\n---\n",
+        );
+
+        let cfg = VerifyConfig::new(&proj.0);
+        let findings = verify(&cfg).unwrap();
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].code, "MDATRON-E0050");
+        assert_eq!(
+            findings[0].location.line, 6,
+            "E0050 must point at the violation's source line (6), not the block start (1); got {:?}",
+            findings[0].location
         );
     }
 
