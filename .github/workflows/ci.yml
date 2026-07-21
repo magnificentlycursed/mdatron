@@ -1,0 +1,102 @@
+# mdatron CI gauntlet (tracker issue #68).
+#
+# Shape follows the crosslink/Thermite reference (operator ruling 2026-07-19,
+# DESIGN.md § Structural inspiration): lint -> {test-matrix, security-audit}.
+# Deliberate divergence from vsdd-cli's `vsdd-*.yml` / `vsdd init` deployment
+# convention: mdatron's default engineering reference is crosslink/Thermite, not
+# vsdd-cli, so this is a hand-authored `ci.yml` (DESIGN.md: divergence from an
+# upstream convention carries a stated reason).
+#
+# Reproducibility: the toolchain is pinned to the project MSRV (1.88, matching
+# rust-toolchain.toml), Cargo.lock is committed, and every build/test runs
+# --locked. Because all jobs use 1.88, green CI also proves MSRV compliance.
+name: CI
+
+on:
+  push:
+    # main plus the working-branch namespaces; crosslink/** tracker branches
+    # (hub, knowledge, agents, ...) are intentionally excluded — they carry no
+    # buildable source.
+    branches: [main, "feature/**", "chore/**", "docs/**"]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  lint:
+    name: Lint (fmt + clippy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain (pinned to the project MSRV)
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.88"
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Format check
+        run: cargo fmt --all --check
+
+      - name: Clippy (deny warnings)
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+  test:
+    name: Test (${{ matrix.os }})
+    needs: lint
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        # unix confinement (openat/O_NOFOLLOW handle walks) is the primary
+        # security path — exercised on both Linux and macOS. The non-unix
+        # fallback is unverified here (no Windows target; see #64).
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain (pinned to the project MSRV)
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.88"
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build
+        run: cargo build --workspace --locked --verbose
+
+      - name: Test
+        run: cargo test --workspace --locked --verbose
+
+  audit:
+    name: Security audit (cargo-audit)
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain (pinned to the project MSRV)
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.88"
+
+      # Prebuilt binary — avoids building cargo-audit itself under the pinned
+      # MSRV (it tracks a newer toolchain). The audit only reads Cargo.lock.
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
+
+      - name: Audit dependencies (RustSec advisories)
+        run: cargo audit
