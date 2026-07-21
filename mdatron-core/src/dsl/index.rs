@@ -28,7 +28,7 @@
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::Read;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use thiserror::Error;
 
@@ -137,7 +137,7 @@ fn build_index(project_root: &Path, decl: &KeyDecl) -> Result<Index, IndexError>
     let mut entries: BTreeMap<String, Value> = BTreeMap::new();
 
     for rel in resolve_source(project_root, source)? {
-        let display = project_root.join(&rel);
+        let display = project_root.join(rel.as_path());
         let file = confine::open_confined(project_root, &rel).map_err(|v| match v {
             confine::OpenViolation::Symlink { component } => IndexError::SymlinkRefused {
                 path: display.to_string_lossy().into_owned(),
@@ -161,7 +161,10 @@ fn build_index(project_root: &Path, decl: &KeyDecl) -> Result<Index, IndexError>
 /// lexically here — before glob expansion and without touching the filesystem —
 /// so absolute paths and parent segments are rejected whether or not the
 /// target exists, and glob patterns may not contain parent segments.
-fn resolve_source(project_root: &Path, source: &str) -> Result<Vec<PathBuf>, IndexError> {
+fn resolve_source(
+    project_root: &Path,
+    source: &str,
+) -> Result<Vec<confine::ConfinedPath>, IndexError> {
     let rel = confine::confine_lexically(Path::new(source)).map_err(|v| match v {
         confine::LexicalViolation::Absolute => IndexError::AbsoluteSource {
             path: source.to_string(),
@@ -175,7 +178,7 @@ fn resolve_source(project_root: &Path, source: &str) -> Result<Vec<PathBuf>, Ind
 
     let mut out = Vec::new();
     if is_glob {
-        let pattern = project_root.join(&rel);
+        let pattern = project_root.join(rel.as_path());
         let pattern_str = pattern.to_string_lossy().into_owned();
         let glob_paths = glob::glob(&pattern_str).map_err(|e| IndexError::Glob {
             pattern: source.to_string(),
@@ -187,13 +190,20 @@ fn resolve_source(project_root: &Path, source: &str) -> Result<Vec<PathBuf>, Ind
                 error: e.to_string(),
             })?;
             // Matches are textual expansions of the root-joined pattern;
-            // re-derive the root-relative path for the handle-based open.
-            let rel = path
-                .strip_prefix(project_root)
-                .map_err(|_| IndexError::PathTraversal {
+            // re-derive the root-relative path and re-confine it, so the
+            // handle-based open receives a ConfinedPath established on the same
+            // lexical basis as the literal branch (a glob can only widen the
+            // set of matched leaves, never smuggle in a `..` or root segment).
+            let stripped =
+                path.strip_prefix(project_root)
+                    .map_err(|_| IndexError::PathTraversal {
+                        path: path.to_string_lossy().into_owned(),
+                    })?;
+            let confined =
+                confine::confine_lexically(stripped).map_err(|_| IndexError::PathTraversal {
                     path: path.to_string_lossy().into_owned(),
                 })?;
-            out.push(rel.to_path_buf());
+            out.push(confined);
         }
     } else {
         out.push(rel);
@@ -401,6 +411,7 @@ fn json_to_value(json: &serde_json::Value) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
     use std::time::{SystemTime, UNIX_EPOCH};
 
     struct TempDir(PathBuf);
