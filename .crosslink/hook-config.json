@@ -1,7 +1,12 @@
 {
   "agent_overrides": {
-    "agent_lint_commands": [],
-    "agent_test_commands": [],
+    "agent_lint_commands": [
+      "cargo clippy -- -D warnings",
+      "cargo fmt --check"
+    ],
+    "agent_test_commands": [
+      "cargo test"
+    ],
     "blocked_git_commands": [
       "git push --force",
       "git push -f",
