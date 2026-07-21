@@ -1,6 +1,6 @@
 //! Embedded `mdatron explain CODE` catalog.
 //!
-//! v0.1.x catalog: MDATRON-E0001, E0002, E0010, E0011, E0012, E0050, E0070,
+//! v0.1.x catalog: MDATRON-E0001, E0002, E0010, E0011, E0012, E0050, E0060, E0070,
 //! E0080. The catalog grows by one entry per newly-emitted code per the
 //! Phase 0 DESIGN open question #2 SO disposition (2026-06-02); the
 //! path-confinement trio (E0010/E0011/E0012) landed with the confinement
@@ -28,6 +28,7 @@ const E0010: &str = include_str!("MDATRON-E0010.md");
 const E0011: &str = include_str!("MDATRON-E0011.md");
 const E0012: &str = include_str!("MDATRON-E0012.md");
 const E0050: &str = include_str!("MDATRON-E0050.md");
+const E0060: &str = include_str!("MDATRON-E0060.md");
 const E0070: &str = include_str!("MDATRON-E0070.md");
 const E0080: &str = include_str!("MDATRON-E0080.md");
 
@@ -59,6 +60,7 @@ pub fn lookup(code: &str) -> Option<&'static str> {
         "MDATRON-E0011" => Some(E0011),
         "MDATRON-E0012" => Some(E0012),
         "MDATRON-E0050" => Some(E0050),
+        "MDATRON-E0060" => Some(E0060),
         "MDATRON-E0070" => Some(E0070),
         "MDATRON-E0080" => Some(E0080),
         _ => None,
@@ -192,6 +194,7 @@ mod tests {
         "MDATRON-E0011",
         "MDATRON-E0012",
         "MDATRON-E0050",
+        "MDATRON-E0060",
         "MDATRON-E0070",
         "MDATRON-E0080",
     ];

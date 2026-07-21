@@ -18,6 +18,9 @@ serde_yaml_ng = "0.10"
 # saphyr: position-tracking YAML parse, used only on the schema-violation error
 # path to resolve a JSON pointer to a source line (#65). Happy path is serde_yaml_ng.
 saphyr = "0.0.11"
+# sha256 content hashes for the init managed-partition manifest (#74). DESIGN.md
+# ratifies sha256 for pins; see the dependency investigation on #74.
+sha2 = "0.10"
 serde_json = "1"
 thiserror = "1"
 clap = { version = "4.5", features = ["derive"] }

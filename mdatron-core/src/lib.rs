@@ -19,6 +19,7 @@ pub mod diagnostic;
 pub mod dsl;
 pub mod error;
 pub mod frontmatter;
+pub mod init;
 pub mod output;
 pub mod schema;
 pub mod verify;
