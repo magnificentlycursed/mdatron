@@ -73,6 +73,18 @@ enum Command {
         #[arg(long = "compact", conflicts_with = "json")]
         compact: bool,
     },
+
+    /// Scaffold the `.mdatron/` skeleton and its managed manifest. Idempotent;
+    /// refuses a hand-modified managed file with MDATRON-E0060.
+    Init {
+        /// Project root. Defaults to the current directory.
+        #[arg(long = "project-root", value_name = "DIR")]
+        project_root: Option<PathBuf>,
+
+        /// Suppress stderr human-readable output.
+        #[arg(long = "quiet", short = 'q')]
+        quiet: bool,
+    },
 }
 
 fn parse_explain_code(s: &str) -> Result<String, String> {
@@ -125,6 +137,63 @@ fn main() -> ExitCode {
             json,
             compact,
         } => cmd_explain(&code, json, compact),
+        Command::Init {
+            project_root,
+            quiet,
+        } => cmd_init(project_root, quiet),
+    }
+}
+
+fn cmd_init(project_root: Option<PathBuf>, quiet: bool) -> ExitCode {
+    use mdatron_core::init::{drift_findings, init, InitError, InitOutcome};
+
+    let root = match project_root.map(Ok).unwrap_or_else(std::env::current_dir) {
+        Ok(r) => r,
+        Err(e) => {
+            if !quiet {
+                eprintln!("error[MDATRON-E0070]: cannot resolve project root: {e}");
+            }
+            return ExitCode::from(2);
+        }
+    };
+
+    match init(&root) {
+        Ok(InitOutcome::Deployed { created }) => {
+            if !quiet {
+                eprintln!(
+                    "mdatron init: deployed .mdatron/ ({} path(s))",
+                    created.len()
+                );
+                for p in &created {
+                    eprintln!("  + {p}");
+                }
+            }
+            ExitCode::SUCCESS
+        }
+        Ok(InitOutcome::AlreadyInitialized) => {
+            if !quiet {
+                eprintln!("mdatron init: already initialized (no changes)");
+            }
+            ExitCode::SUCCESS
+        }
+        Err(InitError::Drift(drifts)) => {
+            if !quiet {
+                for f in drift_findings(&root, &drifts) {
+                    print_finding(&f);
+                }
+                eprintln!(
+                    "mdatron init: refused — {} managed file(s) drifted from the manifest",
+                    drifts.len()
+                );
+            }
+            ExitCode::from(1)
+        }
+        Err(e) => {
+            if !quiet {
+                eprintln!("error[MDATRON-E0080]: init failed\n   = note: {e}");
+            }
+            ExitCode::from(2)
+        }
     }
 }
 
