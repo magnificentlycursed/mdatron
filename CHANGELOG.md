@@ -14,6 +14,7 @@ the TRON blockchain.
 - Path-confinement helper: fallback and starts_with flaws; traversal test passes only via macOS symlink (L2)
 
 ### Security
+- index: complete the diagnostic marking discipline at the extract/parse stage — Parse/Selection/UnsupportedFileType/read-Io messages now escape adopter path text (control bytes render as inert `\xNN`), consistent with the confinement-stage variants (#67)
 - index: glob enumeration semantics unpinned — closed-world discipline not enforced or tested; replaced glob::glob with an engine-owned no-follow bounded walk (absorbs #54: glob metacharacters in the project-root path parsed as pattern syntax, and non-UTF8 roots degraded before matching) (#55)
 - confine: open_confined silently sanitizes non-Normal components instead of rejecting them (#53)
 - Competent-demotion refusal asserts an engine signal the engine cannot emit (L41)

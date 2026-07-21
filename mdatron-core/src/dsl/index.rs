@@ -504,7 +504,7 @@ fn extract_into(
 ) -> Result<(), IndexError> {
     let parsed = parse_file_to_value(path, file)?;
     let selected = apply_select(&parsed, select).map_err(|e| IndexError::Selection {
-        path: path.to_string_lossy().into_owned(),
+        path: escape_path_text(&path.to_string_lossy()),
         select: select.to_string(),
         error: e,
     })?;
@@ -518,7 +518,7 @@ fn extract_into(
                 Ok(())
             }
             other => Err(IndexError::Selection {
-                path: path.to_string_lossy().into_owned(),
+                path: escape_path_text(&path.to_string_lossy()),
                 select: select.to_string(),
                 error: format!(
                     "indexed_by '$key' requires the selected value to be an object; got {}",
@@ -529,7 +529,7 @@ fn extract_into(
     } else {
         // Selected is one entry; extract its key via indexed_by select.
         let key_value = apply_select(&selected, indexed_by).map_err(|e| IndexError::Selection {
-            path: path.to_string_lossy().into_owned(),
+            path: escape_path_text(&path.to_string_lossy()),
             select: indexed_by.to_string(),
             error: e,
         })?;
@@ -537,7 +537,7 @@ fn extract_into(
             Value::Str(s) => s,
             other => {
                 return Err(IndexError::Selection {
-                    path: path.to_string_lossy().into_owned(),
+                    path: escape_path_text(&path.to_string_lossy()),
                     select: indexed_by.to_string(),
                     error: format!(
                         "indexed_by must yield a string key; got {}",
@@ -561,7 +561,7 @@ fn parse_file_to_value(path: &Path, mut file: File) -> Result<Value, IndexError>
     let mut content = String::new();
     file.read_to_string(&mut content)
         .map_err(|e| IndexError::Io {
-            path: path.to_string_lossy().into_owned(),
+            path: escape_path_text(&path.to_string_lossy()),
             error: e.to_string(),
         })?;
 
@@ -575,7 +575,7 @@ fn parse_file_to_value(path: &Path, mut file: File) -> Result<Value, IndexError>
         "yaml" | "yml" => {
             let yaml: serde_yaml::Value =
                 serde_yaml::from_str(&content).map_err(|e| IndexError::Parse {
-                    path: path.to_string_lossy().into_owned(),
+                    path: escape_path_text(&path.to_string_lossy()),
                     error: e.to_string(),
                 })?;
             Ok(yaml_to_value(&yaml))
@@ -583,7 +583,7 @@ fn parse_file_to_value(path: &Path, mut file: File) -> Result<Value, IndexError>
         "json" => {
             let json: serde_json::Value =
                 serde_json::from_str(&content).map_err(|e| IndexError::Parse {
-                    path: path.to_string_lossy().into_owned(),
+                    path: escape_path_text(&path.to_string_lossy()),
                     error: e.to_string(),
                 })?;
             Ok(json_to_value(&json))
@@ -591,7 +591,7 @@ fn parse_file_to_value(path: &Path, mut file: File) -> Result<Value, IndexError>
         "md" => {
             // Markdown file: parse frontmatter, expose as $.frontmatter.
             let fm_opt = crate::frontmatter::parse(&content).map_err(|e| IndexError::Parse {
-                path: path.to_string_lossy().into_owned(),
+                path: escape_path_text(&path.to_string_lossy()),
                 error: e.to_string(),
             })?;
             let fm_value = match fm_opt {
@@ -603,7 +603,7 @@ fn parse_file_to_value(path: &Path, mut file: File) -> Result<Value, IndexError>
             Ok(Value::Object(wrapper))
         }
         _ => Err(IndexError::UnsupportedFileType {
-            path: path.to_string_lossy().into_owned(),
+            path: escape_path_text(&path.to_string_lossy()),
             ext,
         }),
     }
@@ -1192,6 +1192,33 @@ mod tests {
         assert!(
             !msg.contains('\u{1b}') && !msg.contains('\n') && !msg.contains('\u{7f}'),
             "no raw control byte may survive in the message: {msg:?}"
+        );
+    }
+
+    // #67: the marking discipline must also hold at the extract/parse stage,
+    // not only at confinement. A control byte in a legitimately-confined,
+    // matched filename must render escaped when it surfaces in an
+    // extract-stage diagnostic (here UnsupportedFileType). Unix-only: the
+    // fixture needs a control byte in an on-disk filename.
+    #[cfg(unix)]
+    #[test]
+    fn parse_stage_path_in_message_is_marked() {
+        let temp = TempDir::new("mark-parse");
+        // A confined file whose name carries an ESC, with an unsupported
+        // extension so extraction reaches UnsupportedFileType carrying this path.
+        let fname = "weird\u{1b}name.txt";
+        temp.write(fname, "x");
+        let d = decl("m", fname, "$", "$key");
+        let err = IndexRegistry::build(temp.path(), &[d]).unwrap_err();
+        assert!(
+            matches!(err, IndexError::UnsupportedFileType { .. }),
+            "an unsupported extension must route to UnsupportedFileType; got {err:?}"
+        );
+        let msg = err.to_string();
+        assert!(msg.contains("\\x1B"), "ESC must render escaped; got: {msg}");
+        assert!(
+            !msg.contains('\u{1b}'),
+            "no raw control byte may survive in the extract-stage message: {msg:?}"
         );
     }
 
