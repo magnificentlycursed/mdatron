@@ -275,13 +275,17 @@ fn verify_file(
     // ── Layer 1: structural validation ─────────────────────────────────────
     if let Some(schema_class) = &schema_class_opt {
         if let Some(schema) = schemas.get(schema_class) {
-            for ve in schema.validate(&frontmatter_value) {
-                // Resolve the schema pointer to a source line so the diagnostic
-                // is directly actionable for the fixing agent (#65); fall back
-                // to the frontmatter block's start line if it doesn't resolve.
-                let (line, column) =
-                    crate::frontmatter::resolve_pointer_location(&content, &ve.instance_path)
-                        .unwrap_or((1, 0));
+            let violations = schema.validate(&frontmatter_value);
+            // Resolve every violation's source line in a single marked parse so
+            // the diagnostics are directly actionable for the fixing agent
+            // (#65/#70/#71); each falls back to the block start when unresolved.
+            let items: Vec<(&str, &str)> = violations
+                .iter()
+                .map(|ve| (ve.instance_path.as_str(), ve.message.as_str()))
+                .collect();
+            let locations = crate::frontmatter::resolve_e0050_locations(&content, &items);
+            for (ve, loc) in violations.iter().zip(locations) {
+                let (line, column) = loc.unwrap_or((1, 0));
                 findings.push(Finding {
                     code: "MDATRON-E0050".into(),
                     severity: Severity::Error,
@@ -590,6 +594,39 @@ mod tests {
         assert_eq!(
             findings[0].location.line, 6,
             "E0050 must point at the violation's source line (6), not the block start (1); got {:?}",
+            findings[0].location
+        );
+    }
+
+    #[test]
+    fn additional_property_reports_offending_key_line() {
+        // #71: an additionalProperties violation's pointer is the parent object,
+        // but the offending key is named in the message. E0050 should point at
+        // the unexpected key's line (file line 3), not the mapping start (2) or
+        // the block start (1).
+        let proj = TempProject::new("e0050-addl-prop");
+        proj.write(
+            ".mdatron/schemas/strict-primer.json",
+            r#"{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["schema_class"],
+  "properties": { "schema_class": { "const": "strict-primer" } },
+  "additionalProperties": false
+}"#,
+        );
+        proj.write(
+            "primer.md",
+            "---\nschema_class: strict-primer\nunexpected_key: oops\n---\n",
+        );
+
+        let cfg = VerifyConfig::new(&proj.0);
+        let findings = verify(&cfg).unwrap();
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].code, "MDATRON-E0050");
+        assert_eq!(
+            findings[0].location.line, 3,
+            "E0050 must point at the unexpected key's line (3); got {:?}",
             findings[0].location
         );
     }

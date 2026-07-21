@@ -105,31 +105,97 @@ fn yaml_block(content: &str) -> Option<&str> {
     None
 }
 
-/// Resolve a schema-validation JSON Pointer (`instance_path`, e.g.
-/// `/action_vocabulary/20`) to its 1-based `(line, column)` in the original
-/// file, by re-parsing the frontmatter with the position-tracking `saphyr`
-/// parser. Runs only on the schema-violation error path — never the happy path.
-/// Returns `None` when there is no frontmatter block or the pointer does not
-/// resolve to a node; the caller then falls back to the block's start line.
+/// Resolve every schema-violation location for one file in a SINGLE marked
+/// parse. Each `(instance_path, message)` yields the 1-based `(line, column)` of
+/// the offending node, or `None` (the caller then falls back to the block
+/// start). Runs only on the error path — never the happy path.
 ///
-/// The value: mdatron's diagnostics are agent-first (`DESIGN.md` § Agents are
-/// the first consumer). A bare pointer forces the fixing agent to re-parse and
-/// count array indices to locate the edit; a `file:line` is directly
-/// actionable, matching the `location`-carrying diagnostics of the Thermite
-/// reference.
-pub fn resolve_pointer_location(content: &str, pointer: &str) -> Option<(u32, u32)> {
+/// - The frontmatter is parsed once for all violations, not once per violation
+///   (#70).
+/// - The parse runs inside `catch_unwind`, so a panic in the pre-1.0 `saphyr`
+///   parser degrades to `None` rather than aborting the whole run (#72).
+/// - For an `additionalProperties` violation — whose pointer is the parent
+///   object, not the offending key — the unexpected key named in the message is
+///   located, so the line points at the key itself rather than the mapping
+///   start (#71).
+///
+/// Value: mdatron's diagnostics are agent-first (`DESIGN.md` § Agents are the
+/// first consumer). A `file:line` is directly actionable where a bare pointer
+/// forces the fixing agent to re-parse and count array indices — matching the
+/// `location`-carrying diagnostics of the Thermite reference.
+pub fn resolve_e0050_locations(content: &str, items: &[(&str, &str)]) -> Vec<Option<(u32, u32)>> {
     use saphyr::{LoadableYamlNode, MarkedYaml};
 
-    let yaml = yaml_block(content)?;
-    let docs = MarkedYaml::load_from_str(yaml).ok()?;
-    let node = walk_pointer(docs.first()?, pointer)?;
-    let marker = node.span.start;
-    // saphyr lines are 1-based within `yaml`, whose first line is file line 2
-    // (the opening `---` is line 1): file_line = marker.line() + 1. Columns are
-    // 0-based, rendered 1-based.
+    let root: Option<MarkedYaml> = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let yaml = yaml_block(content)?;
+        MarkedYaml::load_from_str(yaml).ok()?.into_iter().next()
+    }))
+    .ok()
+    .flatten();
+
+    let Some(root) = root else {
+        return vec![None; items.len()];
+    };
+    items
+        .iter()
+        .map(|(pointer, message)| resolve_one(&root, pointer, message))
+        .collect()
+}
+
+/// Single-pointer convenience wrapper over [`resolve_e0050_locations`].
+pub fn resolve_pointer_location(content: &str, pointer: &str) -> Option<(u32, u32)> {
+    resolve_e0050_locations(content, &[(pointer, "")])
+        .into_iter()
+        .next()
+        .flatten()
+}
+
+fn resolve_one(root: &saphyr::MarkedYaml, pointer: &str, message: &str) -> Option<(u32, u32)> {
+    let node = walk_pointer(root, pointer)?;
+    // additionalProperties: the pointer addresses the parent object; the
+    // offending key is named in the message. Locate the key for a precise line.
+    if let Some(key) = unexpected_property_name(message) {
+        if let Some(loc) = key_location(node, &key) {
+            return Some(loc);
+        }
+    }
+    marker_to_location(node.span.start)
+}
+
+/// The 1-based file `(line, column)` of a marked node's start. saphyr lines are
+/// 1-based within the block, whose first line is file line 2 (the opening `---`
+/// is line 1), so `file_line = marker.line() + 1`; columns are 0-based, rendered
+/// 1-based.
+fn marker_to_location(marker: saphyr::Marker) -> Option<(u32, u32)> {
     let line = u32::try_from(marker.line()).ok()?.checked_add(1)?;
     let column = u32::try_from(marker.col()).ok()?.saturating_add(1);
     Some((line, column))
+}
+
+/// Locate a child key by name within a mapping node, returning the KEY's
+/// position (not the value's) — used to point at an unexpected property.
+fn key_location(node: &saphyr::MarkedYaml, key: &str) -> Option<(u32, u32)> {
+    use saphyr::{Scalar, YamlData};
+    let YamlData::Mapping(map) = &node.data else {
+        return None;
+    };
+    map.iter().find_map(|(k, _)| match &k.data {
+        YamlData::Value(Scalar::String(s)) if s.as_ref() == key => marker_to_location(k.span.start),
+        _ => None,
+    })
+}
+
+/// Extract the first unexpected-property name from an `additionalProperties`
+/// validator message (`"Additional properties are not allowed ('extra' was
+/// unexpected)"` -> `"extra"`). `None` for any other message shape.
+fn unexpected_property_name(message: &str) -> Option<String> {
+    if !message.contains("Additional properties are not allowed") {
+        return None;
+    }
+    let start = message.find('\'')?;
+    let rest = &message[start + 1..];
+    let end = rest.find('\'')?;
+    Some(rest[..end].to_string())
 }
 
 /// Walk a JSON Pointer (RFC 6901) over a marked YAML tree to the addressed node.
