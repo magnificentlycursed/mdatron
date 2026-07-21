@@ -56,6 +56,7 @@ the TRON blockchain.
   + round-trip, and `--quiet --json` flag-combination drive-by
 
 ### Changed
+- docs: the E0012 explain page and DESIGN.md § Verification is fast qualify the swap-proof confinement guarantee as Unix-only (`openat`/`O_NOFOLLOW`); the non-unix fallback's weaker check-to-open window is stated as a tolerated, carved-out posture until a handle-based walk lands (#56)
 - ops: repair the hollow chassis install (crosslink init --force) (#58)
 - mdatron cleanup: truth reconciliation + chassis onboarding (layer 0, pulled forward) (#2)
 - Spec-review round 7 (conformance-engine rev 7, confirmation: the claim reduction) (L7)
