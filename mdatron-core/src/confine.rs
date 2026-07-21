@@ -24,6 +24,26 @@ use std::fs::File;
 use std::io;
 use std::path::{Component, Path, PathBuf};
 
+/// A path proven confinement-safe: relative, composed only of normal
+/// components (no root/prefix, no `..`). The **sole** constructor is
+/// [`confine_lexically`], and [`open_confined`] accepts nothing else — so the
+/// lexical check can never be skipped, and a caller cannot hand `open_confined`
+/// a `../secret.yaml` that would otherwise be silently sanitized to
+/// `root/secret.yaml` (the defect issue in this tracker records the hole).
+///
+/// The invariant — every component is [`Component::Normal`] — is established at
+/// construction and never mutated, so [`open_confined`] needs no re-validation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConfinedPath(PathBuf);
+
+impl ConfinedPath {
+    /// The normalized, root-relative path. Borrowing is read-only: the
+    /// confinement invariant cannot be broken through this view.
+    pub fn as_path(&self) -> &Path {
+        &self.0
+    }
+}
+
 /// A confinement violation decidable from the path text alone.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LexicalViolation {
@@ -49,10 +69,11 @@ pub enum OpenViolation {
 /// Decide confinement of an adopter-supplied source path on its text alone.
 ///
 /// Accepts only relative paths made of normal components (`.` is dropped);
-/// returns the normalized root-relative path. Requires no filesystem access,
-/// so targets that do not exist are rejected on the same basis as targets
-/// that do.
-pub fn confine_lexically(source: &Path) -> Result<PathBuf, LexicalViolation> {
+/// returns a [`ConfinedPath`] wrapping the normalized root-relative path.
+/// Requires no filesystem access, so targets that do not exist are rejected on
+/// the same basis as targets that do. This is the only way to obtain a
+/// `ConfinedPath`, and hence the only entry to [`open_confined`].
+pub fn confine_lexically(source: &Path) -> Result<ConfinedPath, LexicalViolation> {
     let mut rel = PathBuf::new();
     for component in source.components() {
         match component {
@@ -62,22 +83,42 @@ pub fn confine_lexically(source: &Path) -> Result<PathBuf, LexicalViolation> {
             Component::Normal(c) => rel.push(c),
         }
     }
-    Ok(rel)
+    Ok(ConfinedPath(rel))
 }
 
-/// Open `rel` (a [`confine_lexically`] result) under `root` through validated
-/// no-follow handles and return the handle the caller must read from.
+/// Open a [`ConfinedPath`] under `root` through validated no-follow handles
+/// and return the handle the caller must read from.
+///
+/// Taking a `ConfinedPath` (rather than a bare `&Path`) is the fix for the
+/// silent-sanitize defect: a path carrying a `..` or root component cannot be
+/// constructed as a `ConfinedPath`, so it can never reach this open — the
+/// pairing with [`confine_lexically`] is enforced by the type, not by caller
+/// discipline. The example below does not compile:
+///
+/// ```compile_fail
+/// use mdatron_core::confine::open_confined;
+/// use std::path::Path;
+/// // open_confined requires a &ConfinedPath; a raw &Path is rejected by the
+/// // type checker, so an unconfined "../secret.yaml" can never be opened.
+/// let _ = open_confined(Path::new("/tmp"), Path::new("../secret.yaml"));
+/// ```
 ///
 /// `root` is engine-supplied and trusted; symlinks in the root path itself
 /// (e.g. macOS `/var` → `/private/var`) are permitted. Every component of
 /// `rel` below it is opened relative to its parent directory's handle with
 /// no-follow semantics, so a symlink at any depth is refused.
-pub fn open_confined(root: &Path, rel: &Path) -> Result<File, OpenViolation> {
+pub fn open_confined(root: &Path, rel: &ConfinedPath) -> Result<File, OpenViolation> {
+    // Every component is Normal by the ConfinedPath invariant (established in
+    // confine_lexically), so this is a straight projection to the names — no
+    // component is silently dropped.
     let components: Vec<&std::ffi::OsStr> = rel
+        .0
         .components()
-        .filter_map(|c| match c {
-            Component::Normal(name) => Some(name),
-            _ => None,
+        .map(|c| match c {
+            Component::Normal(name) => name,
+            other => {
+                unreachable!("ConfinedPath invariant violated: non-normal component {other:?}")
+            }
         })
         .collect();
     if components.is_empty() {
@@ -193,16 +234,20 @@ mod tests {
     #[test]
     fn plain_relative_path_is_confined() {
         assert_eq!(
-            confine_lexically(Path::new("a/b/c.yaml")).unwrap(),
-            PathBuf::from("a/b/c.yaml")
+            confine_lexically(Path::new("a/b/c.yaml"))
+                .unwrap()
+                .as_path(),
+            Path::new("a/b/c.yaml")
         );
     }
 
     #[test]
     fn cur_dir_components_are_dropped() {
         assert_eq!(
-            confine_lexically(Path::new("./a/./b.yaml")).unwrap(),
-            PathBuf::from("a/b.yaml")
+            confine_lexically(Path::new("./a/./b.yaml"))
+                .unwrap()
+                .as_path(),
+            Path::new("a/b.yaml")
         );
     }
 
@@ -244,7 +289,10 @@ mod tests {
 
     #[test]
     fn empty_path_confines_to_empty() {
-        assert_eq!(confine_lexically(Path::new("")).unwrap(), PathBuf::new());
+        assert_eq!(
+            confine_lexically(Path::new("")).unwrap().as_path(),
+            Path::new("")
+        );
     }
 
     // ── open_confined ───────────────────────────────────────────────────────
@@ -259,6 +307,13 @@ mod tests {
         path
     }
 
+    /// The only way to build the `open_confined` argument: through the lexical
+    /// check. A source that fails confinement panics here, mirroring the fact
+    /// that it can never reach `open_confined` in production code.
+    fn confined(source: &str) -> ConfinedPath {
+        confine_lexically(Path::new(source)).expect("test source must be confinable")
+    }
+
     #[test]
     fn opens_nested_file_through_handles() {
         use std::io::Read;
@@ -266,7 +321,7 @@ mod tests {
         std::fs::create_dir_all(root.join("a/b")).unwrap();
         std::fs::write(root.join("a/b/data.yaml"), "k: v\n").unwrap();
 
-        let mut file = open_confined(&root, Path::new("a/b/data.yaml")).unwrap();
+        let mut file = open_confined(&root, &confined("a/b/data.yaml")).unwrap();
         let mut content = String::new();
         file.read_to_string(&mut content).unwrap();
         assert_eq!(content, "k: v\n");
@@ -276,7 +331,7 @@ mod tests {
     #[test]
     fn missing_target_is_io_not_symlink() {
         let root = temp_root("missing");
-        let err = open_confined(&root, Path::new("absent.yaml")).unwrap_err();
+        let err = open_confined(&root, &confined("absent.yaml")).unwrap_err();
         assert!(matches!(err, OpenViolation::Io(_)));
         std::fs::remove_dir_all(&root).unwrap();
     }
@@ -284,8 +339,32 @@ mod tests {
     #[test]
     fn empty_source_is_io() {
         let root = temp_root("empty");
-        let err = open_confined(&root, Path::new("")).unwrap_err();
+        let err = open_confined(&root, &confined("")).unwrap_err();
         assert!(matches!(err, OpenViolation::Io(_)));
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    // RED GATE (#53): a path carrying a `..` component must never reach an open
+    // as `root/secret.yaml`. Pre-fix, `open_confined(root, Path::new("../secret.yaml"))`
+    // filtered the ParentDir away and opened `root/secret.yaml`; the falsifying
+    // call now fails to type-check (see the `compile_fail` doctest on
+    // `open_confined`). This runtime test guards the seam that remains: the only
+    // way to reach `open_confined` is via `confine_lexically`, which refuses the
+    // traversal outright, so the target file is never opened.
+    #[test]
+    fn red_gate_parent_traversal_cannot_reach_open() {
+        let root = temp_root("red-gate-parent");
+        std::fs::write(root.join("secret.yaml"), "k: v\n").unwrap();
+
+        // The would-be argument to open_confined cannot even be constructed.
+        assert_eq!(
+            confine_lexically(Path::new("../secret.yaml")).unwrap_err(),
+            LexicalViolation::ParentSegment,
+        );
+        // And the same file, reached through a properly confined path, still opens
+        // — the fix rejects traversal without breaking legitimate access.
+        assert!(open_confined(&root, &confined("secret.yaml")).is_ok());
+
         std::fs::remove_dir_all(&root).unwrap();
     }
 
@@ -296,7 +375,7 @@ mod tests {
         std::fs::write(root.join("real.yaml"), "k: v\n").unwrap();
         std::os::unix::fs::symlink(root.join("real.yaml"), root.join("alias.yaml")).unwrap();
 
-        let err = open_confined(&root, Path::new("alias.yaml")).unwrap_err();
+        let err = open_confined(&root, &confined("alias.yaml")).unwrap_err();
         match err {
             OpenViolation::Symlink { component } => {
                 assert_eq!(component, PathBuf::from("alias.yaml"));
@@ -314,7 +393,7 @@ mod tests {
         std::fs::write(outside.join("data.yaml"), "k: v\n").unwrap();
         std::os::unix::fs::symlink(&outside, root.join("sub")).unwrap();
 
-        let err = open_confined(&root, Path::new("sub/data.yaml")).unwrap_err();
+        let err = open_confined(&root, &confined("sub/data.yaml")).unwrap_err();
         match err {
             OpenViolation::Symlink { component } => {
                 assert_eq!(component, PathBuf::from("sub"));
