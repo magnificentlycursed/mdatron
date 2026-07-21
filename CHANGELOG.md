@@ -38,7 +38,8 @@ the TRON blockchain.
 - Inline interpolation does not fit block prefix marking (L4)
 
 ### Added
-- CI: GitHub Actions gauntlet — fmt + clippy (`-D warnings`), workspace tests on Linux and macOS, and `cargo audit`, all on the pinned MSRV toolchain (crosslink/Thermite-shaped) (#68)
+- diagnostics: `MDATRON-E0050` frontmatter-schema-violation now reports the violation's precise source line (`--> file:line`) instead of the frontmatter block start, resolving the schema JSON pointer via an error-path-only position-tracking parse — directly actionable for the fixing agent (#65)
+- CI: GitHub Actions gauntlet — fmt + clippy (`-D warnings`), workspace tests on Linux, macOS, and Windows, and `cargo audit`, all on the pinned MSRV toolchain (crosslink/Thermite-shaped) (#68, #64)
 - docs(README): pre-commit integration guide recommending a fail-closed wrapper (block the commit when the `mdatron` binary is missing, rather than skip silently), from the first external-adopter field report (#60)
 - Design increment: conformance-check families (phase 1a cycle) (#1)
 
