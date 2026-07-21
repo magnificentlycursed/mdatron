@@ -79,6 +79,85 @@ pub fn parse(content: &str) -> Result<Option<(Value, &str)>, Error> {
     Ok(Some((value, body)))
 }
 
+/// The frontmatter YAML substring (between the `---` markers), or `None` when
+/// there is no well-formed block. The substring's first line is file line 2
+/// (the opening `---` is line 1). Used by [`resolve_pointer_location`].
+fn yaml_block(content: &str) -> Option<&str> {
+    if !content.starts_with("---\n") {
+        return None;
+    }
+    let bytes = content.as_bytes();
+    let mut pos = 4usize;
+    while pos <= bytes.len() {
+        let line_end = bytes[pos..]
+            .iter()
+            .position(|&b| b == b'\n')
+            .map(|rel| pos + rel)
+            .unwrap_or(bytes.len());
+        if &content[pos..line_end] == "---" {
+            return Some(&content[4..pos]);
+        }
+        if line_end == bytes.len() {
+            break;
+        }
+        pos = line_end + 1;
+    }
+    None
+}
+
+/// Resolve a schema-validation JSON Pointer (`instance_path`, e.g.
+/// `/action_vocabulary/20`) to its 1-based `(line, column)` in the original
+/// file, by re-parsing the frontmatter with the position-tracking `saphyr`
+/// parser. Runs only on the schema-violation error path — never the happy path.
+/// Returns `None` when there is no frontmatter block or the pointer does not
+/// resolve to a node; the caller then falls back to the block's start line.
+///
+/// The value: mdatron's diagnostics are agent-first (`DESIGN.md` § Agents are
+/// the first consumer). A bare pointer forces the fixing agent to re-parse and
+/// count array indices to locate the edit; a `file:line` is directly
+/// actionable, matching the `location`-carrying diagnostics of the Thermite
+/// reference.
+pub fn resolve_pointer_location(content: &str, pointer: &str) -> Option<(u32, u32)> {
+    use saphyr::{LoadableYamlNode, MarkedYaml};
+
+    let yaml = yaml_block(content)?;
+    let docs = MarkedYaml::load_from_str(yaml).ok()?;
+    let node = walk_pointer(docs.first()?, pointer)?;
+    let marker = node.span.start;
+    // saphyr lines are 1-based within `yaml`, whose first line is file line 2
+    // (the opening `---` is line 1): file_line = marker.line() + 1. Columns are
+    // 0-based, rendered 1-based.
+    let line = u32::try_from(marker.line()).ok()?.checked_add(1)?;
+    let column = u32::try_from(marker.col()).ok()?.saturating_add(1);
+    Some((line, column))
+}
+
+/// Walk a JSON Pointer (RFC 6901) over a marked YAML tree to the addressed node.
+fn walk_pointer<'a, 'i>(
+    root: &'a saphyr::MarkedYaml<'i>,
+    pointer: &str,
+) -> Option<&'a saphyr::MarkedYaml<'i>> {
+    use saphyr::{Scalar, YamlData};
+
+    if pointer.is_empty() {
+        return Some(root);
+    }
+    let mut node = root;
+    // '/'-separated tokens; unescape `~1` -> `/` then `~0` -> `~`.
+    for raw in pointer.split('/').skip(1) {
+        let token = raw.replace("~1", "/").replace("~0", "~");
+        node = match &node.data {
+            YamlData::Mapping(map) => map.iter().find_map(|(k, v)| match &k.data {
+                YamlData::Value(Scalar::String(s)) if s.as_ref() == token.as_str() => Some(v),
+                _ => None,
+            })?,
+            YamlData::Sequence(seq) => seq.get(token.parse::<usize>().ok()?)?,
+            _ => return None,
+        };
+    }
+    Some(node)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -161,6 +240,56 @@ mod tests {
         assert!(
             result.is_err(),
             "a duplicate mapping key must be rejected, not silently resolved"
+        );
+    }
+
+    // #65: JSON-pointer -> source-line resolution. Fixture file lines:
+    //   1: ---
+    //   2: title: hello
+    //   3: tags:
+    //   4:   - a
+    //   5:   - b
+    //   6: count: 5
+    //   7: ---
+    const FIXTURE: &str = "---\ntitle: hello\ntags:\n  - a\n  - b\ncount: 5\n---\nbody\n";
+
+    #[test]
+    fn resolve_pointer_top_level_key() {
+        // /title -> value "hello" on file line 2.
+        assert_eq!(
+            resolve_pointer_location(FIXTURE, "/title").map(|(l, _)| l),
+            Some(2)
+        );
+    }
+
+    #[test]
+    fn resolve_pointer_nested_array_element() {
+        // /tags/1 -> "b" on file line 5 — the high-value nested/array case an
+        // agent would otherwise have to count to by hand.
+        assert_eq!(
+            resolve_pointer_location(FIXTURE, "/tags/1").map(|(l, _)| l),
+            Some(5)
+        );
+    }
+
+    #[test]
+    fn resolve_pointer_later_key() {
+        // /count -> value on file line 6.
+        assert_eq!(
+            resolve_pointer_location(FIXTURE, "/count").map(|(l, _)| l),
+            Some(6)
+        );
+    }
+
+    #[test]
+    fn resolve_pointer_unresolvable_is_none() {
+        // A pointer that names no node resolves to None (caller falls back).
+        assert_eq!(resolve_pointer_location(FIXTURE, "/nope"), None);
+        assert_eq!(resolve_pointer_location(FIXTURE, "/tags/9"), None);
+        // No frontmatter block at all.
+        assert_eq!(
+            resolve_pointer_location("no frontmatter here\n", "/x"),
+            None
         );
     }
 }

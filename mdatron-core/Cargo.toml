@@ -13,6 +13,7 @@ categories = ["development-tools", "parser-implementations"]
 [dependencies]
 serde = { workspace = true }
 serde_yaml_ng = { workspace = true }
+saphyr = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 jsonschema = { workspace = true }
