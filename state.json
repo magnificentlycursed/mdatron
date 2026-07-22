@@ -1507,9 +1507,12 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-22T17:48:09.184274Z",
-      "updated_at": "2026-07-22T17:48:53.354822Z",
+      "updated_at": "2026-07-22T17:48:59.298603Z",
       "labels": [
         "refactor"
+      ],
+      "related": [
+        "fea9b536-a072-4342-afe0-0a87fe5ca8bd"
       ],
       "comments": {
         "3f2f880f-04eb-42c9-99a2-f7e893c1719e": {
@@ -3227,10 +3230,13 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-19T20:53:20.240290Z",
-      "updated_at": "2026-07-19T20:53:21.220799Z",
+      "updated_at": "2026-07-22T17:48:59.298603Z",
       "labels": [
         "feature",
         "v1.0"
+      ],
+      "related": [
+        "8fc6916d-2d90-430e-af0d-fdebc0367dca"
       ]
     },
     "fed9ad06-769e-4cef-b2e3-be7041de17bc": {
@@ -3329,8 +3335,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-22T17:48:53.354822Z",
+    "timestamp": "2026-07-22T17:48:59.298603Z",
     "agent_id": "79Ig",
-    "agent_seq": 118
+    "agent_seq": 119
   }
 }
