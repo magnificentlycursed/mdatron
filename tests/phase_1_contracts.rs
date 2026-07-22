@@ -4,9 +4,9 @@
 //! grouping below corresponds to one of the three changes documented in
 //! `vsdd-cli/docs/refactor/phase-1-codes-and-dsl/DESIGN.md`.
 
-use mdatron_core::codes::is_reserved_mdatron_code;
-use mdatron_core::dsl::{evaluate, EvalContext, EvalError, Expr, Value, VarRef};
-use mdatron_core::verify::{verify, VerifyConfig};
+use mdatron::codes::is_reserved_mdatron_code;
+use mdatron::dsl::{evaluate, EvalContext, EvalError, Expr, Value, VarRef};
+use mdatron::verify::{verify, VerifyConfig};
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::PathBuf;
@@ -78,8 +78,10 @@ fn all_emitted_codes_are_reserved() {
     // class-assigned; treating those as violations would block adding new
     // spec rows.
 
-    let manifest_dir = env!("CARGO_MANIFEST_DIR");
-    let workspace_root = PathBuf::from(manifest_dir).parent().unwrap().to_path_buf();
+    // Single-crate layout (#81): the manifest dir IS the repo root. The
+    // workspace_members() helper returns empty on a non-workspace manifest and
+    // the loop below scans the root itself, so the sweep still covers src/.
+    let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let members = workspace_members(&workspace_root);
     let mut scan_roots: Vec<PathBuf> = members.iter().map(|m| workspace_root.join(m)).collect();
     scan_roots.push(workspace_root.clone());

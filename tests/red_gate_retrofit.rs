@@ -1,7 +1,7 @@
 //! Red-gate retrofit for mdatron tracker issue #52 (L2 fix at 0b21986).
 //!
 //! This file is placed into the PRE-FIX worktree (0b21986^ = b30251b) at
-//! mdatron-core/tests/red_gate_retrofit.rs and run there. Each test asserts
+//! tests/red_gate_retrofit.rs and run there. Each test asserts
 //! the ratified-contract expectation (DESIGN.md § Five check families:
 //! parent-directory, absolute-path, and symlink escapes rejected, including
 //! non-existent targets) that the corresponding post-fix test asserts.
@@ -14,8 +14,8 @@
 //! mask the predecessor's textual-fallback hole the way it masked the
 //! original traversal test (see the L2 issue).
 
-use mdatron_core::dsl::index::{IndexError, IndexRegistry};
-use mdatron_core::dsl::types::KeyDecl;
+use mdatron::dsl::index::{IndexError, IndexRegistry};
+use mdatron::dsl::types::KeyDecl;
 use std::path::PathBuf;
 
 fn canonical_temp_root(label: &str) -> PathBuf {

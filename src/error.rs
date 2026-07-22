@@ -1,4 +1,4 @@
-//! Internal errors for mdatron-core operations.
+//! Internal errors for mdatron engine operations.
 //!
 //! These are engine-internal errors (e.g. IO failures, config-load failures). They are
 //! distinct from [`crate::diagnostic::Finding`]s, which are validation outcomes the engine

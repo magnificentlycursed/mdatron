@@ -278,16 +278,13 @@ fn unknown_flag_is_rejected() {
 
 #[test]
 fn mdatron_source_never_emits_vsdd_code_prefix() {
-    // Lint-style fixture: grep mdatron-core + mdatron-cli source for the literal
-    // string "VSDD-E" as a quoted literal. mdatron MUST NOT emit VSDD-Exxxx codes.
+    // Lint-style fixture: grep the mdatron source for the literal string
+    // "VSDD-E" as a quoted literal. mdatron MUST NOT emit VSDD-Exxxx codes.
     use std::collections::HashSet;
 
-    let manifest_dir = env!("CARGO_MANIFEST_DIR");
-    let mdatron_root = PathBuf::from(manifest_dir).parent().unwrap().to_path_buf();
-    let scan_roots = [
-        mdatron_root.join("mdatron-core").join("src"),
-        mdatron_root.join("mdatron-cli").join("src"),
-    ];
+    // Single-crate layout (#81): CARGO_MANIFEST_DIR is the repo root.
+    let mdatron_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let scan_roots = [mdatron_root.join("src")];
     let mut allowlist: HashSet<String> = HashSet::new();
     allowlist.insert(
         // The lint MAY hit its own marker string; allowlist tests/ files explicitly.

@@ -1,6 +1,6 @@
 //! mdatron CLI binary.
 //!
-//! `mdatron verify` runs the full pipeline from `mdatron_core::verify`: loads schemas
+//! `mdatron verify` runs the full pipeline from `mdatron::verify`: loads schemas
 //! from `<root>/.mdatron/schemas/`, patterns from `<root>/.mdatron/patterns/`, walks
 //! the project per `--files` globs, and applies Layer 1 (JSON Schema) + Layer 2 (DSL)
 //! against every matched markdown file.
@@ -9,8 +9,8 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
-use mdatron_core::diagnostic::{Finding, Location, Severity};
-use mdatron_core::verify::{verify, VerifyConfig, VerifyError};
+use mdatron::diagnostic::{Finding, Location, Severity};
+use mdatron::verify::{verify, VerifyConfig, VerifyError};
 
 mod explain;
 
@@ -145,7 +145,7 @@ fn main() -> ExitCode {
 }
 
 fn cmd_init(project_root: Option<PathBuf>, quiet: bool) -> ExitCode {
-    use mdatron_core::init::{drift_findings, init, InitError, InitOutcome};
+    use mdatron::init::{drift_findings, init, InitError, InitOutcome};
 
     let root = match project_root.map(Ok).unwrap_or_else(std::env::current_dir) {
         Ok(r) => r,
@@ -205,7 +205,7 @@ fn cmd_verify(
     json: bool,
     quiet: bool,
 ) -> ExitCode {
-    use mdatron_core::output::{Output, PipelineStatus};
+    use mdatron::output::{Output, PipelineStatus};
 
     let root = match project_root.map(Ok).unwrap_or_else(std::env::current_dir) {
         Ok(r) => r,
