@@ -79,12 +79,7 @@
     "fea9b536-a072-4342-afe0-0a87fe5ca8bd": 48,
     "fed9ad06-769e-4cef-b2e3-be7041de17bc": 52
   },
-  "locks": {
-    "76": {
-      "agent_id": "79Ig",
-      "claimed_at": "2026-07-22T15:18:45.089449Z"
-    }
-  },
+  "locks": {},
   "issues": {
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": {
       "uuid": "1198bf2d-1428-40e0-8e18-cbf40d2df45d",
@@ -3121,8 +3116,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-22T15:22:28.082430Z",
+    "timestamp": "2026-07-22T15:22:35.976525Z",
     "agent_id": "79Ig",
-    "agent_seq": 79
+    "agent_seq": 80
   }
 }
