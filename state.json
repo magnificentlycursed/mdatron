@@ -1,6 +1,6 @@
 {
   "next_display_id": 80,
-  "next_comment_id": 211,
+  "next_comment_id": 212,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -105,7 +105,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-22T16:56:53.629145Z",
-      "updated_at": "2026-07-22T17:11:17.917485Z",
+      "updated_at": "2026-07-22T17:31:45.327439Z",
       "labels": [
         "bug"
       ],
@@ -113,6 +113,15 @@
         "588a808f-de8c-4824-8347-2ed0a5891594"
       ],
       "comments": {
+        "725f2e29-135c-491d-a411-b960a51a9603": {
+          "display_id": 211,
+          "author": "79Ig",
+          "content": "Core FIXED on feature/77-config-globs (6d93601). verify now honors .mdatron/config.yaml file_globs as the consumer-authored jurisdiction (--files overrides; malformed config fails loud through the standard pipeline path). config.yaml demoted managed->seed with a DESIGN-prescribed demotion tombstone: manifest v2 carries tombstones; the manifest DEFINES the partition, so v1 manifests still listing config.yaml are honored as data (drift-checked, engine-repaired, entries+tombstones preserved). Repo's own config scoped to review-log/**/*.md; manifest hand-authored v2+tombstone anchored by the reviewed commit. Red-gate flip demonstrated (edited config was E0060-refused, now sanctioned no-op). End-to-end: verify clean with the non-YAML .claude/ skill file present — the incident class retired. 276 workspace tests green, fmt/clippy clean. Pushed for CI. OPEN on this issue: the walk-all-vs-route-only DEFAULT when config is absent (SO decision batch).",
+          "created_at": "2026-07-22T17:31:45.311950Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABASyH+wsem56xhjF7Utv8JEfCSuSPc7kAhkO/h/B14JQo0WCHFNjFOcXnLSAmW+mvuhMGrCKYRK5bv269DfF3HBg=="
+        },
         "d13e7c01-dbf0-484d-9d4b-f9fe32448634": {
           "display_id": 205,
           "author": "79Ig",
@@ -3244,8 +3253,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-22T17:21:07.389471Z",
+    "timestamp": "2026-07-22T17:31:45.327439Z",
     "agent_id": "79Ig",
-    "agent_seq": 101
+    "agent_seq": 102
   }
 }
