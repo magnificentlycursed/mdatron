@@ -1,6 +1,6 @@
 {
   "next_display_id": 80,
-  "next_comment_id": 209,
+  "next_comment_id": 210,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -764,10 +764,21 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-22T17:10:29.912761Z",
-      "updated_at": "2026-07-22T17:10:34.856863Z",
+      "updated_at": "2026-07-22T17:11:06.011454Z",
       "labels": [
         "enhancement"
-      ]
+      ],
+      "comments": {
+        "c7216b6d-b368-4a09-a37b-80c075f90c04": {
+          "display_id": 209,
+          "author": "79Ig",
+          "content": "CONSUMER RAISE (vsdd-cli relay 2026-07-22, Raise 2). FAILURE CLASS: prose in a frontmatter-bearing document restates a count/enumeration the frontmatter carries, and the copies drift. vsdd paid 3x in ONE review cycle ('17 domain prompts' vs 18 on disk; 'seven core domains' vs six; stale 'three OPEN notes') — each caught only by expensive cold-review lenses, none mechanically. Their interim authoring rule's contract text literally says 'until a numeric-claims pattern exists'. ASK: a Layer-2-family primitive flagging numeric literals in body prose that plausibly restate frontmatter facts (collection lengths, count fields). Design fully ours; their suggested conservative first cut: scoped to CONFIGURED FIELD REFERENCES (adopter declares which fields' counts prose may restate), not free inference. They contribute the 3 historical drift cases as fixtures. GENERALITY: any consumer pairing machine frontmatter with human prose has this class. ASSESSMENT: this is the first BODY-PROSE check primitive (current families are frontmatter-only) — a real scope decision against the deliberately-narrowed DSL, but squarely 'document-anchored rules supplied as data' per the ratified identity, and it's cross-representation (frontmatter<->prose) drift, the project's founding failure class (cross-document count drift was bootstrap-validator Class 1!). Route: candidate primitive for the #45 conformance-families design pass; needs SO scope ratification before build. Note the resonance: the bootstrap validator's Class-1 check (count drift vs canonical-counts.yaml) was deleted at #46 — this raise effectively asks for its principled, generic successor inside the engine.",
+          "created_at": "2026-07-22T17:11:05.993381Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAY4DwZHiebFOKicDAJhDGvEdHZtG2EnXbTvPRLB0vDANAmn/rQrOlpQ/p5w1ZXo2zK9cKUdwgPQFhCnVGwtGCAA=="
+        }
+      }
     },
     "44e04ea5-0edc-4919-bcf7-7c234a3c8954": {
       "uuid": "44e04ea5-0edc-4919-bcf7-7c234a3c8954",
@@ -3212,8 +3223,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-22T17:10:42.700518Z",
+    "timestamp": "2026-07-22T17:11:06.011454Z",
     "agent_id": "79Ig",
-    "agent_seq": 97
+    "agent_seq": 98
   }
 }
