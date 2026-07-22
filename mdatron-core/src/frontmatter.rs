@@ -24,50 +24,12 @@ use serde_yaml_ng::Value;
 /// - `Ok(None)` when no frontmatter is present (or no closing marker found)
 /// - `Err` when the frontmatter is present but malformed YAML
 pub fn parse(content: &str) -> Result<Option<(Value, &str)>, Error> {
-    // The first line must be exactly `---` followed by a newline.
-    if !content.starts_with("---\n") {
+    let content = strip_bom(content);
+    let Some((yaml_start, yaml_end, body_start)) = fence_bounds(content) else {
         return Ok(None);
-    }
-
-    // Walk lines from byte 4 (after the opening `---\n`) looking for a closing `---` line.
-    // A closing line is: line content exactly equal to `---`. The line may or may not have a
-    // trailing newline (last-line-of-file case). This handles the empty-frontmatter case
-    // (`---\n---\n`) uniformly with the typical case.
-    let bytes = content.as_bytes();
-    let mut pos = 4usize;
-    let mut yaml_end: Option<usize> = None;
-    let mut after_close: Option<usize> = None;
-
-    while pos <= bytes.len() {
-        let line_end = bytes[pos..]
-            .iter()
-            .position(|&b| b == b'\n')
-            .map(|rel| pos + rel)
-            .unwrap_or(bytes.len());
-
-        if &content[pos..line_end] == "---" {
-            yaml_end = Some(pos);
-            after_close = Some(if line_end < bytes.len() {
-                line_end + 1
-            } else {
-                line_end
-            });
-            break;
-        }
-
-        if line_end == bytes.len() {
-            break;
-        }
-        pos = line_end + 1;
-    }
-
-    let yaml_end = match yaml_end {
-        Some(e) => e,
-        None => return Ok(None),
     };
-    let body_start = after_close.unwrap_or(bytes.len());
 
-    let yaml_str = &content[4..yaml_end];
+    let yaml_str = &content[yaml_start..yaml_end];
     let body = content.get(body_start..).unwrap_or("");
 
     let value: Value = if yaml_str.trim().is_empty() {
@@ -79,30 +41,74 @@ pub fn parse(content: &str) -> Result<Option<(Value, &str)>, Error> {
     Ok(Some((value, body)))
 }
 
-/// The frontmatter YAML substring (between the `---` markers), or `None` when
-/// there is no well-formed block. The substring's first line is file line 2
-/// (the opening `---` is line 1). Used by [`resolve_pointer_location`].
-fn yaml_block(content: &str) -> Option<&str> {
-    if !content.starts_with("---\n") {
+/// Strip a single leading UTF-8 BOM (U+FEFF). Windows editors prepend one; a
+/// BOM'd governed file must not read as no-frontmatter, because parse ABSENCE
+/// is indistinguishable from not-governed and the file would silently pass the
+/// walk (#78, consumer raise).
+fn strip_bom(content: &str) -> &str {
+    content.strip_prefix('\u{FEFF}').unwrap_or(content)
+}
+
+/// A fence line is `---` alone on its line, tolerating one trailing CR so CRLF
+/// files (Windows-editor provenance) close their frontmatter like LF files do.
+fn is_fence_line(line: &str) -> bool {
+    line.strip_suffix('\r').unwrap_or(line) == "---"
+}
+
+/// Locate the frontmatter fences in (BOM-stripped) content. Returns
+/// `(yaml_start, yaml_end, body_start)` byte offsets, or `None` when there is
+/// no well-formed opening+closing fence pair.
+///
+/// The opening line must be exactly `---` (LF or CRLF). The closing fence is
+/// the FIRST subsequent [`is_fence_line`] — deliberately including one inside a
+/// block scalar: a fence scanner cannot know it is inside a scalar without a
+/// full YAML parse, and vsdd-cli's loader shares this truncation semantics; the
+/// #78 conformance corpus pins it so the two tools cannot silently diverge.
+/// The closing line may lack a trailing newline (last-line-of-file case); the
+/// empty block (`---\n---\n`) resolves uniformly with the typical case.
+fn fence_bounds(content: &str) -> Option<(usize, usize, usize)> {
+    let yaml_start = if content.starts_with("---\n") {
+        4
+    } else if content.starts_with("---\r\n") {
+        5
+    } else {
         return None;
-    }
+    };
+
     let bytes = content.as_bytes();
-    let mut pos = 4usize;
+    let mut pos = yaml_start;
     while pos <= bytes.len() {
         let line_end = bytes[pos..]
             .iter()
             .position(|&b| b == b'\n')
             .map(|rel| pos + rel)
             .unwrap_or(bytes.len());
-        if &content[pos..line_end] == "---" {
-            return Some(&content[4..pos]);
+
+        if is_fence_line(&content[pos..line_end]) {
+            let body_start = if line_end < bytes.len() {
+                line_end + 1
+            } else {
+                line_end
+            };
+            return Some((yaml_start, pos, body_start));
         }
+
         if line_end == bytes.len() {
             break;
         }
         pos = line_end + 1;
     }
     None
+}
+
+/// The frontmatter YAML substring (between the `---` markers), or `None` when
+/// there is no well-formed block. The substring's first line is file line 2
+/// (the opening `---` is line 1; a leading BOM sits on that same line, so line
+/// numbering is unaffected). Used by [`resolve_pointer_location`].
+fn yaml_block(content: &str) -> Option<&str> {
+    let content = strip_bom(content);
+    let (yaml_start, yaml_end, _) = fence_bounds(content)?;
+    Some(&content[yaml_start..yaml_end])
 }
 
 /// Resolve every schema-violation location for one file in a SINGLE marked
@@ -313,6 +319,105 @@ mod tests {
     //   6: count: 5
     //   7: ---
     const FIXTURE: &str = "---\ntitle: hello\ntags:\n  - a\n  - b\ncount: 5\n---\nbody\n";
+
+    // ── #78 fence-edge conformance corpus (shared with vsdd-cli) ────────────
+    //
+    // The consumer raise: a BOM'd or CRLF'd governed artifact read as
+    // no-frontmatter and PASSED the walk silently, while vsdd's lenient
+    // consumer-side loader validated it — one file, validated by one tool,
+    // invisible to the other. Parse FAILURE is loud (E0001); parse ABSENCE is
+    // indistinguishable from not-governed, so absence must not be manufactured
+    // by encoding trivia. Cases contributed by vsdd-cli; both projects test
+    // against this corpus.
+
+    // RED GATE (#78): BOM-prefixed opening fence. Pre-fix: Ok(None) — silent skip.
+    #[test]
+    fn bom_prefixed_opening_fence_is_frontmatter() {
+        let content = "\u{FEFF}---\nschema_class: design-doc\n---\nbody\n";
+        let (fm, body) = parse(content)
+            .expect("BOM'd frontmatter should parse")
+            .expect("BOM must not read as no-frontmatter (the silent-skip hole)");
+        assert_eq!(fm["schema_class"].as_str(), Some("design-doc"));
+        assert_eq!(body, "body\n");
+    }
+
+    // RED GATE (#78): CRLF fences (Windows-editor provenance). Pre-fix: Ok(None).
+    #[test]
+    fn crlf_fences_are_frontmatter() {
+        let content = "---\r\nschema_class: design-doc\r\nversion: 0.1.0\r\n---\r\nbody\r\n";
+        let (fm, body) = parse(content)
+            .expect("CRLF frontmatter should parse")
+            .expect("CRLF fences must not read as no-frontmatter");
+        assert_eq!(fm["schema_class"].as_str(), Some("design-doc"));
+        assert_eq!(fm["version"].as_str(), Some("0.1.0"));
+        assert_eq!(body, "body\r\n");
+    }
+
+    // RED GATE (#78): both trivia at once.
+    #[test]
+    fn bom_and_crlf_combined_is_frontmatter() {
+        let content = "\u{FEFF}---\r\nschema_class: design-doc\r\n---\r\nbody\n";
+        let (fm, _body) = parse(content)
+            .expect("BOM+CRLF frontmatter should parse")
+            .expect("BOM+CRLF must not read as no-frontmatter");
+        assert_eq!(fm["schema_class"].as_str(), Some("design-doc"));
+    }
+
+    // Corpus pin: a bare `---` line inside a frontmatter block scalar truncates
+    // the frontmatter THERE. Both mdatron and vsdd's loader share this
+    // semantics; the corpus pins it as deliberate, matching behavior (a fence
+    // scanner cannot know it is inside a scalar without a full YAML parse, and
+    // diverging silently between the two tools would reopen the split-brain
+    // hole this corpus exists to close).
+    #[test]
+    fn bare_fence_inside_block_scalar_truncates_there() {
+        let content = "---\nnote: |\n  before\n---\n  after\n---\nbody\n";
+        let (fm, body) = parse(content)
+            .expect("truncated-at-first-fence content parses")
+            .expect("frontmatter present");
+        // The frontmatter is everything before the FIRST bare fence line
+        // (`|` literal scalars keep their trailing newline).
+        assert_eq!(fm["note"].as_str(), Some("before\n"));
+        assert!(
+            body.starts_with("  after"),
+            "body begins at the first bare fence; got: {body:?}"
+        );
+    }
+
+    // Corpus pin: empty frontmatter block, CRLF variant.
+    #[test]
+    fn empty_frontmatter_block_crlf() {
+        let content = "---\r\n---\r\nbody\n";
+        let (fm, body) = parse(content)
+            .expect("empty CRLF frontmatter is well-formed")
+            .expect("empty CRLF frontmatter returns Some");
+        assert!(fm.as_mapping().expect("mapping").is_empty());
+        assert_eq!(body, "body\n");
+    }
+
+    // Corpus pin: unterminated fence stays no-frontmatter (BOM'd variant too —
+    // tolerance must not manufacture frontmatter where none closes).
+    #[test]
+    fn unterminated_fence_is_no_frontmatter_even_with_bom() {
+        for content in ["---\nkey: value\n", "\u{FEFF}---\r\nkey: value\r\n"] {
+            let result = parse(content).expect("unterminated must not error");
+            assert!(result.is_none(), "no closing fence => None for {content:?}");
+        }
+    }
+
+    // The resolver walks the same fences: E0050 locations must survive BOM+CRLF.
+    #[test]
+    fn resolve_pointer_location_tolerates_bom_and_crlf() {
+        let content = "\u{FEFF}---\r\na: 1\r\nb: 2\r\n---\r\nbody\n";
+        let loc = resolve_pointer_location(content, "/b");
+        // The pointer addresses b's VALUE node (`2`, col 4) — identical to the
+        // LF case, proving BOM+CRLF shift neither line nor column.
+        assert_eq!(
+            loc,
+            Some((3, 4)),
+            "b's value sits on file line 3 col 4 despite BOM+CRLF"
+        );
+    }
 
     #[test]
     fn resolve_pointer_top_level_key() {
