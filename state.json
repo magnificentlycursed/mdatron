@@ -1,6 +1,6 @@
 {
   "next_display_id": 78,
-  "next_comment_id": 205,
+  "next_comment_id": 206,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -95,10 +95,21 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-22T16:56:53.629145Z",
-      "updated_at": "2026-07-22T16:56:58.194722Z",
+      "updated_at": "2026-07-22T16:57:27.489549Z",
       "labels": [
         "bug"
-      ]
+      ],
+      "comments": {
+        "d13e7c01-dbf0-484d-9d4b-f9fe32448634": {
+          "display_id": 205,
+          "author": "79Ig",
+          "content": "Discovered while working #76. mdatron verify uses VerifyConfig::new() which hardcodes file_globs=['**/*.md']; the CLI never reads the committed .mdatron/config.yaml. So 'mdatron verify --project-root .' walks ALL 54 .claude/*.md + .crosslink/*.md tooling files plus review-log/, not just mdatron's own typed-markdown corpus. It stays clean ONLY because those files currently have valid (or absent) YAML frontmatter — proven fragile: a local .claude/commands/design.md (Claude Code skill file, argument-hint line is not strict YAML) makes verify emit E0001. Impact: #46's self-validate CI gate would break the moment any committed non-corpus .md carries non-YAML frontmatter — and 'verify via its own .mdatron/ config' (#46 acceptance) is not actually honored since config.yaml is inert. FIX: (1) cmd_verify reads .mdatron/config.yaml file_globs (fall back to default when absent); (2) set the committed config.yaml globs to scope the corpus (review-log/**/*.md) so verify validates only mdatron-owned typed-markdown. NOTE: config.yaml is a managed/drift-guarded file (init manifest) but file_globs are inherently project-specific — this resurfaces the config-governance question (adopter-customizable config vs engine-managed). Links #46/#44. Correcting my earlier #46 assessment: I concluded 'default globs scope correctly (glob skips dotdirs)' — that was WRONG; the glob DOES walk dotdirs, it just happened to find valid frontmatter.",
+          "created_at": "2026-07-22T16:57:27.474068Z",
+          "kind": "note",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAi177zXJe4rmh0OhyTw2VC66QHmdIglC3ymM5WMbqEbzeY6qEfeVDjiFuqR0DPg6Y/SdwfTshRshGyep6JbrcCg=="
+        }
+      }
     },
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": {
       "uuid": "1198bf2d-1428-40e0-8e18-cbf40d2df45d",
@@ -3135,8 +3146,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-22T16:57:05.455608Z",
+    "timestamp": "2026-07-22T16:57:27.489549Z",
     "agent_id": "79Ig",
-    "agent_seq": 83
+    "agent_seq": 84
   }
 }
