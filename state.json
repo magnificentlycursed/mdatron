@@ -1,6 +1,6 @@
 {
   "next_display_id": 80,
-  "next_comment_id": 212,
+  "next_comment_id": 213,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -105,7 +105,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-22T16:56:53.629145Z",
-      "updated_at": "2026-07-22T17:31:45.327439Z",
+      "updated_at": "2026-07-22T17:33:11.437874Z",
       "labels": [
         "bug"
       ],
@@ -121,6 +121,15 @@
           "kind": "result",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABASyH+wsem56xhjF7Utv8JEfCSuSPc7kAhkO/h/B14JQo0WCHFNjFOcXnLSAmW+mvuhMGrCKYRK5bv269DfF3HBg=="
+        },
+        "993f8685-de28-49ac-b0bc-25ae83461db2": {
+          "display_id": 212,
+          "author": "79Ig",
+          "content": "CI green on feature/77-config-globs (run 29942705513): all six jobs incl. self-validate (which now exercises the scoped jurisdiction on the repo itself). Ready for --no-ff merge.",
+          "created_at": "2026-07-22T17:33:11.422662Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAugC0gIl1rwfvQVMiQIzwDjFfaQYiVdkAug48gpP370fD2MmMDCl82nd2yhHEBSxIIVVpsKhH5LdUl+lA14x+Bg=="
         },
         "d13e7c01-dbf0-484d-9d4b-f9fe32448634": {
           "display_id": 205,
@@ -3253,8 +3262,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-22T17:31:45.327439Z",
+    "timestamp": "2026-07-22T17:33:11.437874Z",
     "agent_id": "79Ig",
-    "agent_seq": 102
+    "agent_seq": 103
   }
 }
