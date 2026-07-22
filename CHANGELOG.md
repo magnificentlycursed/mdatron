@@ -10,6 +10,8 @@ the TRON blockchain.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-07-22
+
 ### Removed
 - bootstrap: retired the throwaway `bootstrap-tooling/` (`bootstrap-validator.py` + `canonical-counts.yaml` + `live-entities.yaml`) per its own documented exit criterion — "deleted when `mdatron-core verify` runs cleanly against the project" (BOOTSTRAP-MITIGATION.md § Mitigation 1). That criterion is now met: `mdatron verify` runs clean on the repo and is enforced by the `self-validate` CI gate. This is the bootstrap-*validator* deletion, which by design predates the full bootstrap-*period* exit (the remaining criteria — v1.0 on crates.io, vsdd-cli Step 5, coinage-log processed — track under #48). (#46)
 
