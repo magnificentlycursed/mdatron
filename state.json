@@ -1,5 +1,5 @@
 {
-  "next_display_id": 80,
+  "next_display_id": 81,
   "next_comment_id": 214,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -33,6 +33,7 @@
     "700bbf38-a0db-46e2-90a8-36df989ecb06": 53,
     "74744f3a-fbb8-424a-897e-d4f2b2ed77ff": 40,
     "7515ecfd-31f2-4e53-bbb7-0e50c7cce064": 6,
+    "7d222949-0302-4dc4-9859-143cf7da11fb": 80,
     "7d3f3244-2166-4727-a6f5-233882cd4457": 49,
     "7f91651e-0b4e-4a0d-aa3e-567f6ebaea4a": 24,
     "85c72705-2c55-4332-bb4d-9616e2ffef82": 78,
@@ -1189,6 +1190,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA01CPT4if6XGZ/6YD6r8Ko5aYUq0d7XiAqcP+dsgljHPg08g12LUmQL8c2LKCYbkLsAqBLI0MBRsDGojyoyx/Dg=="
         }
       }
+    },
+    "7d222949-0302-4dc4-9859-143cf7da11fb": {
+      "uuid": "7d222949-0302-4dc4-9859-143cf7da11fb",
+      "display_id": 80,
+      "title": "process: SO ratification batch — verify default (walk-all vs route-only), frontmatterless-loudness W-code, numeric-claims scope, compact size-limit number",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-07-22T17:38:00.939529Z",
+      "updated_at": "2026-07-22T17:38:00.939529Z"
     },
     "7d3f3244-2166-4727-a6f5-233882cd4457": {
       "uuid": "7d3f3244-2166-4727-a6f5-233882cd4457",
@@ -3265,8 +3276,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-22T17:37:53.576999Z",
+    "timestamp": "2026-07-22T17:38:00.939529Z",
     "agent_id": "79Ig",
-    "agent_seq": 108
+    "agent_seq": 109
   }
 }
