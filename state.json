@@ -1,7 +1,8 @@
 {
-  "next_display_id": 77,
+  "next_display_id": 78,
   "next_comment_id": 205,
   "display_id_map": {
+    "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
     "15d7981a-008d-4805-8a69-f3e4f414caf0": 75,
     "1a48e540-17b6-4a8f-9681-62cffd446bc3": 14,
@@ -81,6 +82,16 @@
   },
   "locks": {},
   "issues": {
+    "028e84f4-cfd0-45aa-8aee-b43ec885d803": {
+      "uuid": "028e84f4-cfd0-45aa-8aee-b43ec885d803",
+      "display_id": 77,
+      "title": "verify ignores .mdatron/config.yaml file_globs; self-validation walks non-corpus dirs (.claude/.crosslink) and is fragile to any non-YAML frontmatter",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-07-22T16:56:53.629145Z",
+      "updated_at": "2026-07-22T16:56:53.629145Z"
+    },
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": {
       "uuid": "1198bf2d-1428-40e0-8e18-cbf40d2df45d",
       "display_id": 9,
@@ -3116,8 +3127,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-22T15:41:06.080333Z",
+    "timestamp": "2026-07-22T16:56:53.629145Z",
     "agent_id": "79Ig",
-    "agent_seq": 80
+    "agent_seq": 81
   }
 }
