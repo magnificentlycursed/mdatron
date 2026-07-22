@@ -1,6 +1,6 @@
 {
   "next_display_id": 78,
-  "next_comment_id": 207,
+  "next_comment_id": 208,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -95,7 +95,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-22T16:56:53.629145Z",
-      "updated_at": "2026-07-22T16:57:27.489549Z",
+      "updated_at": "2026-07-22T17:09:25.083741Z",
       "labels": [
         "bug"
       ],
@@ -108,6 +108,15 @@
           "kind": "note",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAi177zXJe4rmh0OhyTw2VC66QHmdIglC3ymM5WMbqEbzeY6qEfeVDjiFuqR0DPg6Y/SdwfTshRshGyep6JbrcCg=="
+        },
+        "e085cc76-85b1-41b6-b405-1151fea8f69c": {
+          "display_id": 207,
+          "author": "79Ig",
+          "content": "CONSUMER RAISE (vsdd-cli relay 2026-07-22, Raise 3) converges on this issue from the consumer side — same design.md incident, seen as a BLOCKED-COMMITS event on their estate: crosslink 0.9's migration deployed a command file with non-strict-YAML frontmatter; mdatron's walk refused it (correctly by its own rules) and blocked the consuming estate's commits over a document mdatron has no mandate to govern. Their asks, in their preference order: (a) ROUTE-TABLE ALLOWLIST — mdatron validates only what a consumer explicitly routes, everything else untouched (they cite Thermite's spec-routes.toml as our own closed-world precedent); (b) ignore list as lighter interim; (c) a stated default — route-only being the closed-world-correct choice, retiring this incident's whole class (an unrouted third-party command file isn't mdatron's to refuse). ASSESSMENT: (a) and my original fix here are the same mechanism — honoring .mdatron/config.yaml file_globs IS the consumer-authored allowlist; the residual decision is the DEFAULT when config is absent (current walk-all vs route-only/empty). Route-only-by-default is a behavior change wanting an SO scope ruling + DESIGN language; honoring file_globs is a straight defect fix (config is committed, deployed by init, and inert). Priority raised: this blocked a consumer's commits in the wild.",
+          "created_at": "2026-07-22T17:09:25.067507Z",
+          "kind": "note",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAWISH+jE2wa+NM7fSL8jviHUL10RkHU6DvvyG3/3Yerhh2TSmxB0XlU8X2At8VKa7byo1MMRhx5IWNgoGmzzKCw=="
         }
       }
     },
@@ -3156,8 +3165,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-22T17:07:05.928747Z",
+    "timestamp": "2026-07-22T17:09:25.083741Z",
     "agent_id": "79Ig",
-    "agent_seq": 88
+    "agent_seq": 89
   }
 }
