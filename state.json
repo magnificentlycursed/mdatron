@@ -1244,11 +1244,12 @@
       "uuid": "85c72705-2c55-4332-bb4d-9616e2ffef82",
       "display_id": 78,
       "title": "frontmatter fence strictness: BOM/CRLF opening reads as no-frontmatter — governed file silently passes the walk (consumer raise)",
-      "status": "open",
+      "status": "closed",
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-22T17:09:48.246696Z",
-      "updated_at": "2026-07-22T17:33:17.703074Z",
+      "updated_at": "2026-07-22T17:37:35.522843Z",
+      "closed_at": "2026-07-22T17:37:35.522834Z",
       "labels": [
         "bug"
       ],
@@ -3271,8 +3272,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-22T17:33:17.703074Z",
+    "timestamp": "2026-07-22T17:37:35.522843Z",
     "agent_id": "79Ig",
-    "agent_seq": 104
+    "agent_seq": 105
   }
 }
