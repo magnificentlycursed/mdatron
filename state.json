@@ -1,5 +1,5 @@
 {
-  "next_display_id": 81,
+  "next_display_id": 82,
   "next_comment_id": 215,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -42,6 +42,7 @@
     "8ac50e86-5777-4068-8ce0-3d628ff48d30": 15,
     "8bbf0d1a-ce4a-4096-b3ad-ae3bc065a6e7": 69,
     "8d5c2bfc-5f17-4577-bbab-0434c455005d": 66,
+    "8fc6916d-2d90-430e-af0d-fdebc0367dca": 81,
     "9242e6c2-32a3-45f1-8478-d1fec3a8ce8b": 76,
     "9e14b0dd-b125-4e1c-a9eb-0c15086a3f1e": 10,
     "9ee63c25-b225-4882-a3cd-2469994d2bce": 37,
@@ -1493,6 +1494,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAZfH8XlF5XdVZ9OHxHyY26Vc28miyxHj9h5gKEKFXVFVOGiwP6Bn85F94RIOnbqOSkC/HXONTIdxkPpYt67zPCA=="
         }
       }
+    },
+    "8fc6916d-2d90-430e-af0d-fdebc0367dca": {
+      "uuid": "8fc6916d-2d90-430e-af0d-fdebc0367dca",
+      "display_id": 81,
+      "title": "resolve the deferred workspace-collapse ruling: single-crate CLI-only vs two-crate library+binary dual surface (DESIGN ledger item 2; shapes #48 publish)",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-07-22T17:48:09.184274Z",
+      "updated_at": "2026-07-22T17:48:09.184274Z"
     },
     "9242e6c2-32a3-45f1-8478-d1fec3a8ce8b": {
       "uuid": "9242e6c2-32a3-45f1-8478-d1fec3a8ce8b",
@@ -3300,8 +3311,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-22T17:38:58.103286Z",
+    "timestamp": "2026-07-22T17:48:09.184274Z",
     "agent_id": "79Ig",
-    "agent_seq": 114
+    "agent_seq": 115
   }
 }
