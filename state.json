@@ -1,6 +1,6 @@
 {
   "next_display_id": 80,
-  "next_comment_id": 213,
+  "next_comment_id": 214,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -1248,11 +1248,20 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-22T17:09:48.246696Z",
-      "updated_at": "2026-07-22T17:21:07.389471Z",
+      "updated_at": "2026-07-22T17:33:17.703074Z",
       "labels": [
         "bug"
       ],
       "comments": {
+        "07a23f7b-0771-4c93-974a-60768226b73a": {
+          "display_id": 213,
+          "author": "79Ig",
+          "content": "CI green on feature/78-fence-edges: all jobs pass. Ready for --no-ff merge. Note for merge: #77 and #78 both prepend to CHANGELOG ### Fixed — the second merge will need a trivial conflict resolution (keep both entries).",
+          "created_at": "2026-07-22T17:33:17.688402Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA8c4/NxJbDTo7j1/4BBxsnKWMk432A/GIbfX2XSlsM7qiSPx8T40uwCQ445K88zZX2Sfjp4OmvoKfeEdg4y5BBA=="
+        },
         "2b86f4c0-773b-4cd1-a2d5-54a77d820748": {
           "display_id": 208,
           "author": "79Ig",
@@ -3262,8 +3271,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-22T17:33:11.437874Z",
+    "timestamp": "2026-07-22T17:33:17.703074Z",
     "agent_id": "79Ig",
-    "agent_seq": 103
+    "agent_seq": 104
   }
 }
