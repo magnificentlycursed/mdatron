@@ -1,0 +1,10 @@
+# Crosslink trusted signers
+# Format: <principal> <key-type> <base64-key> [comment]
+# approved by claire.celesterra at 2026-07-19 23:22:01 UTC
+79Ig@crosslink ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDpOzC6Fb0hDwFjPVZByhZx6vDtYhJD0n6mO8y3OCNvK crosslink-agent:79Ig@Claires-MacBook-Pro.local
+# approved by claire.celesterra at 2026-07-20 00:41:07 UTC
+URsw@crosslink ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINY6L6jKUBb7SuIxmeqQVzCkJDrVWjzO3JaqOx8xqBls crosslink-agent:URsw@Claires-MacBook-Pro.local
+# approved by claire.celesterra at 2026-07-20 00:41:09 UTC
+xFV2@crosslink ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFW9nTQL3zyxLAXe8tioZJqk7CiJyBCgG1N624HaQb4l crosslink-agent:xFV2@Claires-MacBook-Pro.local
+# approved by claire.celesterra at 2026-07-20 00:41:10 UTC
+fGzG@crosslink ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAtHFxGlhnyTwlxD45yIw2ZP8LBXnVzJM/SPs0FTegXg crosslink-agent:fGzG@Claires-MacBook-Pro.local
