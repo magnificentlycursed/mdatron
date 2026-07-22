@@ -11,6 +11,7 @@ the TRON blockchain.
 ## [Unreleased]
 
 ### Fixed
+- test(confine): `confine_ops_do_not_leak_fds` was flaky under parallel execution — it took a single `/proc/self/fd` snapshot (process-global, shared across threads) and tolerated only +2, so descriptors briefly held by unrelated concurrent tests failed it despite zero leak. Now min-samples the count to filter transient churn and tolerates bounded parallel noise (32) while staying an order of magnitude below the per-op leak signal (300); a deterministic red-gate test reproduces the race (#75)
 - Path-confinement helper: fallback and starts_with flaws; traversal test passes only via macOS symlink (L2)
 
 ### Security
