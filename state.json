@@ -1,6 +1,6 @@
 {
   "next_display_id": 78,
-  "next_comment_id": 206,
+  "next_comment_id": 207,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -1365,7 +1365,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-22T15:18:40.063608Z",
-      "updated_at": "2026-07-22T15:18:42.235682Z",
+      "updated_at": "2026-07-22T17:04:29.967845Z",
       "labels": [
         "security"
       ],
@@ -1377,6 +1377,15 @@
           "kind": "plan",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAQc7leY561X0c1ZcL9XOrSv7FrlppcoFnzypmQb6Y4AahG3mg2G5NTywRSqqEZ8kz6p5Itnb4MH9uveq8Cc6WDA=="
+        },
+        "f017d4ab-9920-4f68-9c38-f2d5cd16672a": {
+          "display_id": 206,
+          "author": "79Ig",
+          "content": "CI green on feature/76-marking (run 29940603896): Lint, Test ubuntu/macos/windows, cargo-audit, self-validate all pass. Marking discipline COMPLETE for the output forms that exist (TTY + JSON): partition renderer + Finding.quoted machinery (113ffe5), E0050 schema-violation marking via kind-reconstruction (6f6c3d7), DSL interpolation marking (feaa753). Both adopter-content sites carry document content out-of-line; verified by driving the CLI (invalid enum -> = found: block; unexpected key -> = unexpected: at the key's line). Ready for --no-ff merge. REMAINING (separate issue): compact-verify rendering of quoted regions = #44, which needs the deferred per-finding size-limit number (SO decision) + line-boundary truncation/elision. Also surfaced #77 (verify ignores config.yaml file_globs -> self-validation walks non-corpus dirs).",
+          "created_at": "2026-07-22T17:04:29.952183Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA+fHIxd3JjQ5kTe1JYofDGK1JvPGSJiX14pKh1tGIRscyLLqF2IReEA4PxLFoeVD95ZK66dyH4XmDeztRFC9qBw=="
         }
       }
     },
@@ -3150,8 +3159,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-22T16:57:35.275058Z",
+    "timestamp": "2026-07-22T17:04:29.967845Z",
     "agent_id": "79Ig",
-    "agent_seq": 85
+    "agent_seq": 86
   }
 }
