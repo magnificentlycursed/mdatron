@@ -1,6 +1,6 @@
 {
   "next_display_id": 82,
-  "next_comment_id": 215,
+  "next_comment_id": 216,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -1507,10 +1507,21 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-22T17:48:09.184274Z",
-      "updated_at": "2026-07-22T17:48:14.219972Z",
+      "updated_at": "2026-07-22T17:48:53.354822Z",
       "labels": [
         "refactor"
-      ]
+      ],
+      "comments": {
+        "3f2f880f-04eb-42c9-99a2-f7e893c1719e": {
+          "display_id": 215,
+          "author": "79Ig",
+          "content": "RECOVERED DEFERRED WORK (operator surfaced 2026-07-22: 'we got rid of the API and committed to shipping a cli only... I thought that would cleanup mdatron-core?'). The record, reconciled:\n\n(1) 2026-06-02 binary-first plan, operator directives (vsdd-cli/docs/refactor/binary-first-plan.md rows 35+37): 'Both mdatron and vsdd are consumed AS BINARIES; vsdd shells out to mdatron verify rather than calling mdatron-core library APIs' + 'Workspace shape: full collapse — single mdatron/vsdd crate per repo; no published -core siblings.'\n\n(2) 2026-07-19 DESIGN ratification, absorption-ledger item 2 (DESIGN.md L174): CARRIED the two-crate workspace + library-plus-binary dual surface; 'the workspace collapse stays deferred to phase 1c as optional (operator ruling, cleanup umbrella)'. DESIGN L9 declares the library 'consumed in-process by adopting tools'.\n\n(3) THE GAP: the deferral pointed at the cleanup umbrella #2, but #2 closed with no leg for it and no tracker issue existed until now — the collapse work was DESIGN-prose-only. This issue is its home.\n\n(4) LIVE EVIDENCE cuts against the June directive: vsdd-cli never did the shell-out — it path-deps mdatron-core as a library in 3 Cargo.tomls and recently DEEPENED the in-process dependency (their #717/#718: serde_yaml_ng pinned to mdatron-core's public API YAML type for their registry loaders).\n\nTHE DECISION (operator/SO — added as D5 to the #80 ratification batch):\n(a) COLLAPSE per the June directive: single mdatron crate, prune the pub API surface to the binary's needs, no published -core; REQUIRES vsdd-cli's shell-out refactor first (cross-repo sequencing) since they link the library today. #48 publishes one crate.\n(b) KEEP the ratified dual surface: DESIGN L9/L174 stand as the operative ruling (they post-date June and match live usage); this issue closes as 'collapse declined — superseded by DESIGN ratification', and #48 gains a leg: publish mdatron-core to crates.io with a stated API-stability posture (library semver becomes a real contract — vsdd's #717 pin shows type-level coupling already binding).\n(c) MIDDLE: keep two crates for build hygiene but mark mdatron-core internal (publish it only as an implementation detail of the binary: 'no stability promises; consume the binary'); vsdd migrates to the binary at their own pace. Cheapest now, but leaves vsdd's live library dep on an unpromised surface.\n\nEvidence-weight note (not a decision): (b) or (c) match reality; (a) matches the original intent but costs a cross-repo refactor the first adopter has been actively building AGAINST.",
+          "created_at": "2026-07-22T17:48:53.339263Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAIXWUZjk5wgBsC0ZmTZMler5FspI9s5p702h9D/lRaniop8FpRrp6YtZwi22iwgS6/44Ed2mSAriU4U4wUn7iDA=="
+        }
+      }
     },
     "9242e6c2-32a3-45f1-8478-d1fec3a8ce8b": {
       "uuid": "9242e6c2-32a3-45f1-8478-d1fec3a8ce8b",
@@ -3318,8 +3329,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-22T17:48:21.973842Z",
+    "timestamp": "2026-07-22T17:48:53.354822Z",
     "agent_id": "79Ig",
-    "agent_seq": 117
+    "agent_seq": 118
   }
 }
