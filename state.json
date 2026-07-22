@@ -1,6 +1,6 @@
 {
   "next_display_id": 80,
-  "next_comment_id": 210,
+  "next_comment_id": 211,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -1230,7 +1230,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-22T17:09:48.246696Z",
-      "updated_at": "2026-07-22T17:10:24.428196Z",
+      "updated_at": "2026-07-22T17:21:07.389471Z",
       "labels": [
         "bug"
       ],
@@ -1243,6 +1243,15 @@
           "kind": "plan",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABApExtNg95f5Guz4URL1LF9xvcFYox8Eo4wkAYttokdtImhlF4S3hx/2A8yXWLoVFIsczDW+m7fqUSEi6/R1x4Dw=="
+        },
+        "c9fb1f72-79bc-4c78-bd62-b90aa342556a": {
+          "display_id": 210,
+          "author": "79Ig",
+          "content": "Ask (a) FIXED on feature/78-fence-edges (commit 6e6de1f): parse()+yaml_block() unified on a BOM/CRLF-tolerant fence_bounds(); the (c) conformance corpus landed as 7 tests (red gates demonstrated failing pre-fix); E0050 locations survive BOM+CRLF unshifted. End-to-end drive: a BOM'd+CRLF review-entry with a bad enum — previously a silent pass — now E0050 with marked found-block at line 3. 275 workspace tests green, fmt/clippy/audit clean. Pushed for CI. Ask (b) loudness stays open here pending the SO decision batch.",
+          "created_at": "2026-07-22T17:21:07.372742Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA+g1JFxJXXfYrXmmsXcegqmW8fu9z/Ip9e7NzNr1SiYtc2EH6ygGTFkcGhkc7FBSMRzDH3K3ykcW28yAZyx7FBg=="
         }
       }
     },
@@ -3235,8 +3244,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-22T17:11:17.917485Z",
+    "timestamp": "2026-07-22T17:21:07.389471Z",
     "agent_id": "79Ig",
-    "agent_seq": 100
+    "agent_seq": 101
   }
 }
