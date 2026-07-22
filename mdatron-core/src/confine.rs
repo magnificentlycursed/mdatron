@@ -749,6 +749,70 @@ mod tests {
         std::fs::read_dir(dir).map(|rd| rd.count()).unwrap_or(0)
     }
 
+    /// Number of confine ops the leak test drives. A genuine per-op descriptor
+    /// leak grows the process fd count by ~this many; the leak signal is
+    /// therefore an order of magnitude above [`FD_LEAK_TOLERANCE`].
+    #[cfg(unix)]
+    const FD_LEAK_OPS: usize = 300;
+
+    /// How much process-global fd growth the leak test tolerates. `/proc/self/fd`
+    /// is shared across threads and cargo runs tests in parallel, so a bounded
+    /// number of descriptors held by unrelated concurrent tests is expected
+    /// noise. This ceiling sits far below the per-op leak signal ([`FD_LEAK_OPS`])
+    /// yet well above realistic parallel churn — it separates leak from noise
+    /// rather than measuring an exact count.
+    #[cfg(unix)]
+    const FD_LEAK_TOLERANCE: usize = 32;
+
+    /// Process-global open-fd count, filtered for transient parallel noise by
+    /// taking the minimum over several rapid reads: a descriptor another thread
+    /// holds only momentarily is unlikely to be present in every sample, while a
+    /// real leak persists and survives the min.
+    #[cfg(unix)]
+    fn quiescent_fd_count() -> usize {
+        (0..8).map(|_| open_fd_count()).min().unwrap_or(0)
+    }
+
+    // RED GATE (#75): the old assertion took a single process-global fd-count
+    // snapshot and allowed only +2. /proc/self/fd is shared across all threads,
+    // and cargo runs these tests in parallel — so a handful of descriptors held
+    // by *unrelated* concurrent tests (zero leak in confine) perturbs the delta
+    // past +2 and fails the build intermittently. This test reproduces that race
+    // deterministically: holding 8 unrelated fds open across the window moves the
+    // single-snapshot delta to +8, which trips the old `before + 2` bound. The
+    // fixed invariant (min-sampling + a tolerance far below the per-op leak
+    // signal) survives it.
+    #[cfg(unix)]
+    #[test]
+    fn red_gate_fd_count_race_from_unrelated_open_fds() {
+        let root = temp_root("fd-race");
+        std::fs::write(root.join("f.yaml"), "k: v\n").unwrap();
+
+        let before = open_fd_count();
+        // Simulate unrelated concurrent tests holding descriptors during the
+        // measurement window — no confine op leaks anything here.
+        let mut held = Vec::new();
+        for _ in 0..8 {
+            held.push(std::fs::File::open(root.join("f.yaml")).unwrap());
+        }
+        let after = open_fd_count();
+
+        // The old, too-tight bound would have failed despite zero leak:
+        assert!(
+            after > before + 2,
+            "expected the unrelated fds to breach the old +2 bound: {before} -> {after}"
+        );
+        // The fixed bound tolerates bounded parallel churn while staying far
+        // below a real per-op leak (+OPS):
+        assert!(
+            after <= before + FD_LEAK_TOLERANCE,
+            "held fds should be within the leak tolerance: {before} -> {after}"
+        );
+
+        drop(held);
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
     #[cfg(unix)]
     #[test]
     fn confine_ops_do_not_leak_fds() {
@@ -773,14 +837,17 @@ mod tests {
         for _ in 0..20 {
             exercise(&root);
         }
-        let before = open_fd_count();
-        for _ in 0..300 {
+        let before = quiescent_fd_count();
+        for _ in 0..FD_LEAK_OPS {
             exercise(&root);
         }
-        let after = open_fd_count();
+        let after = quiescent_fd_count();
+        // A genuine leak grows ~1 fd per op (→ +FD_LEAK_OPS); the tolerance
+        // absorbs bounded process-global fd churn from parallel tests while
+        // staying an order of magnitude below any real leak. See #75.
         assert!(
-            after <= before + 2,
-            "descriptor leak across 300 confine ops: {before} -> {after} (invariant I7)"
+            after <= before + FD_LEAK_TOLERANCE,
+            "descriptor leak across {FD_LEAK_OPS} confine ops: {before} -> {after} (invariant I7)"
         );
         std::fs::remove_dir_all(&root).unwrap();
     }
