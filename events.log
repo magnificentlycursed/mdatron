@@ -1,0 +1,2 @@
+{"agent_id":"ohMM","agent_seq":1,"timestamp":"2026-07-21T01:58:46.892605Z","event":{"type":"LockClaimed","issue_display_id":55}}
+{"agent_id":"ohMM","agent_seq":2,"timestamp":"2026-07-21T02:09:30.269096Z","event":{"type":"LockReleased","issue_display_id":55}}
