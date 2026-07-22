@@ -1,6 +1,6 @@
 {
   "next_display_id": 79,
-  "next_comment_id": 208,
+  "next_comment_id": 209,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -1192,10 +1192,21 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-22T17:09:48.246696Z",
-      "updated_at": "2026-07-22T17:09:52.964588Z",
+      "updated_at": "2026-07-22T17:10:24.428196Z",
       "labels": [
         "bug"
-      ]
+      ],
+      "comments": {
+        "2b86f4c0-773b-4cd1-a2d5-54a77d820748": {
+          "display_id": 208,
+          "author": "79Ig",
+          "content": "CONSUMER RAISE (vsdd-cli relay 2026-07-22, Raise 1). Passed their ratified scope test (document-anchored, generic), failed their support test, raised here. DEFECT: frontmatter.rs parse() requires content to start exactly '---\\n' (~line 27). A UTF-8 BOM (U+FEFF) prefix or CRLF fence ('---\\r\\n') fails the check -> Ok(None) -> verify's dispatch finds no schema_class (verify.rs ~269-277), no schema and no pattern applies -> the file PASSES THE WALK SILENTLY. Meanwhile vsdd's lenient consumer-side loader (tolerates BOM+CRLF after a review finding) validates the same file — a governed artifact validated by one tool, invisible to the other. The hole sits precisely on Windows-editor provenance (and we ship a windows CI leg — CRLF is in scope). KEY ASYMMETRY: parse FAILURE is loud (E0001, proven live this week); parse ABSENCE is indistinguishable from not-governed. THREE SEPARABLE ASKS: (a) tolerate leading BOM + CRLF fences in parse() — straight fix, this issue's core; (b) loudness option: a file matching a governed glob (or configured must-have-frontmatter glob) that parses Ok(None) reports instead of silently passing — interacts with #77's routing (a route table makes 'routed but frontmatterless' well-defined); needs a new W-code + design language, likely SO-touching; (c) shared fence-edge conformance corpus both projects test against — vsdd contributes: BOM opening, CRLF fences, bare '---' inside a block scalar (BOTH parsers truncate at first bare fence — pin as shared deliberate semantics), empty block, unterminated fence. PLAN: fix (a) with red gates from the (c) corpus cases in one lane; route (b) to a design decision alongside #77's default question.",
+          "created_at": "2026-07-22T17:10:24.415850Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABApExtNg95f5Guz4URL1LF9xvcFYox8Eo4wkAYttokdtImhlF4S3hx/2A8yXWLoVFIsczDW+m7fqUSEi6/R1x4Dw=="
+        }
+      }
     },
     "869224e9-82ba-459b-8281-5942bbc2b763": {
       "uuid": "869224e9-82ba-459b-8281-5942bbc2b763",
@@ -3183,8 +3194,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-22T17:10:00.911701Z",
+    "timestamp": "2026-07-22T17:10:24.428196Z",
     "agent_id": "79Ig",
-    "agent_seq": 93
+    "agent_seq": 94
   }
 }
