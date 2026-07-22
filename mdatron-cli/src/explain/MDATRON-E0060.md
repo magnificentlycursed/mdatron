@@ -27,9 +27,14 @@ then apply the matching pattern:
 - **You edited a managed file by mistake.** Restore it — `git checkout
   .mdatron/<file>` if it is committed, or re-run `mdatron init` in a clean
   checkout to redeploy the engine defaults.
-- **You meant to customize engine configuration.** Managed files are not the
-  place for it in v0.1.x; put adopter data in `.mdatron/schemas/` or
-  `.mdatron/patterns/`, which are outside the managed partition.
+- **You meant to customize `config.yaml`.** Since the #77 demotion,
+  `config.yaml` is *seeded* by init and adopter-owned — editing it (e.g. its
+  `file_globs` jurisdiction) is sanctioned and does not drift. If your tree's
+  manifest predates the demotion and still lists `config.yaml` as managed,
+  replace that entry with a demotion tombstone (path, reason, owner) in a
+  reviewed commit; fresh `mdatron init` deployments already ship the demoted
+  shape. Other adopter data belongs in `.mdatron/schemas/` or
+  `.mdatron/patterns/`, outside the managed partition.
 - **The engine defaults changed across an mdatron upgrade.** The manifest
   records the version that deployed each file; restore the file to match the
   manifest, or reinitialize in a clean tree to pick up new defaults.

@@ -57,6 +57,22 @@ impl VerifyConfig {
             file_globs: vec!["**/*.md".to_string()],
         }
     }
+
+    /// Build a config honoring the project's committed `.mdatron/config.yaml`:
+    /// its `file_globs` are the consumer-authored jurisdiction (#77), so files
+    /// outside them — third-party markdown a chassis or unrelated tool deploys
+    /// into the tree — are not walked at all. Falls back to [`Self::new`]
+    /// defaults when the config is absent or declares no globs; errs when the
+    /// config exists but is unreadable/unparsable (loud, no silent default).
+    pub fn from_project(project_root: impl Into<PathBuf>) -> Result<Self, crate::Error> {
+        let mut cfg = Self::new(project_root);
+        if let Some(pc) = crate::config::load(&cfg.project_root)? {
+            if !pc.file_globs.is_empty() {
+                cfg.file_globs = pc.file_globs;
+            }
+        }
+        Ok(cfg)
+    }
 }
 
 /// Errors arising during pipeline orchestration. Distinct from validation
@@ -94,6 +110,11 @@ pub enum VerifyError {
 
     #[error("glob error: {0}")]
     Glob(String),
+
+    // The wrapped string is a rendered `crate::Error`, which already carries
+    // its own "config error:" category label — no second prefix here.
+    #[error("{0}")]
+    Config(String),
 
     #[error("frontmatter parse error at '{path}': {error}")]
     Frontmatter { path: String, error: String },
@@ -579,6 +600,68 @@ mod tests {
             findings.is_empty(),
             "expected no findings; got {findings:?}"
         );
+    }
+
+    // RED GATE (#77, consumer raise 3): config.yaml `file_globs` are the
+    // consumer-authored jurisdiction. A file outside them — e.g. third-party
+    // markdown a chassis deploys into the tree — is not walked at all, even
+    // with broken frontmatter; it is not mdatron's to refuse. Pre-fix, verify
+    // ignored the committed config entirely (VerifyConfig::new hardcoded
+    // `**/*.md`) and E0001-refused the vendor file.
+    #[test]
+    fn project_config_file_globs_scope_the_walk() {
+        let proj = TempProject::new("config-scope");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        // In-jurisdiction and violating: caught.
+        proj.write(
+            "docs/bad.md",
+            "---\nschema_class: phase-primer\nphase: invalid\nrelevant_domains: [se]\n---\n",
+        );
+        // Out-of-jurisdiction third-party file with non-YAML frontmatter: untouched.
+        proj.write("vendor/tool.md", "---\nnot: valid: yaml: [\n---\n");
+
+        let cfg = VerifyConfig::from_project(&proj.0).expect("config loads");
+        let findings = verify(&cfg).unwrap();
+        assert_eq!(
+            findings.len(),
+            1,
+            "only the in-jurisdiction file is validated; got {findings:?}"
+        );
+        assert!(findings[0].location.file.ends_with("docs/bad.md"));
+
+        // The engine default (config ignored) still walks everything — the
+        // pre-#77 behavior this red gate exists to demonstrate.
+        let all = verify(&VerifyConfig::new(&proj.0)).unwrap();
+        assert!(
+            all.len() >= 2,
+            "default globs walk the vendor file too; got {all:?}"
+        );
+    }
+
+    // #77: an explicit caller override (`--files`) takes precedence over the
+    // project config — the CLI passes its own globs by replacing file_globs.
+    #[test]
+    fn absent_config_falls_back_to_default_globs() {
+        let proj = TempProject::new("config-absent");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(
+            "anywhere.md",
+            "---\nschema_class: phase-primer\nphase: invalid\nrelevant_domains: [se]\n---\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).expect("absent config is fine");
+        assert_eq!(cfg.file_globs, vec!["**/*.md"]);
+        let findings = verify(&cfg).unwrap();
+        assert_eq!(findings.len(), 1);
     }
 
     #[test]

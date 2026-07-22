@@ -217,20 +217,30 @@ fn cmd_verify(
         }
     };
 
-    let mut config = VerifyConfig::new(&root);
-    if let Some(s) = schemas {
-        config.schemas_dir = s;
-    }
-    if let Some(p) = patterns {
-        config.patterns_dir = p;
-    }
-    if !files.is_empty() {
-        config.file_globs = files;
-    }
-
-    let (findings, pipeline_status, pipeline_err) = match verify(&config) {
-        Ok(f) => (f, PipelineStatus::Ok, None),
-        Err(e) => (Vec::new(), PipelineStatus::Failed, Some(e)),
+    // The committed .mdatron/config.yaml's file_globs are the consumer-authored
+    // jurisdiction (#77); `--files` overrides them for an ad-hoc run. A present-
+    // but-malformed config is a pipeline failure (loud), not a silent fallback.
+    let (findings, pipeline_status, pipeline_err) = match VerifyConfig::from_project(&root) {
+        Err(e) => (
+            Vec::new(),
+            PipelineStatus::Failed,
+            Some(VerifyError::Config(e.to_string())),
+        ),
+        Ok(mut config) => {
+            if let Some(s) = schemas {
+                config.schemas_dir = s;
+            }
+            if let Some(p) = patterns {
+                config.patterns_dir = p;
+            }
+            if !files.is_empty() {
+                config.file_globs = files;
+            }
+            match verify(&config) {
+                Ok(f) => (f, PipelineStatus::Ok, None),
+                Err(e) => (Vec::new(), PipelineStatus::Failed, Some(e)),
+            }
+        }
     };
 
     // BC-2: files_checked count. v0.1.0 stub: 0 when pipeline failed; otherwise the
