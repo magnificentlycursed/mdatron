@@ -276,6 +276,7 @@ pub fn drift_findings(project_root: &Path, drifts: &[Drift]) -> Vec<Finding> {
                 column: 0,
             },
             explain_ref: Some("MDATRON-E0060".into()),
+            quoted: Vec::new(),
         })
         .collect()
 }

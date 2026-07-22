@@ -131,6 +131,7 @@ mod tests {
                 column: 0,
             },
             explain_ref: None,
+            quoted: Vec::new(),
         }
     }
 

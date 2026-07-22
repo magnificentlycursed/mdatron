@@ -255,6 +255,7 @@ fn verify_file(
                     column: 0,
                 },
                 explain_ref: Some("MDATRON-E0001".into()),
+                quoted: Vec::new(),
             });
             return Ok(());
         }
@@ -298,6 +299,7 @@ fn verify_file(
                         column,
                     },
                     explain_ref: Some("MDATRON-E0050".into()),
+                    quoted: Vec::new(),
                 });
             }
         }
@@ -395,6 +397,7 @@ fn verify_rule(
                 column: 0,
             },
             explain_ref: Some(rule.code.clone()),
+            quoted: Vec::new(),
         });
     }
     Ok(())

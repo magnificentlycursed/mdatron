@@ -319,6 +319,7 @@ fn print_pipeline_error(e: &VerifyError) {
             column: 0,
         },
         explain_ref: None,
+        quoted: Vec::new(),
     };
     eprintln!("{}", finding.format_tty());
 }
