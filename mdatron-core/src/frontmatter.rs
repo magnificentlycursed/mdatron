@@ -106,16 +106,18 @@ fn yaml_block(content: &str) -> Option<&str> {
 }
 
 /// Resolve every schema-violation location for one file in a SINGLE marked
-/// parse. Each `(instance_path, message)` yields the 1-based `(line, column)` of
-/// the offending node, or `None` (the caller then falls back to the block
-/// start). Runs only on the error path — never the happy path.
+/// parse. Each `(instance_path, unexpected_key)` yields the 1-based
+/// `(line, column)` of the offending node, or `None` (the caller then falls back
+/// to the block start). `unexpected_key` is `""` unless the violation is an
+/// `additionalProperties`, in which case it is the offending key. Runs only on
+/// the error path — never the happy path.
 ///
 /// - The frontmatter is parsed once for all violations, not once per violation
 ///   (#70).
 /// - The parse runs inside `catch_unwind`, so a panic in the pre-1.0 `saphyr`
 ///   parser degrades to `None` rather than aborting the whole run (#72).
 /// - For an `additionalProperties` violation — whose pointer is the parent
-///   object, not the offending key — the unexpected key named in the message is
+///   object, not the offending key — the caller-supplied `unexpected_key` is
 ///   located, so the line points at the key itself rather than the mapping
 ///   start (#71).
 ///
@@ -138,7 +140,7 @@ pub fn resolve_e0050_locations(content: &str, items: &[(&str, &str)]) -> Vec<Opt
     };
     items
         .iter()
-        .map(|(pointer, message)| resolve_one(&root, pointer, message))
+        .map(|(pointer, unexpected_key)| resolve_one(&root, pointer, unexpected_key))
         .collect()
 }
 
@@ -150,12 +152,18 @@ pub fn resolve_pointer_location(content: &str, pointer: &str) -> Option<(u32, u3
         .flatten()
 }
 
-fn resolve_one(root: &saphyr::MarkedYaml, pointer: &str, message: &str) -> Option<(u32, u32)> {
+fn resolve_one(
+    root: &saphyr::MarkedYaml,
+    pointer: &str,
+    unexpected_key: &str,
+) -> Option<(u32, u32)> {
     let node = walk_pointer(root, pointer)?;
-    // additionalProperties: the pointer addresses the parent object; the
-    // offending key is named in the message. Locate the key for a precise line.
-    if let Some(key) = unexpected_property_name(message) {
-        if let Some(loc) = key_location(node, &key) {
+    // additionalProperties: the pointer addresses the parent object; the caller
+    // supplies the offending key (from the finding's quoted `unexpected` region,
+    // no longer parsed out of a message string) so we can point at the key's own
+    // line rather than the parent object's.
+    if !unexpected_key.is_empty() {
+        if let Some(loc) = key_location(node, unexpected_key) {
             return Some(loc);
         }
     }
@@ -183,19 +191,6 @@ fn key_location(node: &saphyr::MarkedYaml, key: &str) -> Option<(u32, u32)> {
         YamlData::Value(Scalar::String(s)) if s.as_ref() == key => marker_to_location(k.span.start),
         _ => None,
     })
-}
-
-/// Extract the first unexpected-property name from an `additionalProperties`
-/// validator message (`"Additional properties are not allowed ('extra' was
-/// unexpected)"` -> `"extra"`). `None` for any other message shape.
-fn unexpected_property_name(message: &str) -> Option<String> {
-    if !message.contains("Additional properties are not allowed") {
-        return None;
-    }
-    let start = message.find('\'')?;
-    let rest = &message[start + 1..];
-    let end = rest.find('\'')?;
-    Some(rest[..end].to_string())
 }
 
 /// Walk a JSON Pointer (RFC 6901) over a marked YAML tree to the addressed node.

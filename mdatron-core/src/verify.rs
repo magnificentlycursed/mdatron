@@ -26,7 +26,7 @@ use std::path::{Path, PathBuf};
 
 use thiserror::Error;
 
-use crate::diagnostic::{Finding, Location, Severity};
+use crate::diagnostic::{Finding, Location, QuotedRegion, Severity};
 use crate::dsl::{
     evaluate, parse_expression, parse_pattern_file, ContextSelector, EvalContext, EvalError,
     IndexError, IndexRegistry, PatternFile, Rule, Value,
@@ -255,6 +255,7 @@ fn verify_file(
                     column: 0,
                 },
                 explain_ref: Some("MDATRON-E0001".into()),
+                quoted: Vec::new(),
             });
             return Ok(());
         }
@@ -279,9 +280,20 @@ fn verify_file(
             // Resolve every violation's source line in a single marked parse so
             // the diagnostics are directly actionable for the fixing agent
             // (#65/#70/#71); each falls back to the block start when unresolved.
+            // For additionalProperties, hand the resolver the offending key from
+            // the finding's quoted `unexpected` region (first key) so it can
+            // pinpoint the key's own line; `""` for every other violation shape.
             let items: Vec<(&str, &str)> = violations
                 .iter()
-                .map(|ve| (ve.instance_path.as_str(), ve.message.as_str()))
+                .map(|ve| {
+                    let key = ve
+                        .quoted
+                        .iter()
+                        .find(|q| q.label == "unexpected")
+                        .and_then(|q| q.content.lines().next())
+                        .unwrap_or("");
+                    (ve.instance_path.as_str(), key)
+                })
                 .collect();
             let locations = crate::frontmatter::resolve_e0050_locations(&content, &items);
             for (ve, loc) in violations.iter().zip(locations) {
@@ -290,7 +302,10 @@ fn verify_file(
                     code: "MDATRON-E0050".into(),
                     severity: Severity::Error,
                     summary: "frontmatter-schema-violation".into(),
-                    message: format!("{} ({})", ve.message, ve.instance_path),
+                    // The message is engine-authored (schema-side data only); the
+                    // failing document value / unexpected keys ride in `quoted`
+                    // for prefix-marked rendering, never inline (DESIGN §Output).
+                    message: ve.message.clone(),
                     help: None,
                     location: Location {
                         file: path.to_path_buf(),
@@ -298,6 +313,7 @@ fn verify_file(
                         column,
                     },
                     explain_ref: Some("MDATRON-E0050".into()),
+                    quoted: ve.quoted.clone(),
                 });
             }
         }
@@ -376,7 +392,7 @@ fn verify_rule(
 
     let passed = matches!(result, Value::Bool(true));
     if !passed {
-        let message =
+        let (message, quoted) =
             interpolate_message(&rule.message, &ctx).map_err(|e| VerifyError::ExprParse {
                 pattern_id: pf.pattern.id.clone(),
                 rule_id: rule.id.clone(),
@@ -395,6 +411,7 @@ fn verify_rule(
                 column: 0,
             },
             explain_ref: Some(rule.code.clone()),
+            quoted,
         });
     }
     Ok(())
@@ -442,8 +459,12 @@ fn glob_matches(pattern: &str, path: &Path) -> bool {
 
 // ── Message interpolation ──────────────────────────────────────────────────────
 
-fn interpolate_message(template: &str, ctx: &EvalContext) -> Result<String, String> {
+fn interpolate_message(
+    template: &str,
+    ctx: &EvalContext,
+) -> Result<(String, Vec<QuotedRegion>), String> {
     let mut out = String::new();
+    let mut quoted = Vec::new();
     let bytes = template.as_bytes();
     let mut i = 0;
     while i < bytes.len() {
@@ -456,7 +477,17 @@ fn interpolate_message(template: &str, ctx: &EvalContext) -> Result<String, Stri
                     .map_err(|e| format!("interpolation '{expr_str}': {}", e.message))?;
                 let value = evaluate(&expr, ctx)
                     .map_err(|e| format!("interpolation '{expr_str}' eval: {e}"))?;
-                out.push_str(&format_value(&value));
+                // The interpolated value is adopter document content. Keep it out
+                // of the engine message — an inline value is a forgeable marking
+                // (DESIGN §Output). The message carries a `{binding}` placeholder;
+                // the value renders in a prefix-marked block beneath it.
+                out.push('{');
+                out.push_str(expr_str);
+                out.push('}');
+                quoted.push(QuotedRegion {
+                    label: expr_str.to_string(),
+                    content: format_value(&value),
+                });
                 i = expr_end + 2;
                 continue;
             }
@@ -464,7 +495,7 @@ fn interpolate_message(template: &str, ctx: &EvalContext) -> Result<String, Stri
         out.push(bytes[i] as char);
         i += 1;
     }
-    Ok(out)
+    Ok((out, quoted))
 }
 
 fn format_value(v: &Value) -> String {
@@ -566,8 +597,26 @@ mod tests {
         let findings = verify(&cfg).unwrap();
         assert_eq!(findings.len(), 1);
         assert_eq!(findings[0].code, "MDATRON-E0050");
+        // Engine-authored message names the constraint (schema-side), and the
+        // failing document value is carried out-of-line in a quoted region — not
+        // inline in the message (DESIGN §Output marking discipline).
         assert!(
-            findings[0].message.contains("invalid-phase") || findings[0].message.contains("enum")
+            findings[0].message.contains("allowed options"),
+            "message should describe the constraint: {}",
+            findings[0].message
+        );
+        assert!(
+            !findings[0].message.contains("invalid-phase"),
+            "adopter value must not leak into the engine message: {}",
+            findings[0].message
+        );
+        assert!(
+            findings[0]
+                .quoted
+                .iter()
+                .any(|q| q.content.contains("invalid-phase")),
+            "failing value should ride in a quoted region; got {:?}",
+            findings[0].quoted
         );
     }
 
@@ -656,10 +705,21 @@ pattern:
         let findings = verify(&cfg).unwrap();
         assert_eq!(findings.len(), 1);
         assert_eq!(findings[0].code, "TEST-E0001");
+        // The interpolated value is marked out-of-line: the message keeps a
+        // `{binding}` placeholder and the value rides in a quoted region.
         assert!(
-            findings[0].message.contains("phase-2a"),
-            "interpolation should substitute $self.phase; got: {}",
+            findings[0].message.contains("{$self.phase}")
+                && !findings[0].message.contains("phase-2a"),
+            "interpolated value must not be inline; got: {}",
             findings[0].message
+        );
+        assert!(
+            findings[0]
+                .quoted
+                .iter()
+                .any(|q| q.content.contains("phase-2a")),
+            "interpolated value should ride in a quoted region; got {:?}",
+            findings[0].quoted
         );
     }
 
@@ -827,8 +887,12 @@ pattern:
         let file_v = Value::Null;
         let project_v = Value::Null;
         let ctx = EvalContext::new(&self_v, &file_v, &project_v);
-        let result = interpolate_message("got phase: {{$self.phase}}", &ctx).unwrap();
-        assert_eq!(result, "got phase: phase-2a");
+        let (message, quoted) = interpolate_message("got phase: {{$self.phase}}", &ctx).unwrap();
+        // The value is out-of-line: the message keeps a `{binding}` placeholder.
+        assert_eq!(message, "got phase: {$self.phase}");
+        assert_eq!(quoted.len(), 1);
+        assert_eq!(quoted[0].label, "$self.phase");
+        assert_eq!(quoted[0].content, "phase-2a");
     }
 
     #[test]
@@ -840,8 +904,10 @@ pattern:
         let file_v = Value::Null;
         let project_v = Value::Null;
         let ctx = EvalContext::new(&self_v, &file_v, &project_v);
-        let result = interpolate_message("domains: {{$self.domains}}", &ctx).unwrap();
-        assert_eq!(result, "domains: se, qe");
+        let (message, quoted) = interpolate_message("domains: {{$self.domains}}", &ctx).unwrap();
+        assert_eq!(message, "domains: {$self.domains}");
+        assert_eq!(quoted.len(), 1);
+        assert_eq!(quoted[0].content, "se, qe");
     }
 
     #[test]
@@ -850,7 +916,8 @@ pattern:
         let file_v = Value::Null;
         let project_v = Value::Null;
         let ctx = EvalContext::new(&self_v, &file_v, &project_v);
-        let result = interpolate_message("no interpolation markers here", &ctx).unwrap();
-        assert_eq!(result, "no interpolation markers here");
+        let (message, quoted) = interpolate_message("no interpolation markers here", &ctx).unwrap();
+        assert_eq!(message, "no interpolation markers here");
+        assert!(quoted.is_empty());
     }
 }
