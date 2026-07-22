@@ -1,5 +1,5 @@
 {
-  "next_display_id": 79,
+  "next_display_id": 80,
   "next_comment_id": 209,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -20,6 +20,7 @@
     "3584e906-268f-45e3-96ef-9d107e4ade52": 64,
     "39fb91bc-ed4a-4358-a8f9-75a737bd1e3b": 8,
     "3bf8a891-a8c6-44cc-9698-1b69f2a3b3c1": 62,
+    "3cc73526-d8d8-4eb3-9bd3-a7affee9ee90": 79,
     "44e04ea5-0edc-4919-bcf7-7c234a3c8954": 74,
     "48642aed-2145-4a65-b014-0df508ad37c5": 11,
     "49197eb8-d2b6-4462-9185-1e9065d2d847": 3,
@@ -750,6 +751,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAC1FHOkT5DEM1/kgRK7fGqUuX+BYzsriLmyfuHbNJZzF0Nsg3cYL1XZHs4clwQ0CWlYWz+Afk9xUW8MavpoilCw=="
         }
       }
+    },
+    "3cc73526-d8d8-4eb3-9bd3-a7affee9ee90": {
+      "uuid": "3cc73526-d8d8-4eb3-9bd3-a7affee9ee90",
+      "display_id": 79,
+      "title": "numeric-claims check family: flag numeric literals in body prose restating frontmatter facts (consumer raise; drift class paid 3x by vsdd-cli)",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-07-22T17:10:29.912761Z",
+      "updated_at": "2026-07-22T17:10:29.912761Z"
     },
     "44e04ea5-0edc-4919-bcf7-7c234a3c8954": {
       "uuid": "44e04ea5-0edc-4919-bcf7-7c234a3c8954",
@@ -3194,8 +3205,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-22T17:10:24.428196Z",
+    "timestamp": "2026-07-22T17:10:29.912761Z",
     "agent_id": "79Ig",
-    "agent_seq": 94
+    "agent_seq": 95
   }
 }
