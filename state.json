@@ -1,6 +1,6 @@
 {
   "next_display_id": 77,
-  "next_comment_id": 206,
+  "next_comment_id": 205,
   "display_id_map": {
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
     "15d7981a-008d-4805-8a69-f3e4f414caf0": 75,
@@ -79,7 +79,20 @@
     "fea9b536-a072-4342-afe0-0a87fe5ca8bd": 48,
     "fed9ad06-769e-4cef-b2e3-be7041de17bc": 52
   },
-  "locks": {},
+  "locks": {
+    "59": {
+      "agent_id": "79Ig",
+      "claimed_at": "2026-07-21T00:27:20.817716Z"
+    },
+    "64": {
+      "agent_id": "79Ig",
+      "claimed_at": "2026-07-21T16:47:24.925507Z"
+    },
+    "76": {
+      "agent_id": "79Ig",
+      "claimed_at": "2026-07-22T15:18:45.089449Z"
+    }
+  },
   "issues": {
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": {
       "uuid": "1198bf2d-1428-40e0-8e18-cbf40d2df45d",
@@ -1331,7 +1344,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-22T15:18:40.063608Z",
-      "updated_at": "2026-07-22T15:32:25.175632Z",
+      "updated_at": "2026-07-22T15:18:42.235682Z",
       "labels": [
         "security"
       ],
@@ -1343,15 +1356,6 @@
           "kind": "plan",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAQc7leY561X0c1ZcL9XOrSv7FrlppcoFnzypmQb6Y4AahG3mg2G5NTywRSqqEZ8kz6p5Itnb4MH9uveq8Cc6WDA=="
-        },
-        "b1ff3b80-8567-4c5e-9abe-c20c7f444d68": {
-          "display_id": 205,
-          "author": "79Ig",
-          "content": "Increment 1 committed (113ffe5): the marking MACHINERY, behavior-preserving. render_quoted() partition renderer (split set LF/CR/VT/FF/NEL/U+2028/U+2029 -> prefixed breaks; escape set incl FS/GS/RS -> inert \\xNN; every line prefixed, no forgeable end-of-quote) with tests against every DESIGN line-135 seed; QuotedRegion + Finding.quoted (serde skip-if-empty, distinct JSON field); format_tty renders quoted blocks beneath the note; integration red gate (hostile value w/ instruction text + ESC + U+2028 + forged prefix renders marked, never inline). All current findings carry empty quoted -> byte-identical output (205 mdatron-core tests, clippy/fmt green). REMAINING: (2) populate E0050's quoted by reconstructing the engine message from jsonschema ValidationErrorKind + routing the failing instance value to a quoted region (the vsdd-cli-exercised site); (3) populate DSL interpolate_message (engine placeholder + value-as-region); (4) compact-verify (#44) with the deferred per-finding size-limit number proposed for SO ratification + line-boundary truncation/elision.",
-          "created_at": "2026-07-22T15:32:25.155344Z",
-          "kind": "result",
-          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
-          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAiq6pGGsDu+ObB3V3rSKxbo4SF4VxG/QDPfdtS1SWUSl2q5Zvw4/YsmdltkKVDFcTEo2QCk17EjMVVXODz+07Dg=="
         }
       }
     },
@@ -3125,8 +3129,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-22T15:32:25.175632Z",
+    "timestamp": "2026-07-22T15:18:45.089449Z",
     "agent_id": "79Ig",
-    "agent_seq": 81
+    "agent_seq": 77
   }
 }
