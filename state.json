@@ -1,5 +1,5 @@
 {
-  "next_display_id": 78,
+  "next_display_id": 79,
   "next_comment_id": 208,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -34,6 +34,7 @@
     "7515ecfd-31f2-4e53-bbb7-0e50c7cce064": 6,
     "7d3f3244-2166-4727-a6f5-233882cd4457": 49,
     "7f91651e-0b4e-4a0d-aa3e-567f6ebaea4a": 24,
+    "85c72705-2c55-4332-bb4d-9616e2ffef82": 78,
     "869224e9-82ba-459b-8281-5942bbc2b763": 31,
     "88be1f06-20a9-48da-8b35-4df657fbee27": 73,
     "8ac50e86-5777-4068-8ce0-3d628ff48d30": 15,
@@ -1178,6 +1179,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAxxmmTECpeD2Y1gIh0MMFRGhYNFX38zTXh3hzVNegRt56iWh9GCheg3xKLKxw4qQDi7XcbsoMJ0w00BHpwOt1BQ=="
         }
       }
+    },
+    "85c72705-2c55-4332-bb4d-9616e2ffef82": {
+      "uuid": "85c72705-2c55-4332-bb4d-9616e2ffef82",
+      "display_id": 78,
+      "title": "frontmatter fence strictness: BOM/CRLF opening reads as no-frontmatter — governed file silently passes the walk (consumer raise)",
+      "status": "open",
+      "priority": "high",
+      "created_by": "79Ig",
+      "created_at": "2026-07-22T17:09:48.246696Z",
+      "updated_at": "2026-07-22T17:09:48.246696Z"
     },
     "869224e9-82ba-459b-8281-5942bbc2b763": {
       "uuid": "869224e9-82ba-459b-8281-5942bbc2b763",
@@ -3165,8 +3176,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-22T17:09:31.360279Z",
+    "timestamp": "2026-07-22T17:09:48.246696Z",
     "agent_id": "79Ig",
-    "agent_seq": 90
+    "agent_seq": 91
   }
 }
