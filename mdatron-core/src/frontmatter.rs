@@ -117,7 +117,7 @@ fn yaml_block(content: &str) -> Option<&str> {
 /// - The parse runs inside `catch_unwind`, so a panic in the pre-1.0 `saphyr`
 ///   parser degrades to `None` rather than aborting the whole run (#72).
 /// - For an `additionalProperties` violation — whose pointer is the parent
-///   object, not the offending key — the unexpected key named in the message is
+///   object, not the offending key — the caller-supplied `unexpected_key` is
 ///   located, so the line points at the key itself rather than the mapping
 ///   start (#71).
 ///
