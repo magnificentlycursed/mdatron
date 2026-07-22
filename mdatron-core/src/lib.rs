@@ -14,6 +14,7 @@
 //! and rustc-shaped + JSON output. See CHANGELOG.md for the surface shipped per release.
 
 pub mod codes;
+pub mod config;
 pub mod confine;
 pub mod diagnostic;
 pub mod dsl;

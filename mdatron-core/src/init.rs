@@ -2,11 +2,15 @@
 //! manifest, idempotently, refusing drifted managed files.
 //!
 //! Per `DESIGN.md` § Init: the skeleton is the schema and pattern directories,
-//! an engine-default config, and the init manifest defining the managed
-//! partition. Managed files — engine-deployed, listed in the manifest with
-//! sha256 content hashes — are drift-refused; adopter-authored data (their
-//! schemas and patterns) lives outside the manifest and is never touched. The
-//! manifest cannot hash itself (a fixed point, `DESIGN.md` § Governance data is
+//! a seeded engine-default config, and the init manifest defining the managed
+//! partition. Managed files — listed in the manifest with sha256 content
+//! hashes — are drift-refused; the manifest is the authority on WHAT is
+//! managed (its entries are honored as data). Seeded files (config.yaml, #77)
+//! are written once and adopter-owned from then on — never hashed, never
+//! overwritten; their demotion from the managed partition persists as
+//! tombstones in trees that had them managed. Adopter-authored data (schemas
+//! and patterns) lives outside the manifest and is never touched. The manifest
+//! cannot hash itself (a fixed point, `DESIGN.md` § Governance data is
 //! governed); its own integrity is anchored by commit review.
 
 use std::path::Path;
@@ -17,25 +21,45 @@ use sha2::{Digest, Sha256};
 use crate::confine::confine_lexically;
 use crate::diagnostic::{Finding, Location, Severity};
 
-/// The engine-default config (a managed file). The verify pipeline's config
-/// consumption lands in a later increment; the file is deployed and
-/// drift-guarded now so the managed partition is non-empty from first init.
+/// The engine-default config, **seeded** at init and adopter-owned from then
+/// on. Its `file_globs` are the consumer-authored jurisdiction the verify
+/// pipeline honors (#77) — which is exactly why it cannot be drift-guarded:
+/// the original guard (placed "until config consumption lands") would make
+/// customization impossible. Its demotion from the managed partition is
+/// recorded as a tombstone in trees that had it managed (DESIGN § Governance
+/// data is governed).
 const DEFAULT_CONFIG: &str = "\
-# mdatron configuration — managed by `mdatron init`.
-# Adopter schemas live in .mdatron/schemas/, patterns in .mdatron/patterns/.
+# mdatron configuration — seeded by `mdatron init`; adopter-owned.
+# file_globs declare what is in mdatron's jurisdiction; files outside them
+# are not walked. Adopter schemas live in .mdatron/schemas/, patterns in
+# .mdatron/patterns/.
 file_globs:
   - \"**/*.md\"
 ";
 
-/// Files the engine deploys and manages (drift-guarded), relative to
-/// `.mdatron/`.
-const MANAGED_FILES: &[(&str, &str)] = &[("config.yaml", DEFAULT_CONFIG)];
+/// Files the engine seeds at init, relative to `.mdatron/`: written when
+/// absent, never overwritten, never hashed — adopter-owned once deployed.
+const SEED_FILES: &[(&str, &str)] = &[("config.yaml", DEFAULT_CONFIG)];
+
+/// Engine-known content for manifest-listed managed paths, used to repair a
+/// missing managed file in trees whose manifest still lists it (v1 trees
+/// predating the config.yaml demotion). The manifest is the authority on WHAT
+/// is managed; this is only the authority on what the engine can redeploy.
+fn engine_content(path: &str) -> Option<&'static str> {
+    match path {
+        "config.yaml" => Some(DEFAULT_CONFIG),
+        _ => None,
+    }
+}
 
 /// Directories the skeleton creates under `.mdatron/`.
 const SKELETON_DIRS: &[&str] = &["schemas", "patterns"];
 
 const MANIFEST_NAME: &str = "manifest.yaml";
-const MANIFEST_VERSION: u32 = 1;
+/// Manifest shape version. v2 adds demotion tombstones and empties the default
+/// managed set (config.yaml demoted to a seed, #77); v1 manifests — which may
+/// still list config.yaml as managed — parse and are honored as data.
+const MANIFEST_VERSION: u32 = 2;
 
 /// Outcome of a successful init run.
 #[derive(Debug, PartialEq, Eq)]
@@ -88,14 +112,29 @@ impl std::error::Error for InitError {}
 struct Manifest {
     version: u32,
     /// Engine-deployed files (path relative to `.mdatron/`) with their sha256.
-    /// The manifest never lists itself (fixed point).
+    /// The manifest never lists itself (fixed point). The manifest DEFINES the
+    /// managed partition (DESIGN § Governance data is governed): drift checks
+    /// run over these entries as data, not over an engine-side list.
     managed: Vec<ManagedEntry>,
+    /// Demotion tombstones: standing records of entries removed from the
+    /// managed partition, with their justification (DESIGN: removals persist
+    /// as tombstones; a naive demotion trips drift, a tombstoned one stays
+    /// loud through this record; the terminal anchor is commit review).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    demoted: Vec<DemotionTombstone>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 struct ManagedEntry {
     path: String,
     sha256: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct DemotionTombstone {
+    path: String,
+    reason: String,
+    owner: String,
 }
 
 /// Lowercase hex sha256 of `bytes`.
@@ -111,22 +150,25 @@ pub fn sha256_hex(bytes: &[u8]) -> String {
 
 /// Run `mdatron init` at `project_root`.
 ///
-/// - No manifest present → first run: deploy the skeleton, managed files, and
-///   manifest.
-/// - Manifest present, every managed file intact and matching → no-op
-///   ([`InitOutcome::AlreadyInitialized`]).
-/// - A managed file hand-modified (hash mismatch) → refuse
-///   ([`InitError::Drift`]); nothing is written.
-/// - A managed file missing → repaired (re-deployed); the manifest is rewritten.
+/// - No manifest present → first run: deploy the skeleton, seed files, and a
+///   fresh (v2, empty-managed) manifest.
+/// - Manifest present, every manifest-listed managed file intact and every
+///   seed present → no-op ([`InitOutcome::AlreadyInitialized`]).
+/// - A manifest-listed managed file hand-modified (hash mismatch) → refuse
+///   ([`InitError::Drift`]); nothing is written. Seeds are adopter-owned:
+///   an edited seed is neither refused nor overwritten.
+/// - A manifest-listed managed file missing → repaired from engine-known
+///   content; the manifest is rewritten preserving entries and tombstones.
+///   A missing seed is re-seeded.
 pub fn init(project_root: &Path) -> Result<InitOutcome, InitError> {
     let dir = project_root.join(".mdatron");
     let manifest_path = dir.join(MANIFEST_NAME);
 
     if manifest_path.exists() {
-        let manifest = read_manifest(&manifest_path)?;
+        let mut manifest = read_manifest(&manifest_path)?;
         let mut drifts = Vec::new();
-        let mut missing = false;
-        for entry in &manifest.managed {
+        let mut missing: Vec<usize> = Vec::new();
+        for (i, entry) in manifest.managed.iter().enumerate() {
             // The manifest is read from the tree, and it cannot hash itself
             // (fixed point) — so a hand-edit to it is not drift-caught. Hold its
             // managed paths to the same confinement contract as any governed
@@ -154,7 +196,7 @@ pub fn init(project_root: &Path) -> Result<InitOutcome, InitError> {
                         });
                     }
                 }
-                Err(e) if e.kind() == std::io::ErrorKind::NotFound => missing = true,
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => missing.push(i),
                 Err(e) => return Err(io_err(&p, &e)),
             }
         }
@@ -163,15 +205,52 @@ pub fn init(project_root: &Path) -> Result<InitOutcome, InitError> {
         if !drifts.is_empty() {
             return Err(InitError::Drift(drifts));
         }
-        if !missing {
-            // Intact — but the skeleton dirs may have been removed; recreate
-            // them idempotently, then report no-op.
-            ensure_dirs(&dir)?;
-            return Ok(InitOutcome::AlreadyInitialized);
+
+        let mut created = Vec::new();
+
+        // Repair missing MANAGED files from engine-known content. The manifest
+        // is the authority on what is managed (its entries are data — v1 trees
+        // still listing config.yaml are honored); the engine only supplies the
+        // bytes. The manifest is rewritten preserving its entries and
+        // tombstones, with repaired entries re-hashed from the written content.
+        if !missing.is_empty() {
+            for &i in &missing {
+                let entry = &mut manifest.managed[i];
+                let Some(content) = engine_content(&entry.path) else {
+                    return Err(InitError::Io {
+                        path: entry.path.clone(),
+                        error: "missing managed file has no engine-known content to redeploy"
+                            .into(),
+                    });
+                };
+                let p = dir.join(&entry.path);
+                std::fs::write(&p, content).map_err(|e| io_err(&p, &e))?;
+                entry.sha256 = sha256_hex(content.as_bytes());
+                created.push(format!(".mdatron/{}", entry.path));
+            }
+            write_manifest(&dir, &manifest)?;
         }
+
+        // Skeleton dirs and SEED files are re-created when absent — idempotent
+        // repair without touching anything that exists (seeds are
+        // adopter-owned; an edited seed is never overwritten, never refused).
+        ensure_dirs(&dir)?;
+        for (name, content) in SEED_FILES {
+            let p = dir.join(name);
+            if !p.exists() {
+                std::fs::write(&p, content).map_err(|e| io_err(&p, &e))?;
+                created.push(format!(".mdatron/{name}"));
+            }
+        }
+
+        return if created.is_empty() {
+            Ok(InitOutcome::AlreadyInitialized)
+        } else {
+            Ok(InitOutcome::Deployed { created })
+        };
     }
 
-    // First run or repair: deploy everything.
+    // First run: deploy the skeleton, seeds, and a fresh (v2) manifest.
     let created = deploy(&dir)?;
     Ok(InitOutcome::Deployed { created })
 }
@@ -191,37 +270,44 @@ fn deploy(dir: &Path) -> Result<Vec<String>, InitError> {
         }
     }
 
-    let mut managed = Vec::new();
-    for (name, content) in MANAGED_FILES {
+    // Seeds: written on first run; adopter-owned from then on (never hashed,
+    // never overwritten by later runs).
+    for (name, content) in SEED_FILES {
         let p = dir.join(name);
-        let existed = p.exists();
-        std::fs::write(&p, content).map_err(|e| io_err(&p, &e))?;
-        if !existed {
+        if !p.exists() {
+            std::fs::write(&p, content).map_err(|e| io_err(&p, &e))?;
             created.push(format!(".mdatron/{name}"));
         }
-        managed.push(ManagedEntry {
-            path: (*name).to_string(),
-            sha256: sha256_hex(content.as_bytes()),
-        });
     }
 
+    // Fresh manifests start with an empty managed partition: config.yaml is a
+    // seed, not a managed file (#77), and no other engine-managed file exists
+    // yet. The manifest still DEFINES the partition — future engine-managed
+    // files (and v1 trees' existing entries) are honored as data.
     let manifest = Manifest {
         version: MANIFEST_VERSION,
-        managed,
+        managed: Vec::new(),
+        demoted: Vec::new(),
     };
-    let manifest_path = dir.join(MANIFEST_NAME);
-    let existed = manifest_path.exists();
-    let yaml = serde_yaml_ng::to_string(&manifest).map_err(|e| InitError::Io {
-        path: manifest_path.to_string_lossy().into_owned(),
-        error: e.to_string(),
-    })?;
-    let body = format!("# mdatron managed-partition manifest — do not edit by hand.\n{yaml}");
-    std::fs::write(&manifest_path, body).map_err(|e| io_err(&manifest_path, &e))?;
+    let existed = dir.join(MANIFEST_NAME).exists();
+    write_manifest(dir, &manifest)?;
     if !existed {
         created.push(format!(".mdatron/{MANIFEST_NAME}"));
     }
 
     Ok(created)
+}
+
+/// Serialize + write the manifest with its do-not-edit header, preserving
+/// whatever entries and tombstones the given manifest carries.
+fn write_manifest(dir: &Path, manifest: &Manifest) -> Result<(), InitError> {
+    let manifest_path = dir.join(MANIFEST_NAME);
+    let yaml = serde_yaml_ng::to_string(manifest).map_err(|e| InitError::Io {
+        path: manifest_path.to_string_lossy().into_owned(),
+        error: e.to_string(),
+    })?;
+    let body = format!("# mdatron managed-partition manifest — do not edit by hand.\n{yaml}");
+    std::fs::write(&manifest_path, body).map_err(|e| io_err(&manifest_path, &e))
 }
 
 fn ensure_dirs(dir: &Path) -> Result<(), InitError> {
@@ -340,11 +426,48 @@ mod tests {
         std::fs::remove_dir_all(&root).unwrap();
     }
 
-    // DESIGN L142: a hand-modified managed file causes refusal.
+    /// Hand-author a v1-style manifest (config.yaml still managed) — the shape
+    /// existing adopter trees carry from before the #77 demotion.
+    fn write_v1_manifest(root: &std::path::Path, sha: &str) {
+        std::fs::write(
+            root.join(".mdatron/manifest.yaml"),
+            format!("version: 1\nmanaged:\n- path: config.yaml\n  sha256: \"{sha}\"\n"),
+        )
+        .unwrap();
+    }
+
+    // RED GATE FLIP (#77): config.yaml is a SEED — adopter-owned. Editing its
+    // file_globs (the point of consumer-authored jurisdiction) must be neither
+    // refused nor overwritten. Pre-fix this exact sequence was refused as
+    // MDATRON-E0060 drift, making scoping impossible.
     #[test]
-    fn drifted_managed_file_is_refused() {
-        let root = temp_root("drift");
+    fn edited_seed_config_is_not_refused() {
+        let root = temp_root("seed-edit");
         init(&root).unwrap();
+        std::fs::write(
+            root.join(".mdatron/config.yaml"),
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        )
+        .unwrap();
+        assert_eq!(init(&root).unwrap(), InitOutcome::AlreadyInitialized);
+        assert!(std::fs::read_to_string(root.join(".mdatron/config.yaml"))
+            .unwrap()
+            .contains("docs/**/*.md"));
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    // The drift machinery is manifest-driven data, not gone: a tree whose
+    // manifest lists config.yaml as managed (v1 shape) still refuses a
+    // hand-modified copy — the managed-partition contract holds wherever the
+    // manifest declares it.
+    #[test]
+    fn manifest_listed_managed_file_drift_is_refused() {
+        let root = temp_root("v1-drift");
+        init(&root).unwrap();
+        write_v1_manifest(&root, &sha256_hex(DEFAULT_CONFIG.as_bytes()));
+        // Intact: the v1 tree is a clean no-op.
+        assert_eq!(init(&root).unwrap(), InitOutcome::AlreadyInitialized);
+        // Tampered: refused, not overwritten.
         std::fs::write(
             root.join(".mdatron/config.yaml"),
             "file_globs: [tampered]\n",
@@ -358,22 +481,64 @@ mod tests {
             }
             other => panic!("expected Drift refusal, got {other:?}"),
         }
-        // The refusal must not overwrite the hand-modified file.
         assert!(std::fs::read_to_string(root.join(".mdatron/config.yaml"))
             .unwrap()
             .contains("tampered"));
         std::fs::remove_dir_all(&root).unwrap();
     }
 
-    // A missing managed file is repaired (idempotent), not refused.
+    // A v1 tree's missing managed file is repaired from engine-known content,
+    // preserving the manifest's own entries (the manifest defines the
+    // partition; the engine only supplies bytes).
     #[test]
-    fn missing_managed_file_is_repaired() {
-        let root = temp_root("repair");
+    fn v1_managed_missing_file_is_repaired() {
+        let root = temp_root("v1-repair");
+        init(&root).unwrap();
+        write_v1_manifest(&root, &sha256_hex(DEFAULT_CONFIG.as_bytes()));
+        std::fs::remove_file(root.join(".mdatron/config.yaml")).unwrap();
+        assert!(matches!(init(&root).unwrap(), InitOutcome::Deployed { .. }));
+        assert!(root.join(".mdatron/config.yaml").is_file());
+        let manifest = std::fs::read_to_string(root.join(".mdatron/manifest.yaml")).unwrap();
+        assert!(
+            manifest.contains("config.yaml"),
+            "repair must preserve the manifest's managed entry: {manifest}"
+        );
+        assert_eq!(init(&root).unwrap(), InitOutcome::AlreadyInitialized);
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    // Demotion tombstones (DESIGN: removals persist) parse and survive a
+    // manifest rewrite triggered by managed-file repair.
+    #[test]
+    fn tombstones_survive_repair() {
+        let root = temp_root("tombstone");
+        init(&root).unwrap();
+        std::fs::write(
+            root.join(".mdatron/manifest.yaml"),
+            format!(
+                "version: 2\nmanaged:\n- path: config.yaml\n  sha256: \"{}\"\ndemoted:\n- path: old.yaml\n  reason: \"retired at v2\"\n  owner: operator\n",
+                sha256_hex(DEFAULT_CONFIG.as_bytes())
+            ),
+        )
+        .unwrap();
+        std::fs::remove_file(root.join(".mdatron/config.yaml")).unwrap();
+        assert!(matches!(init(&root).unwrap(), InitOutcome::Deployed { .. }));
+        let manifest = std::fs::read_to_string(root.join(".mdatron/manifest.yaml")).unwrap();
+        assert!(
+            manifest.contains("old.yaml") && manifest.contains("retired at v2"),
+            "tombstone must survive the rewrite: {manifest}"
+        );
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    // A missing seed is re-seeded (idempotent), and the tree returns to no-op.
+    #[test]
+    fn missing_seed_is_reseeded() {
+        let root = temp_root("reseed");
         init(&root).unwrap();
         std::fs::remove_file(root.join(".mdatron/config.yaml")).unwrap();
         assert!(matches!(init(&root).unwrap(), InitOutcome::Deployed { .. }));
         assert!(root.join(".mdatron/config.yaml").is_file());
-        // And the repaired tree is now a clean no-op.
         assert_eq!(init(&root).unwrap(), InitOutcome::AlreadyInitialized);
         std::fs::remove_dir_all(&root).unwrap();
     }

@@ -1,4 +1,7 @@
-# mdatron configuration — managed by `mdatron init`.
-# Adopter schemas live in .mdatron/schemas/, patterns in .mdatron/patterns/.
+# mdatron configuration — seeded by `mdatron init`; adopter-owned (#77).
+# file_globs declare what is in mdatron's jurisdiction; files outside them are
+# not walked. mdatron's own governed corpus is the review-log typed markdown —
+# tooling markdown deployed by the chassis (.claude/, .crosslink/) is not ours
+# to validate.
 file_globs:
-  - "**/*.md"
+  - "review-log/**/*.md"

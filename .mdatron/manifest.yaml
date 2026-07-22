@@ -1,5 +1,9 @@
 # mdatron managed-partition manifest — do not edit by hand.
-version: 1
-managed:
+# (This demotion edit is the sanctioned exception: a tombstoned demotion is
+# anchored by commit review, the manifest's stated root of trust.)
+version: 2
+managed: []
+demoted:
 - path: config.yaml
-  sha256: c47ca4f95b2c01c29120f484f09c11e7313a017348857b7fcdf9589edbff43ea
+  reason: "file_globs are project-specific adopter configuration; config.yaml is seeded by init and adopter-owned once deployed — drift-guarding it made consumer scoping impossible (#77, consumer raise 3)"
+  owner: operator
