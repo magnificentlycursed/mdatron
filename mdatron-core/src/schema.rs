@@ -9,6 +9,7 @@
 //! error catalog. This module is content-neutral about the codes; it only describes
 //! WHAT failed and WHERE in the value tree.
 
+use crate::diagnostic::QuotedRegion;
 use crate::Error;
 use serde_json::Value as JsonValue;
 use serde_yaml_ng::Value as YamlValue;
@@ -29,8 +30,14 @@ pub struct ValidationError {
     pub instance_path: String,
     /// Schema path that produced the violation (e.g. `/properties/phase/enum`).
     pub schema_path: String,
-    /// Human-readable message from the validator.
+    /// Engine-authored message describing WHAT failed. Carries no adopter-derived
+    /// document content inline: the failing value and any adopter-authored keys
+    /// live in [`Self::quoted`] instead (per `DESIGN.md` § Output).
     pub message: String,
+    /// Adopter-derived text from the failing document (the value that failed, or
+    /// the unexpected keys it carried), for prefix-marked rendering rather than
+    /// inline interpolation.
+    pub quoted: Vec<QuotedRegion>,
 }
 
 impl Schema {
@@ -57,6 +64,7 @@ impl Schema {
                     instance_path: String::new(),
                     schema_path: String::new(),
                     message: "frontmatter could not be converted to JSON for validation".into(),
+                    quoted: Vec::new(),
                 }]
             }
         };
@@ -66,15 +74,144 @@ impl Schema {
         let mut collected = Vec::new();
         if let Err(errors) = self.compiled.validate(&json) {
             for e in errors {
+                let (message, quoted) = describe(&e);
                 collected.push(ValidationError {
                     instance_path: e.instance_path.to_string(),
                     schema_path: e.schema_path.to_string(),
-                    message: e.to_string(),
+                    message,
+                    quoted,
                 });
             }
         }
         collected
     }
+}
+
+/// Reconstruct an engine-authored, adopter-value-free message plus the quoted
+/// adopter content for a `jsonschema` validation error.
+///
+/// The `jsonschema` crate's own `Display` interpolates the failing document
+/// value straight into the message; that is exactly the inline, unmarked adopter
+/// content `DESIGN.md` § Output forbids (and the agent-context injection surface).
+/// Here the message is built from the error *kind* using only schema-side data
+/// (keyword, allowed options, limits — the adopter's committed config), while the
+/// failing document value and any adopter-authored keys are routed to
+/// [`QuotedRegion`]s for prefix-marked rendering. Uncommon kinds fall back to a
+/// generic engine message that still quotes the value.
+fn describe(e: &jsonschema::ValidationError) -> (String, Vec<QuotedRegion>) {
+    use jsonschema::error::ValidationErrorKind as K;
+
+    let at = at_pointer(&e.instance_path.to_string());
+    // The failing document value, compactly serialized, as a quoted region.
+    let found = || {
+        vec![QuotedRegion {
+            label: "found".into(),
+            content: serde_json::to_string(&*e.instance)
+                .unwrap_or_else(|_| "<unserializable value>".into()),
+        }]
+    };
+
+    match &e.kind {
+        K::AdditionalProperties { unexpected } | K::UnevaluatedProperties { unexpected } => {
+            let plural = if unexpected.len() == 1 {
+                "property"
+            } else {
+                "properties"
+            };
+            (
+                format!("unexpected {plural} not permitted by the schema{at}"),
+                vec![QuotedRegion {
+                    label: "unexpected".into(),
+                    content: unexpected.join("\n"),
+                }],
+            )
+        }
+        K::Enum { options } => (
+            format!(
+                "value{at} is not one of the schema's allowed options: {}",
+                compact(options)
+            ),
+            found(),
+        ),
+        K::Constant { expected_value } => (
+            format!(
+                "value{at} must equal the schema constant {}",
+                compact(expected_value)
+            ),
+            found(),
+        ),
+        K::Type { .. } => (
+            format!("value{at} is not of the type the schema requires"),
+            found(),
+        ),
+        K::Pattern { pattern } => (
+            format!("value{at} does not match the schema's required pattern /{pattern}/"),
+            found(),
+        ),
+        K::Required { property } => (
+            format!("required property {} is missing{at}", compact(property)),
+            Vec::new(),
+        ),
+        K::MinLength { limit } | K::MaxLength { limit } => (
+            format!("value{at} violates the schema length bound ({limit})"),
+            found(),
+        ),
+        K::Minimum { limit }
+        | K::Maximum { limit }
+        | K::ExclusiveMinimum { limit }
+        | K::ExclusiveMaximum { limit } => (
+            format!(
+                "value{at} violates the schema numeric bound ({})",
+                compact(limit)
+            ),
+            found(),
+        ),
+        K::MinItems { limit } | K::MaxItems { limit } => (
+            format!("array{at} violates the schema item-count bound ({limit})"),
+            found(),
+        ),
+        K::MinProperties { limit } | K::MaxProperties { limit } => (
+            format!("object{at} violates the schema property-count bound ({limit})"),
+            found(),
+        ),
+        K::Format { format } => (
+            format!("value{at} does not conform to the '{format}' format"),
+            found(),
+        ),
+        // Generic fallback: still engine-authored + value quoted, never inline.
+        _ => (
+            format!(
+                "value{at} does not satisfy the schema ({})",
+                at_pointer(&e.schema_path.to_string()).trim_start()
+            ),
+            found(),
+        ),
+    }
+}
+
+/// Render an instance/schema JSON pointer for inline use with control characters
+/// escaped to inert `\xNN` (a pointer can carry adopter-chosen key names). Empty
+/// pointer (root) yields an empty string so messages read naturally.
+fn at_pointer(pointer: &str) -> String {
+    if pointer.is_empty() {
+        return String::new();
+    }
+    let mut out = String::from(" at ");
+    for ch in pointer.chars() {
+        if ch.is_control() {
+            use std::fmt::Write;
+            let _ = write!(out, "\\x{:02X}", ch as u32);
+        } else {
+            out.push(ch);
+        }
+    }
+    out
+}
+
+/// Compact one-line JSON rendering of schema-side data (allowed options, limits,
+/// expected constants). Schema content is adopter *config*, not document content.
+fn compact(v: &JsonValue) -> String {
+    serde_json::to_string(v).unwrap_or_else(|_| "<?>".into())
 }
 
 /// Convert a `serde_yaml_ng::Value` to a `serde_json::Value` via serde's interconversion.

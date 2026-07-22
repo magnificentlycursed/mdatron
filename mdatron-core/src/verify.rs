@@ -280,9 +280,20 @@ fn verify_file(
             // Resolve every violation's source line in a single marked parse so
             // the diagnostics are directly actionable for the fixing agent
             // (#65/#70/#71); each falls back to the block start when unresolved.
+            // For additionalProperties, hand the resolver the offending key from
+            // the finding's quoted `unexpected` region (first key) so it can
+            // pinpoint the key's own line; `""` for every other violation shape.
             let items: Vec<(&str, &str)> = violations
                 .iter()
-                .map(|ve| (ve.instance_path.as_str(), ve.message.as_str()))
+                .map(|ve| {
+                    let key = ve
+                        .quoted
+                        .iter()
+                        .find(|q| q.label == "unexpected")
+                        .and_then(|q| q.content.lines().next())
+                        .unwrap_or("");
+                    (ve.instance_path.as_str(), key)
+                })
                 .collect();
             let locations = crate::frontmatter::resolve_e0050_locations(&content, &items);
             for (ve, loc) in violations.iter().zip(locations) {
@@ -291,7 +302,10 @@ fn verify_file(
                     code: "MDATRON-E0050".into(),
                     severity: Severity::Error,
                     summary: "frontmatter-schema-violation".into(),
-                    message: format!("{} ({})", ve.message, ve.instance_path),
+                    // The message is engine-authored (schema-side data only); the
+                    // failing document value / unexpected keys ride in `quoted`
+                    // for prefix-marked rendering, never inline (DESIGN §Output).
+                    message: ve.message.clone(),
                     help: None,
                     location: Location {
                         file: path.to_path_buf(),
@@ -299,7 +313,7 @@ fn verify_file(
                         column,
                     },
                     explain_ref: Some("MDATRON-E0050".into()),
-                    quoted: Vec::new(),
+                    quoted: ve.quoted.clone(),
                 });
             }
         }
@@ -569,8 +583,26 @@ mod tests {
         let findings = verify(&cfg).unwrap();
         assert_eq!(findings.len(), 1);
         assert_eq!(findings[0].code, "MDATRON-E0050");
+        // Engine-authored message names the constraint (schema-side), and the
+        // failing document value is carried out-of-line in a quoted region — not
+        // inline in the message (DESIGN §Output marking discipline).
         assert!(
-            findings[0].message.contains("invalid-phase") || findings[0].message.contains("enum")
+            findings[0].message.contains("allowed options"),
+            "message should describe the constraint: {}",
+            findings[0].message
+        );
+        assert!(
+            !findings[0].message.contains("invalid-phase"),
+            "adopter value must not leak into the engine message: {}",
+            findings[0].message
+        );
+        assert!(
+            findings[0]
+                .quoted
+                .iter()
+                .any(|q| q.content.contains("invalid-phase")),
+            "failing value should ride in a quoted region; got {:?}",
+            findings[0].quoted
         );
     }
 
