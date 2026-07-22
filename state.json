@@ -1,6 +1,6 @@
 {
   "next_display_id": 82,
-  "next_comment_id": 217,
+  "next_comment_id": 218,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -1517,7 +1517,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-22T17:48:09.184274Z",
-      "updated_at": "2026-07-22T17:49:05.852353Z",
+      "updated_at": "2026-07-22T17:54:19.327049Z",
       "labels": [
         "refactor"
       ],
@@ -1534,6 +1534,15 @@
           "kind": "plan",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAIXWUZjk5wgBsC0ZmTZMler5FspI9s5p702h9D/lRaniop8FpRrp6YtZwi22iwgS6/44Ed2mSAriU4U4wUn7iDA=="
+        },
+        "e9654ff9-d507-47b8-b040-f573cefe1943": {
+          "display_id": 217,
+          "author": "79Ig",
+          "content": "OPERATOR RULING (2026-07-22): disposition (a) — COLLAPSE, executed BEFORE any version cut. Operator also leaning 0.x MVP for vsdd-cli binary consumption rather than pushing to v1.0 first (v1.0 distance: #45 families are the long pole). Execution shape: single 'mdatron' package (workspace dissolved), binary-first per the June directive; an INTERNAL lib target is retained inside the single crate for unit/integration tests and the load-bearing compile_fail doctests (confine #53) — documented 'implementation detail, no API stability; consume the binary' — this is not a published -core sibling, which is what the directive forbids. DESIGN L9 + ledger item 2 amended to record execution. SEQUENCING HAZARD (loud): vsdd-cli's Cargo.tomls path-dep ../mdatron/mdatron-core against this LIVE working tree — the moment the collapse merges to main, vsdd-cli stops building until their shell-out refactor lands. Building the collapse CI-green on feature/81-collapse breaks nothing; the MERGE is the cross-repo gate.",
+          "created_at": "2026-07-22T17:54:19.313446Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAVNyscPaOZnx0U5oG2F2+XyITlLSwikDd1rEYw5J2MvrUT55i4Gc3dXK2D4CD0EeS/UpGzJR831oHuitSK9BgDg=="
         }
       }
     },
@@ -3346,8 +3355,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-22T17:49:12.097919Z",
+    "timestamp": "2026-07-22T17:54:19.327049Z",
     "agent_id": "79Ig",
-    "agent_seq": 121
+    "agent_seq": 122
   }
 }
