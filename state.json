@@ -92,10 +92,10 @@
       "display_id": 77,
       "title": "verify ignores .mdatron/config.yaml file_globs; self-validation walks non-corpus dirs (.claude/.crosslink) and is fragile to any non-YAML frontmatter",
       "status": "open",
-      "priority": "medium",
+      "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-22T16:56:53.629145Z",
-      "updated_at": "2026-07-22T17:09:25.083741Z",
+      "updated_at": "2026-07-22T17:09:31.360279Z",
       "labels": [
         "bug"
       ],
@@ -3165,8 +3165,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-22T17:09:25.083741Z",
+    "timestamp": "2026-07-22T17:09:31.360279Z",
     "agent_id": "79Ig",
-    "agent_seq": 89
+    "agent_seq": 90
   }
 }
