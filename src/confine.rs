@@ -97,7 +97,7 @@ pub fn confine_lexically(source: &Path) -> Result<ConfinedPath, LexicalViolation
 /// discipline. The example below does not compile:
 ///
 /// ```compile_fail
-/// use mdatron_core::confine::open_confined;
+/// use mdatron::confine::open_confined;
 /// use std::path::Path;
 /// // open_confined requires a &ConfinedPath; a raw &Path is rejected by the
 /// // type checker, so an unconfined "../secret.yaml" can never be opened.

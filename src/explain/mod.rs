@@ -249,7 +249,7 @@ mod tests {
     #[test]
     fn unknown_code_returns_none() {
         // E9999 is constructed at runtime to keep the literal out of source
-        // (the reserved-codes lint at mdatron-core/tests/phase_1_contracts.rs
+        // (the reserved-codes lint at tests/phase_1_contracts.rs
         // walks .rs files looking for non-reserved MDATRON-Ennnn literals).
         let unreserved = format!("{}-{}", "MDATRON", "E9999");
         assert!(lookup(&unreserved).is_none());

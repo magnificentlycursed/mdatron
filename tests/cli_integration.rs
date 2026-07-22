@@ -84,12 +84,10 @@ fn mdatron_bin() -> PathBuf {
     PathBuf::from(env!("CARGO_BIN_EXE_mdatron"))
 }
 
-/// The mdatron repo root (one directory up from `mdatron-cli/`).
+/// The mdatron repo root. Single-crate layout (#81): the manifest dir IS the
+/// repo root.
 fn mdatron_repo_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .unwrap()
-        .to_path_buf()
 }
 
 fn run(args: &[&str]) -> Output {
@@ -316,7 +314,7 @@ fn explain_unknown_code_exits_two_with_not_found_message() {
     // E9999 is not in any reserved range; therefore not in the catalog.
     // Constructed at runtime to keep the unreserved-literal out of source
     // (per the reserved-codes lint at
-    // mdatron-core/tests/phase_1_contracts.rs::all_emitted_codes_are_reserved).
+    // tests/phase_1_contracts.rs::all_emitted_codes_are_reserved).
     let unreserved = format!("{}-{}", "MDATRON", "E9999");
     let out = run(&["explain", &unreserved]);
     assert_eq!(

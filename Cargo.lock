@@ -584,16 +584,6 @@ name = "mdatron"
 version = "0.1.0"
 dependencies = [
  "clap",
- "mdatron-core",
- "serde",
- "serde_json",
- "serde_yaml_ng",
-]
-
-[[package]]
-name = "mdatron-core"
-version = "0.1.0"
-dependencies = [
  "glob",
  "jsonschema",
  "libc",

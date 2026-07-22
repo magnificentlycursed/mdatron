@@ -34,7 +34,7 @@ local checkout of the `magnificentlycursed` monorepo:
 
 ```
 git clone https://github.com/magnificentlycursed/magnificentlycursed
-cargo install --path magnificentlycursed/mdatron/mdatron-cli --locked
+cargo install --path magnificentlycursed/mdatron --locked
 mdatron --version
 ```
 

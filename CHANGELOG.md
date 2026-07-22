@@ -68,6 +68,7 @@ the TRON blockchain.
   + round-trip, and `--quiet --json` flag-combination drive-by
 
 ### Changed
+- workspace collapse (#81): the two-crate workspace (`mdatron-core` + `mdatron-cli`) is now a single `mdatron` crate, executing the 2026-06-02 binary-first directive per the operator ruling of 2026-07-22 — mdatron is consumed **as a binary** (`--json` is the machine interface); the crate's lib target is an implementation detail for its own tests (unit suites, integration suites, the load-bearing `compile_fail` confinement doctest) and carries **no API-stability promise**. DESIGN §Summary + ledger item 2 amended to record execution. Consumers linking `mdatron-core` in-process must move to shelling out to the binary (vsdd-cli coordination sequenced via #81)
 - docs: the E0012 explain page and DESIGN.md § Verification is fast qualify the swap-proof confinement guarantee as Unix-only (`openat`/`O_NOFOLLOW`); the non-unix fallback's weaker check-to-open window is stated as a tolerated, carved-out posture until a handle-based walk lands (#56)
 - ops: repair the hollow chassis install (crosslink init --force) (#58)
 - mdatron cleanup: truth reconciliation + chassis onboarding (layer 0, pulled forward) (#2)

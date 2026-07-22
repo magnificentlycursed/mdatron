@@ -5,7 +5,7 @@
 //!
 //! Phase 2b: this module turns the output_format Red Gate green for output object-shape
 //! contracts. Exit-code semantics (BC-4) + stream contract (BC-5) live at the binary
-//! boundary (mdatron-cli/src/main.rs).
+//! boundary (src/main.rs).
 //!
 //! Output version stays at 1.0.0 for v0.1.0; subsequent additive optional-field changes
 //! bump minor; required-field or shape changes bump major.

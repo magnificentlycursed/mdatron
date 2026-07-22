@@ -1,4 +1,13 @@
-//! mdatron-core — validator engine for the mdatron typed-markdown validation toolkit.
+//! mdatron engine internals — **not a public API**.
+//!
+//! mdatron is consumed **as a binary** (#81, operator ruling 2026-07-22
+//! executing the 2026-06-02 binary-first directive): the machine interface is
+//! `mdatron verify --json` / `mdatron explain --json`, with version discipline
+//! on the JSON envelope (DESIGN.md § Machine output is a public interface).
+//! This lib target exists only so unit tests, the integration suites under
+//! `tests/`, and the load-bearing `compile_fail` doctests (confine, #53) can
+//! link the engine; it carries **no API-stability promise** and is not a
+//! supported consumption surface. Shell out to the binary instead.
 //!
 //! Two-layer architecture per DESIGN.md § Summary: JSON Schema for structural validation
 //! (Layer 1); a Schematron-derived DSL for cross-field, cross-file, and cross-document
