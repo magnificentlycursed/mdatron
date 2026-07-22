@@ -1,6 +1,6 @@
 {
   "next_display_id": 82,
-  "next_comment_id": 219,
+  "next_comment_id": 220,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -1526,7 +1526,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-22T17:48:09.184274Z",
-      "updated_at": "2026-07-22T17:54:19.327049Z",
+      "updated_at": "2026-07-22T17:59:26.152074Z",
       "labels": [
         "refactor"
       ],
@@ -1543,6 +1543,15 @@
           "kind": "plan",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAIXWUZjk5wgBsC0ZmTZMler5FspI9s5p702h9D/lRaniop8FpRrp6YtZwi22iwgS6/44Ed2mSAriU4U4wUn7iDA=="
+        },
+        "71cde591-a9e7-4c6c-8ad3-e58ac12eacb9": {
+          "display_id": 219,
+          "author": "79Ig",
+          "content": "Collapse EXECUTED on feature/81-collapse (54352da), behavior-preserving: single mdatron crate at repo root, all moves as git renames, mdatron_core->mdatron rewrite, layout-dependent test helpers fixed, DESIGN L9+ledger-2 amended, README install path updated, lib target retained internal-only (tests + compile_fail doctest) with no-API-stability posture in lib.rs+Cargo.toml. 284 tests green incl. doctests; binary drive identical; fmt/clippy/audit clean; CI flags unchanged. Pushed for CI. MERGE GATE: vsdd-cli still path-deps ../mdatron/mdatron-core (3 Cargo.tomls) — merging breaks their build until the shell-out lands. Recommend: relay to vsdd-cli now; merge on their go (or operator accepts transient breakage).",
+          "created_at": "2026-07-22T17:59:26.136124Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABACRjOnFErUe1r1+4y0YK9/m2N4PAZl9zFFCoQncjq0tn9qzpF3sDtCbNU/TbEsGuN7lvcHkeJHvJ46Tw/xVodDQ=="
         },
         "e9654ff9-d507-47b8-b040-f573cefe1943": {
           "display_id": 217,
@@ -3364,8 +3373,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-22T17:54:25.314650Z",
+    "timestamp": "2026-07-22T17:59:26.152074Z",
     "agent_id": "79Ig",
-    "agent_seq": 123
+    "agent_seq": 124
   }
 }
