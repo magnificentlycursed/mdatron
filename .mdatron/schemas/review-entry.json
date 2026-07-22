@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "review-entry",
+  "description": "Frontmatter contract for a VSDD review-log entry (review-log/*.md). This is mdatron's own typed-markdown corpus; verifying it clean is the self-validation gate (#46).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_class",
+    "schema_version",
+    "review_number",
+    "date",
+    "phase",
+    "lens",
+    "scope",
+    "source",
+    "model",
+    "execution_method",
+    "session_note",
+    "sycophancy_compensation"
+  ],
+  "properties": {
+    "schema_class": {
+      "const": "review-entry",
+      "description": "Routing anchor: selects this schema."
+    },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Semver of the review-entry contract."
+    },
+    "review_number": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Monotonic review index within the project."
+    },
+    "date": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+      "description": "ISO 8601 calendar date the review ran."
+    },
+    "phase": {
+      "type": "string",
+      "pattern": "^phase-[0-9]",
+      "description": "VSDD phase the review belongs to (phase-0 .. phase-4, with letter suffixes)."
+    },
+    "lens": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Domain lens / stance the reviewer adopted."
+    },
+    "scope": {
+      "type": "string",
+      "minLength": 1,
+      "description": "What the review covered."
+    },
+    "source": {
+      "type": "string",
+      "enum": ["director-raised", "operator-directive", "domain-raised"],
+      "description": "Provenance of the review request."
+    },
+    "model": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Model that produced the review."
+    },
+    "execution_method": {
+      "type": "string",
+      "minLength": 1,
+      "description": "How the review session was run (cold-session task tool, inline, etc.)."
+    },
+    "session_note": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Reviewer's framing note for the session."
+    },
+    "sycophancy_compensation": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Declared counter-sycophancy stance for the review."
+    },
+    "supplements_loaded": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Optional: language/tooling supplements loaded for the review."
+    },
+    "filename_note": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional: note reconciling the entry's filename with its content."
+    }
+  }
+}

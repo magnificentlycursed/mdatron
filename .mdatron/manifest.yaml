@@ -1,0 +1,5 @@
+# mdatron managed-partition manifest — do not edit by hand.
+version: 1
+managed:
+- path: config.yaml
+  sha256: c47ca4f95b2c01c29120f484f09c11e7313a017348857b7fcdf9589edbff43ea

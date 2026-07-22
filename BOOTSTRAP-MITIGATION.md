@@ -1,6 +1,18 @@
 # Bootstrap-Period Mitigation Plan
 
-**Status:** Step 0.5 artifact. Sibling to [`BOUNDARY-PREAMBLE.md`](./BOUNDARY-PREAMBLE.md). Closes the validator-absent-state risks raised by SEC-F3, AIE-F2, M2, M4 in the 2026-06-01 multi-domain review.
+> **Exit record (2026-07-21, #46):** Mitigation 1's `bootstrap-validator.py`
+> (with `canonical-counts.yaml` + `live-entities.yaml`) has been **retired and
+> deleted** per its own criterion — "deleted when `mdatron-core verify` runs
+> cleanly against the project" (§ Mitigation 1; exit-criterion 3). mdatron now
+> verifies its own `review-log/*.md` corpus against a committed `.mdatron/`
+> config, enforced by the `self-validate` CI gate. This is the bootstrap-
+> **validator** retirement, which by design predates the full bootstrap-
+> **period** exit; the remaining exit criteria (v1.0 on crates.io, vsdd-cli
+> Step 5 coupling, coinage-log processed, `BootstrapPeriodExited` emitted) are
+> unmet and tracked under #48. The document below is preserved as the
+> historical charter.
+
+**Status:** Step 0.5 artifact — Mitigation 1 exited 2026-07-21 (see exit record above). Sibling to [`BOUNDARY-PREAMBLE.md`](./BOUNDARY-PREAMBLE.md). Closes the validator-absent-state risks raised by SEC-F3, AIE-F2, M2, M4 in the 2026-06-01 multi-domain review.
 
 **Provenance:** Steps 1-4 of the bootstrap plan produce VSDD-methodology artifacts before mdatron's validators exist. This plan declares the bounded mitigations operating during that period.
 

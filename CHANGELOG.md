@@ -10,6 +10,9 @@ the TRON blockchain.
 
 ## [Unreleased]
 
+### Removed
+- bootstrap: retired the throwaway `bootstrap-tooling/` (`bootstrap-validator.py` + `canonical-counts.yaml` + `live-entities.yaml`) per its own documented exit criterion — "deleted when `mdatron-core verify` runs cleanly against the project" (BOOTSTRAP-MITIGATION.md § Mitigation 1). That criterion is now met: `mdatron verify` runs clean on the repo and is enforced by the `self-validate` CI gate. This is the bootstrap-*validator* deletion, which by design predates the full bootstrap-*period* exit (the remaining criteria — v1.0 on crates.io, vsdd-cli Step 5, coinage-log processed — track under #48). (#46)
+
 ### Fixed
 - test(confine): `confine_ops_do_not_leak_fds` was flaky under parallel execution — it took a single `/proc/self/fd` snapshot (process-global, shared across threads) and tolerated only +2, so descriptors briefly held by unrelated concurrent tests failed it despite zero leak. Now min-samples the count to filter transient churn and tolerates bounded parallel noise (32) while staying an order of magnitude below the per-op leak signal (300); a deterministic red-gate test reproduces the race (#75)
 - Path-confinement helper: fallback and starts_with flaws; traversal test passes only via macOS symlink (L2)
@@ -39,6 +42,7 @@ the TRON blockchain.
 - Inline interpolation does not fit block prefix marking (L4)
 
 ### Added
+- self-validation: mdatron now verifies its own typed-markdown corpus (`review-log/*.md`) against a committed `.mdatron/` config — the self-hosting gate. Ships a `review-entry` JSON Schema (draft 2020-12) validating the 12 required review-entry frontmatter fields, an `mdatron init`-deployed managed partition, and a blocking `self-validate` CI job that fails on any schema violation. Retires the throwaway bootstrap validator (see Removed). (#46)
 - diagnostics: `MDATRON-E0050` frontmatter-schema-violation now reports the violation's precise source line (`--> file:line`) instead of the frontmatter block start, resolving the schema JSON pointer via an error-path-only position-tracking parse — directly actionable for the fixing agent (#65)
 - CI: GitHub Actions gauntlet — fmt + clippy (`-D warnings`), workspace tests on Linux, macOS, and Windows, and `cargo audit`, all on the pinned MSRV toolchain (crosslink/Thermite-shaped) (#68, #64)
 - docs(README): pre-commit integration guide recommending a fail-closed wrapper (block the commit when the `mdatron` binary is missing, rather than skip silently), from the first external-adopter field report (#60)
