@@ -1,6 +1,6 @@
 {
   "next_display_id": 82,
-  "next_comment_id": 222,
+  "next_comment_id": 223,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -784,7 +784,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-22T17:10:29.912761Z",
-      "updated_at": "2026-07-22T17:38:58.103286Z",
+      "updated_at": "2026-07-25T23:59:34.615856Z",
       "labels": [
         "enhancement"
       ],
@@ -801,6 +801,15 @@
           "kind": "plan",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAY4DwZHiebFOKicDAJhDGvEdHZtG2EnXbTvPRLB0vDANAmn/rQrOlpQ/p5w1ZXo2zK9cKUdwgPQFhCnVGwtGCAA=="
+        },
+        "d904b21f-9289-46cf-855c-dc9182561bbd": {
+          "display_id": 222,
+          "author": "79Ig",
+          "content": "D3 RULED (2026-07-25, #80): ACCEPTED at the conservative cut — configured field references only (adopter declares which frontmatter counts prose may restate); no free inference. Sequencing: design in the #45 conformance-families pass; the body-content falsifiability leg (DESIGN L85, 80% bar) rides the #47 campaign; vsdd-cli contributes the 3 historical drift cases as fixtures.",
+          "created_at": "2026-07-25T23:59:34.601878Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA/tniNaE5Lqpf6EP54r/8VHv3DaG9677TduF3QV3O2oaUI2pLQEftS30JDEitDXhWmP4dQNvqR1qwtAn9yi4iCw=="
         }
       }
     },
@@ -3388,8 +3397,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-25T23:59:29.098800Z",
+    "timestamp": "2026-07-25T23:59:34.615856Z",
     "agent_id": "79Ig",
-    "agent_seq": 128
+    "agent_seq": 129
   }
 }
