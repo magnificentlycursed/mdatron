@@ -1,6 +1,6 @@
 {
   "next_display_id": 82,
-  "next_comment_id": 223,
+  "next_comment_id": 224,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -949,7 +949,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-19T20:53:15.157746Z",
-      "updated_at": "2026-07-22T17:38:52.017328Z",
+      "updated_at": "2026-07-25T23:59:40.550955Z",
       "labels": [
         "feature",
         "v1.0"
@@ -960,7 +960,18 @@
       "related": [
         "028e84f4-cfd0-45aa-8aee-b43ec885d803",
         "7d222949-0302-4dc4-9859-143cf7da11fb"
-      ]
+      ],
+      "comments": {
+        "392563f6-566b-47d1-8033-1b958b4e96df": {
+          "display_id": 223,
+          "author": "79Ig",
+          "content": "D4 RULED (2026-07-25, #80): compact per-finding size limit = 512 BYTES (contract limit, not band-derived, per DESIGN §Output L29); truncation only at line boundaries, engine-authored elision marker closes cut quoted regions. Compact-verify lane now unblocked — the last engine/CLI gap on this issue.",
+          "created_at": "2026-07-25T23:59:40.536363Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAXRMVpRr4ioSmF3ImJ1q7drH+/QrTveVmFsIOD/9ZzWyQP+M5G0+4ZiI5rTfu1iUrpaUEGPb3AY6O7YqmcbsoAw=="
+        }
+      }
     },
     "5eb9d32c-b382-4b47-8abf-7b7f75de5916": {
       "uuid": "5eb9d32c-b382-4b47-8abf-7b7f75de5916",
@@ -3397,8 +3408,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-25T23:59:34.615856Z",
+    "timestamp": "2026-07-25T23:59:40.550955Z",
     "agent_id": "79Ig",
-    "agent_seq": 129
+    "agent_seq": 130
   }
 }
