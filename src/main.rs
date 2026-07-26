@@ -47,6 +47,12 @@ enum Command {
         #[arg(long = "json")]
         json: bool,
 
+        /// Emit the compact agent-context form on stdout: one size-capped block
+        /// per finding (512 bytes, DESIGN §Output; #80 D4), adopter content
+        /// prefix-marked, truncation at line boundaries with an elision marker.
+        #[arg(long = "compact", conflicts_with = "json")]
+        compact: bool,
+
         /// Suppress stderr human-readable diagnostics (machine-only consumers).
         #[arg(long = "quiet", short = 'q')]
         quiet: bool,
@@ -130,8 +136,9 @@ fn main() -> ExitCode {
             patterns,
             files,
             json,
+            compact,
             quiet,
-        } => cmd_verify(project_root, schemas, patterns, files, json, quiet),
+        } => cmd_verify(project_root, schemas, patterns, files, json, compact, quiet),
         Command::Explain {
             code,
             json,
@@ -203,6 +210,7 @@ fn cmd_verify(
     patterns: Option<PathBuf>,
     files: Vec<String>,
     json: bool,
+    compact: bool,
     quiet: bool,
 ) -> ExitCode {
     use mdatron::output::{Output, PipelineStatus};
@@ -284,6 +292,22 @@ fn cmd_verify(
         }
     }
 
+    // Compact agent-context form (#44, #80 D4): one 512-byte-capped block per
+    // finding on stdout, blank-line separated (no line inside a block is empty,
+    // so the delimiter is unambiguous). Pipeline failures render compact too.
+    if compact {
+        if let Some(e) = &pipeline_err {
+            println!("{}", pipeline_error_finding(e).format_compact());
+        } else {
+            for (i, f) in output.findings.iter().enumerate() {
+                if i > 0 {
+                    println!();
+                }
+                println!("{}", f.format_compact());
+            }
+        }
+    }
+
     if !quiet {
         if let Some(e) = &pipeline_err {
             print_pipeline_error(e);
@@ -319,11 +343,11 @@ fn print_finding(f: &Finding) {
     eprintln!("{}", f.format_tty());
 }
 
-fn print_pipeline_error(e: &VerifyError) {
-    // Construct a Finding for the pipeline error so the same format_tty
-    // path that renders per-file diagnostics renders this one too. Single
-    // source of truth for TTY rendering. Per crosslink #13 SE/F5.
-    let finding = Finding {
+/// Construct the Finding for a pipeline error so every output form renders it
+/// through the same single-source-of-truth paths (format_tty / format_compact /
+/// JSON envelope). Per crosslink #13 SE/F5.
+fn pipeline_error_finding(e: &VerifyError) -> Finding {
+    Finding {
         code: "MDATRON-E0080".into(),
         severity: Severity::Error,
         summary: "verify pipeline failed".into(),
@@ -336,8 +360,11 @@ fn print_pipeline_error(e: &VerifyError) {
         },
         explain_ref: None,
         quoted: Vec::new(),
-    };
-    eprintln!("{}", finding.format_tty());
+    }
+}
+
+fn print_pipeline_error(e: &VerifyError) {
+    eprintln!("{}", pipeline_error_finding(e).format_tty());
 }
 
 fn cmd_explain(code: &str, json: bool, compact: bool) -> ExitCode {

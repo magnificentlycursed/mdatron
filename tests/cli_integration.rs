@@ -141,6 +141,50 @@ fn verify_refuses_configless_tree_but_files_flag_escapes() {
     );
 }
 
+// #44 / #80 D4: `verify --compact` emits size-capped agent-context blocks on
+// stdout — every block within the 512-byte contract limit, adopter content
+// prefix-marked, exit code unchanged.
+#[test]
+fn verify_compact_emits_capped_marked_blocks_on_stdout() {
+    let proj = TempProject::new("compact");
+    proj.write(
+        ".mdatron/schemas/note.json",
+        r#"{"type":"object","properties":{"schema_class":{"const":"note"},"kind":{"enum":["a","b"]}},"required":["schema_class","kind"],"additionalProperties":false}"#,
+    );
+    proj.write(
+        "doc.md",
+        "---\nschema_class: note\nkind: not-a-real-kind\n---\nbody\n",
+    );
+    let out = Command::new(mdatron_bin())
+        .args(["verify", "--project-root"])
+        .arg(proj.path())
+        .args(["--compact", "-q"])
+        .output()
+        .expect("mdatron binary executes");
+    assert_eq!(out.status.code(), Some(1), "violation still exits 1");
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(!stdout.trim().is_empty(), "compact form lands on stdout");
+    for block in stdout.trim_end().split("\n\n") {
+        assert!(
+            block.len() <= 512,
+            "compact block exceeds the contract limit ({} bytes): {block}",
+            block.len()
+        );
+    }
+    assert!(
+        stdout.contains("E[MDATRON-E0050]"),
+        "head line shape: {stdout}"
+    );
+    assert!(
+        stdout.lines().any(|l| l.starts_with("> ")),
+        "adopter value rides prefix-marked: {stdout}"
+    );
+    assert!(
+        !stdout.lines().next().unwrap().contains("not-a-real-kind"),
+        "adopter value must not sit inline in the head line"
+    );
+}
+
 fn run_verify_tty(proj: &TempProject) -> Output {
     Command::new(mdatron_bin())
         .args(["verify", "--project-root"])

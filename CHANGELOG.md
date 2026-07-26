@@ -11,6 +11,7 @@ the TRON blockchain.
 ## [Unreleased]
 
 ### Added
+- compact verify output (#44, #80 D4): `mdatron verify --compact` emits the agent-context form on stdout — one block per finding, blank-line separated, hard-capped at the ratified 512-byte per-finding contract limit (recorded in DESIGN §Output and docs/cost-ledger.md). Engine-authored head line (`E[CODE] file:line:col summary — message`); quoted adopter content rides prefix-marked beneath (`=label:` + `> ` lines via the partition renderer); truncation drops whole lines from the tail and closes cut regions with an engine elision marker — never mid-line, never mid-escape; an oversized head elides at a char boundary. Pipeline failures render compact too. Measured real-corpus findings: 315/246 bytes
 - verify jurisdiction loudness (#82, executing #80 rulings D1+D2): an absent `.mdatron/config.yaml` now REFUSES — `no jurisdiction declared` pipeline failure, exit 2 — instead of silently walking `**/*.md`; jurisdiction is always explicit (an explicit `--files` run declares it on the command line and needs no config). New opt-in config key `require_frontmatter` (globs): a matching file that parses to no-frontmatter fires `MDATRON-W0040 governed-file-has-no-frontmatter` (warning) with an explain page, closing the loud-failure/silent-absence asymmetry from the fence-edge consumer raise; mdatron's own config enables it for `review-log/**/*.md`
 
 ## [0.1.0] - 2026-07-22
