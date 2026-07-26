@@ -1,6 +1,6 @@
 {
   "next_display_id": 83,
-  "next_comment_id": 225,
+  "next_comment_id": 226,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -958,7 +958,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-19T20:53:15.157746Z",
-      "updated_at": "2026-07-25T23:59:40.550955Z",
+      "updated_at": "2026-07-26T00:14:15.611815Z",
       "labels": [
         "feature",
         "v1.0"
@@ -971,6 +971,15 @@
         "7d222949-0302-4dc4-9859-143cf7da11fb"
       ],
       "comments": {
+        "222c84cd-157f-45d3-9be1-73abddbfa559": {
+          "display_id": 225,
+          "author": "79Ig",
+          "content": "Compact-verify BUILT on feature/44-compact (stacked on feature/82; merge order 82->44), CI-green (run 30180760738). Finding::format_compact: 512-byte hard cap (DESIGN L29 amended with the ratified number; docs/cost-ledger.md created with measured real-corpus sizes 315/246 bytes); head line engine-authored, quoted regions =label:/> lines via the partition renderer; line-boundary truncation + engine elision; oversized-head char-boundary elision. verify --compact on stdout, blank-line-separated blocks; pipeline errors render compact via shared pipeline_error_finding. Contract tests per DESIGN L135 seeds + CLI integration test. With this merged, #44's acceptance (verify/explain/init functional, tests pass, compact under the limit) is MET — closable on merge.",
+          "created_at": "2026-07-26T00:14:15.592657Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAvZG4MPR808NKkk03AMaLrybihDY62hBmmyXva2mVjpoOFnXcJk8nrVkcsk1a+vPij4Xjvueg0JxvNAmZrZyeBw=="
+        },
         "392563f6-566b-47d1-8033-1b958b4e96df": {
           "display_id": 223,
           "author": "79Ig",
@@ -3441,8 +3450,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-26T00:07:27.730333Z",
+    "timestamp": "2026-07-26T00:14:15.611815Z",
     "agent_id": "79Ig",
-    "agent_seq": 135
+    "agent_seq": 136
   }
 }
