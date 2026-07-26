@@ -1682,11 +1682,12 @@
       "uuid": "9e78b47b-77c9-44f9-9419-b4977f1f46ca",
       "display_id": 82,
       "title": "verify jurisdiction loudness: refuse absent config (no jurisdiction declared) + opt-in require_frontmatter globs firing MDATRON-W0040 (D1+D2 of #80)",
-      "status": "open",
+      "status": "closed",
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-25T23:59:45.652814Z",
-      "updated_at": "2026-07-26T00:14:21.832233Z",
+      "updated_at": "2026-07-26T10:07:04.062358Z",
+      "closed_at": "2026-07-26T10:07:04.062349Z",
       "labels": [
         "feature"
       ],
@@ -3459,8 +3460,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-26T00:14:21.832233Z",
+    "timestamp": "2026-07-26T10:07:04.062358Z",
     "agent_id": "79Ig",
-    "agent_seq": 137
+    "agent_seq": 138
   }
 }
