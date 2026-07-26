@@ -1,6 +1,6 @@
 {
   "next_display_id": 83,
-  "next_comment_id": 224,
+  "next_comment_id": 225,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -1673,10 +1673,21 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-25T23:59:45.652814Z",
-      "updated_at": "2026-07-25T23:59:50.103129Z",
+      "updated_at": "2026-07-26T00:06:43.472500Z",
       "labels": [
         "feature"
-      ]
+      ],
+      "comments": {
+        "5c77dc58-6dcd-4a06-863a-944698c407e6": {
+          "display_id": 224,
+          "author": "79Ig",
+          "content": "Built on feature/82-jurisdiction-loudness (28e75ad). D1: absent config refuses (no-jurisdiction pipeline error, exit 2; --files = ad-hoc escape). D2: require_frontmatter globs -> MDATRON-W0040 warning + explain page; repo config dogfoods it for review-log. Red gates demonstrated both ways; integration fixtures seed explicit configs; 287 tests green, gauntlet clean. Pushed for CI.",
+          "created_at": "2026-07-26T00:06:43.456430Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAlp1JvfusO49Z2molKj+fIDEvlKyhqKUU3DRC4vHufdpxBcwad8YqFCgFXXfCfPKRv5c/k0cgMMHM9aBgUcWsBg=="
+        }
+      }
     },
     "9ee63c25-b225-4882-a3cd-2469994d2bce": {
       "uuid": "9ee63c25-b225-4882-a3cd-2469994d2bce",
@@ -3426,8 +3437,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-25T23:59:57.299666Z",
+    "timestamp": "2026-07-26T00:06:43.472500Z",
     "agent_id": "79Ig",
-    "agent_seq": 133
+    "agent_seq": 134
   }
 }
