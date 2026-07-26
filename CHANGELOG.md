@@ -10,6 +10,9 @@ the TRON blockchain.
 
 ## [Unreleased]
 
+### Added
+- verify jurisdiction loudness (#82, executing #80 rulings D1+D2): an absent `.mdatron/config.yaml` now REFUSES — `no jurisdiction declared` pipeline failure, exit 2 — instead of silently walking `**/*.md`; jurisdiction is always explicit (an explicit `--files` run declares it on the command line and needs no config). New opt-in config key `require_frontmatter` (globs): a matching file that parses to no-frontmatter fires `MDATRON-W0040 governed-file-has-no-frontmatter` (warning) with an explain page, closing the loud-failure/silent-absence asymmetry from the fence-edge consumer raise; mdatron's own config enables it for `review-log/**/*.md`
+
 ## [0.1.0] - 2026-07-22
 
 ### Removed

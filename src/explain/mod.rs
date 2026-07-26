@@ -1,7 +1,7 @@
 //! Embedded `mdatron explain CODE` catalog.
 //!
 //! v0.1.x catalog: MDATRON-E0001, E0002, E0010, E0011, E0012, E0050, E0060, E0070,
-//! E0080. The catalog grows by one entry per newly-emitted code per the
+//! E0080, W0040. The catalog grows by one entry per newly-emitted code per the
 //! Phase 0 DESIGN open question #2 SO disposition (2026-06-02); the
 //! path-confinement trio (E0010/E0011/E0012) landed with the confinement
 //! rework (the path-confinement defect issue in this tracker).
@@ -31,6 +31,7 @@ const E0050: &str = include_str!("MDATRON-E0050.md");
 const E0060: &str = include_str!("MDATRON-E0060.md");
 const E0070: &str = include_str!("MDATRON-E0070.md");
 const E0080: &str = include_str!("MDATRON-E0080.md");
+const W0040: &str = include_str!("MDATRON-W0040.md");
 
 /// Structured shape of an explain page. Surfaces the required fields named
 /// in the Phase 1a behavioral spec. Used by `mdatron explain --json <code>`.
@@ -63,6 +64,7 @@ pub fn lookup(code: &str) -> Option<&'static str> {
         "MDATRON-E0060" => Some(E0060),
         "MDATRON-E0070" => Some(E0070),
         "MDATRON-E0080" => Some(E0080),
+        "MDATRON-W0040" => Some(W0040),
         _ => None,
     }
 }
@@ -197,6 +199,7 @@ mod tests {
         "MDATRON-E0060",
         "MDATRON-E0070",
         "MDATRON-E0080",
+        "MDATRON-W0040",
     ];
 
     #[test]

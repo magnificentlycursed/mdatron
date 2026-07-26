@@ -44,6 +44,9 @@ pub struct VerifyConfig {
     pub patterns_dir: PathBuf,
     /// Globs (relative to `project_root`) of files to validate.
     pub file_globs: Vec<String>,
+    /// Globs whose matching files must carry frontmatter (`MDATRON-W0040`
+    /// on absence). Empty disables the check (#80 D2).
+    pub require_frontmatter: Vec<String>,
 }
 
 impl VerifyConfig {
@@ -55,22 +58,38 @@ impl VerifyConfig {
             patterns_dir: root.join(".mdatron").join("patterns"),
             project_root: root,
             file_globs: vec!["**/*.md".to_string()],
+            require_frontmatter: Vec::new(),
         }
     }
 
     /// Build a config honoring the project's committed `.mdatron/config.yaml`:
     /// its `file_globs` are the consumer-authored jurisdiction (#77), so files
     /// outside them — third-party markdown a chassis or unrelated tool deploys
-    /// into the tree — are not walked at all. Falls back to [`Self::new`]
-    /// defaults when the config is absent or declares no globs; errs when the
-    /// config exists but is unreadable/unparsable (loud, no silent default).
+    /// into the tree — are not walked at all.
+    ///
+    /// An ABSENT config is a refusal (#80 D1): jurisdiction is always explicit,
+    /// never guessed — a governed tree that lost its config must not silently
+    /// walk everything (overreach) or nothing (the silent-skip hole at tree
+    /// scale). `mdatron init` seeds the config; an explicit `--files`
+    /// invocation (which declares jurisdiction on the command line via
+    /// [`Self::new`]) is the ad-hoc escape hatch. A present-but-unparsable
+    /// config errs the same way (loud, no silent default).
     pub fn from_project(project_root: impl Into<PathBuf>) -> Result<Self, crate::Error> {
         let mut cfg = Self::new(project_root);
-        if let Some(pc) = crate::config::load(&cfg.project_root)? {
-            if !pc.file_globs.is_empty() {
-                cfg.file_globs = pc.file_globs;
-            }
+        let Some(pc) = crate::config::load(&cfg.project_root)? else {
+            return Err(crate::Error::Config(format!(
+                "no jurisdiction declared: '{}' is missing — run `mdatron init` \
+                 to seed it, or pass explicit --files globs for an ad-hoc run",
+                cfg.project_root
+                    .join(".mdatron")
+                    .join(crate::config::CONFIG_NAME)
+                    .display()
+            )));
+        };
+        if !pc.file_globs.is_empty() {
+            cfg.file_globs = pc.file_globs;
         }
+        cfg.require_frontmatter = pc.require_frontmatter;
         Ok(cfg)
     }
 }
@@ -151,6 +170,17 @@ pub fn verify(config: &VerifyConfig) -> Result<Vec<Finding>, VerifyError> {
     }
     let registry = IndexRegistry::build(&project_root, &all_keys)?;
 
+    // Opt-in frontmatter requirement (#80 D2): compile the globs once; a
+    // malformed pattern is a config error, not a silent no-op.
+    let require: Vec<glob::Pattern> = config
+        .require_frontmatter
+        .iter()
+        .map(|g| {
+            glob::Pattern::new(g)
+                .map_err(|e| VerifyError::Config(format!("require_frontmatter '{g}': {e}")))
+        })
+        .collect::<Result<_, _>>()?;
+
     let mut findings: Vec<Finding> = Vec::new();
     for glob_pattern in &config.file_globs {
         let absolute = project_root.join(glob_pattern);
@@ -158,7 +188,15 @@ pub fn verify(config: &VerifyConfig) -> Result<Vec<Finding>, VerifyError> {
             .map_err(|e| VerifyError::Glob(format!("'{glob_pattern}': {e}")))?;
         for entry in paths {
             let path = entry.map_err(|e| VerifyError::Glob(format!("'{glob_pattern}': {e}")))?;
-            verify_file(&path, &schemas, &patterns, &registry, &mut findings)?;
+            verify_file(
+                &path,
+                &project_root,
+                &require,
+                &schemas,
+                &patterns,
+                &registry,
+                &mut findings,
+            )?;
         }
     }
 
@@ -251,6 +289,8 @@ fn load_patterns(dir: &Path) -> Result<Vec<PatternFile>, VerifyError> {
 
 fn verify_file(
     path: &Path,
+    project_root: &Path,
+    require_frontmatter: &[glob::Pattern],
     schemas: &BTreeMap<String, Schema>,
     patterns: &[PatternFile],
     registry: &IndexRegistry,
@@ -284,7 +324,38 @@ fn verify_file(
 
     let frontmatter_value = match fm_opt {
         Some((fm, _body)) => fm,
-        None => return Ok(()),
+        None => {
+            // Opt-in loudness (#80 D2): inside a require_frontmatter glob,
+            // "no frontmatter" must not be indistinguishable from "passed" —
+            // the parse-ABSENCE half of #78's loud-failure/silent-absence
+            // asymmetry. Matching is on the root-relative path.
+            let rel = path.strip_prefix(project_root).unwrap_or(path);
+            if require_frontmatter.iter().any(|p| p.matches_path(rel)) {
+                findings.push(Finding {
+                    code: "MDATRON-W0040".into(),
+                    severity: Severity::Warning,
+                    summary: "governed-file-has-no-frontmatter".into(),
+                    message: "this file matches a `require_frontmatter` glob in \
+                              .mdatron/config.yaml but carries no frontmatter block, \
+                              so no schema or rule can govern it"
+                        .into(),
+                    help: Some(
+                        "add the frontmatter block (starting with `---` on line 1), \
+                         or narrow the require_frontmatter globs if this file is \
+                         genuinely prose-only"
+                            .into(),
+                    ),
+                    location: Location {
+                        file: path.to_path_buf(),
+                        line: 1,
+                        column: 0,
+                    },
+                    explain_ref: Some("MDATRON-W0040".into()),
+                    quoted: Vec::new(),
+                });
+            }
+            return Ok(());
+        }
     };
 
     let frontmatter_internal = crate::dsl::index::yaml_to_value(&frontmatter_value);
@@ -647,21 +718,72 @@ mod tests {
 
     // #77: an explicit caller override (`--files`) takes precedence over the
     // project config — the CLI passes its own globs by replacing file_globs.
+    // RED GATE (#82 / #80 D1): an absent config is a REFUSAL, not a silent
+    // fallback to walk-all — jurisdiction is always explicit, never guessed.
+    // Pre-fix, from_project defaulted to `**/*.md`.
     #[test]
-    fn absent_config_falls_back_to_default_globs() {
+    fn absent_config_is_refused_not_defaulted() {
         let proj = TempProject::new("config-absent");
         proj.write(
             ".mdatron/schemas/phase-primer.json",
             minimal_phase_primer_schema(),
         );
-        proj.write(
-            "anywhere.md",
-            "---\nschema_class: phase-primer\nphase: invalid\nrelevant_domains: [se]\n---\n",
+        let err = VerifyConfig::from_project(&proj.0)
+            .expect_err("absent config must refuse: no jurisdiction declared");
+        assert!(
+            err.to_string().contains("no jurisdiction declared"),
+            "refusal names the problem; got: {err}"
         );
-        let cfg = VerifyConfig::from_project(&proj.0).expect("absent config is fine");
-        assert_eq!(cfg.file_globs, vec!["**/*.md"]);
+    }
+
+    // RED GATE (#82 / #80 D2): a file matching a `require_frontmatter` glob
+    // that parses to no-frontmatter fires MDATRON-W0040 — "governed file
+    // skipped" stops looking identical to "file passed". Pre-fix the config
+    // key was tolerated-unknown and the file passed silently.
+    #[test]
+    fn require_frontmatter_glob_fires_w0040() {
+        let proj = TempProject::new("w0040");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\nrequire_frontmatter:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write("docs/naked.md", "# prose only, no frontmatter\n");
+        let cfg = VerifyConfig::from_project(&proj.0).expect("config loads");
         let findings = verify(&cfg).unwrap();
-        assert_eq!(findings.len(), 1);
+        assert_eq!(
+            findings.len(),
+            1,
+            "exactly the naked governed file warns; got {findings:?}"
+        );
+        assert_eq!(findings[0].code, "MDATRON-W0040");
+        assert_eq!(findings[0].severity, Severity::Warning);
+        assert!(findings[0].location.file.ends_with("docs/naked.md"));
+    }
+
+    // D2 boundary: a file with frontmatter satisfies the requirement — W0040
+    // is about ABSENCE, not validity (a malformed block is E0001's job).
+    #[test]
+    fn require_frontmatter_is_satisfied_by_present_frontmatter() {
+        let proj = TempProject::new("w0040-ok");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\nrequire_frontmatter:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write(
+            "docs/typed.md",
+            "---\nschema_class: phase-primer\nphase: phase-1a\nrelevant_domains: [se]\n---\nbody\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).expect("config loads");
+        let findings = verify(&cfg).unwrap();
+        assert!(findings.is_empty(), "typed file is clean; got {findings:?}");
     }
 
     #[test]

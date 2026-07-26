@@ -24,6 +24,12 @@ pub struct ProjectConfig {
     /// Globs (relative to the project root) of files mdatron validates.
     #[serde(default)]
     pub file_globs: Vec<String>,
+    /// Opt-in loudness (#80 D2): globs whose matching files MUST carry
+    /// frontmatter — a match that parses to no-frontmatter fires
+    /// `MDATRON-W0040 governed-file-has-no-frontmatter` instead of passing
+    /// silently. Empty (the default) disables the check.
+    #[serde(default)]
+    pub require_frontmatter: Vec<String>,
 }
 
 /// Load `<project_root>/.mdatron/config.yaml`.

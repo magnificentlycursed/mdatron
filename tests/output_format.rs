@@ -25,6 +25,14 @@ impl TempProject {
         let path = std::env::temp_dir().join(format!("mdatron-out-{label}-{nanos}"));
         let _ = fs::remove_dir_all(&path);
         fs::create_dir_all(&path).unwrap();
+        // #80 D1: verify refuses a config-less tree; fixtures declare their
+        // jurisdiction explicitly like any real adopter tree.
+        fs::create_dir_all(path.join(".mdatron")).unwrap();
+        fs::write(
+            path.join(".mdatron/config.yaml"),
+            "file_globs:\n  - \"**/*.md\"\n",
+        )
+        .unwrap();
         Self(path)
     }
 
