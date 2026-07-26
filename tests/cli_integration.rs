@@ -37,6 +37,14 @@ impl TempProject {
         let path = std::env::temp_dir().join(format!("mdatron-cli-int-{label}-{nanos}"));
         let _ = fs::remove_dir_all(&path);
         fs::create_dir_all(&path).unwrap();
+        // #80 D1: verify refuses a config-less tree; fixtures declare their
+        // jurisdiction explicitly like any real adopter tree.
+        fs::create_dir_all(path.join(".mdatron")).unwrap();
+        fs::write(
+            path.join(".mdatron/config.yaml"),
+            "file_globs:\n  - \"**/*.md\"\n",
+        )
+        .unwrap();
         Self(path)
     }
 
@@ -95,6 +103,42 @@ fn run(args: &[&str]) -> Output {
         .args(args)
         .output()
         .expect("mdatron binary executes")
+}
+
+// #80 D1: a config-less tree refuses with "no jurisdiction declared"
+// (exit 2, pipeline failure) — and an explicit --files run is the sanctioned
+// ad-hoc escape that needs no config.
+#[test]
+fn verify_refuses_configless_tree_but_files_flag_escapes() {
+    let proj = TempProject::new("d1-refusal");
+    std::fs::create_dir_all(proj.path().join(".mdatron/schemas")).unwrap();
+    std::fs::remove_file(proj.path().join(".mdatron/config.yaml")).unwrap();
+    proj.write("doc.md", "# prose\n");
+
+    let out = run_verify_tty(&proj);
+    assert_eq!(
+        out.status.code(),
+        Some(2),
+        "absent config is a pipeline failure"
+    );
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        stderr.contains("no jurisdiction declared"),
+        "refusal names the problem: {stderr}"
+    );
+
+    let out = Command::new(mdatron_bin())
+        .args(["verify", "--project-root"])
+        .arg(proj.path())
+        .args(["--files", "**/*.md"])
+        .output()
+        .expect("mdatron binary executes");
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "--files declares jurisdiction ad hoc: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
 }
 
 fn run_verify_tty(proj: &TempProject) -> Output {

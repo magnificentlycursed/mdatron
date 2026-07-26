@@ -218,9 +218,18 @@ fn cmd_verify(
     };
 
     // The committed .mdatron/config.yaml's file_globs are the consumer-authored
-    // jurisdiction (#77); `--files` overrides them for an ad-hoc run. A present-
-    // but-malformed config is a pipeline failure (loud), not a silent fallback.
-    let (findings, pipeline_status, pipeline_err) = match VerifyConfig::from_project(&root) {
+    // jurisdiction (#77); an ABSENT config refuses (#80 D1) — jurisdiction is
+    // explicit, never guessed. `--files` declares jurisdiction on the command
+    // line for an ad-hoc run and needs no config. A present-but-malformed
+    // config is a pipeline failure (loud), not a silent fallback.
+    let config_result = if files.is_empty() {
+        VerifyConfig::from_project(&root)
+    } else {
+        let mut c = VerifyConfig::new(&root);
+        c.file_globs = files;
+        Ok(c)
+    };
+    let (findings, pipeline_status, pipeline_err) = match config_result {
         Err(e) => (
             Vec::new(),
             PipelineStatus::Failed,
@@ -232,9 +241,6 @@ fn cmd_verify(
             }
             if let Some(p) = patterns {
                 config.patterns_dir = p;
-            }
-            if !files.is_empty() {
-                config.file_globs = files;
             }
             match verify(&config) {
                 Ok(f) => (f, PipelineStatus::Ok, None),

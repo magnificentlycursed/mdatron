@@ -5,3 +5,7 @@
 # to validate.
 file_globs:
   - "review-log/**/*.md"
+# Opt-in loudness (#80 D2): every review-log entry must carry frontmatter —
+# a naked file in the corpus warns (MDATRON-W0040) instead of passing silently.
+require_frontmatter:
+  - "review-log/**/*.md"
