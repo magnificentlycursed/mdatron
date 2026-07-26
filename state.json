@@ -86,10 +86,6 @@
     "fed9ad06-769e-4cef-b2e3-be7041de17bc": 52
   },
   "locks": {
-    "44": {
-      "agent_id": "79Ig",
-      "claimed_at": "2026-07-26T00:07:27.730333Z"
-    },
     "79": {
       "agent_id": "79Ig",
       "claimed_at": "2026-07-22T17:10:42.700518Z"
@@ -3457,8 +3453,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-26T10:07:17.963537Z",
+    "timestamp": "2026-07-26T10:07:24.123907Z",
     "agent_id": "79Ig",
-    "agent_seq": 140
+    "agent_seq": 141
   }
 }
