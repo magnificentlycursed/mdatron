@@ -1,6 +1,6 @@
 {
   "next_display_id": 83,
-  "next_comment_id": 227,
+  "next_comment_id": 228,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -1237,7 +1237,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-22T17:38:00.939529Z",
-      "updated_at": "2026-07-25T23:59:29.098800Z",
+      "updated_at": "2026-07-26T10:07:31.923098Z",
       "labels": [
         "enhancement"
       ],
@@ -1291,6 +1291,15 @@
           "kind": "note",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA9fVLXqfnQVDcyw4H2D6rliN88Fz80CTyPHqOivcCdIEqv30n2q9Yez32ybUhu4FRlJt2HSn8a8oy0GJpv5viCA=="
+        },
+        "cd1ecb86-d851-44ac-a1c7-abd37e5becbf": {
+          "display_id": 227,
+          "author": "79Ig",
+          "content": "All four rulings now EXECUTED or ROUTED: D1+D2 merged via #82, D4 merged via #44 (both on main @ 15d6b2b; #44's v1.0 acceptance met and closed), D3 recorded on #79 for the #45/#47 passes. Batch complete — closing.",
+          "created_at": "2026-07-26T10:07:31.906514Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAg9vygzstYZIuGWx7KFUYt63Eagt+awtwCNQqavdhE9/AIwR0+B0Zc1a+Q7/MjW9hfDQQqr6sjgR3Kea+zNAtBA=="
         }
       }
     },
@@ -3453,8 +3462,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-26T10:07:24.123907Z",
+    "timestamp": "2026-07-26T10:07:31.923098Z",
     "agent_id": "79Ig",
-    "agent_seq": 141
+    "agent_seq": 142
   }
 }
