@@ -198,6 +198,12 @@ pub fn verify(config: &VerifyConfig) -> Result<Vec<Finding>, VerifyError> {
         Err(e) => return Err(VerifyError::Config(e.to_string())),
     };
 
+    // Vocabulary family (#85): registry-driven prose scan; absent = inactive.
+    let vocab = match crate::vocab::load(&project_root) {
+        Ok(v) => v,
+        Err(e) => return Err(VerifyError::Config(e.to_string())),
+    };
+
     let mut findings: Vec<Finding> = Vec::new();
     if let Some(mut loaded) = pin_data {
         findings.append(&mut loaded.findings);
@@ -224,6 +230,7 @@ pub fn verify(config: &VerifyConfig) -> Result<Vec<Finding>, VerifyError> {
                 &path,
                 &project_root,
                 &require,
+                vocab.as_ref(),
                 &schemas,
                 &patterns,
                 &registry,
@@ -319,10 +326,12 @@ fn load_patterns(dir: &Path) -> Result<Vec<PatternFile>, VerifyError> {
 
 // ── Per-file processing ────────────────────────────────────────────────────────
 
+#[allow(clippy::too_many_arguments)]
 fn verify_file(
     path: &Path,
     project_root: &Path,
     require_frontmatter: &[glob::Pattern],
+    vocab: Option<&crate::vocab::LoadedVocab>,
     schemas: &BTreeMap<String, Schema>,
     patterns: &[PatternFile],
     registry: &IndexRegistry,
@@ -354,13 +363,17 @@ fn verify_file(
         }
     };
 
-    let frontmatter_value = match fm_opt {
-        Some((fm, _body)) => fm,
+    let (frontmatter_value, body_len) = match fm_opt {
+        Some((fm, body)) => (fm, body.len()),
         None => {
             // Opt-in loudness (#80 D2): inside a require_frontmatter glob,
             // "no frontmatter" must not be indistinguishable from "passed" —
             // the parse-ABSENCE half of #78's loud-failure/silent-absence
             // asymmetry. Matching is on the root-relative path.
+            // Vocabulary scans prose-only files too (whole content as body).
+            if let Some(v) = vocab {
+                crate::vocab::check_file(v, path, &content, 0, None, findings);
+            }
             let rel = path.strip_prefix(project_root).unwrap_or(path);
             if require_frontmatter.iter().any(|p| p.matches_path(rel)) {
                 findings.push(Finding {
@@ -389,6 +402,20 @@ fn verify_file(
             return Ok(());
         }
     };
+
+    // Vocabulary prose scan over the body, with frontmatter context for the
+    // numeric-claims comparison (#80 D3).
+    if let Some(v) = vocab {
+        let body_offset = content.len() - body_len;
+        crate::vocab::check_file(
+            v,
+            path,
+            &content,
+            body_offset,
+            Some(&frontmatter_value),
+            findings,
+        );
+    }
 
     let frontmatter_internal = crate::dsl::index::yaml_to_value(&frontmatter_value);
     let schema_class_opt = frontmatter_internal
@@ -1069,6 +1096,158 @@ mod tests {
         assert!(
             findings.iter().all(|f| !f.code.starts_with("MDATRON-E006")),
             "no pin findings without pin data; got {findings:?}"
+        );
+    }
+
+    // ── vocabulary family (#85): registry-driven prose scan ────────────────
+
+    fn vocab_project(label: &str, vocab: &str, body: &str) -> TempProject {
+        let proj = TempProject::new(label);
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write(".mdatron/vocabulary.yaml", vocab);
+        proj.write(
+            "docs/doc.md",
+            &format!(
+                "---\nschema_class: phase-primer\nphase: phase-1a\nrelevant_domains: [se, qe, pe]\n---\n{body}"
+            ),
+        );
+        proj
+    }
+
+    fn codes_of(findings: &[Finding], code: &str) -> usize {
+        findings.iter().filter(|f| f.code == code).count()
+    }
+
+    // RED GATE (#85): a bold-introduced term absent from the registry is
+    // flagged (E0090); registered AND draft terms are exempt (draft-status
+    // exemption per contract). Pre-impl, vocabulary.yaml is inert.
+    #[test]
+    fn unregistered_coinage_flagged_registered_and_draft_exempt() {
+        let proj = vocab_project(
+            "vocab-coinage",
+            "terms:\n- term: fix-lane\n  status: registered\n  sense: \"the gated change lane\"\n- term: half-idea\n  status: draft\n  sense: \"tbd\"\n",
+            "The **fix-lane** holds. The **half-idea** floats. The **brand-new-coinage** lands.\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert_eq!(
+            codes_of(&findings, "MDATRON-E0090"),
+            1,
+            "only the unregistered coinage flags; got {findings:?}"
+        );
+        let f = findings.iter().find(|f| f.code == "MDATRON-E0090").unwrap();
+        assert!(f.quoted.iter().any(|q| q.content == "brand-new-coinage"));
+        assert!(
+            !f.message.contains("brand-new-coinage"),
+            "term rides quoted"
+        );
+    }
+
+    // RED GATE (#85): a letter+number cluster outside the allowlist is an
+    // invented label scheme (E0091); allowed schemes pass. Line is precise.
+    #[test]
+    fn invented_label_scheme_outside_allowlist_flagged() {
+        let proj = vocab_project(
+            "vocab-cluster",
+            "label_schemes:\n  allow:\n  - \"^MDATRON-[ELW][0-9]{4}$\"\n",
+            "Fine: MDATRON-E0050.\nInvented: SEC-F3 recurs.\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert_eq!(codes_of(&findings, "MDATRON-E0091"), 1, "got {findings:?}");
+        let f = findings.iter().find(|f| f.code == "MDATRON-E0091").unwrap();
+        assert!(f.quoted.iter().any(|q| q.content == "SEC-F3"));
+        assert_eq!(f.location.line, 7, "body line 2 = file line 7 (5 fm lines)");
+    }
+
+    // RED GATE (#85): a reserved-status term appearing in prose is flagged
+    // (E0092) — reserved means held, not usable.
+    #[test]
+    fn reserved_word_use_is_flagged() {
+        let proj = vocab_project(
+            "vocab-reserved",
+            "terms:\n- term: mcp-serve\n  status: reserved\n  sense: \"reserved subcommand spelling\"\n",
+            "Someday mcp-serve will exist.\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert_eq!(codes_of(&findings, "MDATRON-E0092"), 1, "got {findings:?}");
+    }
+
+    // RED GATE (#85): a listed register anti-pattern match is flagged (E0093)
+    // with the matched prose quoted, never inline.
+    #[test]
+    fn register_anti_pattern_flagged() {
+        let proj = vocab_project(
+            "vocab-anti",
+            "anti_patterns:\n- pattern: \"very unique\"\n  register: hedged-absolute\n",
+            "This is a very unique approach.\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert_eq!(codes_of(&findings, "MDATRON-E0093"), 1, "got {findings:?}");
+        let f = findings.iter().find(|f| f.code == "MDATRON-E0093").unwrap();
+        assert!(f.message.contains("hedged-absolute"));
+        assert!(f.quoted.iter().any(|q| q.content.contains("very unique")));
+    }
+
+    // RED GATE (#85 / #80 D3, the vsdd drift class): a prose numeral
+    // restating a configured field's count and drifting from it is flagged
+    // (E0094); an agreeing numeral is clean. Configured references only.
+    #[test]
+    fn numeric_claim_drift_flagged_agreement_clean() {
+        let proj = vocab_project(
+            "vocab-numeric",
+            "numeric_claims:\n- field: relevant_domains\n",
+            "This review spans 4 relevant domains in total.\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert_eq!(codes_of(&findings, "MDATRON-E0094"), 1, "got {findings:?}");
+
+        let proj2 = vocab_project(
+            "vocab-numeric-ok",
+            "numeric_claims:\n- field: relevant_domains\n",
+            "This review spans 3 relevant domains in total.\n",
+        );
+        let cfg2 = VerifyConfig::from_project(&proj2.0).unwrap();
+        let findings2 = verify(&cfg2).unwrap();
+        assert_eq!(
+            codes_of(&findings2, "MDATRON-E0094"),
+            0,
+            "agreement is clean; got {findings2:?}"
+        );
+    }
+
+    // #85: word-numbers count too (the vsdd 'seven core domains' case shape).
+    #[test]
+    fn numeric_claim_word_number_drift_flagged() {
+        let proj = vocab_project(
+            "vocab-word-num",
+            "numeric_claims:\n- field: relevant_domains\n",
+            "Covers seven relevant domains.\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert_eq!(codes_of(&findings, "MDATRON-E0094"), 1, "got {findings:?}");
+    }
+
+    // #85 inactivity: no vocabulary.yaml -> family inactive.
+    #[test]
+    fn absent_vocabulary_file_keeps_family_inactive() {
+        let proj = routed_project("vocab-inactive");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert!(
+            findings.iter().all(|f| !f.code.starts_with("MDATRON-E009")),
+            "no vocab findings without vocab data; got {findings:?}"
         );
     }
 
