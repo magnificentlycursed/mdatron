@@ -144,14 +144,15 @@ The parenthetical names the contract or requirement verified, matching exactly.
 
 ## Open questions
 
-<!-- OPEN: pattern-data-formats -->
-### Data formats for routes, pins, and registries
-Engine-defined interfaces with engine-shipped schemas (contractual under Validation is data-driven); the concrete format choice (YAML shape, field names), the justification-annotation form for governance-weakening entries, and the quote-prefix character for rendered marking land in phase 1b with the fixture corpus design.
-<!-- /OPEN -->
+### Data formats for routes, pins, and registries (RESOLVED 2026-07-27)
+Resolved by operator ratification on tracker #45: `routes.yaml` `{files, governed_by, naming?}` (#83), `pins.yaml` `{governing, file, sha256}` (#84), `vocabulary.yaml` `{terms, label_schemes, anti_patterns, numeric_claims}` (#85), citation family data-less over routed files (#86) — each an engine-defined interface parsed strictly (unknown fields refused). The quote-prefix character is `> ` (shipped with the marking discipline, #76/#44). The justification-annotation form for governance-weakening entries remains with the pin-family lane (#84), where the first weakening-capable data lands.
 
-<!-- OPEN: code-ranges -->
-### Code-range allocation for the new families
-Four new families need reserved ranges; the formerly reserved built-in-pattern range (W0100–199) returns to the pool given the zero-built-ins position, and the delegate-trust reservation (W0030) returns with the delegate protocol's retirement (absorption ledger). Decide with the catalog work in phase 1b, together with the mutation-floor number and the compact size limit.
+### Code-range allocation for the new families (RESOLVED; mutation floor carved out below)
+Resolved by tracker #50 (2026-07-21): route E0030–39, pin E0060–69, vocabulary E0090–99, citation E0100–109, config/governance warnings W0040–99; the W0100–199 and W0030 reservations returned to the pool as planned. The compact size limit resolved at 512 bytes (tracker #80 D4, 2026-07-25; recorded in § Agents are the first consumer). Reconciliation note: this block survived both resolving lanes and was caught by operator review — the incident is recorded on #84 (pin-family motivation) and #87 (the standing-document reconciliation step now in the fix-lane).
+
+<!-- OPEN: mutation-floor -->
+### Mutation-testing kill-ratio floor
+The Phase 5 mutation floor number remains undecided; band it from the first mutation-run actuals or ratify a contract number with the Phase 5 CI work.
 <!-- /OPEN -->
 
 <!-- OPEN: index-persistence -->

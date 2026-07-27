@@ -1,0 +1,8 @@
+# mdatron route table — the closed-world allowlist over the governed tree (#83).
+# Adopter-owned data; engine-shipped strict schema. Every walked file must be
+# claimed by exactly one route; the review-log naming grammar pins the
+# YYYY-MM-DD-slug convention (the slug incident is the motivating evidence).
+routes:
+- files: "review-log/**/*.md"
+  governed_by: DESIGN.md
+  naming: "^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9-]+\\.md$"
