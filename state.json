@@ -1,6 +1,6 @@
 {
   "next_display_id": 88,
-  "next_comment_id": 234,
+  "next_comment_id": 235,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -3502,7 +3502,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-26T10:11:01.245922Z",
-      "updated_at": "2026-07-27T18:14:49.315693Z",
+      "updated_at": "2026-07-27T21:28:44.682565Z",
       "labels": [
         "feature"
       ],
@@ -3520,6 +3520,15 @@
           "kind": "observation",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAzJl/DTmqGaQXALFBtPBNh0TF98HxflabIGj5LIECBVQIHD/K7iMoYxXA/Yx8gUr3iC9kZSapFnS1jpPQ64hwCQ=="
+        },
+        "aba17e65-8acb-4c79-9f6c-ff7b4cef05de": {
+          "display_id": 234,
+          "author": "79Ig",
+          "content": "Built on feature/84-pin (8c1f61e). E0061/E0062 + unpinned tombstones (L0001 standing lint / W0042 unjustified — the DESIGN annotation form, recorded in DESIGN in-lane per step 5) + mdatron pin/--update/--dry-run. THE INCIDENT IS NOW A LIVE FIXTURE: repo pins DESIGN.md->src/codes.rs + manifest; replaying the #50-shaped edit blocks with E0061 in CI. 304 tests green, gauntlet clean. Pushed for CI.",
+          "created_at": "2026-07-27T21:28:44.667728Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAsMCIYORG0W0VbdUH7u59RXvfHjTXLVq3otr+13eYD/fWITlCTb8/XBlH3v1UPhKwjRpWUE2MGqGTpBxr1yVQDA=="
         }
       }
     },
@@ -3637,8 +3646,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-27T21:20:50.207170Z",
+    "timestamp": "2026-07-27T21:28:44.682565Z",
     "agent_id": "79Ig",
-    "agent_seq": 178
+    "agent_seq": 179
   }
 }
