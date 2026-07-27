@@ -31,6 +31,7 @@ pub mod error;
 pub mod frontmatter;
 pub mod init;
 pub mod output;
+pub mod pin;
 pub mod route;
 pub mod schema;
 pub mod verify;

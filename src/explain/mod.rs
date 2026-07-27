@@ -1,7 +1,7 @@
 //! Embedded `mdatron explain CODE` catalog.
 //!
 //! v0.1.x catalog: MDATRON-E0001, E0002, E0010, E0011, E0012, E0050, E0060, E0070,
-//! E0080, W0040; route family E0030, E0031, E0032, W0041. The catalog grows by one entry per newly-emitted code per the
+//! E0080, W0040; route family E0030, E0031, E0032, W0041; pin family E0061, E0062, W0042, L0001. The catalog grows by one entry per newly-emitted code per the
 //! Phase 0 DESIGN open question #2 SO disposition (2026-06-02); the
 //! path-confinement trio (E0010/E0011/E0012) landed with the confinement
 //! rework (the path-confinement defect issue in this tracker).
@@ -36,6 +36,10 @@ const E0030: &str = include_str!("MDATRON-E0030.md");
 const E0031: &str = include_str!("MDATRON-E0031.md");
 const E0032: &str = include_str!("MDATRON-E0032.md");
 const W0041: &str = include_str!("MDATRON-W0041.md");
+const E0061: &str = include_str!("MDATRON-E0061.md");
+const E0062: &str = include_str!("MDATRON-E0062.md");
+const W0042: &str = include_str!("MDATRON-W0042.md");
+const L0001: &str = include_str!("MDATRON-L0001.md");
 
 /// Structured shape of an explain page. Surfaces the required fields named
 /// in the Phase 1a behavioral spec. Used by `mdatron explain --json <code>`.
@@ -73,6 +77,10 @@ pub fn lookup(code: &str) -> Option<&'static str> {
         "MDATRON-E0031" => Some(E0031),
         "MDATRON-E0032" => Some(E0032),
         "MDATRON-W0041" => Some(W0041),
+        "MDATRON-E0061" => Some(E0061),
+        "MDATRON-E0062" => Some(E0062),
+        "MDATRON-W0042" => Some(W0042),
+        "MDATRON-L0001" => Some(L0001),
         _ => None,
     }
 }
@@ -212,6 +220,10 @@ mod tests {
         "MDATRON-E0031",
         "MDATRON-E0032",
         "MDATRON-W0041",
+        "MDATRON-E0061",
+        "MDATRON-E0062",
+        "MDATRON-W0042",
+        "MDATRON-L0001",
     ];
 
     #[test]
