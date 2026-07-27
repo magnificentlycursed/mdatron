@@ -181,13 +181,33 @@ pub fn verify(config: &VerifyConfig) -> Result<Vec<Finding>, VerifyError> {
         })
         .collect::<Result<_, _>>()?;
 
+    // Route family (#83): load + compile the allowlist; absent file = family
+    // inactive. Per-entry defects arrive as findings (confinement escapes drop
+    // the entry fail-closed; an absent governing doc reports once, entry stays
+    // matchable so it doesn't cascade into spurious unrouted errors).
+    let routes = match crate::route::load(&project_root) {
+        Ok(r) => r,
+        Err(e) => return Err(VerifyError::Config(e.to_string())),
+    };
+
     let mut findings: Vec<Finding> = Vec::new();
+    let routes = match routes {
+        Some(mut loaded) => {
+            findings.append(&mut loaded.findings);
+            Some(loaded.routes)
+        }
+        None => None,
+    };
     for glob_pattern in &config.file_globs {
         let absolute = project_root.join(glob_pattern);
         let paths = glob::glob(&absolute.to_string_lossy())
             .map_err(|e| VerifyError::Glob(format!("'{glob_pattern}': {e}")))?;
         for entry in paths {
             let path = entry.map_err(|e| VerifyError::Glob(format!("'{glob_pattern}': {e}")))?;
+            if let Some(routes) = &routes {
+                let rel = path.strip_prefix(&project_root).unwrap_or(&path);
+                crate::route::check_file(routes, rel, &path, &mut findings);
+            }
             verify_file(
                 &path,
                 &project_root,
@@ -762,6 +782,154 @@ mod tests {
         assert_eq!(findings[0].code, "MDATRON-W0040");
         assert_eq!(findings[0].severity, Severity::Warning);
         assert!(findings[0].location.file.ends_with("docs/naked.md"));
+    }
+
+    // ── route family (#83): the allowlist over the governed tree ───────────
+
+    fn routed_project(label: &str) -> TempProject {
+        let proj = TempProject::new(label);
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write("GOVERNING.md", "# governing doc\n");
+        proj.write(
+            "docs/2026-07-27-good-name.md",
+            "---\nschema_class: phase-primer\nphase: phase-1a\nrelevant_domains: [se]\n---\n",
+        );
+        proj
+    }
+
+    // RED GATE (#83): with route data supplied, a walked file matching no
+    // route BLOCKS (E0030). Pre-impl, routes.yaml is inert and the file passes.
+    #[test]
+    fn unrouted_file_blocks_when_routes_supplied() {
+        let proj = routed_project("route-unrouted");
+        proj.write(
+            ".mdatron/routes.yaml",
+            "routes:\n- files: \"docs/registry/**/*.md\"\n  governed_by: GOVERNING.md\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert!(
+            findings
+                .iter()
+                .any(|f| f.code == "MDATRON-E0030" && f.severity == Severity::Error),
+            "unrouted docs/2026-07-27-good-name.md must block; got {findings:?}"
+        );
+    }
+
+    // RED GATE (#83): a route citing an absent governing document BLOCKS (E0031),
+    // with the adopter path quoted out-of-line per the marking discipline.
+    #[test]
+    fn absent_governing_document_blocks() {
+        let proj = routed_project("route-absent-gov");
+        proj.write(
+            ".mdatron/routes.yaml",
+            "routes:\n- files: \"docs/**/*.md\"\n  governed_by: NO-SUCH-DOC.md\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        let f = findings
+            .iter()
+            .find(|f| f.code == "MDATRON-E0031")
+            .unwrap_or_else(|| panic!("expected E0031; got {findings:?}"));
+        assert_eq!(f.severity, Severity::Error);
+        assert!(
+            !f.message.contains("NO-SUCH-DOC"),
+            "adopter path must not ride inline: {}",
+            f.message
+        );
+        assert!(f.quoted.iter().any(|q| q.content.contains("NO-SUCH-DOC")));
+    }
+
+    // RED GATE (#83): an underivable name is FLAGGED (W0041, warning).
+    #[test]
+    fn underivable_name_is_flagged() {
+        let proj = routed_project("route-naming");
+        proj.write(
+            "docs/Bad Name With Spaces.md",
+            "---\nschema_class: phase-primer\nphase: phase-1a\nrelevant_domains: [se]\n---\n",
+        );
+        proj.write(
+            ".mdatron/routes.yaml",
+            "routes:\n- files: \"docs/**/*.md\"\n  governed_by: GOVERNING.md\n  naming: \"^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9-]+\\\\.md$\"\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        let w: Vec<_> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-W0041")
+            .collect();
+        assert_eq!(w.len(), 1, "exactly the bad name flags; got {findings:?}");
+        assert_eq!(w[0].severity, Severity::Warning);
+        assert!(w[0].location.file.ends_with("docs/Bad Name With Spaces.md"));
+    }
+
+    // RED GATE (#83): two routes claiming one file is an ERROR (E0032) per the
+    // agnosticism-audit conflict contract (DESIGN: asserted by value+severity).
+    #[test]
+    fn two_routes_claiming_one_file_is_an_error() {
+        let proj = routed_project("route-conflict");
+        proj.write(
+            ".mdatron/routes.yaml",
+            "routes:\n- files: \"docs/**/*.md\"\n  governed_by: GOVERNING.md\n- files: \"docs/2026-*.md\"\n  governed_by: GOVERNING.md\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert!(
+            findings
+                .iter()
+                .any(|f| f.code == "MDATRON-E0032" && f.severity == Severity::Error),
+            "route conflict must error; got {findings:?}"
+        );
+    }
+
+    // #83 confinement: a route escaping the governed tree is rejected under the
+    // path-confinement codes — parent-segment (E0011) and absolute (E0010) in
+    // both the files glob and governed_by, existent and non-existent targets
+    // alike (the falsification clause).
+    #[test]
+    fn escaping_route_entries_are_rejected_under_confinement_codes() {
+        for (routes, code) in [
+            (
+                "routes:\n- files: \"../outside/**/*.md\"\n  governed_by: GOVERNING.md\n",
+                "MDATRON-E0011",
+            ),
+            (
+                "routes:\n- files: \"docs/**/*.md\"\n  governed_by: \"../escape.md\"\n",
+                "MDATRON-E0011",
+            ),
+            (
+                "routes:\n- files: \"docs/**/*.md\"\n  governed_by: \"/etc/passwd\"\n",
+                "MDATRON-E0010",
+            ),
+        ] {
+            let proj = routed_project("route-escape");
+            proj.write(".mdatron/routes.yaml", routes);
+            let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+            let findings = verify(&cfg).unwrap();
+            assert!(
+                findings.iter().any(|f| f.code == code),
+                "expected {code} for {routes:?}; got {findings:?}"
+            );
+        }
+    }
+
+    // #83 inactivity: no routes.yaml -> family inactive, no route findings.
+    #[test]
+    fn absent_routes_file_keeps_family_inactive() {
+        let proj = routed_project("route-inactive");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert!(
+            findings.iter().all(|f| !f.code.starts_with("MDATRON-E003")),
+            "no route findings without route data; got {findings:?}"
+        );
     }
 
     // D2 boundary: a file with frontmatter satisfies the requirement — W0040
