@@ -185,6 +185,46 @@ fn verify_compact_emits_capped_marked_blocks_on_stdout() {
     );
 }
 
+// #84: the pin lifecycle through the binary — stale blocks, --dry-run
+// previews without writing, --update re-pins, verify returns clean.
+#[test]
+fn pin_update_repins_and_dry_run_does_not_write() {
+    let proj = TempProject::new("pin-cli");
+    std::fs::create_dir_all(proj.path().join(".mdatron/schemas")).unwrap();
+    proj.write("GOVERNING.md", "# gov\n");
+    proj.write("governed.md", "v1\n");
+    proj.write(
+        ".mdatron/pins.yaml",
+        "pins:\n- governing: GOVERNING.md\n  file: governed.md\n  sha256: \"stale\"\n",
+    );
+    let run_pin = |args: &[&str]| {
+        Command::new(mdatron_bin())
+            .args(["pin", "--project-root"])
+            .arg(proj.path())
+            .args(args)
+            .output()
+            .expect("mdatron binary executes")
+    };
+    // Stale: check mode exits 1 with E0061.
+    let out = run_pin(&[]);
+    assert_eq!(out.status.code(), Some(1));
+    assert!(String::from_utf8_lossy(&out.stderr).contains("MDATRON-E0061"));
+    // Dry-run: previews, writes nothing (check still fails).
+    let out = run_pin(&["--update", "--dry-run"]);
+    assert_eq!(out.status.code(), Some(0));
+    assert_eq!(
+        run_pin(&[]).status.code(),
+        Some(1),
+        "dry-run must not write"
+    );
+    // Update: re-pins; check is clean.
+    let out = run_pin(&["--update"]);
+    assert_eq!(out.status.code(), Some(0));
+    assert_eq!(run_pin(&[]).status.code(), Some(0), "re-pin restores clean");
+    let record = std::fs::read_to_string(proj.path().join(".mdatron/pins.yaml")).unwrap();
+    assert!(!record.contains("stale"), "hash rewritten: {record}");
+}
+
 fn run_verify_tty(proj: &TempProject) -> Output {
     Command::new(mdatron_bin())
         .args(["verify", "--project-root"])

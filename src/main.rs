@@ -80,6 +80,26 @@ enum Command {
         compact: bool,
     },
 
+    /// Verify the pin record, or recompute it with --update (#84).
+    Pin {
+        /// Project root. Defaults to the current directory.
+        #[arg(long = "project-root", value_name = "DIR")]
+        project_root: Option<PathBuf>,
+
+        /// Recompute every pin's sha256 from current content and rewrite
+        /// .mdatron/pins.yaml (the single-command re-pin).
+        #[arg(long = "update")]
+        update: bool,
+
+        /// With --update: report what would change without writing.
+        #[arg(long = "dry-run", requires = "update")]
+        dry_run: bool,
+
+        /// Suppress stderr human-readable output.
+        #[arg(long = "quiet", short = 'q')]
+        quiet: bool,
+    },
+
     /// Scaffold the `.mdatron/` skeleton and its managed manifest. Idempotent;
     /// refuses a hand-modified managed file with MDATRON-E0060.
     Init {
@@ -144,10 +164,94 @@ fn main() -> ExitCode {
             json,
             compact,
         } => cmd_explain(&code, json, compact),
+        Command::Pin {
+            project_root,
+            update,
+            dry_run,
+            quiet,
+        } => cmd_pin(project_root, update, dry_run, quiet),
         Command::Init {
             project_root,
             quiet,
         } => cmd_init(project_root, quiet),
+    }
+}
+
+fn cmd_pin(project_root: Option<PathBuf>, update: bool, dry_run: bool, quiet: bool) -> ExitCode {
+    let root = match project_root.map(Ok).unwrap_or_else(std::env::current_dir) {
+        Ok(r) => r,
+        Err(e) => {
+            if !quiet {
+                eprintln!("error[MDATRON-E0070]: cannot resolve project root: {e}");
+            }
+            return ExitCode::from(2);
+        }
+    };
+
+    if update {
+        match mdatron::pin::update(&root, dry_run) {
+            Ok(changed) => {
+                if !quiet {
+                    let verb = if dry_run { "would re-pin" } else { "re-pinned" };
+                    eprintln!("mdatron pin: {verb} {} entr(ies)", changed.len());
+                    for (file, old, new) in &changed {
+                        eprintln!(
+                            "  {file}: {} -> {}",
+                            &old[..old.len().min(12)],
+                            &new[..new.len().min(12)]
+                        );
+                    }
+                }
+                ExitCode::SUCCESS
+            }
+            Err(e) => {
+                if !quiet {
+                    eprintln!("error[MDATRON-E0080]: pin update failed\n   = note: {e}");
+                }
+                ExitCode::from(2)
+            }
+        }
+    } else {
+        // Check mode: load + verify the pins, print findings rustc-shaped.
+        match mdatron::pin::load(&root) {
+            Ok(None) => {
+                if !quiet {
+                    eprintln!(
+                        "mdatron pin: no pin record (.mdatron/pins.yaml absent); nothing to do"
+                    );
+                }
+                ExitCode::SUCCESS
+            }
+            Ok(Some(loaded)) => {
+                let mut findings = loaded.findings;
+                mdatron::pin::check(&root, &loaded.pins, &mut findings);
+                let errors = findings
+                    .iter()
+                    .filter(|f| f.severity == Severity::Error)
+                    .count();
+                if !quiet {
+                    for f in &findings {
+                        print_finding(f);
+                    }
+                    eprintln!(
+                        "mdatron pin: {} pin(s) checked, {} error(s)",
+                        loaded.pins.len(),
+                        errors
+                    );
+                }
+                if errors > 0 {
+                    ExitCode::from(1)
+                } else {
+                    ExitCode::SUCCESS
+                }
+            }
+            Err(e) => {
+                if !quiet {
+                    eprintln!("error[MDATRON-E0080]: pin check failed\n   = note: {e}");
+                }
+                ExitCode::from(2)
+            }
+        }
     }
 }
 

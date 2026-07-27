@@ -190,7 +190,19 @@ pub fn verify(config: &VerifyConfig) -> Result<Vec<Finding>, VerifyError> {
         Err(e) => return Err(VerifyError::Config(e.to_string())),
     };
 
+    // Pin family (#84): mirror of the route load — absent file = inactive;
+    // load-time findings include confinement drops and the standing
+    // weakening annotations (L0001/W0042).
+    let pin_data = match crate::pin::load(&project_root) {
+        Ok(p) => p,
+        Err(e) => return Err(VerifyError::Config(e.to_string())),
+    };
+
     let mut findings: Vec<Finding> = Vec::new();
+    if let Some(mut loaded) = pin_data {
+        findings.append(&mut loaded.findings);
+        crate::pin::check(&project_root, &loaded.pins, &mut findings);
+    }
     let routes = match routes {
         Some(mut loaded) => {
             findings.append(&mut loaded.findings);
@@ -929,6 +941,134 @@ mod tests {
         assert!(
             findings.iter().all(|f| !f.code.starts_with("MDATRON-E003")),
             "no route findings without route data; got {findings:?}"
+        );
+    }
+
+    // ── pin family (#84): sha256 governance over governed files ────────────
+
+    fn pinned_project(label: &str, content: &str) -> TempProject {
+        let proj = TempProject::new(label);
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write("GOVERNING.md", "# governing doc\n");
+        proj.write("governed.md", content);
+        let sha = crate::init::sha256_hex(content.as_bytes());
+        proj.write(
+            ".mdatron/pins.yaml",
+            &format!(
+                "pins:\n- governing: GOVERNING.md\n  file: governed.md\n  sha256: \"{sha}\"\n"
+            ),
+        );
+        proj
+    }
+
+    // RED GATE (#84, drawn from the live incident: codes.rs changed under
+    // DESIGN's OPEN block with no signal): a governed-file change with a stale
+    // pin FAILS (E0061) — and passes again after re-pin. Pre-impl, pins.yaml
+    // is inert and the drift is silent.
+    #[test]
+    fn stale_pin_fails_and_passes_after_repin() {
+        let proj = pinned_project("pin-stale", "original content\n");
+        // Fresh pin: clean.
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        assert!(verify(&cfg).unwrap().is_empty());
+        // The governed file changes; the pin is now stale: FAIL.
+        proj.write("governed.md", "changed content\n");
+        let findings = verify(&cfg).unwrap();
+        let f = findings
+            .iter()
+            .find(|f| f.code == "MDATRON-E0061")
+            .unwrap_or_else(|| panic!("expected E0061 pin-stale; got {findings:?}"));
+        assert_eq!(f.severity, Severity::Error);
+        assert!(f.quoted.iter().any(|q| q.content.contains("governed.md")));
+        // Re-pin (the single-command recompute, as a library call): clean again.
+        let updated = crate::pin::update(&proj.0, false).unwrap();
+        assert_eq!(updated.len(), 1, "one pin recomputed");
+        assert!(verify(&cfg).unwrap().is_empty(), "re-pin restores clean");
+    }
+
+    // RED GATE (#84): a pin whose target is gone is E0062, not silence.
+    #[test]
+    fn missing_pin_target_is_e0062() {
+        let proj = pinned_project("pin-missing", "content\n");
+        std::fs::remove_file(proj.0.join("governed.md")).unwrap();
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert!(
+            findings
+                .iter()
+                .any(|f| f.code == "MDATRON-E0062" && f.severity == Severity::Error),
+            "expected E0062; got {findings:?}"
+        );
+    }
+
+    // #84 confinement: escaping pin targets rejected under the confinement
+    // codes, existent and non-existent alike (falsification clause).
+    #[test]
+    fn escaping_pin_entries_are_rejected() {
+        for (pins, code) in [
+            (
+                "pins:\n- governing: GOVERNING.md\n  file: \"../escape.md\"\n  sha256: \"00\"\n",
+                "MDATRON-E0011",
+            ),
+            (
+                "pins:\n- governing: GOVERNING.md\n  file: \"/etc/passwd\"\n  sha256: \"00\"\n",
+                "MDATRON-E0010",
+            ),
+        ] {
+            let proj = pinned_project("pin-escape", "content\n");
+            proj.write(".mdatron/pins.yaml", pins);
+            let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+            let findings = verify(&cfg).unwrap();
+            assert!(
+                findings.iter().any(|f| f.code == code),
+                "expected {code}; got {findings:?}"
+            );
+        }
+    }
+
+    // RED GATE (#84, DESIGN §Validation is data-driven): a standing tombstoned
+    // weakening (unpinned entry with justification) emits its informational
+    // lint on every whole-tree run (L0001); an UNJUSTIFIED weakening is
+    // flagged louder (W0042).
+    #[test]
+    fn unpinned_annotations_stay_loud() {
+        let proj = pinned_project("pin-unpinned", "content\n");
+        proj.write(
+            ".mdatron/pins.yaml",
+            "pins: []\nunpinned:\n- file: governed.md\n  governing: GOVERNING.md\n  reason: \"governance moved to route naming\"\n  owner: operator\n- file: other.md\n  governing: GOVERNING.md\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert!(
+            findings
+                .iter()
+                .any(|f| f.code == "MDATRON-L0001" && f.severity == Severity::Lint),
+            "justified tombstone emits the standing lint; got {findings:?}"
+        );
+        assert!(
+            findings
+                .iter()
+                .any(|f| f.code == "MDATRON-W0042" && f.severity == Severity::Warning),
+            "unjustified weakening is flagged; got {findings:?}"
+        );
+    }
+
+    // #84 inactivity: no pins.yaml -> family inactive.
+    #[test]
+    fn absent_pins_file_keeps_family_inactive() {
+        let proj = routed_project("pin-inactive");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert!(
+            findings.iter().all(|f| !f.code.starts_with("MDATRON-E006")),
+            "no pin findings without pin data; got {findings:?}"
         );
     }
 
