@@ -1,6 +1,6 @@
 {
   "next_display_id": 88,
-  "next_comment_id": 231,
+  "next_comment_id": 232,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -1244,7 +1244,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-27T18:14:04.125772Z",
-      "updated_at": "2026-07-27T18:14:55.744701Z",
+      "updated_at": "2026-07-27T20:00:30.326303Z",
       "labels": [
         "enhancement"
       ],
@@ -1261,6 +1261,15 @@
           "kind": "plan",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAZ0ozHDH8UbBN8f2u+U7hhmtjScgVRzo6aFegP1XOYpi7q7iPlhebY2/ofZdn2wQ+4Yn2k7AnbWoUDr2C6eEEAw=="
+        },
+        "2835efe0-4991-40b2-b48b-ff570e645825": {
+          "display_id": 231,
+          "author": "79Ig",
+          "content": "OPERATOR RATIFIED (2026-07-27). Standing ruling, effective immediately: fix-lane closure step (5) — before commit, sweep the standing documents (DESIGN.md, README.md) for OPEN markers and statements the lane resolves or contradicts; amend them in-lane or record 'no standing-doc impact' in the closing comment. Interim control until #84 mechanizes the attention loop; remains the semantic layer after. Closing as ratified ruling; the rule lives here + in session memory.",
+          "created_at": "2026-07-27T20:00:30.312643Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAM7+tEjU+IbCzU7+rtu5dDObia941sExhYtgoNQSwCMAxLKDqYYCTpiF5EU8OsO1abtiq2D/csgn8ukNWNrV0Aw=="
         }
       }
     },
@@ -3614,8 +3623,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-27T18:14:55.744701Z",
+    "timestamp": "2026-07-27T20:00:30.326303Z",
     "agent_id": "79Ig",
-    "agent_seq": 171
+    "agent_seq": 172
   }
 }
