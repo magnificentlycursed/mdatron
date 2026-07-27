@@ -1,6 +1,6 @@
 {
   "next_display_id": 88,
-  "next_comment_id": 235,
+  "next_comment_id": 236,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -739,14 +739,25 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-26T10:11:20.111373Z",
-      "updated_at": "2026-07-26T10:12:53.277066Z",
+      "updated_at": "2026-07-27T23:07:23.782501Z",
       "labels": [
         "feature"
       ],
       "related": [
         "3cc73526-d8d8-4eb3-9bd3-a7affee9ee90",
         "f7b7edd2-26cc-4bf0-839d-af22d2b8ca75"
-      ]
+      ],
+      "comments": {
+        "5d5e7611-af28-4741-934f-63417ea42eba": {
+          "display_id": 235,
+          "author": "79Ig",
+          "content": "Built on feature/85-vocab (af6b041). E0090 coinage (bold-introduced, draft-exempt) / E0091 label schemes (engine cluster detector + adopter allowlist) / E0092 reserved use / E0093 anti-patterns / E0094 numeric-claims (D3: digits + word-numbers within 4 words of a configured field reference vs that doc's frontmatter count). Precise lines, quoted prose, linear-time patterns, per-section activation. 7 red gates demonstrated. DOGFOOD DECISION: no repo vocabulary.yaml — the 38 historical reviews are dense with pre-registry bold emphasis + domain clusters (SEC-F3 etc., the incident corpus itself); retrofitting a curated registry is separate work — file a curation issue if wanted. 311 tests green, gauntlet clean. Pushed for CI.",
+          "created_at": "2026-07-27T23:07:23.751653Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABADEiVuXtHxx0IOt6cVcVTgQAMI1xZ4gUGZsiMFIlMY0FaIh7xFfxMQZ+RqEwfeg5zo1QVZaRw3OHg/Iur9q9XBg=="
+        }
+      }
     },
     "3584e906-268f-45e3-96ef-9d107e4ade52": {
       "uuid": "3584e906-268f-45e3-96ef-9d107e4ade52",
@@ -3643,8 +3654,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-27T22:58:31.516028Z",
+    "timestamp": "2026-07-27T23:07:23.782501Z",
     "agent_id": "79Ig",
-    "agent_seq": 181
+    "agent_seq": 182
   }
 }
