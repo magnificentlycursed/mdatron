@@ -1817,11 +1817,12 @@
       "uuid": "9a9d6a89-465b-47fe-bacb-e0589ebccf91",
       "display_id": 89,
       "title": "dsl let: bindings evaluate in declaration order, not BTreeMap key order (chained bindings break alphabetically — #47 cold-run finding)",
-      "status": "open",
+      "status": "closed",
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-28T17:14:04.566273Z",
-      "updated_at": "2026-07-28T17:20:07.429586Z",
+      "updated_at": "2026-07-28T19:03:41.977018Z",
+      "closed_at": "2026-07-28T19:03:41.977003Z",
       "labels": [
         "bug"
       ],
@@ -3760,8 +3761,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-28T19:03:34.594434Z",
+    "timestamp": "2026-07-28T19:03:41.977018Z",
     "agent_id": "79Ig",
-    "agent_seq": 208
+    "agent_seq": 209
   }
 }
