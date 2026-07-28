@@ -1,6 +1,6 @@
 {
   "next_display_id": 88,
-  "next_comment_id": 239,
+  "next_comment_id": 240,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -3375,7 +3375,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-19T20:53:16.527423Z",
-      "updated_at": "2026-07-27T20:00:48.288695Z",
+      "updated_at": "2026-07-28T03:02:48.594420Z",
       "labels": [
         "feature",
         "v1.0"
@@ -3391,6 +3391,15 @@
         "fd19315f-a56d-4b81-a131-e8a697a3a77b"
       ],
       "comments": {
+        "85cf17fc-b6f8-4665-8b99-a95857b7f964": {
+          "display_id": 239,
+          "author": "79Ig",
+          "content": "MILESTONE ISSUE COMPLETE — all four families shipped to main per the ratified contracts (2026-07-27 formats + #50 code ranges), acceptance criteria mapped to evidence:\n\nROUTE (#83, main bbf6f64): unrouted file blocks (E0030 ✓ test), absent governing doc blocks (E0031 ✓ no-follow), route conflict errors (E0032 ✓ the DESIGN conflict-outcome criterion), underivable name flagged (W0041 ✓, slug-incident grammar dogfooded on review-log — all 38 names conform), confinement escapes fail-closed existent+absent (✓).\nPIN (#84, main 312f92e): stale pin fails AND passes after re-pin (E0061 ✓ the exact contract sentence, tested both ways), recompute single command (mdatron pin --update ✓ +--dry-run), target-missing (E0062 ✓), governance-weakening annotation form defined+recorded (unpinned tombstones → L0001 standing lint / W0042 unjustified — the seeded-weakening-without-justification and annotated-weakening-emits criteria from the agnosticism audit ✓), manifest fixed-point anchored in the separate governing record (✓ dogfood), THE STALENESS INCIDENT IS A LIVE CI TRIPWIRE (DESIGN.md pins src/codes.rs).\nVOCABULARY (#85, main 5f76323): unregistered coinage flagged with draft exempt (E0090 ✓), invented label scheme (E0091 ✓ letter-cluster incident), reserved-word misuse (E0092 ✓), register anti-pattern (E0093 ✓), numeric-claims per D3/#79 (E0094 ✓ digits+word-numbers, configured references only; DESIGN amended).\nCITATION (#86, main 368ae43): dead citation rejected against the dirty working tree — uncommitted counts, no git (E0100 ✓ pinned by test), out-of-range incl. ranges (E0101 ✓), escapes reach confinement intact (✓ the escape gate caught+fixed a truncation defect), per-route opt-in amendment recorded.\nCROSS-FAMILY: every family strict-parses (engine-shipped-schema discipline), inactivity on absent data (✓ per-family tests), adopter content quoted never inline, precise source lines, linear-time adopter patterns, 14 new explain pages, 316 tests.\n\nHONEST RESIDUALS (recorded, not blockers to this issue's criterion): (1) D3 body-content falsifiability leg rides #47 per DESIGN L85; (2) the inactivity-REPORT lint ('families inactive and the inactivity is reported') and the symlink-cycle/bounded-extras-scan fixture belong to the agnosticism-audit + incremental-agreement acceptance clusters — engine-wide criteria beyond the four family lanes, tracked with the remaining v1.0 issues; (3) vocabulary corpus curation (repo vocabulary.yaml) is optional follow-up work. Closing.",
+          "created_at": "2026-07-28T03:02:48.581549Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA09qMcGXPnDX+Y1qbgI5AlgD/sFVS19SgYLOOMKQJf1wtcniKW14aL3vE2q0k1enP8lUDy91De0EeG+IuZXGoBw=="
+        },
         "cc78515c-e790-42dd-a141-589be37a1cb8": {
           "display_id": 228,
           "author": "79Ig",
@@ -3677,8 +3686,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-28T03:00:48.797259Z",
+    "timestamp": "2026-07-28T03:02:48.594420Z",
     "agent_id": "79Ig",
-    "agent_seq": 189
+    "agent_seq": 190
   }
 }
