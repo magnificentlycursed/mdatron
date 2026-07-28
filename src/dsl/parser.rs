@@ -76,13 +76,48 @@ pattern:
         let rule = &pf.pattern.rules[0];
         assert_eq!(rule.let_bindings.len(), 2);
         assert_eq!(
-            rule.let_bindings.get("expected"),
-            Some(&r#"key("composition-matrix", $self.phase)"#.to_string())
+            rule.let_bindings
+                .iter()
+                .find(|(k, _)| k == "expected")
+                .map(|(_, v)| v.as_str()),
+            Some(r#"key("composition-matrix", $self.phase)"#)
         );
         assert!(rule.location.is_some());
         assert_eq!(
             rule.location.as_ref().unwrap().field.as_deref(),
             Some("relevant_domains")
+        );
+    }
+
+    // RED GATE (#89, #47 cold-run finding): let bindings preserve DECLARATION
+    // order — `aa` references the earlier-declared `zz`, which alphabetical
+    // (BTreeMap) evaluation would visit in the wrong order.
+    #[test]
+    fn let_bindings_preserve_declaration_order() {
+        let yaml = r#"
+mdatron_dsl_version: 1
+pattern:
+  id: order
+  rules:
+    - id: r
+      context: c
+      let:
+        zz: 'count($self.items)'
+        aa: '$zz == 3'
+      assert: $aa
+      code: T-E0001
+      message: m
+"#;
+        let pf = parse_pattern_file(yaml).expect("parses");
+        let names: Vec<&str> = pf.pattern.rules[0]
+            .let_bindings
+            .iter()
+            .map(|(k, _)| k.as_str())
+            .collect();
+        assert_eq!(
+            names,
+            vec!["zz", "aa"],
+            "declaration order, not alphabetical"
         );
     }
 
