@@ -1,6 +1,6 @@
 {
   "next_display_id": 90,
-  "next_comment_id": 241,
+  "next_comment_id": 242,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -1816,13 +1816,24 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-28T17:14:04.566273Z",
-      "updated_at": "2026-07-28T17:14:31.272564Z",
+      "updated_at": "2026-07-28T17:20:07.429586Z",
       "labels": [
         "bug"
       ],
       "related": [
         "69b33517-946c-45ba-9287-c1231028d5ec"
-      ]
+      ],
+      "comments": {
+        "a3153757-3e2c-49c6-b5ed-f5d9a1afae33": {
+          "display_id": 241,
+          "author": "79Ig",
+          "content": "FIXED in the #47 lane (5b32bdb): let_bindings now Vec<(String,String)> via an order-preserving serde_yaml_ng::Mapping deserializer; declaration-order + chained-binding red gates at parse and end-to-end. Closing on merge.",
+          "created_at": "2026-07-28T17:20:07.416219Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAnyrn78xB3Pu62GtLQyOdc9upX7D/x9N3tMtJM+0PJ0uTP9g7uFj/bP8d2vc/T8f+BD23cqsicDsYxQXuvJJQDQ=="
+        }
+      }
     },
     "9e14b0dd-b125-4e1c-a9eb-0c15086a3f1e": {
       "uuid": "9e14b0dd-b125-4e1c-a9eb-0c15086a3f1e",
@@ -3744,8 +3755,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-28T17:20:00.549346Z",
+    "timestamp": "2026-07-28T17:20:07.429586Z",
     "agent_id": "79Ig",
-    "agent_seq": 202
+    "agent_seq": 203
   }
 }
