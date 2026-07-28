@@ -1,6 +1,6 @@
 {
   "next_display_id": 90,
-  "next_comment_id": 240,
+  "next_comment_id": 241,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -1106,13 +1106,24 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-28T17:13:44.534847Z",
-      "updated_at": "2026-07-28T17:14:25.690604Z",
+      "updated_at": "2026-07-28T17:20:00.549346Z",
       "labels": [
         "bug"
       ],
       "related": [
         "69b33517-946c-45ba-9287-c1231028d5ec"
-      ]
+      ],
+      "comments": {
+        "559fbc88-eed4-48eb-8c4a-d8c42b45bf1c": {
+          "display_id": 240,
+          "author": "79Ig",
+          "content": "FIXED in the #47 lane (5b32bdb): extract_into fans out array selections one-entry-per-element (single object stays one entry; last-wins collisions), matching the reference + the 2026-06-01 Gap-6 promise. Red-gated end-to-end. Closing on merge.",
+          "created_at": "2026-07-28T17:20:00.534088Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABANsj9m51uV3xHROt4Xq7/VB/n7pkKA6O7IBPucjN+6o4eg+b4iaDpHWh4WiOG757T6o8d7CuTdoSbLxQDz/D7BA=="
+        }
+      }
     },
     "6135d3c6-44c0-43d1-8080-dd5fd5cda222": {
       "uuid": "6135d3c6-44c0-43d1-8080-dd5fd5cda222",
@@ -3733,8 +3744,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-28T17:14:31.272564Z",
+    "timestamp": "2026-07-28T17:20:00.549346Z",
     "agent_id": "79Ig",
-    "agent_seq": 201
+    "agent_seq": 202
   }
 }
