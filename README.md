@@ -27,48 +27,47 @@ output for machine consumers.
 
 ## Install
 
-mdatron is in its bootstrap period (v0.1.0); the crates.io publish is gated
-on Phase 6 of the [binary-first refactor plan](
-../vsdd-cli/docs/refactor/binary-first-plan.md). For now, install from a
-local checkout of the `magnificentlycursed` monorepo:
+mdatron is pre-publish (v0.2.x); the crates.io release is tracked as the
+v1.0 publish milestone (tracker #48). For now, install from a checkout:
 
 ```
-git clone https://github.com/magnificentlycursed/magnificentlycursed
-cargo install --path magnificentlycursed/mdatron --locked
+git clone https://github.com/magnificentlycursed/mdatron
+cargo install --path mdatron --locked
 mdatron --version
 ```
-
-(The `mdatron` subdirectory lives inside the parent `magnificentlycursed`
-repo; standalone-`mdatron` packaging lands at Phase 6.)
 
 The `--locked` flag pins transitive dependencies to `Cargo.lock`; recommended
 for reproducible builds and CI.
 
-Once mdatron 0.1.0 is published to crates.io, the install command becomes:
+Once mdatron is published to crates.io, the install command becomes:
 
 ```
-cargo install mdatron --locked --version "0.1.0"
+cargo install mdatron --locked --version "0.2.0"
 ```
 
 (Version-pin to avoid unintentional upgrades when the crate publishes.)
 
 ## First run
 
-Create a minimal project that mdatron can validate:
+Scaffold with `mdatron init`, which deploys the `.mdatron/` skeleton — the
+`schemas/` and `patterns/` directories, a seeded `config.yaml` (adopter-owned
+from then on), and the managed-partition manifest:
 
 ```
-mkdir my-typed-docs
-cd my-typed-docs
-mkdir -p .mdatron/schemas .mdatron/patterns
+mkdir my-typed-docs && cd my-typed-docs
+mdatron init
 ```
 
-The `.mdatron/` directory is required: running `mdatron verify` against a
-project without it exits 2 with `MDATRON-E0080: pipeline-orchestration-
-failure`. (`mdatron init`, v0.1.x, will scaffold this automatically.)
+`config.yaml`'s `file_globs` are your declared **jurisdiction**: mdatron walks
+only what they claim, so third-party markdown deployed into your tree by other
+tools is never mdatron's to refuse. A tree with no config refuses loudly
+(`no jurisdiction declared`) rather than guessing — pass explicit `--files`
+globs for an ad-hoc run without one. Re-running `init` is a no-op on an intact
+tree; a hand-modified *managed* file is refused with `MDATRON-E0060`.
 
 Drop a JSON Schema at `.mdatron/schemas/blog.json` (a Layer 1 example follows
-below), drop a markdown file at the project root with matching frontmatter,
-and run:
+below), drop a markdown file with matching frontmatter inside your globs, and
+run:
 
 ```
 mdatron verify
@@ -81,23 +80,28 @@ $ mdatron verify
 mdatron verify: clean
 ```
 
-A run with diagnostics emits rustc-shape blocks on stderr and exits 1:
+A run with diagnostics emits rustc-shape blocks on stderr and exits 1. Your
+document's own text never rides inline in an engine line — it renders as a
+prefix-marked quoted block:
 
 ```
 $ mdatron verify
 error[MDATRON-E0050]: frontmatter-schema-violation
-  --> bad.md:1
-   = note: Additional properties are not allowed ('extra' was unexpected)
+  --> bad.md:3:1
+   = note: unexpected property not permitted by the schema
+   = unexpected:
+           > extra
    = explain: mdatron explain MDATRON-E0050
 mdatron verify: 1 error(s), 0 warning(s) across 1 finding(s)
 ```
 
 The `= explain:` line is copyable: paste `mdatron explain MDATRON-E0050` into
-your shell to read the per-code prose. Pipeline failures (missing schema
-directory, malformed pattern file, IO failure) print on stderr and exit 2.
-The `--json` flag emits a single JSON output object on stdout for machine
-consumers; stderr still carries the rustc-shaped diagnostics unless you also
-pass `--quiet`.
+your shell to read the per-code prose. Pipeline failures (missing config,
+malformed pattern file, IO failure) print on stderr and exit 2. Two machine
+forms share the same findings: `--json` emits a single output object on
+stdout, and `--compact` emits one size-capped block per finding (512 bytes,
+a contract limit) for agent-context consumers; add `--quiet` to silence the
+stderr rendering.
 
 ## Pre-commit integration
 
@@ -197,6 +201,75 @@ path-confined `key()` cross-file index mechanism). The DSL's scope is
 cross-file and registry validation; body-content extraction functions are
 out of scope.
 
+## Conformance families (Layer 2 data)
+
+Beyond schemas and rule patterns, four generic engines activate on adopter
+data under `.mdatron/` — each inactive until its file exists, each strict-
+parsed, every path confined to the governed tree:
+
+**Routes** (`routes.yaml`) — the closed-world allowlist:
+
+```yaml
+routes:
+- files: "review-log/**/*.md"
+  governed_by: DESIGN.md
+  naming: "^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9-]+\\.md$"   # optional
+  citations: true                                        # optional, see below
+```
+
+With routes supplied: an unclaimed walked file blocks (`E0030`), a route
+citing an absent governing document blocks (`E0031`), two routes claiming one
+file is an error (`E0032`), and a filename underivable from the `naming`
+grammar warns (`W0041`).
+
+**Pins** (`pins.yaml`) — governing documents pin sha256 over governed files:
+
+```yaml
+pins:
+- governing: DESIGN.md
+  file: src/codes.rs
+  sha256: "…"
+```
+
+A governed-file change with a stale pin fails (`E0061`) until you re-read the
+governing document and re-pin: `mdatron pin --update` (preview with
+`--dry-run`; bare `mdatron pin` checks). Un-pinning persists as a justified
+`unpinned:` tombstone that stays loud as an informational lint (`L0001`);
+an unjustified one warns (`W0042`).
+
+**Vocabulary** (`vocabulary.yaml`) — registry-driven prose scan: unregistered
+bold-introduced coinages (`E0090`, draft-status exempt), letter-plus-number
+label clusters outside your allowlist (`E0091`), reserved-word use (`E0092`),
+listed register anti-patterns (`E0093`), and numeric claims — a prose numeral
+restating a configured frontmatter field's count and drifting from it
+(`E0094`).
+
+**Citations** — data-less; opt a route in with `citations: true` and its
+files' `path:line` / `path:start-end` references are verified against the
+working tree (uncommitted content counts; no git subprocess): a dead citation
+blocks (`E0100`), one past the target's end blocks (`E0101`). Historical
+corpora simply don't opt in.
+
+Every family code has an explain page: `mdatron explain MDATRON-E0061`.
+
+## Onboarding: the init-and-hook path
+
+The adoption sequence, each step optional after the first:
+
+1. `mdatron init` — scaffold; scope `file_globs` in `config.yaml` to your
+   typed corpus (your jurisdiction).
+2. Add a schema per `schema_class` under `.mdatron/schemas/`; opt strictness
+   in with `require_frontmatter` globs in `config.yaml` (`W0040` flags a
+   governed file that silently lacks frontmatter).
+3. Route your corpus (`routes.yaml`) to its governing documents; add a
+   `naming` grammar if filenames are a contract.
+4. Pin what governs you (`pins.yaml` + `mdatron pin --update`) so governed
+   drift blocks instead of rotting.
+5. Wire the fail-closed pre-commit hook (next section) and a CI job that
+   builds mdatron and runs `mdatron verify --project-root .` — a repository
+   that verifies itself is the intended end state (this repo's own
+   `self-validate` CI job is the worked example).
+
 ## Relationship to vsdd
 
 **mdatron is methodology-agnostic.** The Layer 1 + Layer 2 architecture is
@@ -221,23 +294,22 @@ vsdd composes mdatron in two ways:
   methodology is encoded as mdatron schemas + patterns; mdatron is the
   engine, not the methodology.
 
-The
-mdatron-examples library (deferred to adopter evidence; see [`DESIGN.md`](./DESIGN.md) § References, absorption ledger)
-(v1.0 candidate; not in v0.1.0 — see
-[`V1-SHIP-CRITERIA.md`](./V1-SHIP-CRITERIA.md)) will ship four generalized
-artifact-class schemas (DESIGN doc, manual-test, PR template, CHANGELOG) for
-non-VSDD adopters.
+A generalized examples library (artifact-class schemas for non-VSDD adopters)
+is deferred to adopter evidence per the absorption ledger — see
+[`DESIGN.md`](./DESIGN.md) § References.
 
 ## Where to go next
 
-- [`DESIGN.md`](./DESIGN.md) — the standing design: agent-first conformance engine, check families, two-layer
-  architecture, DSL reference, error catalog format, agent-loop integration,
-  built-in patterns, path-confinement discipline
-- [`V1-SHIP-CRITERIA.md`](./V1-SHIP-CRITERIA.md) — what v1.0 ships and what
-  is reserved for v1.1 (LSP server, MCP server)
-- `mdatron explain <code>` — per-code prose for any emitted diagnostic; the
-  v0.1.0 baseline catalog covers `MDATRON-E0001`, `E0002`, `E0050`, `E0070`,
-  `E0080`; the catalog grows by one entry per newly-emitted code
+- [`DESIGN.md`](./DESIGN.md) — the standing design: behavioral contracts,
+  the five check families, output marking discipline, path confinement,
+  governance-data governance
+- [`docs/dsl-reference.md`](./docs/dsl-reference.md) — the complete Layer 2
+  construct inventory with evaluation semantics; validated by a cold-context
+  authoring campaign at 100% one-pass (`dsl-falsifiability-report.md`)
+- `mdatron explain <code>` — per-code prose for every emitted diagnostic
+  (frontmatter, confinement, schema, init, jurisdiction, route, pin,
+  vocabulary, and citation codes); the catalog grows by one entry per
+  newly-emitted code
 - [vsdd-cli](../vsdd-cli/) — if you are adopting VSDD, the vsdd toolkit
   composes mdatron + ships the methodology artifacts; `vsdd init` deploys
   both
