@@ -1,6 +1,6 @@
 {
   "next_display_id": 90,
-  "next_comment_id": 244,
+  "next_comment_id": 245,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -1469,7 +1469,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-19T20:53:21.686201Z",
-      "updated_at": "2026-07-28T20:50:53.299552Z",
+      "updated_at": "2026-07-28T20:51:06.612006Z",
       "labels": [
         "feature",
         "v1.0"
@@ -1483,6 +1483,15 @@
           "kind": "result",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABARRf1mV/9CzUhQ5UBz6bipo1DB4ypBySQ3CRb2u7cpeLo8GRYW0CVsDOL5vo7Viyh3wyLRTIZ6yjyz0K7MgbgBA=="
+        },
+        "569faff8-5ebe-49da-8737-1e8f2f8e8d45": {
+          "display_id": 244,
+          "author": "79Ig",
+          "content": "#49 authoring shipped + v0.2.0 cut (tag pushed; main 404f4fd green). Relay drafted for operator to send vsdd-cli: raises status, v0.2.0 surface, THE ONE BREAKING CHANGE (D1: config-less temp trees now refuse — their #764 binary-driving tests need config.yaml or --files), #88 fan-out serving their registries, cold-read request for #49 acceptance. #49 open pending reads; #48 publish is the last v1.0 issue.",
+          "created_at": "2026-07-28T20:51:06.595081Z",
+          "kind": "handoff",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAVP8/4nHb1+ONk0AhQYHo1vW9JF6naVKUAtTPXGkYvWFRanM1Jb8JrgGoEc9lzK0+uYF9VCxFoymveSNZKgbADQ=="
         }
       }
     },
@@ -3768,8 +3777,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-28T20:51:00.461783Z",
+    "timestamp": "2026-07-28T20:51:06.612006Z",
     "agent_id": "79Ig",
-    "agent_seq": 213
+    "agent_seq": 214
   }
 }
