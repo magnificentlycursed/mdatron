@@ -1,6 +1,6 @@
 {
   "next_display_id": 88,
-  "next_comment_id": 237,
+  "next_comment_id": 238,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -3145,13 +3145,24 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-26T10:11:39.523245Z",
-      "updated_at": "2026-07-26T10:12:47.605675Z",
+      "updated_at": "2026-07-28T00:55:27.131658Z",
       "labels": [
         "feature"
       ],
       "related": [
         "f7b7edd2-26cc-4bf0-839d-af22d2b8ca75"
-      ]
+      ],
+      "comments": {
+        "cbbda300-6227-4cf5-862c-19aa82b60819": {
+          "display_id": 237,
+          "author": "79Ig",
+          "content": "FORMAT AMENDMENT (recorded before build; ratified shape said 'data-less, activates over routed files'): blanket activation floods HISTORICAL corpora — our own routed review-log legitimately cites pre-collapse paths (mdatron-core/src/...) that no longer exist; those documents were true when written and rewriting history is wrong. Amendment: routes.yaml entries gain an OPTIONAL 'citations: true' flag (compatible extension to the ratified route shape); citation scanning activates per-route, so living corpora opt in and historical ones stay archival. DESIGN Five-families citation sentence + formats-resolution note amended in-lane (step 5). Evidence check performed: grep of review-log shows dense file:line citations to moved paths — the flood is real, not hypothetical.",
+          "created_at": "2026-07-28T00:55:27.115408Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA2DYX9V2CJFJ1np8GaTIaai+2dGPG2GMIYD1tphS2bH8R2JG8kEm7pji+MDSjwzqkzGEtLbJh1PfFBJlP2f+7CQ=="
+        }
+      }
     },
     "e504525f-77cd-4dfc-94f1-ba221ebab2f2": {
       "uuid": "e504525f-77cd-4dfc-94f1-ba221ebab2f2",
@@ -3660,8 +3671,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-28T00:55:00.123919Z",
+    "timestamp": "2026-07-28T00:55:27.131658Z",
     "agent_id": "79Ig",
-    "agent_seq": 185
+    "agent_seq": 186
   }
 }
