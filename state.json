@@ -1,6 +1,6 @@
 {
   "next_display_id": 90,
-  "next_comment_id": 243,
+  "next_comment_id": 244,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -1473,11 +1473,22 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-19T20:53:21.686201Z",
-      "updated_at": "2026-07-19T20:53:22.448537Z",
+      "updated_at": "2026-07-28T20:50:53.299552Z",
       "labels": [
         "feature",
         "v1.0"
-      ]
+      ],
+      "comments": {
+        "442bd250-711f-4c45-94b3-3efa64791a91": {
+          "display_id": 243,
+          "author": "79Ig",
+          "content": "Authoring merged (bcc12a4) and v0.2.0 CUT (tag v0.2.0 @ 404f4fd, main CI green). Issue stays OPEN for the two acceptance reads: (1) operator read of README + docs/dsl-reference.md; (2) external cold read — requested from vsdd-cli in the 2026-07-28 relay (cold session, README+reference only, attempt the onboarding path on a scratch tree, report friction). Close on both reads clean (or after routing their findings).",
+          "created_at": "2026-07-28T20:50:53.282342Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABARRf1mV/9CzUhQ5UBz6bipo1DB4ypBySQ3CRb2u7cpeLo8GRYW0CVsDOL5vo7Viyh3wyLRTIZ6yjyz0K7MgbgBA=="
+        }
+      }
     },
     "7f91651e-0b4e-4a0d-aa3e-567f6ebaea4a": {
       "uuid": "7f91651e-0b4e-4a0d-aa3e-567f6ebaea4a",
@@ -3761,8 +3772,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-28T20:42:06.646680Z",
+    "timestamp": "2026-07-28T20:50:53.299552Z",
     "agent_id": "79Ig",
-    "agent_seq": 211
+    "agent_seq": 212
   }
 }
