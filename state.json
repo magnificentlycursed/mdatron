@@ -1098,11 +1098,12 @@
       "uuid": "5ee2ea80-c483-44f0-815d-81d8fa6cd9f4",
       "display_id": 88,
       "title": "dsl keys: array selections fan out to one entry per element (Gap-6 revision never landed in code; blocks array-of-objects registries — #47 cold-run finding)",
-      "status": "open",
+      "status": "closed",
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-28T17:13:44.534847Z",
-      "updated_at": "2026-07-28T17:20:00.549346Z",
+      "updated_at": "2026-07-28T19:03:26.255891Z",
+      "closed_at": "2026-07-28T19:03:26.255880Z",
       "labels": [
         "bug"
       ],
@@ -3763,8 +3764,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-28T19:03:19.098883Z",
+    "timestamp": "2026-07-28T19:03:26.255891Z",
     "agent_id": "79Ig",
-    "agent_seq": 206
+    "agent_seq": 207
   }
 }
