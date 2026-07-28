@@ -22,6 +22,7 @@
 //! dispatch (Layer 1), DSL evaluation with the cross-file `key()` index (Layer 2),
 //! and rustc-shaped + JSON output. See CHANGELOG.md for the surface shipped per release.
 
+pub mod cite;
 pub mod codes;
 pub mod config;
 pub mod confine;
