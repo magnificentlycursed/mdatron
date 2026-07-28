@@ -10,6 +10,8 @@ the TRON blockchain.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-07-28
+
 ### Fixed
 - dsl: `keys:` array selections now fan out to one index entry per element — the array-of-objects registry shape (promised by the 2026-06-01 falsifiability report's Gap-6 revision) had never landed in code, making the natural registry form unindexable; caught by the #47 cold-context re-run (#88)
 - dsl: `let:` bindings evaluate in declaration order and may chain (a later binding referencing an earlier one) — the former BTreeMap storage evaluated alphabetically, breaking declared chains; caught by the #47 cold-context re-run (#89)
