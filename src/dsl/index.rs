@@ -527,26 +527,36 @@ fn extract_into(
             }),
         }
     } else {
-        // Selected is one entry; extract its key via indexed_by select.
-        let key_value = apply_select(&selected, indexed_by).map_err(|e| IndexError::Selection {
-            path: escape_path_text(&path.to_string_lossy()),
-            select: indexed_by.to_string(),
-            error: e,
-        })?;
-        let key_str = match key_value {
-            Value::Str(s) => s,
-            other => {
-                return Err(IndexError::Selection {
+        // Fan-out (#88, the Gap-6 semantics finally landed in code): an array
+        // selection contributes one entry per element — a registry is
+        // naturally an array of objects — while a single object stays one
+        // entry. Same-key collisions are last-wins.
+        let entries: Vec<Value> = match selected {
+            Value::Array(items) => items,
+            other => vec![other],
+        };
+        for entry in entries {
+            let key_value =
+                apply_select(&entry, indexed_by).map_err(|e| IndexError::Selection {
                     path: escape_path_text(&path.to_string_lossy()),
                     select: indexed_by.to_string(),
-                    error: format!(
-                        "indexed_by must yield a string key; got {}",
-                        other.type_name()
-                    ),
-                });
-            }
-        };
-        out.insert(key_str, selected);
+                    error: e,
+                })?;
+            let key_str = match key_value {
+                Value::Str(s) => s,
+                other => {
+                    return Err(IndexError::Selection {
+                        path: escape_path_text(&path.to_string_lossy()),
+                        select: indexed_by.to_string(),
+                        error: format!(
+                            "indexed_by must yield a string key; got {}",
+                            other.type_name()
+                        ),
+                    });
+                }
+            };
+            out.insert(key_str, entry);
+        }
         Ok(())
     }
 }

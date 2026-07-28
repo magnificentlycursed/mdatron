@@ -1376,6 +1376,94 @@ mod tests {
         );
     }
 
+    // #88 (#47 cold-run finding): an ARRAY selection fans out to one index
+    // entry per element — the natural registry shape (array of objects) is
+    // indexable. Pre-fix, indexed_by hit the whole array and errored.
+    #[test]
+    fn keys_array_selection_fans_out_per_element() {
+        let proj = TempProject::new("fanout");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write(
+            "registry/domains.md",
+            "---\nschema_class: domain-registry\nentries:\n- id: se\n  pairs_with: qe\n- id: qe\n  pairs_with: se\n---\n",
+        );
+        proj.write(
+            ".mdatron/patterns/p.yaml",
+            r#"mdatron_dsl_version: 1
+pattern:
+  id: fanout
+  keys:
+    - name: domains
+      source: "registry/domains.md"
+      select: "$.frontmatter.entries"
+      indexed_by: "$.id"
+  rules:
+    - id: r
+      context: work-entry
+      assert: 'every(d in $self.relevant_domains, defined(key("domains", $d)))'
+      code: T-E0001
+      message: "unresolvable domain"
+"#,
+        );
+        proj.write(
+            "docs/good.md",
+            "---\nschema_class: work-entry\nrelevant_domains: [se, qe]\n---\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        assert!(verify(&cfg).unwrap().is_empty(), "both ids resolve");
+        proj.write(
+            "docs/good.md",
+            "---\nschema_class: work-entry\nrelevant_domains: [se, zz]\n---\n",
+        );
+        let findings = verify(&cfg).unwrap();
+        assert_eq!(findings.len(), 1, "zz misses; got {findings:?}");
+        assert_eq!(findings[0].code, "T-E0001");
+    }
+
+    // #89 (#47 cold-run finding): chained let bindings evaluate in declaration
+    // order end-to-end — `missing` (alphabetically first) references
+    // `required` (declared first). Pre-fix: 'undefined binding: required'.
+    #[test]
+    fn chained_let_bindings_evaluate_in_declaration_order() {
+        let proj = TempProject::new("let-chain");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write(
+            ".mdatron/patterns/p.yaml",
+            r#"mdatron_dsl_version: 1
+pattern:
+  id: chain
+  rules:
+    - id: r
+      context: work-entry
+      let:
+        required: '["a", "b"]'
+        missing: 'difference($required, $self.covers)'
+      assert: 'count($missing) == 0'
+      code: T-E0002
+      message: "missing entries"
+"#,
+        );
+        proj.write(
+            "docs/d.md",
+            "---\nschema_class: work-entry\ncovers: [a]\n---\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert_eq!(
+            findings.len(),
+            1,
+            "chained lets evaluate and the rule fires; got {findings:?}"
+        );
+    }
+
     // D2 boundary: a file with frontmatter satisfies the requirement — W0040
     // is about ABSENCE, not validity (a malformed block is E0001's job).
     #[test]

@@ -104,3 +104,53 @@ The revisions are all additive (no breaking changes); they extend the standard l
 - Adopter evidence surfaces additional gaps (run a fresh cold-context test against the gap surface)
 - v1.1 surfaces add new DSL features (run a focused test covering those)
 - Methodology amendment requires re-validation (operator directive)
+
+---
+
+# Re-run at the narrowed scope — 2026-07-28 (#47)
+
+**Reference under test:** `docs/dsl-reference.md` — authored for this campaign
+from the implemented surface (the original spec section retired with
+DESIGN-MDATRON). **Method:** same as 2026-06-01 — a cold-context agent with no
+conversation history, no repository access, and ONLY the reference text,
+authoring 8 rules; measured by a harness that runs each authored rule verbatim
+and in isolation against seeded should-fire / must-stay-quiet fixtures through
+the real binary. Rule set: the three 2026-06-01 passers re-posed, plus five
+first-consumer-real rules from the vsdd-cli #73 requirement set (referential
+integrity, exact coverage, exactly-one, conditional membership, draft gate).
+
+## Results
+
+| Run | Reference state | Authored | One-pass execution | Notes |
+|---|---|---|---|---|
+| 1 | draft 1 | 8/8 (4 confident) | 2/8 | Reference defect: the `.md` index-source `{frontmatter: …}` wrapper was undocumented — every `keys:` rule failed at index build. Reference revised (wrapper + a new Evaluation-semantics section: short-circuiting, Null-guard rules, collision order). |
+| 2 | revised | 8/8 (6 confident) | 2/8 → **8/8** | Initial failures were **engine defects, not authoring errors**: (a) `keys:` array fan-out — promised by 2026-06-01 Gap 6 — had never landed in code (#88); (b) `let:` bindings evaluated in BTreeMap-alphabetical order, breaking declared chains (#89). Both fixed with red-gated tests; the run-2 artifacts, unchanged, then pass 8/8: compile, quiet-on-clean, fire-on-dirty. |
+
+**Score: 8/8 = 100% one-pass against the revised reference and the corrected
+engine. The ≥80% acceptance criterion is MET.**
+
+## Findings routed
+
+- **Engine** — #88 (array fan-out) and #89 (declaration-order `let:`) fixed
+  in-lane; both were invisible to the unit suite and surfaced only by cold
+  authoring, which is the argument for this test existing.
+- **Contract** — DESIGN's construct-inventory line claimed "arithmetic and
+  comparison operators"; the engine implements equality only. Amended
+  (a narrowed-surface falsifier caught by the campaign).
+- **Known limit, both agents independently:** no filter/count-with-predicate,
+  so "exactly N matching elements" has no direct encoding (run 2 reached it
+  via last-wins index + universal equality, unsound for deeply-identical
+  duplicates). Recorded as the standing candidate for any future DSL-expansion
+  decision — consistent with the vsdd #73 uniqueness assessment; not a v1.0
+  gate.
+- **Residual frictions** (empty-`[]` shown nowhere, `{{expr}}` scope,
+  non-string index keys): folded into `docs/dsl-reference.md` as they were
+  reported; none blocked authoring.
+
+## Waiver record (migrated per #47)
+
+The 2026-06-01 run scored 43% and the routing decision accepted the revised
+spec **without** a second cold-context test (cost-bounded) — that acceptance
+was the standing waiver, previously noted in V1-SHIP-CRITERIA (retired at the
+design ratification). This re-run **discharges the waiver**: the bar is now
+met by measurement, at the narrowed scope, against the corrected engine.

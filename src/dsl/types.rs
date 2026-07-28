@@ -1,7 +1,6 @@
 //! AST types for parsed pattern files.
 
 use serde::Deserialize;
-use std::collections::BTreeMap;
 
 /// Top-level pattern file: a `mdatron_dsl_version` declaration + a `pattern` block.
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
@@ -41,11 +40,12 @@ pub struct KeyDecl {
 pub struct Rule {
     pub id: String,
     pub context: ContextSelector,
-    /// Local bindings evaluated before the assertion. Stored as a string-to-string
-    /// map for now; expression parsing lands in the evaluator iteration. Uses BTreeMap
-    /// for stable ordering across runs.
-    #[serde(default, rename = "let")]
-    pub let_bindings: BTreeMap<String, String>,
+    /// Local bindings evaluated before the assertion, in DECLARATION order —
+    /// a later binding may reference an earlier one (#89: the former BTreeMap
+    /// storage evaluated alphabetically, which broke naturally chained
+    /// bindings; the #47 cold-context run caught it).
+    #[serde(default, rename = "let", deserialize_with = "de_let_bindings")]
+    pub let_bindings: Vec<(String, String)>,
     /// Assertion expression. Stored as a string; the parser does not validate the
     /// expression's internal syntax. Rule fires when this evaluates to FALSE.
     pub assert: String,
@@ -56,10 +56,35 @@ pub struct Rule {
     pub location: Option<LocationSpec>,
 }
 
+/// Deserialize a YAML mapping of let-bindings preserving document order
+/// (serde_yaml_ng mappings iterate in insertion order).
+fn de_let_bindings<'de, D>(deserializer: D) -> Result<Vec<(String, String)>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::de::Error as _;
+    let mapping = serde_yaml_ng::Mapping::deserialize(deserializer)?;
+    mapping
+        .into_iter()
+        .map(|(k, v)| {
+            let k = k
+                .as_str()
+                .ok_or_else(|| D::Error::custom("let binding name must be a string"))?
+                .to_string();
+            let v = v
+                .as_str()
+                .ok_or_else(|| D::Error::custom("let binding value must be an expression string"))?
+                .to_string();
+            Ok((k, v))
+        })
+        .collect()
+}
+
 /// What artifacts a rule applies to. Three forms supported:
 /// - schema_class slug as a bare string
 /// - file glob as a bare string (contains `*`, `?`, or `/`)
 /// - combined `{ schema_class, path }` object
+
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 #[serde(untagged)]
 pub enum ContextSelector {
