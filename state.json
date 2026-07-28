@@ -1,6 +1,6 @@
 {
   "next_display_id": 90,
-  "next_comment_id": 245,
+  "next_comment_id": 246,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -3676,14 +3676,25 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-19T20:53:20.240290Z",
-      "updated_at": "2026-07-22T17:48:59.298603Z",
+      "updated_at": "2026-07-28T21:05:10.015911Z",
       "labels": [
         "feature",
         "v1.0"
       ],
       "related": [
         "8fc6916d-2d90-430e-af0d-fdebc0367dca"
-      ]
+      ],
+      "comments": {
+        "28c811b9-0870-4f06-98dc-2576387943ce": {
+          "display_id": 245,
+          "author": "79Ig",
+          "content": "OPERATOR RULING (2026-07-28): v0.2.0 stands as the STABLE BETA — the crates.io publish (this issue) is deliberately HELD pending first-adopter feedback on the beta: vsdd-cli's consumption of the v0.2.0 binary surface (including the D1 config-refusal breaking change against their #764 harness) and the #49 external cold read. Feedback routes: doc findings -> #49 before it closes; engine findings -> new fix-lanes; a quiet cycle -> this issue proceeds (single-crate publish per D5, cargo install mdatron, Linux/macOS x64/arm64 verification per the criterion). No further version cut planned before publish unless feedback forces one.",
+          "created_at": "2026-07-28T21:05:10.000190Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAhjf/2DzfQtN1wa4M+7d1ML2MumhMf5Oz5uNPfvAnIaCVSRCTM9ahOyyO9zmWxYrRfBPf9dj+TDNOziPr4h3DAA=="
+        }
+      }
     },
     "fed9ad06-769e-4cef-b2e3-be7041de17bc": {
       "uuid": "fed9ad06-769e-4cef-b2e3-be7041de17bc",
@@ -3781,8 +3792,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-28T21:04:37.346284Z",
+    "timestamp": "2026-07-28T21:05:10.015911Z",
     "agent_id": "79Ig",
-    "agent_seq": 215
+    "agent_seq": 216
   }
 }
