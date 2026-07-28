@@ -44,6 +44,11 @@ struct RawEntry {
     /// Optional naming grammar: a regex the claimed FILENAME must match.
     #[serde(default)]
     naming: Option<String>,
+    /// Opt this route's files into citation verification (#86): file:line
+    /// tokens in their prose are checked against the working-tree snapshot.
+    /// Default off, so historical corpora stay archival.
+    #[serde(default)]
+    citations: bool,
 }
 
 /// The loaded route table: the active entries plus the per-entry findings
@@ -58,6 +63,7 @@ pub struct Route {
     pub files: glob::Pattern,
     pub governed_by: String,
     pub naming: Option<regex_lite::Regex>,
+    pub citations: bool,
 }
 
 /// Load, validate, and compile `.mdatron/routes.yaml`.
@@ -181,6 +187,7 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
             files,
             governed_by: entry.governed_by,
             naming,
+            citations: entry.citations,
         });
     }
     Ok(Some(LoadedRoutes { routes, findings }))
@@ -264,6 +271,13 @@ pub fn check_file(routes: &[Route], rel: &Path, abs: &Path, findings: &mut Vec<F
                 .collect(),
         }),
     }
+}
+
+/// True when any route claiming `rel` opts it into citation verification.
+pub fn citations_enabled(routes: &[Route], rel: &Path) -> bool {
+    routes
+        .iter()
+        .any(|r| r.citations && r.files.matches_path(rel))
 }
 
 fn confinement_finding(

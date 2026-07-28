@@ -222,14 +222,17 @@ pub fn verify(config: &VerifyConfig) -> Result<Vec<Finding>, VerifyError> {
             .map_err(|e| VerifyError::Glob(format!("'{glob_pattern}': {e}")))?;
         for entry in paths {
             let path = entry.map_err(|e| VerifyError::Glob(format!("'{glob_pattern}': {e}")))?;
+            let mut cite_enabled = false;
             if let Some(routes) = &routes {
                 let rel = path.strip_prefix(&project_root).unwrap_or(&path);
                 crate::route::check_file(routes, rel, &path, &mut findings);
+                cite_enabled = crate::route::citations_enabled(routes, rel);
             }
             verify_file(
                 &path,
                 &project_root,
                 &require,
+                cite_enabled,
                 vocab.as_ref(),
                 &schemas,
                 &patterns,
@@ -331,6 +334,7 @@ fn verify_file(
     path: &Path,
     project_root: &Path,
     require_frontmatter: &[glob::Pattern],
+    cite_enabled: bool,
     vocab: Option<&crate::vocab::LoadedVocab>,
     schemas: &BTreeMap<String, Schema>,
     patterns: &[PatternFile],
@@ -374,6 +378,9 @@ fn verify_file(
             if let Some(v) = vocab {
                 crate::vocab::check_file(v, path, &content, 0, None, findings);
             }
+            if cite_enabled {
+                crate::cite::check_file(project_root, path, &content, 0, findings);
+            }
             let rel = path.strip_prefix(project_root).unwrap_or(path);
             if require_frontmatter.iter().any(|p| p.matches_path(rel)) {
                 findings.push(Finding {
@@ -415,6 +422,10 @@ fn verify_file(
             Some(&frontmatter_value),
             findings,
         );
+    }
+    if cite_enabled {
+        let body_offset = content.len() - body_len;
+        crate::cite::check_file(project_root, path, &content, body_offset, findings);
     }
 
     let frontmatter_internal = crate::dsl::index::yaml_to_value(&frontmatter_value);
@@ -1248,6 +1259,120 @@ mod tests {
         assert!(
             findings.iter().all(|f| !f.code.starts_with("MDATRON-E009")),
             "no vocab findings without vocab data; got {findings:?}"
+        );
+    }
+
+    // ── citation family (#86): file:line verification vs the snapshot ──────
+
+    fn cite_project(label: &str, body: &str) -> TempProject {
+        let proj = TempProject::new(label);
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write("GOVERNING.md", "# gov\n");
+        proj.write(
+            ".mdatron/routes.yaml",
+            "routes:\n- files: \"docs/**/*.md\"\n  governed_by: GOVERNING.md\n  citations: true\n",
+        );
+        proj.write("src-file.rs", "line1\nline2\nline3\nline4\nline5\n");
+        proj.write("docs/2026-07-27-doc.md", &format!("---\nschema_class: phase-primer\nphase: phase-1a\nrelevant_domains: [se]\n---\n{body}"));
+        proj
+    }
+
+    // RED GATE (#86): a citation naming absent content is rejected (E0100)
+    // against the working-tree snapshot. Pre-impl, citations are inert.
+    #[test]
+    fn dead_citation_rejected() {
+        let proj = cite_project("cite-dead", "Per no-such-file.rs:12 this holds.\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        let f = findings
+            .iter()
+            .find(|f| f.code == "MDATRON-E0100")
+            .unwrap_or_else(|| panic!("expected E0100; got {findings:?}"));
+        assert!(f
+            .quoted
+            .iter()
+            .any(|q| q.content.contains("no-such-file.rs:12")));
+        assert_eq!(
+            f.location.line, 6,
+            "citation sits on body line 1 = file line 6"
+        );
+    }
+
+    // RED GATE (#86): a citation past the target's end is E0101; one in range
+    // is clean — including a RANGE form.
+    #[test]
+    fn citation_line_out_of_range() {
+        let proj = cite_project(
+            "cite-range",
+            "Good: src-file.rs:5 and src-file.rs:2-4.\nBad: src-file.rs:99 and src-file.rs:2-9.\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert_eq!(
+            findings
+                .iter()
+                .filter(|f| f.code == "MDATRON-E0101")
+                .count(),
+            2,
+            "exactly the two out-of-range citations flag; got {findings:?}"
+        );
+        assert!(findings.iter().all(|f| f.code != "MDATRON-E0100"));
+    }
+
+    // #86: uncommitted content COUNTS (working tree authoritative, no git):
+    // a citation to a file that was never committed anywhere is live.
+    #[test]
+    fn uncommitted_target_counts_as_live() {
+        let proj = cite_project("cite-uncommitted", "See fresh.md:1.\n");
+        proj.write("fresh.md", "only line\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert!(
+            findings.iter().all(|f| !f.code.starts_with("MDATRON-E010")),
+            "uncommitted-but-present target is live; got {findings:?}"
+        );
+    }
+
+    // #86 confinement: escaping citations rejected under the confinement codes.
+    #[test]
+    fn escaping_citations_rejected() {
+        let proj = cite_project(
+            "cite-escape",
+            "Bad: ../outside.rs:3 and /etc/passwd.txt:1.\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert!(
+            findings.iter().any(|f| f.code == "MDATRON-E0011"),
+            "parent-segment citation refused; got {findings:?}"
+        );
+        assert!(
+            findings.iter().any(|f| f.code == "MDATRON-E0010"),
+            "absolute citation refused; got {findings:?}"
+        );
+    }
+
+    // #86 opt-in: a route WITHOUT citations: true gets no citation findings —
+    // historical corpora stay archival (the amendment recorded on #86).
+    #[test]
+    fn citations_are_per_route_opt_in() {
+        let proj = cite_project("cite-optout", "Per no-such-file.rs:12.\n");
+        proj.write(
+            ".mdatron/routes.yaml",
+            "routes:\n- files: \"docs/**/*.md\"\n  governed_by: GOVERNING.md\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert!(
+            findings.iter().all(|f| !f.code.starts_with("MDATRON-E010")),
+            "no opt-in, no citation findings; got {findings:?}"
         );
     }
 
