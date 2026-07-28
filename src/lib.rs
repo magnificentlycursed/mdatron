@@ -35,6 +35,7 @@ pub mod pin;
 pub mod route;
 pub mod schema;
 pub mod verify;
+pub mod vocab;
 
 pub use diagnostic::{Finding, Location, Severity};
 pub use dsl::{parse_pattern_file, PatternFile};

@@ -1,7 +1,7 @@
 //! Embedded `mdatron explain CODE` catalog.
 //!
 //! v0.1.x catalog: MDATRON-E0001, E0002, E0010, E0011, E0012, E0050, E0060, E0070,
-//! E0080, W0040; route family E0030, E0031, E0032, W0041; pin family E0061, E0062, W0042, L0001. The catalog grows by one entry per newly-emitted code per the
+//! E0080, W0040; route family E0030, E0031, E0032, W0041; pin family E0061, E0062, W0042, L0001; vocabulary family E0090-E0094. The catalog grows by one entry per newly-emitted code per the
 //! Phase 0 DESIGN open question #2 SO disposition (2026-06-02); the
 //! path-confinement trio (E0010/E0011/E0012) landed with the confinement
 //! rework (the path-confinement defect issue in this tracker).
@@ -40,6 +40,11 @@ const E0061: &str = include_str!("MDATRON-E0061.md");
 const E0062: &str = include_str!("MDATRON-E0062.md");
 const W0042: &str = include_str!("MDATRON-W0042.md");
 const L0001: &str = include_str!("MDATRON-L0001.md");
+const E0090: &str = include_str!("MDATRON-E0090.md");
+const E0091: &str = include_str!("MDATRON-E0091.md");
+const E0092: &str = include_str!("MDATRON-E0092.md");
+const E0093: &str = include_str!("MDATRON-E0093.md");
+const E0094: &str = include_str!("MDATRON-E0094.md");
 
 /// Structured shape of an explain page. Surfaces the required fields named
 /// in the Phase 1a behavioral spec. Used by `mdatron explain --json <code>`.
@@ -81,6 +86,11 @@ pub fn lookup(code: &str) -> Option<&'static str> {
         "MDATRON-E0062" => Some(E0062),
         "MDATRON-W0042" => Some(W0042),
         "MDATRON-L0001" => Some(L0001),
+        "MDATRON-E0090" => Some(E0090),
+        "MDATRON-E0091" => Some(E0091),
+        "MDATRON-E0092" => Some(E0092),
+        "MDATRON-E0093" => Some(E0093),
+        "MDATRON-E0094" => Some(E0094),
         _ => None,
     }
 }
@@ -224,6 +234,11 @@ mod tests {
         "MDATRON-E0062",
         "MDATRON-W0042",
         "MDATRON-L0001",
+        "MDATRON-E0090",
+        "MDATRON-E0091",
+        "MDATRON-E0092",
+        "MDATRON-E0093",
+        "MDATRON-E0094",
     ];
 
     #[test]
