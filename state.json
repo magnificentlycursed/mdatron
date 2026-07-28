@@ -1,6 +1,6 @@
 {
   "next_display_id": 90,
-  "next_comment_id": 247,
+  "next_comment_id": 248,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -3681,7 +3681,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-19T20:53:20.240290Z",
-      "updated_at": "2026-07-28T21:05:10.015911Z",
+      "updated_at": "2026-07-28T21:05:29.755319Z",
       "labels": [
         "feature",
         "v1.0"
@@ -3698,6 +3698,15 @@
           "kind": "decision",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAhjf/2DzfQtN1wa4M+7d1ML2MumhMf5Oz5uNPfvAnIaCVSRCTM9ahOyyO9zmWxYrRfBPf9dj+TDNOziPr4h3DAA=="
+        },
+        "cda9baf8-669a-4094-96b2-57221b79c4c7": {
+          "display_id": 247,
+          "author": "79Ig",
+          "content": "Operator ruled v0.2.0 = STABLE BETA; #48 publish HELD pending vsdd-cli feedback (beta consumption + #49 cold read). GitHub pre-release v0.2.0 published. HOLDING PATTERN: no build work queued; next mdatron work = routing vsdd feedback when relayed (docs->49, engine->new lanes), then #48 publish on a quiet cycle.",
+          "created_at": "2026-07-28T21:05:29.739556Z",
+          "kind": "handoff",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAPvKo4jWu7fRHv2TQ6CU+KAXdRE2JAzL6rudUtmDoSGAWlcH62QX2kxO5Ip3vXL9DupDbRBOVM3WHk7Ajb60KAg=="
         }
       }
     },
@@ -3797,8 +3806,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-28T21:05:24.196495Z",
+    "timestamp": "2026-07-28T21:05:29.755319Z",
     "agent_id": "79Ig",
-    "agent_seq": 218
+    "agent_seq": 219
   }
 }
