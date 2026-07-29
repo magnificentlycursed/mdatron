@@ -1,6 +1,6 @@
 {
   "next_display_id": 103,
-  "next_comment_id": 288,
+  "next_comment_id": 289,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -3745,7 +3745,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T06:19:36.040948Z",
-      "updated_at": "2026-07-29T06:48:56.587534Z",
+      "updated_at": "2026-07-29T07:11:55.207669Z",
       "labels": [
         "feature"
       ],
@@ -3770,6 +3770,15 @@
           "kind": "plan",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA3yV1f3BVl1Fs8kngixXICDRMSrfRCZHYt4iqNrP9HBsV5TU9B+syT+BjBEZRT/GD2KMJ4GN8ziHdkKoNm8PmCA=="
+        },
+        "bc212787-01f8-462d-a84a-c3aab78c28da": {
+          "display_id": 288,
+          "author": "79Ig",
+          "content": "B1 RESOLVED (operator ruling: hold merge for the fix, not a documented limitation). A pin finding is about the pinned file, so incremental includes it by the pinned file's scope membership (checked per-pin after the location filter). Seed incremental_includes_stale_pin_for_in_scope_file green. All 3 cold-review blockers now closed (B1 pin, B2 hand-authored oracle, B3/B4 path canonicalization + fail-safe). SF6 (trace-escape consistency) routed as a follow-on (injection-safe). Gauntlet green. Ready for merge.",
+          "created_at": "2026-07-29T07:11:55.176269Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAy8JyW1pGGxOl+D1y+a4fNTq4yplfK9i0QkoSAFhgXGFR7b1/qPTppTAN8W7MhnuqLNCuwKQtyJPuiKrzDrXWCA=="
         }
       }
     },
@@ -4449,8 +4458,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T06:58:18.870957Z",
+    "timestamp": "2026-07-29T07:11:55.207669Z",
     "agent_id": "79Ig",
-    "agent_seq": 331
+    "agent_seq": 332
   }
 }
