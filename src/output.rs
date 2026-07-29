@@ -7,21 +7,30 @@
 //! contracts. Exit-code semantics (BC-4) + stream contract (BC-5) live at the binary
 //! boundary (src/main.rs).
 //!
-//! Output version is [`OUTPUT_VERSION`]; additive fields bump minor (the
-//! `families` field took it 1.0.0 -> 1.1.0, #90), required-field or shape
-//! changes bump major. The published schema at `schema/mdatron-output.schema.json`
-//! is the machine-readable pin; contract-stability tripwires keep the two in step.
+//! Output version is [`OUTPUT_VERSION`], versioned per SemVer: an additive,
+//! backward-compatible change (a new optional field, a new enum value) bumps the
+//! MINOR; a breaking change (a removed, renamed, or reshaped field, a field's
+//! type changing, a new REQUIRED field under a closed object, or a change to an
+//! emitted code's meaning) bumps the MAJOR. The published schema at
+//! `schema/mdatron-output.schema.json` is the machine-readable pin; contract-
+//! stability tripwires keep the two in step.
 
 use serde::{Deserialize, Serialize};
 
 use crate::diagnostic::{Finding, Severity};
 
 /// Output-version contract value. Semver per SO disposition 2026-06-02 (Raise-to-SO #1).
-/// 1.1.0 (#90, 0.3.0): additive `families` field — old consumers ignore it,
-/// new consumers audit per-verify family activity. Must move in lockstep with
-/// the published envelope schema (`schema/mdatron-output.schema.json`); the
-/// `envelope_version_matches_published_schema` tripwire enforces it.
-pub const OUTPUT_VERSION: &str = "1.4.0";
+/// 1.1.0 (#90, released in 0.3.0): additive `families` field.
+/// 2.0.0 (#120, 0.4.0): MAJOR — since the last released envelope (1.1.0) the shape
+/// broke twice: `families` reshaped string → `{state, reason}` object (#107) and
+/// `quoted[]` gained REQUIRED `origin`/`trusted` under a closed object (#114),
+/// both rejected by a 1.1.0-schema validator; `pipeline_error` is additive (#112).
+/// Development passed through 1.2.0–1.4.0 (never released); those minor bumps
+/// under-signalled the breaking reshape, so 0.4.0 corrects the released contract
+/// to a single honest major bump. Must move in lockstep with the published schema
+/// (`schema/mdatron-output.schema.json`); the `envelope_version_matches_published_schema`
+/// tripwire enforces it.
+pub const OUTPUT_VERSION: &str = "2.0.0";
 
 /// Whether a check family was invoked in a verify run — active means its data
 /// was supplied and the family ran (NOT that it produced findings; a clean
