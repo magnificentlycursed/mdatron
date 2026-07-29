@@ -1,6 +1,6 @@
 {
   "next_display_id": 105,
-  "next_comment_id": 294,
+  "next_comment_id": 295,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -308,10 +308,21 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T07:55:05.605670Z",
-      "updated_at": "2026-07-29T07:55:09.464776Z",
+      "updated_at": "2026-07-29T07:55:22.772537Z",
       "labels": [
         "enhancement"
-      ]
+      ],
+      "comments": {
+        "589bedde-7450-4981-ac08-3dd3246f0fff": {
+          "display_id": 294,
+          "author": "79Ig",
+          "content": "vsdd-cli v0.3.0 diagnostic-efficacy review (6 domain lenses, each reproduced against live v0.3.0). STRONG: error[CODE]/-->file:line:col/=note/=help/=explain shape is agent-parseable; --json -q clean single-line; MDATRON-namespace explain pages model-grade; exit-code discipline (0/1/2) CI-legible; explain arg-parsing injection-hardened; quoted[] recovers values; output-version 1.0.0->1.1.0 additive.\n\nTHROUGH-LINE CONCERN: mdatron can't distinguish 'checked N files, all clean' from 'checked nothing' — the audit-signal gap. 10 substantive items:\n1. files_checked is a MISNOMER — counts files WITH findings, not files validated (1 valid->0, clean repo->0); a clean corpus and an empty jurisdiction emit an identical envelope. Fix: true files_walked/in_scope/routed count.\n2. Missing .mdatron/schemas/ -> silent false-clean (ok, exit 0, 'clean'); only families.schema:inactive tells. Contradicts DESIGN. Fix: fail or emit a finding.\n3. Unroutable schema_class silently UNVALIDATED — a made-up schema_class on a garbage file -> 0 findings (W0040 only catches MISSING frontmatter). Fix: diagnose frontmatter that routes to no schema.\n4. families is UNFALSIFIABLE — inactive conflates not-configured with configured-but-didn't-run; doesn't track pattern execution (pattern rules fire while route:inactive; vocabulary_globs set but vocabulary:inactive). Fix: tri-state + reason; map pattern rules to families. [overlaps #48-A]\n5. MDATRON-E0080 masks all findings + overloaded across >=5 senses with one explain page; error_count stays 0 on failure. Fix: split codes or add pipeline_error:{code,kind,note} / top-level checked:false.\n6. --json --quiet (documented CI mode) DROPS the failure reason on pipeline failure (findings:[], no reason; the note is stderr-only, -q suppresses). Fix: carry the reason into the envelope.\n7. VSDD-namespace explain is a DEAD-END — every VSDD finding advertises 'mdatron explain VSDD-...' which the same binary rejects. Fix: resolve VSDD pages or stop advertising.\n8. VSDD pattern-message interpolation is BROKEN — {{$self.x}} renders literally as {$self.x} (values only in quoted[]); in --compact the value elides under 512 while the placeholder survives. Affects all E0201-E0212. Fix: interpolate; budget the value ahead of the template in compact.\n9. Diagnostic-content INJECTION — adopter bytes reach the agent surface/quoted[].content with no untrusted flag in JSON (only the > convention). Fix: mark quoted adopter content origin:'adopter'/trusted:false.\n10. Jurisdiction/--files self-audit BYPASS — narrowing config.yaml file_globs or --files silently shrinks the corpus (exit 0, no warning); E0060 says jurisdiction edits 'do not drift.' Fix: warn on zero-match globs; record a jurisdiction hash; flag jurisdiction shrink.\n\nMEDIUM/LOW: DESIGN 'See also' links resolve to files adopters don't have + #summary anchor mismatches; E0080 stale 'v0.1.x init will scaffold' framing; --json without -q double-emits (~1.7x tokens); pattern-rule location coarse (:1 col 0) vs schema's precise :4:8; explain needs full code + has no --list; --compact truncates mid-sentence; the promised output.schema.json 'absent' [NOTE: we DID publish schema/mdatron-output.schema.json in #90 — verify vsdd's expected path/name] + no contract test [we added contract-stability CI in #90 — verify].\n\nCluster: items 1-5,10 are the audit-signal gap (prove-you-checked); 7-9 are VSDD-consumer surface (explain resolution, interpolation, injection-marking); 6 is the CI envelope. Needs decomposition + prioritization.",
+          "created_at": "2026-07-29T07:55:22.757516Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA0L9hXReu8hp38Kg/zUh8w5jpuqooJi3lufFYcHVkchCqHpz8Ut1AORLjQ44dgR0BC/VdjqJevwyXWJtNNZYtCg=="
+        }
+      }
     },
     "1a48e540-17b6-4a8f-9681-62cffd446bc3": {
       "uuid": "1a48e540-17b6-4a8f-9681-62cffd446bc3",
@@ -4539,8 +4550,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T07:55:16.018012Z",
+    "timestamp": "2026-07-29T07:55:22.772537Z",
     "agent_id": "79Ig",
-    "agent_seq": 348
+    "agent_seq": 349
   }
 }
