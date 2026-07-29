@@ -906,11 +906,12 @@
       "uuid": "277a179b-fdda-44e7-a79b-f9e096e12789",
       "display_id": 124,
       "title": "harden untrusted-input parse: frontmatter depth/byte/aggregate bounds + DSL expr MAX_DEPTH (roast SHO1/SHO2, DESIGN.md:99 overclaim)",
-      "status": "open",
+      "status": "closed",
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T17:21:36.128832Z",
-      "updated_at": "2026-07-29T18:13:37.214201Z",
+      "updated_at": "2026-07-29T18:25:14.600150Z",
+      "closed_at": "2026-07-29T18:25:14.600139Z",
       "labels": [
         "security"
       ],
@@ -5479,8 +5480,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T18:16:18.757820Z",
+    "timestamp": "2026-07-29T18:25:14.600150Z",
     "agent_id": "79Ig",
-    "agent_seq": 526
+    "agent_seq": 527
   }
 }
