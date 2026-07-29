@@ -1,6 +1,6 @@
 {
   "next_display_id": 113,
-  "next_comment_id": 312,
+  "next_comment_id": 313,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -4298,13 +4298,24 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T10:25:55.415804Z",
-      "updated_at": "2026-07-29T10:26:12.435140Z",
+      "updated_at": "2026-07-29T10:42:15.346729Z",
       "labels": [
         "enhancement"
       ],
       "related": [
         "18545077-3dbb-4401-847d-c6b4bdbe7d78"
-      ]
+      ],
+      "comments": {
+        "4b58cb3b-2a4f-4f45-9e5d-dd2cf595c481": {
+          "display_id": 312,
+          "author": "79Ig",
+          "content": "Built on feature/112-pipeline-error. pipeline_error{code,kind,message} in the --json envelope: carries the failure reason in-band (survives -q, item 6) with a kind disambiguating E0080's ~9 senses (item 5). Envelope 1.2.0->1.3.0 (schema+DESIGN+explain updated). Cold SE review: SHIP. Red gate + unit + schema-tripwire green; fmt/clippy/self-verify/pin clean. Awaiting operator merge gate.",
+          "created_at": "2026-07-29T10:42:15.325583Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAzHHLjjnFbyAUacJOxywJ0rpiR0zUo5PpUxlg5N0zJ7Cd904IcRICy7KYCTRZNtGtOIqlW5OyjJHtQBwjSAwgDg=="
+        }
+      }
     },
     "eacfd6f1-3490-4d19-bd5c-be5825553a19": {
       "uuid": "eacfd6f1-3490-4d19-bd5c-be5825553a19",
@@ -4881,8 +4892,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T10:26:12.435140Z",
+    "timestamp": "2026-07-29T10:42:15.346729Z",
     "agent_id": "79Ig",
-    "agent_seq": 412
+    "agent_seq": 413
   }
 }
