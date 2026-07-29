@@ -41,6 +41,7 @@ const E0062: &str = include_str!("MDATRON-E0062.md");
 const W0042: &str = include_str!("MDATRON-W0042.md");
 const W0043: &str = include_str!("MDATRON-W0043.md");
 const W0044: &str = include_str!("MDATRON-W0044.md");
+const W0045: &str = include_str!("MDATRON-W0045.md");
 const L0001: &str = include_str!("MDATRON-L0001.md");
 const E0090: &str = include_str!("MDATRON-E0090.md");
 const E0091: &str = include_str!("MDATRON-E0091.md");
@@ -91,6 +92,7 @@ pub fn lookup(code: &str) -> Option<&'static str> {
         "MDATRON-W0042" => Some(W0042),
         "MDATRON-W0043" => Some(W0043),
         "MDATRON-W0044" => Some(W0044),
+        "MDATRON-W0045" => Some(W0045),
         "MDATRON-L0001" => Some(L0001),
         "MDATRON-E0090" => Some(E0090),
         "MDATRON-E0091" => Some(E0091),
@@ -243,6 +245,7 @@ mod tests {
         "MDATRON-W0042",
         "MDATRON-W0043",
         "MDATRON-W0044",
+        "MDATRON-W0045",
         "MDATRON-L0001",
         "MDATRON-E0090",
         "MDATRON-E0091",

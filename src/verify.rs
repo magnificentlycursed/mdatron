@@ -828,8 +828,10 @@ fn verify_file(
         .map(|s| s.to_string());
 
     // ── Layer 1: structural validation ─────────────────────────────────────
+    let mut schema_matched = false;
     if let Some(schema_class) = &schema_class_opt {
         if let Some(schema) = schemas.get(schema_class) {
+            schema_matched = true;
             let violations = schema.validate(&frontmatter_value);
             // Resolve every violation's source line in a single marked parse so
             // the diagnostics are directly actionable for the fixing agent
@@ -887,12 +889,50 @@ fn verify_file(
         registry,
         path,
     };
+    let mut any_context_matched = false;
     for pf in patterns {
         for rule in &pf.pattern.rules {
             if !context_matches(&rule.context, schema_class_opt.as_deref(), path) {
                 continue;
             }
+            any_context_matched = true;
             verify_rule(pf, rule, &rule_ctx, findings)?;
+        }
+    }
+
+    // #106 (audit signal, #104 item 3): a file that DECLARES a schema_class
+    // which matches no schema AND no rule context was silently unvalidated —
+    // flag it, so a typo'd or unregistered class on an unchecked file is loud,
+    // not a false-clean. A class validated by a schema OR any matching rule is
+    // routed and stays silent. Only when validation infrastructure exists (some
+    // schema or pattern): a project doing no class-validation at all is not
+    // nagged, preserving the "no adopter data -> clean" property.
+    let has_validation_infra = !schemas.is_empty() || !patterns.is_empty();
+    if let Some(schema_class) = &schema_class_opt {
+        if has_validation_infra && !schema_matched && !any_context_matched {
+            findings.push(Finding {
+                code: "MDATRON-W0045".into(),
+                severity: Severity::Warning,
+                summary: "schema-class-unrouted".into(),
+                message: "this file declares a schema_class that matches no \
+                          schema and no rule context, so nothing validated it"
+                    .into(),
+                help: Some(
+                    "add a .mdatron/schemas/<class>.json, or a pattern rule with \
+                     `context: <class>`, or correct the schema_class"
+                        .into(),
+                ),
+                location: Location {
+                    file: path.to_path_buf(),
+                    line: 1,
+                    column: 0,
+                },
+                explain_ref: Some("MDATRON-W0045".into()),
+                quoted: vec![QuotedRegion {
+                    label: "schema_class".into(),
+                    content: schema_class.clone(),
+                }],
+            });
         }
     }
     Ok(())
@@ -1891,7 +1931,12 @@ mod tests {
     #[test]
     fn files_checked_counts_validated_files_not_findings() {
         let proj = TempProject::new("files-checked");
-        proj.write(".mdatron/schemas/.keep.json", "{}");
+        // Route class `x` to a permissive schema so the corpus is genuinely
+        // clean (not W0045-unrouted).
+        proj.write(
+            ".mdatron/schemas/x.json",
+            r#"{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object"}"#,
+        );
         proj.write(
             ".mdatron/config.yaml",
             "file_globs:\n  - \"docs/**/*.md\"\n",
@@ -1940,6 +1985,80 @@ mod tests {
             inc.report.files_checked, 1,
             "only the changed file validated"
         );
+    }
+
+    // #106 (audit signal): a schema_class that routes to no schema AND no rule
+    // context is flagged (W0045), not silently unvalidated.
+    #[test]
+    fn unrouted_schema_class_is_flagged() {
+        let proj = TempProject::new("unrouted-class");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write("docs/a.md", "---\nschema_class: made-up\n---\n# a\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert_eq!(
+            codes_of(&findings, "MDATRON-W0045"),
+            1,
+            "a made-up class is flagged; got {findings:?}"
+        );
+        let f = findings.iter().find(|f| f.code == "MDATRON-W0045").unwrap();
+        assert!(
+            f.quoted.iter().any(|q| q.content == "made-up"),
+            "the class rides quoted"
+        );
+
+        // A class WITH a schema is routed -> silent.
+        proj.write(
+            ".mdatron/schemas/made-up.json",
+            r#"{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object"}"#,
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        assert_eq!(
+            codes_of(&verify(&cfg).unwrap(), "MDATRON-W0045"),
+            0,
+            "a class with a schema is routed, not flagged"
+        );
+    }
+
+    // A class validated by a RULE context (no schema) is routed -> silent (no
+    // false positive on legitimate pattern-only classes).
+    #[test]
+    fn schema_class_routed_by_rule_context_is_not_flagged() {
+        let proj = TempProject::new("class-by-rule");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write(
+            ".mdatron/patterns/p.yaml",
+            "mdatron_dsl_version: 1\npattern:\n  id: p\n  rules:\n    - id: r\n      context: post\n      assert: '$self.title != \"\"'\n      code: ADOPTER-E0001\n      message: m\n",
+        );
+        proj.write("docs/a.md", "---\nschema_class: post\ntitle: ok\n---\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        assert_eq!(
+            codes_of(&verify(&cfg).unwrap(), "MDATRON-W0045"),
+            0,
+            "a class routed by a rule context is not flagged"
+        );
+    }
+
+    // A file with NO schema_class is not a W0045 candidate (it claims no type).
+    #[test]
+    fn no_schema_class_is_not_unrouted() {
+        let proj = TempProject::new("no-class");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write("docs/a.md", "---\ntitle: prose\n---\n# a\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        assert_eq!(codes_of(&verify(&cfg).unwrap(), "MDATRON-W0045"), 0);
     }
 
     // #85 inactivity: no vocabulary.yaml -> family inactive.
@@ -2188,14 +2307,13 @@ pattern:
       message: "unresolvable other"
 "#,
         );
+        // The registries are index data sources (selected by $.frontmatter.
+        // entries), not typed docs — no schema_class, so no W0045.
         proj.write(
             "registry/domains.md",
-            "---\nschema_class: domain-registry\nentries:\n- id: se\n- id: qe\n---\n",
+            "---\nentries:\n- id: se\n- id: qe\n---\n",
         );
-        proj.write(
-            "registry/others.md",
-            "---\nschema_class: other-registry\nentries:\n- id: x\n---\n",
-        );
+        proj.write("registry/others.md", "---\nentries:\n- id: x\n---\n");
         // Each fires (a missing domain/other); the other-entry is coupled to a
         // different registry, so it stays out of the work-entry cluster's scope.
         proj.write(

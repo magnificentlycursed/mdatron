@@ -25,5 +25,6 @@
   "MDATRON-W0041": "name-underivable",
   "MDATRON-W0042": "governance-weakening-unjustified",
   "MDATRON-W0043": "vocabulary-scope-matches-nothing",
-  "MDATRON-W0044": "vocabulary-term-status-conflict"
+  "MDATRON-W0044": "vocabulary-term-status-conflict",
+  "MDATRON-W0045": "schema-class-unrouted"
 }
