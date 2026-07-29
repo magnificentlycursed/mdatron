@@ -1,5 +1,5 @@
 {
-  "next_display_id": 108,
+  "next_display_id": 109,
   "next_comment_id": 304,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -55,6 +55,7 @@
     "8929a168-665b-4be1-8b8d-441e73f742c4": 90,
     "8ac50e86-5777-4068-8ce0-3d628ff48d30": 15,
     "8bbf0d1a-ce4a-4096-b3ad-ae3bc065a6e7": 69,
+    "8c4eab12-ffd1-4077-9afa-29257925a0aa": 108,
     "8d5c2bfc-5f17-4577-bbab-0434c455005d": 66,
     "8fc6916d-2d90-430e-af0d-fdebc0367dca": 81,
     "9242e6c2-32a3-45f1-8478-d1fec3a8ce8b": 76,
@@ -2220,6 +2221,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAI38gOyJpSlgehOn3Hua/1wVPv78cLfKDxGCxPH4zCxs+AxybaYaKsLh4b7uKiDX7864ZpWOoaa9B+wIx5DZLBg=="
         }
       }
+    },
+    "8c4eab12-ffd1-4077-9afa-29257925a0aa": {
+      "uuid": "8c4eab12-ffd1-4077-9afa-29257925a0aa",
+      "display_id": 108,
+      "title": "audit-signal #10: warn on a zero-match file_globs/--files jurisdiction glob (silent corpus shrink)",
+      "status": "open",
+      "priority": "high",
+      "created_by": "79Ig",
+      "created_at": "2026-07-29T08:53:01.499674Z",
+      "updated_at": "2026-07-29T08:53:01.499674Z"
     },
     "8d5c2bfc-5f17-4577-bbab-0434c455005d": {
       "uuid": "8d5c2bfc-5f17-4577-bbab-0434c455005d",
@@ -4696,8 +4707,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T08:52:57.050202Z",
+    "timestamp": "2026-07-29T08:53:01.499674Z",
     "agent_id": "79Ig",
-    "agent_seq": 376
+    "agent_seq": 377
   }
 }
