@@ -561,7 +561,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T14:23:17.967852Z",
-      "updated_at": "2026-07-29T17:23:21.768561Z",
+      "updated_at": "2026-07-29T17:23:45.514721Z",
       "labels": [
         "enhancement"
       ],
@@ -572,6 +572,7 @@
         "277a179b-fdda-44e7-a79b-f9e096e12789",
         "4fe1ca8e-6b24-4d43-86c1-7a29b108f3ac",
         "fa076a04-5085-46c5-a300-eb89b8bb1015",
+        "fb3b39b8-04f7-47eb-95d0-c3bc51f71548",
         "fea9b536-a072-4342-afe0-0a87fe5ca8bd"
       ],
       "comments": {
@@ -5108,9 +5109,12 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T17:23:26.393142Z",
-      "updated_at": "2026-07-29T17:23:30.529236Z",
+      "updated_at": "2026-07-29T17:23:45.514721Z",
       "labels": [
         "documentation"
+      ],
+      "related": [
+        "1cafa0f3-dcdd-491b-b455-52af79c6c85d"
       ]
     },
     "fbaae8f9-41ac-498e-ae2e-019a69bd0b14": {
@@ -5383,8 +5387,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T17:23:38.581354Z",
+    "timestamp": "2026-07-29T17:23:45.514721Z",
     "agent_id": "79Ig",
-    "agent_seq": 510
+    "agent_seq": 511
   }
 }
