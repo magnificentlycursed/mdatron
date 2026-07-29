@@ -1,0 +1,43 @@
+#!/bin/sh
+# S1 (methodology §3, amendment discipline): a commit touching the governing
+# DESIGN.md must cite its authorizing issue AND a ratified review/decision.
+# A DESIGN change that self-asserts (no external ratification citation) is
+# refused at the act. Catches escape E-e (forge a self-authored record).
+#
+# Install: git config core.hooksPath .githooks
+set -eu
+msg_file="$1"
+
+# Integration merges carry authoring commits that were already gated in-lane;
+# the amendment discipline gates the AUTHORING of a spec change, not its
+# integration. Skip when a merge is in progress (routed finding, #96: the seam
+# scope distinguishes authoring from integration). Residual: a DESIGN edit made
+# solely during merge-conflict resolution is not gated (acceptable, low-risk).
+if git rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1; then
+    exit 0
+fi
+
+# Only governed-DESIGN changes are gated.
+if ! git diff --cached --name-only | grep -qx 'DESIGN.md'; then
+    exit 0
+fi
+
+msg=$(cat "$msg_file")
+
+fail() {
+    echo "commit-msg refused (methodology §3, amendment discipline, #96):" >&2
+    echo "  $1" >&2
+    echo "  A DESIGN.md change cites the issue and the ratified review/decision" >&2
+    echo "  that authorized it. If this is a step-5 reconciliation recording an" >&2
+    echo "  already-ratified decision, cite that decision's issue." >&2
+    exit 1
+}
+
+echo "$msg" | grep -qE '#[0-9]+' \
+    || fail "no authorizing issue reference (#N) in the commit message"
+
+# An external ratification/decision citation — not a bare self-assertion.
+echo "$msg" | grep -qiE 'ratif|operator (ruling|decision)|cold review|review-log|§[0-9]|decision' \
+    || fail "no ratified-review/decision citation for a DESIGN change"
+
+exit 0
