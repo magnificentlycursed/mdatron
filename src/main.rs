@@ -374,10 +374,11 @@ fn cmd_verify(
         c.file_globs = files;
         Ok(c)
     };
-    let (findings, families, pipeline_status, pipeline_err) = match config_result {
+    let (findings, families, files_checked, pipeline_status, pipeline_err) = match config_result {
         Err(e) => (
             Vec::new(),
             Families::all_inactive(),
+            0,
             PipelineStatus::Failed,
             Some(VerifyError::Config(e.to_string())),
         ),
@@ -426,11 +427,18 @@ fn cmd_verify(
                 None => verify_report(&config),
             };
             match result {
-                Ok(r) => (r.findings, r.families, PipelineStatus::Ok, None),
+                Ok(r) => (
+                    r.findings,
+                    r.families,
+                    r.files_checked,
+                    PipelineStatus::Ok,
+                    None,
+                ),
                 // A failed pipeline reports no family as invoked.
                 Err(e) => (
                     Vec::new(),
                     Families::all_inactive(),
+                    0,
                     PipelineStatus::Failed,
                     Some(e),
                 ),
@@ -438,20 +446,9 @@ fn cmd_verify(
         }
     };
 
-    // BC-2: files_checked count. v0.1.0 stub: 0 when pipeline failed; otherwise the
-    // number of unique files referenced in findings (approximation pending a
-    // verify()-level file-count return value in v0.1.x).
-    let files_checked: u32 = if matches!(pipeline_status, PipelineStatus::Failed) {
-        0
-    } else {
-        let mut seen: std::collections::BTreeSet<&std::path::Path> =
-            std::collections::BTreeSet::new();
-        for f in &findings {
-            seen.insert(&f.location.file);
-        }
-        u32::try_from(seen.len()).unwrap_or(u32::MAX)
-    };
-
+    // files_checked (#105) is the true count of files this run VALIDATED,
+    // threaded from the report — a clean run over N files reports N, not a count
+    // of files that happened to produce findings (the old v0.1.0 stub).
     let output = Output::build(
         findings,
         files_checked,

@@ -35,7 +35,7 @@
         "error_count": { "type": "integer", "minimum": 0 },
         "warning_count": { "type": "integer", "minimum": 0 },
         "lint_count": { "type": "integer", "minimum": 0 },
-        "files_checked": { "type": "integer", "minimum": 0 }
+        "files_checked": { "type": "integer", "minimum": 0, "description": "the number of files this run VALIDATED (ran the per-file schema and rule checks on), not a count of files that produced findings; a clean run over N files reports N, an empty jurisdiction reports 0" }
       }
     },
     "families": {

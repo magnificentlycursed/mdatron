@@ -10,6 +10,13 @@ the TRON blockchain.
 
 ## [Unreleased]
 
+### Fixed
+- `summary.files_checked` now reports the true number of files **validated** this run, not a count of files that produced findings (#105, vsdd-cli v0.3.0 diagnostic-efficacy review item 1). The old v0.1.0 stub counted unique files referenced in findings, so a clean run over N files reported `0` — indistinguishable from an empty jurisdiction. The count is threaded from `verify` (`VerifyReport.files_checked`); incremental runs count the scope. Field type unchanged (integer); the published output schema gains a `description`. Closes the core of the "checked N vs checked nothing" audit-signal gap.
+
+### Added
+- confined no-follow read of the governed-file body (#103, partial): the per-file check reads governed files once through `confine::open_confined` (openat/`O_NOFOLLOW`) rather than raw `std::fs::read_to_string`, so a symlinked governed file is refused (`MDATRON-E0012`) instead of followed. A capture-complete seam makes the body snapshot's immutability testable. The full immutable-snapshot unification (index/pin/citation) remains tracked on #103.
+- incremental verify (#102): `mdatron verify --changed <file>` verifies the changed file plus its transitive dependents (#100) against full cross-file context, reporting the same findings a whole-tree run would for those files; a `.mdatron/` change forces whole-tree, and any path that doesn't resolve to a governed file fails safe to whole-tree. The visited-file scope prints to stderr.
+
 ## [0.3.0] - 2026-07-29
 
 ### Added
