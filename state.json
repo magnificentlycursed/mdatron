@@ -327,7 +327,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T07:55:05.605670Z",
-      "updated_at": "2026-07-29T10:56:08.935437Z",
+      "updated_at": "2026-07-29T12:04:57.535193Z",
       "labels": [
         "enhancement"
       ],
@@ -338,6 +338,7 @@
         "82cb584a-cbc0-4ddd-9c36-0bd7a641a7a5",
         "87e35dbb-43b8-4ebb-a0f2-06777d8f956d",
         "8c4eab12-ffd1-4077-9afa-29257925a0aa",
+        "9149809f-422d-4870-8cca-53832d051a70",
         "b696933e-86e0-4ffa-8930-363e6dd16bfa",
         "d6a9a419-11bd-4e47-bbfc-1cd8940f61a1",
         "ea18ea7f-05a6-4d32-8549-09f2137b5eb6",
@@ -2500,9 +2501,12 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T12:04:41.320194Z",
-      "updated_at": "2026-07-29T12:04:44.983023Z",
+      "updated_at": "2026-07-29T12:04:57.535193Z",
       "labels": [
         "bug"
+      ],
+      "related": [
+        "18545077-3dbb-4401-847d-c6b4bdbe7d78"
       ]
     },
     "9242e6c2-32a3-45f1-8478-d1fec3a8ce8b": {
@@ -4994,8 +4998,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T12:04:51.157124Z",
+    "timestamp": "2026-07-29T12:04:57.535193Z",
     "agent_id": "79Ig",
-    "agent_seq": 435
+    "agent_seq": 436
   }
 }
