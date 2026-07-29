@@ -1,6 +1,6 @@
 {
   "next_display_id": 114,
-  "next_comment_id": 313,
+  "next_comment_id": 314,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -3138,13 +3138,24 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T10:44:27.681108Z",
-      "updated_at": "2026-07-29T10:44:43.800625Z",
+      "updated_at": "2026-07-29T10:49:46.107532Z",
       "labels": [
         "bug"
       ],
       "related": [
         "18545077-3dbb-4401-847d-c6b4bdbe7d78"
-      ]
+      ],
+      "comments": {
+        "7e37c95a-5c14-4313-858f-f76b40e74f8c": {
+          "display_id": 313,
+          "author": "79Ig",
+          "content": "Built on feature/113-explain-deadend. explain_ref emitted only when explain::lookup resolves a page; adopter/VSDD-coded rule findings no longer advertise a dead 'mdatron explain <code>'. Fix in main.rs (explain catalog lives in the binary), correcting tty/compact/json. No version bump (explain_ref already nullable). Red gate green; bracketed by the existing mdatron-keeps-explain test; gauntlet green. Awaiting operator merge gate.",
+          "created_at": "2026-07-29T10:49:46.089665Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAwPC8r/ps4pgS+/sErKBZQGT8WK15t0hAhPp3FndWk4b5BmGobf7X0AGaLLKSbv7ZwaR0G+3apTBMduEs9jxoCw=="
+        }
+      }
     },
     "b8c80dd7-30d0-4776-93e3-5c45695b62c1": {
       "uuid": "b8c80dd7-30d0-4776-93e3-5c45695b62c1",
@@ -4914,8 +4925,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T10:44:43.800625Z",
+    "timestamp": "2026-07-29T10:49:46.107532Z",
     "agent_id": "79Ig",
-    "agent_seq": 417
+    "agent_seq": 418
   }
 }
