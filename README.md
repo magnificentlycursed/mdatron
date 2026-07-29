@@ -27,7 +27,7 @@ output for machine consumers.
 
 ## Install
 
-mdatron is pre-publish (v0.2.x); the crates.io release is tracked as the
+mdatron is pre-publish (v0.3.x); the crates.io release is tracked as the
 v1.0 publish milestone (tracker #48). For now, install from a checkout:
 
 ```
@@ -42,7 +42,7 @@ for reproducible builds and CI.
 Once mdatron is published to crates.io, the install command becomes:
 
 ```
-cargo install mdatron --locked --version "0.2.0"
+cargo install mdatron --locked --version "0.3.0"
 ```
 
 (Version-pin to avoid unintentional upgrades when the crate publishes.)
@@ -246,7 +246,9 @@ restating a configured frontmatter field's count and drifting from it
 in `config.yaml` (a scope list beside `require_frontmatter`) to restrict it —
 e.g. to apply the register to your live specs while leaving a historical archive
 walked and routed but unscanned. A `vocabulary_globs` that matches nothing is
-loud (`W0043`), so a mistyped glob can't silently disable the register.
+loud (`W0043`), so a mistyped glob can't silently disable the register. A term
+declared both `registered` and `draft` resolves to draft with a warning
+(`W0044`), so a conflicting declaration is surfaced, not silently resolved.
 
 **Citations** — data-less; opt a route in with `citations: true` and its
 files' `path:line` / `path:start-end` references are verified against the
