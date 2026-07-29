@@ -1,6 +1,6 @@
 {
   "next_display_id": 100,
-  "next_comment_id": 265,
+  "next_comment_id": 266,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -1427,13 +1427,24 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T02:44:16.945659Z",
-      "updated_at": "2026-07-29T02:44:37.364430Z",
+      "updated_at": "2026-07-29T02:44:43.669244Z",
       "labels": [
         "enhancement"
       ],
       "related": [
         "2881253a-3641-4d7b-a6c1-e09cbbd2d140"
-      ]
+      ],
+      "comments": {
+        "a23a0751-7663-49c9-a26d-0d949a3c10be": {
+          "display_id": 265,
+          "author": "79Ig",
+          "content": "PLAN (child of #96, session-stop-binding seam). Gap: the hook estate has SessionStart/PreToolUse/PostToolUse hooks but NO Stop hook — the checker-edit dodge (disable/weaken the seam machinery mid-session) is not caught at the session boundary. Design: add .claude/hooks/session-stop.py wired as a Stop hook in .claude/settings.json. It binds the amendment-citation seam's integrity at exit: if .githooks/commit-msg is present in the repo (the seam is expected) but core.hooksPath no longer points at .githooks (disabled) OR the gate tokens were stripped from the hook (weakened), it BLOCKS the clean stop (exit 2) telling Claude to restore the seam; otherwise exits 0 (with a reminder if seam scripts were touched this session). Respects stop_hook_active (no re-block loop). Phases: 2a red gate — no Stop hook, a weakened checker at stop goes uncaught; 2b build + wire; seed (checker-edit escape) — a Rust test in tests/methodology_seams.rs drives session-stop.py in a temp repo across intact/disabled/weakened states. Standing-doc sweep: docs/methodology-enforcement.md seam status + escape-corpus 'checker-edit' row. No mdatron engine change; no DESIGN amendment expected.",
+          "created_at": "2026-07-29T02:44:43.647068Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA/bIPSJYWiOiG4SQL2kikI1f+to1BBupog9Hbhdp4U8z1vtfgn2mfIBG83KdYCdLP1pZG2nHAXLovYZhZRDWnDA=="
+        }
+      }
     },
     "69b33517-946c-45ba-9287-c1231028d5ec": {
       "uuid": "69b33517-946c-45ba-9287-c1231028d5ec",
@@ -4183,8 +4194,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T02:44:37.364430Z",
+    "timestamp": "2026-07-29T02:44:43.669244Z",
     "agent_id": "79Ig",
-    "agent_seq": 285
+    "agent_seq": 286
   }
 }
