@@ -1,6 +1,6 @@
 {
   "next_display_id": 100,
-  "next_comment_id": 269,
+  "next_comment_id": 270,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -1427,7 +1427,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T02:44:16.945659Z",
-      "updated_at": "2026-07-29T04:23:43.234175Z",
+      "updated_at": "2026-07-29T04:28:41.459332Z",
       "labels": [
         "enhancement"
       ],
@@ -1435,6 +1435,15 @@
         "2881253a-3641-4d7b-a6c1-e09cbbd2d140"
       ],
       "comments": {
+        "7575e847-26e6-49cf-9725-90d29e4f3536": {
+          "display_id": 269,
+          "author": "79Ig",
+          "content": "Merged to main, operator-ratified 2026-07-28. Integrated gauntlet green (fmt/clippy clean, full suite pass, self-verify clean, pin 0 errors). Delivered the enforcement-grades model (not a session-stop hook). Session-stop is retired as grade-2 friction that can't self-protect; the durable third leg is CI-tested integrity. Disposition on the escape corpus: checker-edit is CI-backed + friction + owned-bypass, tamper-proof residual named to the corroboration oracle (vsdd #815).",
+          "created_at": "2026-07-29T04:28:41.445655Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAHlk5jfZx7D7iWm9Lrqm2S6tW1QphUhfivxLwDUO5NBJrtan02ptW7pqpCPXBa6qd5zTreVEohoC2kM1GUmqSCg=="
+        },
         "84c0010a-a59e-4aeb-aeda-bc21c6cc66b7": {
           "display_id": 268,
           "author": "79Ig",
@@ -4221,8 +4230,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T04:23:43.234175Z",
+    "timestamp": "2026-07-29T04:28:41.459332Z",
     "agent_id": "79Ig",
-    "agent_seq": 289
+    "agent_seq": 290
   }
 }
