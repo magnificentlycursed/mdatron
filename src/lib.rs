@@ -26,6 +26,7 @@ pub mod cite;
 pub mod codes;
 pub mod config;
 pub mod confine;
+pub mod dep;
 pub mod diagnostic;
 pub mod dsl;
 pub mod error;

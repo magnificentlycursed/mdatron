@@ -680,7 +680,11 @@ fn verify_rule(
 
 // ── Context-selector matching ──────────────────────────────────────────────────
 
-fn context_matches(context: &ContextSelector, schema_class: Option<&str>, path: &Path) -> bool {
+pub(crate) fn context_matches(
+    context: &ContextSelector,
+    schema_class: Option<&str>,
+    path: &Path,
+) -> bool {
     match context {
         ContextSelector::Bare(s) => {
             if s.contains('*') || s.contains('?') || s.contains('/') {
