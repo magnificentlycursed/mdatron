@@ -1,5 +1,5 @@
 {
-  "next_display_id": 94,
+  "next_display_id": 95,
   "next_comment_id": 249,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -42,6 +42,7 @@
     "7d222949-0302-4dc4-9859-143cf7da11fb": 80,
     "7d3f3244-2166-4727-a6f5-233882cd4457": 49,
     "7f91651e-0b4e-4a0d-aa3e-567f6ebaea4a": 24,
+    "8368834a-bc3c-4500-a10a-7dad88e1c9ff": 94,
     "85c72705-2c55-4332-bb4d-9616e2ffef82": 78,
     "869224e9-82ba-459b-8281-5942bbc2b763": 31,
     "88be1f06-20a9-48da-8b35-4df657fbee27": 73,
@@ -1577,6 +1578,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAxxmmTECpeD2Y1gIh0MMFRGhYNFX38zTXh3hzVNegRt56iWh9GCheg3xKLKxw4qQDi7XcbsoMJ0w00BHpwOt1BQ=="
         }
       }
+    },
+    "8368834a-bc3c-4500-a10a-7dad88e1c9ff": {
+      "uuid": "8368834a-bc3c-4500-a10a-7dad88e1c9ff",
+      "display_id": 94,
+      "title": "corpus: intake vsdd's three numeric-claims drift cases as verbatim E0094 fixtures (offer accepted; request case texts in next relay)",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-07-29T00:28:31.764518Z",
+      "updated_at": "2026-07-29T00:28:31.764518Z"
     },
     "85c72705-2c55-4332-bb4d-9616e2ffef82": {
       "uuid": "85c72705-2c55-4332-bb4d-9616e2ffef82",
@@ -3889,8 +3900,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T00:28:24.298598Z",
+    "timestamp": "2026-07-29T00:28:31.764518Z",
     "agent_id": "79Ig",
-    "agent_seq": 232
+    "agent_seq": 233
   }
 }
