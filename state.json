@@ -1,6 +1,6 @@
 {
   "next_display_id": 103,
-  "next_comment_id": 284,
+  "next_comment_id": 285,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -3734,13 +3734,24 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T06:19:36.040948Z",
-      "updated_at": "2026-07-29T06:20:05.656477Z",
+      "updated_at": "2026-07-29T06:22:45.418875Z",
       "labels": [
         "feature"
       ],
       "related": [
         "a0e4b4b2-63f5-41c1-a62d-7713001a66d8"
-      ]
+      ],
+      "comments": {
+        "3586b80f-6c48-4bde-8a00-c6f414ab38c4": {
+          "display_id": 284,
+          "author": "79Ig",
+          "content": "PHASE 1a/1b DESIGN (sub-lane C of #92). Incremental mode + the soundness oracle, built on the #100 resolver.\n\nSOUNDNESS ARGUMENT (why the fast path equals whole-tree-filtered): verify_file is PER-FILE — every finding it emits is located at that file. So running verify_file only on the scope files yields EXACTLY the whole-tree findings located in scope; no scope-located finding is missed, none extra. Whole-run checks (pin::check, vocab registry W0044, W0043) run fully (cheap) and are filtered to scope by finding location. A .mdatron/ change forces whole-tree (DESIGN); .mdatron-located findings (route-load, W0043, W0044) are never in a governed-file scope, so they filter out in incremental — consistent with 'filtered to changed+dependents'.\n\nMECHANISM: refactor verify_report into run(config, changed: Option<&Path>). When changed is Some and not under .mdatron/: walk once, read each governed file's schema_class (a light pre-pass), build DepGraph (#100), scope = {changed} ∪ dependents(changed); the per-file loop skips files not in scope; the final pass filters findings to scope-located (rel-path membership). Whole-tree path (changed=None) is unchanged. New public verify_incremental(config, changed) -> IncrementalReport { report, visited } exposes the visited-file trace (scope). CLI wiring (a --changed flag) is a thin follow-on within this lane.\n\nVERIFICATION ARCH (1b): the soundness oracle as a property test — for a fixture repo with cross-file rules, incremental(changed).findings == whole_tree().findings filtered to visited, no missing/no extra, over several changed files; plus a .mdatron/-change forces whole-tree; plus the visited trace stays within the hand-authored dependent scope. Red gate first.",
+          "created_at": "2026-07-29T06:22:45.383551Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA3yV1f3BVl1Fs8kngixXICDRMSrfRCZHYt4iqNrP9HBsV5TU9B+syT+BjBEZRT/GD2KMJ4GN8ziHdkKoNm8PmCA=="
+        }
+      }
     },
     "e06b1201-7654-4266-ad6b-93d5c3daabf9": {
       "uuid": "e06b1201-7654-4266-ad6b-93d5c3daabf9",
@@ -4409,8 +4420,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T06:20:05.656477Z",
+    "timestamp": "2026-07-29T06:22:45.418875Z",
     "agent_id": "79Ig",
-    "agent_seq": 327
+    "agent_seq": 328
   }
 }
