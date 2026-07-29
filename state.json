@@ -1,11 +1,12 @@
 {
-  "next_display_id": 104,
+  "next_display_id": 105,
   "next_comment_id": 294,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
     "12afc5cc-5cb5-4494-8835-3d16d53616f6": 93,
     "15d7981a-008d-4805-8a69-f3e4f414caf0": 75,
+    "18545077-3dbb-4401-847d-c6b4bdbe7d78": 104,
     "1a48e540-17b6-4a8f-9681-62cffd446bc3": 14,
     "1b58cd40-d953-4626-b2c8-be53d696aee3": 19,
     "1da67425-f44d-40d6-8ba1-2d2ed768de38": 97,
@@ -294,6 +295,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAGjNmcGzGHg7PC8sdAkhsUnK0hn24jarkIEIfxPagBFNpFieF2FR9B2kWgz8KXJ/h7DPFaxHATgikh2TbKqyJAw=="
         }
       }
+    },
+    "18545077-3dbb-4401-847d-c6b4bdbe7d78": {
+      "uuid": "18545077-3dbb-4401-847d-c6b4bdbe7d78",
+      "display_id": 104,
+      "title": "v0.3.0 diagnostic-efficacy review (vsdd-cli): the checked-N-vs-checked-nothing through-line + 9 more",
+      "status": "open",
+      "priority": "high",
+      "created_by": "79Ig",
+      "created_at": "2026-07-29T07:55:05.605670Z",
+      "updated_at": "2026-07-29T07:55:05.605670Z"
     },
     "1a48e540-17b6-4a8f-9681-62cffd446bc3": {
       "uuid": "1a48e540-17b6-4a8f-9681-62cffd446bc3",
@@ -4521,8 +4532,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T07:42:27.181877Z",
+    "timestamp": "2026-07-29T07:55:05.605670Z",
     "agent_id": "79Ig",
-    "agent_seq": 345
+    "agent_seq": 346
   }
 }
