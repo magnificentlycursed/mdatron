@@ -3884,11 +3884,12 @@
       "uuid": "f00730f0-5883-4ad4-9ae0-9a665b2baa0b",
       "display_id": 100,
       "title": "incremental sub-lane B: dependency resolver — transitive closure over rule-reference + governance + shared-key edges (#92)",
-      "status": "open",
+      "status": "closed",
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-29T05:22:21.086795Z",
-      "updated_at": "2026-07-29T06:01:13.417351Z",
+      "updated_at": "2026-07-29T06:01:20.062558Z",
+      "closed_at": "2026-07-29T06:01:20.062547Z",
       "labels": [
         "feature"
       ],
@@ -4355,8 +4356,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T06:01:13.417351Z",
+    "timestamp": "2026-07-29T06:01:20.062558Z",
     "agent_id": "79Ig",
-    "agent_seq": 314
+    "agent_seq": 315
   }
 }
