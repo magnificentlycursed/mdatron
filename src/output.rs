@@ -30,7 +30,7 @@ use crate::diagnostic::{Finding, Severity};
 /// to a single honest major bump. Must move in lockstep with the published schema
 /// (`schema/mdatron-output.schema.json`); the `envelope_version_matches_published_schema`
 /// tripwire enforces it.
-pub const OUTPUT_VERSION: &str = "2.0.0";
+pub const OUTPUT_VERSION: &str = "2.1.0";
 
 /// Whether a check family was invoked in a verify run — active means its data
 /// was supplied and the family ran (NOT that it produced findings; a clean
