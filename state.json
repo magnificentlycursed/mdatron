@@ -1,6 +1,6 @@
 {
   "next_display_id": 100,
-  "next_comment_id": 267,
+  "next_comment_id": 268,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -1427,7 +1427,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T02:44:16.945659Z",
-      "updated_at": "2026-07-29T02:57:53.382712Z",
+      "updated_at": "2026-07-29T04:20:25.124164Z",
       "labels": [
         "enhancement"
       ],
@@ -1452,6 +1452,15 @@
           "kind": "decision",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA1VP66ajWUGuHk8EsOJgHm2DkZjAOznwLbyEvJCG1NA/JxsOp2rP5Zpb9s8PuegXOIhl6GMKG6DuSItq256asDg=="
+        },
+        "fcdea940-578f-44e5-bc48-b5dd97d76721": {
+          "display_id": 267,
+          "author": "79Ig",
+          "content": "RESCOPE per vsdd-cli #819 (operator-relayed, ratified). vsdd-cli formalized enforcement GRADES by distance from the policed agent's reach: detection (reads/reports) -> friction (bypassable local hook that records a deviation) -> CI-backed block (server-side, unskippable, for what CI can independently verify) -> tamper-proof (needs an independent oracle the agent can't author = their corroboration oracle #815; or capability-restriction, a reviewer lacking mutation tools). A Stop hook is grade-2 friction at best (in-repo, can't self-protect — my regress); shipping it as a block asserts enforcement it can't deliver, and it just failed live on their side (Thermite's edit-time gates silently de-wired by a crosslink init settings clobber, uncaught for weeks). DECISION: DROP the session-stop hook; do NOT ship a leaky session-end block. Record checker-edit as caught by: CI-backed block (the seam seeds re-derive integrity over the checker's own wiring — a checker-edit surfaces as CI-red independently of the edited local checker) + friction (the commit-time amendment hook, honest path records the deviation) + owned-bypass for the locally-skippable residual (--no-verify, the deviation is yours to record); the tamper-proof residual (an edit that also fools CI) is named to the corroboration oracle (vsdd #815) as the honest boundary. Methodology note: the directive's 'three mechanisms (engine, git pre-commit, session-stop hook)' updates — the durable third leg is CI-tested integrity, not a session-stop hook. Reframing this lane to deliver the grades model + the drop, not a Stop hook.",
+          "created_at": "2026-07-29T04:20:25.109324Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA6gIjKZGcGkd4VnJ5a+OD1j3zHkxitGJldZqnqBUjB0lAlSiT3hDeCIeaI7EI+iB86yVtpw5BSHcmwv8yCc2KBw=="
         }
       }
     },
@@ -4203,8 +4212,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T02:57:53.382712Z",
+    "timestamp": "2026-07-29T04:20:25.124164Z",
     "agent_id": "79Ig",
-    "agent_seq": 287
+    "agent_seq": 288
   }
 }
