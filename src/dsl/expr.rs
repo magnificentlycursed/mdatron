@@ -108,6 +108,10 @@ pub enum Expr {
     Every(String, Box<Expr>, Box<Expr>),
     /// `some(<binding> in <collection>, <predicate>)` — existential quantifier.
     Some_(String, Box<Expr>, Box<Expr>),
+    /// `filter(<binding> in <collection>, <predicate>)` — the sub-array of
+    /// elements for which the predicate holds. Composes with `count`/`len` for
+    /// exactly-N / at-least-N rules (#93).
+    Filter(String, Box<Expr>, Box<Expr>),
 }
 
 /// What a `Var(...)` references.
@@ -303,6 +307,24 @@ pub fn evaluate(expr: &Expr, ctx: &EvalContext) -> Result<Value, EvalError> {
                 }
             }
             Ok(Value::Bool(false))
+        }
+        Expr::Filter(binding_name, collection_expr, predicate_expr) => {
+            // Null collection -> empty array (same optional-field tolerance as
+            // every/some). Returns the sub-array, so `count(filter(...))`
+            // expresses exactly-N and `some`/`in` compose over the result.
+            let collection_value = evaluate(collection_expr, ctx)?;
+            if matches!(collection_value, Value::Null) {
+                return Ok(Value::Array(Vec::new()));
+            }
+            let collection = expect_array(collection_value)?;
+            let mut out = Vec::new();
+            for item in collection {
+                let child_ctx = ctx.with_binding(binding_name.clone(), item.clone());
+                if expect_bool(evaluate(predicate_expr, &child_ctx)?)? {
+                    out.push(item);
+                }
+            }
+            Ok(Value::Array(out))
         }
     }
 }
@@ -922,6 +944,42 @@ mod tests {
         )
         .unwrap();
         assert_eq!(result, Value::Bool(true));
+    }
+
+    // RED GATE (#93): filter returns the sub-array where the predicate holds;
+    // count over it expresses exactly-N / at-least-N.
+    #[test]
+    fn filter_returns_matching_subarray() {
+        let cv = null_ctx();
+        // filter(d in ["a", "bb", "c"], d in ["a", "c"]) -> ["a", "c"]
+        let result = evaluate(
+            &Expr::Filter(
+                "d".into(),
+                Box::new(Expr::Lit(arr([s("a"), s("bb"), s("c")]))),
+                Box::new(Expr::In(
+                    Box::new(Expr::Var(VarRef::Binding("d".into()))),
+                    Box::new(Expr::Lit(arr([s("a"), s("c")]))),
+                )),
+            ),
+            &ctx(&cv),
+        )
+        .unwrap();
+        assert_eq!(result, arr([s("a"), s("c")]));
+    }
+
+    #[test]
+    fn filter_over_null_is_empty_array() {
+        let cv = null_ctx();
+        let result = evaluate(
+            &Expr::Filter(
+                "d".into(),
+                Box::new(Expr::Lit(Value::Null)),
+                Box::new(Expr::Lit(Value::Bool(true))),
+            ),
+            &ctx(&cv),
+        )
+        .unwrap();
+        assert_eq!(result, Value::Array(vec![]));
     }
 
     #[test]

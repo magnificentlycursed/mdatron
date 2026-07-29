@@ -137,12 +137,23 @@ engine. The ≥80% acceptance criterion is MET.**
 - **Contract** — DESIGN's construct-inventory line claimed "arithmetic and
   comparison operators"; the engine implements equality only. Amended
   (a narrowed-surface falsifier caught by the campaign).
-- **Known limit, both agents independently:** no filter/count-with-predicate,
-  so "exactly N matching elements" has no direct encoding (run 2 reached it
-  via last-wins index + universal equality, unsound for deeply-identical
-  duplicates). Recorded as the standing candidate for any future DSL-expansion
-  decision — consistent with the vsdd #73 uniqueness assessment; not a v1.0
-  gate.
+- **Known limit → CLOSED 2026-07-28 (#93):** no filter/count-with-predicate,
+  so "exactly N matching elements" had no direct encoding (run 2 reached it via
+  last-wins index + universal equality, unsound for deeply-identical
+  duplicates). Both cold agents hit this independently; it was the standing
+  DSL-expansion candidate and vsdd's #73 uniqueness need. Resolved by the
+  `filter(x in arr, pred)` construct — exactly-N is `count(filter(...)) == N` —
+  a narrowed-inventory addition (frontmatter arrays, not body content, so
+  outside the L85 gate) confirmed by the focused cold-authoring run below.
+
+## filter addition — cold confirmation, 2026-07-28 (#93)
+
+A fresh cold-context agent, given ONLY the updated `docs/dsl-reference.md`
+(with `filter`), was asked to author the exactly-one-lane rule that both prior
+runs found inexpressible. Result recorded inline in the tracker (#93): the rule
+was authored confidently in one pass as `count(filter(m in $self.members,
+$m.kind == "lane")) == 1` and executes correctly (fires on two lanes, clean on
+one). The construct closes the gap it was added for.
 - **Residual frictions** (empty-`[]` shown nowhere, `{{expr}}` scope,
   non-string index keys): folded into `docs/dsl-reference.md` as they were
   reported; none blocked authoring.

@@ -266,6 +266,7 @@ impl<'a> Parser<'a> {
             "null" => Ok(Expr::Lit(Value::Null)),
             "every" => self.parse_quantifier_body(QuantifierKind::Every),
             "some" => self.parse_quantifier_body(QuantifierKind::Some),
+            "filter" => self.parse_quantifier_body(QuantifierKind::Filter),
             // Reserved keywords that cannot appear as a primary:
             "and" | "or" | "not" | "in" | "not_in" => Err(ParseError::new(
                 start,
@@ -334,6 +335,9 @@ impl<'a> Parser<'a> {
                 Expr::Every(binding, Box::new(collection), Box::new(predicate))
             }
             QuantifierKind::Some => Expr::Some_(binding, Box::new(collection), Box::new(predicate)),
+            QuantifierKind::Filter => {
+                Expr::Filter(binding, Box::new(collection), Box::new(predicate))
+            }
         })
     }
 
@@ -492,6 +496,7 @@ impl<'a> Parser<'a> {
 enum QuantifierKind {
     Every,
     Some,
+    Filter,
 }
 
 impl QuantifierKind {
@@ -499,6 +504,7 @@ impl QuantifierKind {
         match self {
             Self::Every => "every",
             Self::Some => "some",
+            Self::Filter => "filter",
         }
     }
 }
@@ -529,6 +535,30 @@ mod tests {
     fn parses_string_literal() {
         let expr = parse_expression("\"hello\"").unwrap();
         assert_eq!(expr, Expr::Lit(s("hello")));
+    }
+
+    // RED GATE (#93): `filter` parses as a quantifier-shaped form and composes
+    // with count() for exactly-one rules.
+    #[test]
+    fn parses_filter_composed_with_count() {
+        let expr = parse_expression(r#"count(filter(m in $members, $m in ["lane"])) == 1"#)
+            .expect("filter composes with count");
+        match expr {
+            Expr::Eq(lhs, rhs) => {
+                assert_eq!(*rhs, Expr::Lit(Value::Int(1)));
+                match *lhs {
+                    Expr::Call(name, args) => {
+                        assert_eq!(name, "count");
+                        assert!(
+                            matches!(args.as_slice(), [Expr::Filter(b, _, _)] if b == "m"),
+                            "count's arg is a Filter over m"
+                        );
+                    }
+                    other => panic!("expected count(...), got {other:?}"),
+                }
+            }
+            other => panic!("expected top-level ==, got {other:?}"),
+        }
     }
 
     #[test]
