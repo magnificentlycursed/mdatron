@@ -88,6 +88,9 @@ pub struct LoadedVocab {
     anti: Vec<(regex_lite::Regex, String)>,
     numeric: Vec<String>,
     cluster: regex_lite::Regex,
+    /// Terms declared both `registered` and `draft` (#95). They resolve to
+    /// draft (the permissive status); each names a `MDATRON-W0044` warning.
+    draft_conflicts: Vec<String>,
 }
 
 /// Load `.mdatron/vocabulary.yaml`. `Ok(None)` when absent (family inactive);
@@ -130,8 +133,34 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedVocab>, Error> {
         .map(|a| Ok((compile(&a.pattern, "anti_pattern")?, a.register.clone())))
         .collect::<Result<Vec<_>, Error>>()?;
 
+    // #95 (DESIGN § agnosticism conflict outcome): group terms by name; a term
+    // declared both `registered` and `draft` resolves to draft (the permissive
+    // status) and names a W0044 warning. Non-draft duplicates keep first-wins.
+    let mut order: Vec<String> = Vec::new();
+    let mut statuses: std::collections::BTreeMap<String, Vec<TermStatus>> =
+        std::collections::BTreeMap::new();
+    for t in &raw.terms {
+        if !statuses.contains_key(&t.term) {
+            order.push(t.term.clone());
+        }
+        statuses.entry(t.term.clone()).or_default().push(t.status);
+    }
+    let mut terms: Vec<(String, TermStatus)> = Vec::new();
+    let mut draft_conflicts: Vec<String> = Vec::new();
+    for term in order {
+        let sts = &statuses[&term];
+        let resolved = if sts.contains(&TermStatus::Registered) && sts.contains(&TermStatus::Draft)
+        {
+            draft_conflicts.push(term.clone());
+            TermStatus::Draft
+        } else {
+            sts[0]
+        };
+        terms.push((term, resolved));
+    }
+
     Ok(Some(LoadedVocab {
-        terms: raw.terms.into_iter().map(|t| (t.term, t.status)).collect(),
+        terms,
         label_allow,
         anti,
         numeric: raw.numeric_claims.into_iter().map(|c| c.field).collect(),
@@ -140,7 +169,36 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedVocab>, Error> {
         // SEC-F3, AIE-F2, MDATRON-E0050).
         cluster: regex_lite::Regex::new(r"\b[A-Z]{1,7}(?:-[A-Z]{0,7})?[0-9]{1,4}\b")
             .expect("engine cluster detector compiles"),
+        draft_conflicts,
     }))
+}
+
+/// Registry-level findings independent of any one file (#95): a term declared
+/// both `registered` and `draft` resolves to draft and names a `MDATRON-W0044`
+/// warning. The term is adopter content, so it rides a quoted region.
+pub fn registry_findings(vocab: &LoadedVocab, vocab_path: &Path, findings: &mut Vec<Finding>) {
+    for term in &vocab.draft_conflicts {
+        findings.push(Finding {
+            code: "MDATRON-W0044".into(),
+            severity: Severity::Warning,
+            summary: "vocabulary-term-status-conflict".into(),
+            message: "a term is declared both registered and draft in \
+                      .mdatron/vocabulary.yaml; it resolves to draft, the \
+                      permissive status — declare it with a single status"
+                .into(),
+            help: Some("keep one status entry for the term".into()),
+            location: Location {
+                file: vocab_path.to_path_buf(),
+                line: 1,
+                column: 0,
+            },
+            explain_ref: Some("MDATRON-W0044".into()),
+            quoted: vec![QuotedRegion {
+                label: "term".into(),
+                content: term.clone(),
+            }],
+        });
+    }
 }
 
 /// Scan one file's prose. `content` is the whole file; `body_offset` is where
