@@ -1,6 +1,6 @@
 {
   "next_display_id": 121,
-  "next_comment_id": 323,
+  "next_comment_id": 324,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -944,10 +944,21 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T13:04:44.715271Z",
-      "updated_at": "2026-07-29T13:04:48.515323Z",
+      "updated_at": "2026-07-29T13:31:13.303317Z",
       "labels": [
         "release"
-      ]
+      ],
+      "comments": {
+        "cfdda727-7070-4dec-b384-568b27262882": {
+          "display_id": 323,
+          "author": "79Ig",
+          "content": "Cut + released 2026-07-29. Crate 0.3.0->0.4.0, envelope 1.1.0->2.0.0 (major). Merged to main (1ef5c0b), tagged v0.4.0, NORMAL GitHub release (isPrerelease=false, latest). SemVer discipline recorded in DESIGN + memory. #48 crates.io publish still held. Closing.",
+          "created_at": "2026-07-29T13:31:13.287227Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAMXQU1VtcC6AWum7RRRaxKAVTvhtlHuRsoENtWidp63ugtK1qDCvej20CG++ONOd/OwB0NUEBFNB0+w4UT+HiAw=="
+        }
+      }
     },
     "2cf9c6a8-984e-448b-bf67-a2acd6b9fa13": {
       "uuid": "2cf9c6a8-984e-448b-bf67-a2acd6b9fa13",
@@ -5145,8 +5156,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T13:04:54.318065Z",
+    "timestamp": "2026-07-29T13:31:13.303317Z",
     "agent_id": "79Ig",
-    "agent_seq": 469
+    "agent_seq": 470
   }
 }
