@@ -1,6 +1,6 @@
 {
   "next_display_id": 120,
-  "next_comment_id": 321,
+  "next_comment_id": 322,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -1690,13 +1690,24 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-29T12:34:12.376568Z",
-      "updated_at": "2026-07-29T12:34:28.981984Z",
+      "updated_at": "2026-07-29T12:46:22.210573Z",
       "labels": [
         "enhancement"
       ],
       "related": [
         "18545077-3dbb-4401-847d-c6b4bdbe7d78"
-      ]
+      ],
+      "comments": {
+        "0543524c-0512-4590-8846-de86f74b90d2": {
+          "display_id": 321,
+          "author": "79Ig",
+          "content": "Built: --json double-emit suppressed; explain --list + short-code; See-also prose refs; README schema pointer. Red gates green; gauntlet green. Remaining W4 tracked as #118 (rule-loc, needs #65) + #119 (compact word-boundary). Merging.",
+          "created_at": "2026-07-29T12:46:22.198016Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABApR2jQbvcp2u+zRKGUgreW/y6LOn8Gz1YQHmm2FwIqF8MDMmBapQx10vi60iXmG6CwYKHd6vhqgju3LCXYg81Dw=="
+        }
+      }
     },
     "69b33517-946c-45ba-9287-c1231028d5ec": {
       "uuid": "69b33517-946c-45ba-9287-c1231028d5ec",
@@ -5113,8 +5124,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T12:45:57.932065Z",
+    "timestamp": "2026-07-29T12:46:22.210573Z",
     "agent_id": "79Ig",
-    "agent_seq": 460
+    "agent_seq": 461
   }
 }
