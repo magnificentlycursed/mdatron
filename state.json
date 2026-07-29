@@ -1,5 +1,5 @@
 {
-  "next_display_id": 125,
+  "next_display_id": 126,
   "next_comment_id": 328,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -15,6 +15,7 @@
     "1da67425-f44d-40d6-8ba1-2d2ed768de38": 97,
     "1ff675c3-889e-4de4-84da-352debc4b1f7": 5,
     "224e7d50-2f87-4c2e-abf7-317c23ccbada": 46,
+    "238317fa-9b8f-4ff1-9774-90c8dffb9a2e": 125,
     "2456d20a-0560-437f-81a0-2d54a1b96d80": 65,
     "262c8f3f-bab5-4796-b735-b24d9bf01ac9": 123,
     "277a179b-fdda-44e7-a79b-f9e096e12789": 124,
@@ -670,6 +671,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAxt8aAXUHF4m81Yumuet3Rf6KTdZ/BttDgX+LqDSn+bIQpi02smYI2L1KN1hdL74ldIAPVwHGFT3HYl6VnP8DCQ=="
         }
       }
+    },
+    "238317fa-9b8f-4ff1-9774-90c8dffb9a2e": {
+      "uuid": "238317fa-9b8f-4ff1-9774-90c8dffb9a2e",
+      "display_id": 125,
+      "title": "robustness: non-UTF8 filename blanks --json; U+2028/2029 leak in location line; config-typo jurisdiction overreach (roast SHO4/SHO5/SHO7)",
+      "status": "open",
+      "priority": "high",
+      "created_by": "79Ig",
+      "created_at": "2026-07-29T17:21:57.083205Z",
+      "updated_at": "2026-07-29T17:21:57.083205Z"
     },
     "2456d20a-0560-437f-81a0-2d54a1b96d80": {
       "uuid": "2456d20a-0560-437f-81a0-2d54a1b96d80",
@@ -5277,8 +5288,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T17:21:52.739805Z",
+    "timestamp": "2026-07-29T17:21:57.083205Z",
     "agent_id": "79Ig",
-    "agent_seq": 491
+    "agent_seq": 492
   }
 }
