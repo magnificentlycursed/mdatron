@@ -1,6 +1,6 @@
 {
   "next_display_id": 112,
-  "next_comment_id": 309,
+  "next_comment_id": 310,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -1732,14 +1732,25 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-07-29T10:01:17.140659Z",
-      "updated_at": "2026-07-29T10:01:39.288886Z",
+      "updated_at": "2026-07-29T10:01:44.069567Z",
       "labels": [
         "question"
       ],
       "related": [
         "18545077-3dbb-4401-847d-c6b4bdbe7d78",
         "ed48043d-4d35-4ce5-af15-81f01cbbbdd7"
-      ]
+      ],
+      "comments": {
+        "93672a85-8247-4f48-b659-1052af8e8193": {
+          "display_id": 309,
+          "author": "79Ig",
+          "content": "Surfaced by the #110 cold SE review (residual obs 1). W0047 (#110) covers a MISSING schemas dir + unrouted schema_class. The sibling case — schemas dir PRESENT-but-EMPTY + a schema_class file that nothing serves + patterns also empty -> exit 0, zero findings (has_validation_infra=false suppresses W0045; is_dir()=true suppresses W0047). Real-world trigger: adopter runs `mdatron init` (creates empty schemas/), adds a schema_class file, forgets the .json. NOT fixed here because it directly contradicts the ratified no_adopter_data_runs_with_all_families_inactive invariant (that test asserts empty-schemas + schema_class file = clean). Genuine design question: should an init'd-but-unconfigured project warn, or stay clean? Operator call; likely a families-reason nuance or a DESIGN ruling, not a silent code change.",
+          "created_at": "2026-07-29T10:01:44.056588Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABACDChaOAW63OlLLFFYUEr2eXsi2/2FG4K4vzE3nInNOBCeJYzxvsl0xt5yvyR+AXlhZCnHEZWNTbQnAU8mt0EBw=="
+        }
+      }
     },
     "730c7a15-f81f-449a-8323-8d09d5206454": {
       "uuid": "730c7a15-f81f-449a-8323-8d09d5206454",
@@ -4831,8 +4842,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T10:01:39.288886Z",
+    "timestamp": "2026-07-29T10:01:44.069567Z",
     "agent_id": "79Ig",
-    "agent_seq": 403
+    "agent_seq": 404
   }
 }
