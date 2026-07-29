@@ -1,6 +1,6 @@
 {
   "next_display_id": 95,
-  "next_comment_id": 249,
+  "next_comment_id": 250,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -2052,10 +2052,21 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-29T00:27:50.651130Z",
-      "updated_at": "2026-07-29T00:27:55.846926Z",
+      "updated_at": "2026-07-29T00:30:30.192022Z",
       "labels": [
         "feature"
-      ]
+      ],
+      "comments": {
+        "078bf37c-ca6e-42ad-a2df-24949084264f": {
+          "display_id": 249,
+          "author": "79Ig",
+          "content": "LATENCY EVIDENCE (vsdd-cli, 2026-07-28): ~178 governed .md files; mdatron verify = 0.65s wall-clock in their pre-commit (measured on 0.1.0). Their read: noticeable-but-tolerable for pre-commit (A waits honestly there), BUT their design wires mdatron into ACTION-TIME hooks (per tool call) where 0.65s/call is a real tax — so changed-file+dependents is REQUIRED before they lean on per-call mdatron. Sequencing: build A before that per-call cadence lands on their side. This is also the first concrete actual for DESIGN's phase-1b latency-banding deferral (normal-case thresholds were to be banded from actuals; 0.65s/178-files/whole-tree/0.1.0 is the first data point — record in the cost ledger when A lands).",
+          "created_at": "2026-07-29T00:30:30.178495Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAz5jc0rX3gHv9GTfzkx6deiyQ67y9lvVKiZYhL/kOh6bc7dquLdACnjmWTFFejJq0ltaKCRG4XSTvU+wjmAZ4Bw=="
+        }
+      }
     },
     "a3a534ce-dc66-4ae7-8e54-f671d161902f": {
       "uuid": "a3a534ce-dc66-4ae7-8e54-f671d161902f",
@@ -3907,8 +3918,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T00:28:44.351949Z",
+    "timestamp": "2026-07-29T00:30:30.192022Z",
     "agent_id": "79Ig",
-    "agent_seq": 235
+    "agent_seq": 236
   }
 }
