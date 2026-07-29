@@ -1,6 +1,6 @@
 {
   "next_display_id": 97,
-  "next_comment_id": 256,
+  "next_comment_id": 257,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -538,11 +538,20 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T01:38:59.747297Z",
-      "updated_at": "2026-07-29T01:39:43.840686Z",
+      "updated_at": "2026-07-29T01:47:23.506243Z",
       "labels": [
         "process"
       ],
       "comments": {
+        "204e255b-1564-43ee-bc58-73537619c1f7": {
+          "display_id": 256,
+          "author": "79Ig",
+          "content": "2c exit-gate — conduct half recorded + first bound seam shipped on feature/96-methodology (ab39663). CONDUCT: docs/methodology.md (six-phase flow, route-before-fix, owned/reviewed spec changes, crosslink discipline, plain-naming register) + docs/methodology-enforcement.md (seam table S1-S5 + escape corpus E-a..E-f as regression seeds). ENFORCEMENT: S1 amendment-discipline .githooks/commit-msg refuses an uncited governing-DESIGN change (catches E-e forge); bound via core.hooksPath; regression seeds in tests/methodology_seams.rs (forged refused / cited accepted / non-DESIGN ungated / checker version-pinned E-f) — 3 green. Branch-lane slip self-caught + reconciled: #96 initially committed onto feature/93-filter, split back to its own branch. Honest boundary preserved: phase-answer derivation + process-integrity queries + gate commands await vsdd-cli. Remaining child lanes: S2 routing-plan-before-fix-close, S3 round-result/child-issue parity, S4 session-stop hook, S5 mdatron dogfood over the estate; plus cold review of methodology.md itself (child i).",
+          "created_at": "2026-07-29T01:47:23.484815Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABANh2sDLk3aumls55U4xYKG3mc6MW+P0aZdJ8nZB/kbrvyg6JJBLck8bZUvYEWedZ6DFaXHUO7RN6mQArsDpcMCw=="
+        },
         "e9778298-353c-44d4-b144-1be697bf0a4b": {
           "display_id": 255,
           "author": "79Ig",
@@ -4036,8 +4045,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T01:39:43.840686Z",
+    "timestamp": "2026-07-29T01:47:23.506243Z",
     "agent_id": "79Ig",
-    "agent_seq": 260
+    "agent_seq": 261
   }
 }
