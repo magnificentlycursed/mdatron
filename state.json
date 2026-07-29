@@ -1,6 +1,6 @@
 {
   "next_display_id": 101,
-  "next_comment_id": 279,
+  "next_comment_id": 280,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -3888,7 +3888,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-29T05:22:21.086795Z",
-      "updated_at": "2026-07-29T05:28:07.330327Z",
+      "updated_at": "2026-07-29T05:52:17.602708Z",
       "labels": [
         "feature"
       ],
@@ -3904,6 +3904,15 @@
           "kind": "handoff",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA10gPVjQr3nYFHUsMC/xTunw0oKftxAMVejt9Edxvy53SXQU1zlp3zHHsdlhd3DC6GDgmB1iuCFXcfgSKNT9gAw=="
+        },
+        "5211023d-0753-49fa-9262-7a72982d1f0e": {
+          "display_id": 279,
+          "author": "79Ig",
+          "content": "PHASE 3 COLD REVIEW — no blockers to the design, but 3 genuine MISSING-EDGE (unsoundness) classes reachable from adopter inputs; routing before fix (practice 2). Clean: walk_expr recursion (exhaustive, no wildcard), provenance last-wins + sources completeness, shared-key clique, rule-reference-to-all-sources, governance breadth.\nF1 (missing edge, ROUTE→1a): a key() appearing ONLY in a rule's message {{...}} is never scanned (interpolate_message evaluates it) — the design under-specified the scan surface. FIX in-lane: scan rule.message slots too.\nF2 (missing edge, ROUTE→1a): key() with a non-literal first arg (dynamic index name via a let-binding/field) is silently dropped, but the evaluator evaluates args[0]. FIX in-lane: a dynamic key() makes the rule reference ALL indices (conservative, no-missing-edge).\nF3 (missing edge, ROUTE→1b): governed_by is used as a raw graph node while every other node is confine-normalized (no leading ./), so 'governed_by: ./DESIGN.md' attaches to a distinct node and the governance edge silently fails to connect. FIX in-lane: normalize governed_by via confine_lexically.\nF4 (test gap, ROUTE→1b): let-binding scan untested; no edge-kind composition/diamond/self-ref; F1/F2 uncovered. FIX in-lane: add those seeds.\nF5 (nit): DESIGN 'keyed rule' phrase in shared-key def == registry index (key() is the sole cross-file mechanism); adding a clarifying note. All fixes land before merge.",
+          "created_at": "2026-07-29T05:52:17.587724Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAYooW7SwvvaOChKIOpEcUC8+Wk1PowLsEjVw7PugvCUaGuja9jUlisoNsfi+DF2GlZ3M4m5Om4zx3ZMSTCuIGBw=="
         },
         "5badc1e2-36c1-4e1a-84a5-e0209b281812": {
           "display_id": 277,
@@ -4328,8 +4337,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T05:30:15.664732Z",
+    "timestamp": "2026-07-29T05:52:17.602708Z",
     "agent_id": "79Ig",
-    "agent_seq": 311
+    "agent_seq": 312
   }
 }
