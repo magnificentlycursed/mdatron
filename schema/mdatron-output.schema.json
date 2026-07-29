@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mdatron.dev/schema/mdatron-output/1.1.0",
+  "title": "mdatron verify --json output envelope",
+  "description": "The machine interface of `mdatron verify --json`. Versioned: mdatron_output_version tracks THIS schema (currently 1.1.0). A published contract (DESIGN.md § Diagnostics are a versioned contract) — consumers pin and validate against it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "mdatron_output_version",
+    "mdatron_version",
+    "pipeline_status",
+    "summary",
+    "families",
+    "findings"
+  ],
+  "properties": {
+    "mdatron_output_version": {
+      "type": "string",
+      "const": "1.1.0",
+      "description": "Semver of this envelope schema. Moves with the schema; a change here signals a contract change."
+    },
+    "mdatron_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+",
+      "description": "The running mdatron crate version (distinct from the envelope version)."
+    },
+    "pipeline_status": {
+      "enum": ["ok", "failed"]
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["error_count", "warning_count", "lint_count", "files_checked"],
+      "properties": {
+        "error_count": { "type": "integer", "minimum": 0 },
+        "warning_count": { "type": "integer", "minimum": 0 },
+        "lint_count": { "type": "integer", "minimum": 0 },
+        "files_checked": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "families": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Per-verify activity of the five check families. active = data supplied and the family ran (invoked, not fired).",
+      "required": ["schema", "route", "pin", "vocabulary", "citation"],
+      "properties": {
+        "schema": { "$ref": "#/$defs/activity" },
+        "route": { "$ref": "#/$defs/activity" },
+        "pin": { "$ref": "#/$defs/activity" },
+        "vocabulary": { "$ref": "#/$defs/activity" },
+        "citation": { "$ref": "#/$defs/activity" }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/finding" }
+    }
+  },
+  "$defs": {
+    "activity": {
+      "enum": ["active", "inactive"]
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "severity", "summary", "message", "help", "location", "explain_ref"],
+      "properties": {
+        "code": { "type": "string" },
+        "severity": { "enum": ["error", "warning", "lint"] },
+        "summary": { "type": "string" },
+        "message": { "type": "string" },
+        "help": { "type": ["string", "null"] },
+        "explain_ref": { "type": ["string", "null"] },
+        "location": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["file", "line", "column"],
+          "properties": {
+            "file": { "type": "string" },
+            "line": { "type": "integer", "minimum": 0 },
+            "column": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "quoted": {
+          "type": "array",
+          "description": "Adopter-derived text carried out-of-line (absent when empty).",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["label", "content"],
+            "properties": {
+              "label": { "type": "string" },
+              "content": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

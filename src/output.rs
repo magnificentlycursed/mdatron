@@ -7,15 +7,69 @@
 //! contracts. Exit-code semantics (BC-4) + stream contract (BC-5) live at the binary
 //! boundary (src/main.rs).
 //!
-//! Output version stays at 1.0.0 for v0.1.0; subsequent additive optional-field changes
-//! bump minor; required-field or shape changes bump major.
+//! Output version is [`OUTPUT_VERSION`]; additive fields bump minor (the
+//! `families` field took it 1.0.0 -> 1.1.0, #90), required-field or shape
+//! changes bump major. The published schema at `schema/mdatron-output.schema.json`
+//! is the machine-readable pin; contract-stability tripwires keep the two in step.
 
 use serde::{Deserialize, Serialize};
 
 use crate::diagnostic::{Finding, Severity};
 
 /// Output-version contract value. Semver per SO disposition 2026-06-02 (Raise-to-SO #1).
-pub const OUTPUT_VERSION: &str = "1.0.0";
+/// 1.1.0 (#90, 0.3.0): additive `families` field — old consumers ignore it,
+/// new consumers audit per-verify family activity. Must move in lockstep with
+/// the published envelope schema (`schema/mdatron-output.schema.json`); the
+/// `envelope_version_matches_published_schema` tripwire enforces it.
+pub const OUTPUT_VERSION: &str = "1.1.0";
+
+/// Whether a check family was invoked in a verify run — active means its data
+/// was supplied and the family ran (NOT that it produced findings; a clean
+/// active family is distinguishable from an inactive one). Per the ratified
+/// #90 envelope shape (vsdd-cli consumer ask + DESIGN § Validation is
+/// data-driven "the inactivity is reported").
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum FamilyActivity {
+    Active,
+    Inactive,
+}
+
+impl FamilyActivity {
+    /// `Active` when `data_supplied`, else `Inactive`.
+    pub fn from_supplied(data_supplied: bool) -> Self {
+        if data_supplied {
+            Self::Active
+        } else {
+            Self::Inactive
+        }
+    }
+}
+
+/// Per-verify activity of the five check families (`DESIGN.md` § Five check
+/// families), emitted under the envelope's `families` field.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Families {
+    pub schema: FamilyActivity,
+    pub route: FamilyActivity,
+    pub pin: FamilyActivity,
+    pub vocabulary: FamilyActivity,
+    pub citation: FamilyActivity,
+}
+
+impl Families {
+    /// All families inactive — the state when the pipeline did not run (a
+    /// pipeline-error envelope reports no family as invoked).
+    pub fn all_inactive() -> Self {
+        Self {
+            schema: FamilyActivity::Inactive,
+            route: FamilyActivity::Inactive,
+            pin: FamilyActivity::Inactive,
+            vocabulary: FamilyActivity::Inactive,
+            citation: FamilyActivity::Inactive,
+        }
+    }
+}
 
 /// Pipeline status — emitted as the `pipeline_status` field.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -63,13 +117,15 @@ impl Summary {
 /// 2. `mdatron_version` (mdatron's own crate version)
 /// 3. `pipeline_status` ("ok" / "failed")
 /// 4. `summary` (per-severity counts + files_checked)
-/// 5. `findings` (array of Finding objects)
+/// 5. `families` (per-family activity; #90)
+/// 6. `findings` (array of Finding objects)
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Output {
     pub mdatron_output_version: String,
     pub mdatron_version: String,
     pub pipeline_status: PipelineStatus,
     pub summary: Summary,
+    pub families: Families,
     pub findings: Vec<Finding>,
 }
 
@@ -85,6 +141,7 @@ impl Output {
         findings: Vec<Finding>,
         files_checked: u32,
         pipeline_status: PipelineStatus,
+        families: Families,
         mdatron_version: &str,
     ) -> Self {
         let summary = Summary::from_findings(&findings, files_checked);
@@ -93,6 +150,7 @@ impl Output {
             mdatron_version: mdatron_version.to_string(),
             pipeline_status,
             summary,
+            families,
             findings,
         }
     }
@@ -164,7 +222,13 @@ mod tests {
 
     #[test]
     fn output_build_sets_required_fields() {
-        let env = Output::build(vec![], 0, PipelineStatus::Ok, "0.1.0");
+        let env = Output::build(
+            vec![],
+            0,
+            PipelineStatus::Ok,
+            Families::all_inactive(),
+            "0.1.0",
+        );
         assert_eq!(env.mdatron_output_version, OUTPUT_VERSION);
         assert_eq!(env.mdatron_version, "0.1.0");
         assert_eq!(env.pipeline_status, PipelineStatus::Ok);
@@ -172,7 +236,13 @@ mod tests {
 
     #[test]
     fn exit_code_zero_when_clean() {
-        let env = Output::build(vec![], 5, PipelineStatus::Ok, "0.1.0");
+        let env = Output::build(
+            vec![],
+            5,
+            PipelineStatus::Ok,
+            Families::all_inactive(),
+            "0.1.0",
+        );
         assert_eq!(env.derive_exit_code(), 0);
     }
 
@@ -182,6 +252,7 @@ mod tests {
             vec![err_finding("MDATRON-E0001")],
             5,
             PipelineStatus::Ok,
+            Families::all_inactive(),
             "0.1.0",
         );
         assert_eq!(env.derive_exit_code(), 1);
@@ -194,6 +265,7 @@ mod tests {
             vec![warn_finding("MDATRON-W0050")],
             5,
             PipelineStatus::Ok,
+            Families::all_inactive(),
             "0.1.0",
         );
         assert_eq!(env.derive_exit_code(), 0);
@@ -201,8 +273,141 @@ mod tests {
 
     #[test]
     fn exit_code_two_when_pipeline_failed() {
-        let env = Output::build(vec![], 0, PipelineStatus::Failed, "0.1.0");
+        let env = Output::build(
+            vec![],
+            0,
+            PipelineStatus::Failed,
+            Families::all_inactive(),
+            "0.1.0",
+        );
         assert_eq!(env.derive_exit_code(), 2);
+    }
+
+    /// The published envelope schema (`schema/mdatron-output.schema.json`),
+    /// embedded so the tripwires run without filesystem access.
+    const PUBLISHED_SCHEMA: &str = include_str!("../schema/mdatron-output.schema.json");
+
+    fn representative_envelope() -> Output {
+        let mut errf = err_finding("MDATRON-E0050");
+        errf.help = Some("fix it".into());
+        errf.explain_ref = Some("MDATRON-E0050".into());
+        errf.quoted = vec![crate::diagnostic::QuotedRegion {
+            label: "found".into(),
+            content: "\"bogus\"".into(),
+        }];
+        Output::build(
+            vec![
+                errf,
+                warn_finding("MDATRON-W0041"),
+                lint_finding("MDATRON-L0001"),
+            ],
+            3,
+            PipelineStatus::Ok,
+            Families {
+                schema: FamilyActivity::Active,
+                route: FamilyActivity::Active,
+                pin: FamilyActivity::Inactive,
+                vocabulary: FamilyActivity::Inactive,
+                citation: FamilyActivity::Inactive,
+            },
+            "0.3.0",
+        )
+    }
+
+    fn compile_published() -> jsonschema::JSONSchema {
+        let schema_json: serde_json::Value =
+            serde_json::from_str(PUBLISHED_SCHEMA).expect("published schema is valid JSON");
+        jsonschema::JSONSchema::options()
+            .with_draft(jsonschema::Draft::Draft202012)
+            .compile(&schema_json)
+            .expect("published schema compiles")
+    }
+
+    // CONTRACT-STABILITY TRIPWIRE (#90): every emitted envelope validates against
+    // the published schema. additionalProperties:false throughout means a shape
+    // change (added/removed/renamed field) that is not mirrored in the schema
+    // FAILS here — the "seeded envelope-shape change fails CI" criterion.
+    #[test]
+    fn envelope_validates_against_published_schema() {
+        let compiled = compile_published();
+        for env in [
+            representative_envelope(),
+            Output::build(
+                vec![],
+                0,
+                PipelineStatus::Failed,
+                Families::all_inactive(),
+                "0.3.0",
+            ),
+            Output::build(
+                vec![],
+                5,
+                PipelineStatus::Ok,
+                Families::all_inactive(),
+                "0.3.0",
+            ),
+        ] {
+            let json = serde_json::to_value(&env).expect("envelope serializes");
+            let errs: Vec<String> = match compiled.validate(&json) {
+                Ok(()) => Vec::new(),
+                Err(errors) => errors
+                    .map(|e| format!("{e} at {}", e.instance_path))
+                    .collect(),
+            };
+            assert!(
+                errs.is_empty(),
+                "envelope failed the published schema:\n{}",
+                errs.join("\n")
+            );
+        }
+    }
+
+    // TRIPWIRE (#90): the schema's declared const version equals OUTPUT_VERSION.
+    // A struct-shape change bumps OUTPUT_VERSION, which forces the schema const
+    // to move (else validation above breaks) — shape and version stay locked.
+    #[test]
+    fn published_schema_version_matches_output_version() {
+        let schema: serde_json::Value = serde_json::from_str(PUBLISHED_SCHEMA).unwrap();
+        let declared = schema["properties"]["mdatron_output_version"]["const"]
+            .as_str()
+            .expect("schema pins the output version as a const");
+        assert_eq!(
+            declared, OUTPUT_VERSION,
+            "published schema version must equal OUTPUT_VERSION"
+        );
+        assert!(
+            schema["$id"]
+                .as_str()
+                .unwrap_or("")
+                .ends_with(OUTPUT_VERSION),
+            "schema $id should carry the version"
+        );
+    }
+
+    // TRIPWIRE (#90): the three output forms agree on the finding set (DESIGN
+    // § Diagnostics are a versioned contract: "the three output forms agree on
+    // fixture findings"). Every finding's code appears in the JSON envelope, its
+    // TTY rendering, and its compact rendering.
+    #[test]
+    fn three_output_forms_agree_on_findings() {
+        let env = representative_envelope();
+        let json_codes: Vec<&str> = env.findings.iter().map(|f| f.code.as_str()).collect();
+        assert_eq!(
+            json_codes,
+            ["MDATRON-E0050", "MDATRON-W0041", "MDATRON-L0001"]
+        );
+        for f in &env.findings {
+            assert!(
+                f.format_tty().contains(&f.code),
+                "TTY form drops {}",
+                f.code
+            );
+            assert!(
+                f.format_compact().contains(&f.code),
+                "compact form drops {}",
+                f.code
+            );
+        }
     }
 
     #[test]

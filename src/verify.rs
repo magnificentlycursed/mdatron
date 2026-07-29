@@ -139,8 +139,24 @@ pub enum VerifyError {
     Frontmatter { path: String, error: String },
 }
 
+/// A completed verification run: the findings plus which check families were
+/// invoked (#90). The envelope's `families` field is built from `families`.
+pub struct VerifyReport {
+    pub findings: Vec<Finding>,
+    pub families: crate::output::Families,
+}
+
 /// Run the verification pipeline. Returns findings sorted by file path then code.
+/// Thin wrapper over [`verify_report`] for callers that only need findings.
 pub fn verify(config: &VerifyConfig) -> Result<Vec<Finding>, VerifyError> {
+    verify_report(config).map(|r| r.findings)
+}
+
+/// Run the verification pipeline and report both findings and per-family
+/// activity (`DESIGN.md` § Five check families; #90). A family is **active**
+/// when its data was supplied and it ran this pass — independent of whether it
+/// produced findings.
+pub fn verify_report(config: &VerifyConfig) -> Result<VerifyReport, VerifyError> {
     // BC-4 pipeline-fail detection: refuse to proceed when neither schemas nor patterns
     // directories exist. A project without either has nothing to validate against; this
     // is a configuration error, not a clean run with zero findings.
@@ -204,6 +220,23 @@ pub fn verify(config: &VerifyConfig) -> Result<Vec<Finding>, VerifyError> {
         Err(e) => return Err(VerifyError::Config(e.to_string())),
     };
 
+    // Capture per-family activity before the Options are consumed (#90).
+    // Active = data supplied and the family ran this pass. Citation is
+    // data-less, activating only via a route opting in with `citations: true`.
+    use crate::output::{Families, FamilyActivity};
+    let families = Families {
+        schema: FamilyActivity::from_supplied(!schemas.is_empty()),
+        route: FamilyActivity::from_supplied(routes.is_some()),
+        pin: FamilyActivity::from_supplied(pin_data.is_some()),
+        vocabulary: FamilyActivity::from_supplied(vocab.is_some()),
+        citation: FamilyActivity::from_supplied(
+            routes
+                .as_ref()
+                .map(|r| r.routes.iter().any(|x| x.citations))
+                .unwrap_or(false),
+        ),
+    };
+
     let mut findings: Vec<Finding> = Vec::new();
     if let Some(mut loaded) = pin_data {
         findings.append(&mut loaded.findings);
@@ -248,7 +281,7 @@ pub fn verify(config: &VerifyConfig) -> Result<Vec<Finding>, VerifyError> {
             .cmp(&b.location.file)
             .then_with(|| a.code.cmp(&b.code))
     });
-    Ok(findings)
+    Ok(VerifyReport { findings, families })
 }
 
 // ── Schema + pattern loading ───────────────────────────────────────────────────

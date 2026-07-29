@@ -247,6 +247,145 @@ mod tests {
         "MDATRON-E0101",
     ];
 
+    use std::path::{Path, PathBuf};
+
+    fn repo_root() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+    }
+
+    /// Collect every `MDATRON-<L><NNNN>` literal in `content`.
+    fn mdatron_codes_in(content: &str) -> Vec<String> {
+        let bytes = content.as_bytes();
+        let mut out = Vec::new();
+        let mut i = 0;
+        while let Some(rel) = content[i..].find("MDATRON-") {
+            let start = i + rel;
+            let tail = start + "MDATRON-".len();
+            if tail + 5 <= bytes.len() {
+                let letter = bytes[tail];
+                let digits = &bytes[tail + 1..tail + 5];
+                if matches!(letter, b'E' | b'L' | b'W') && digits.iter().all(u8::is_ascii_digit) {
+                    out.push(content[start..tail + 5].to_string());
+                }
+            }
+            i = tail;
+        }
+        out
+    }
+
+    fn rs_files(dir: &Path, out: &mut Vec<PathBuf>) {
+        for e in std::fs::read_dir(dir).unwrap().flatten() {
+            let p = e.path();
+            if p.is_dir() {
+                rs_files(&p, out);
+            } else if p.extension().and_then(|s| s.to_str()) == Some("rs") {
+                out.push(p);
+            }
+        }
+    }
+
+    // CONTRACT-STABILITY TRIPWIRE (#90): every MDATRON-* code literal in
+    // PRODUCTION source (the region before the file's `#[cfg(test)]` module)
+    // resolves in the explain catalog. Emitting or referencing a code without
+    // a page fails here — the "every emitted code resolves in explain" criterion
+    // (DESIGN § Diagnostics are a versioned contract).
+    #[test]
+    fn every_production_code_resolves_in_explain() {
+        let mut files = Vec::new();
+        rs_files(&repo_root().join("src"), &mut files);
+        let mut missing: Vec<(String, String)> = Vec::new();
+        for f in files {
+            // codes.rs is the reserved-range registry: it names range
+            // representatives (E0020, E0040, ...) that are reserved-but-not-yet-
+            // assigned and so have no page — excluded like the reserved-codes
+            // lint does for the same reason.
+            if f.ends_with("codes.rs") {
+                continue;
+            }
+            let content = std::fs::read_to_string(&f).unwrap_or_default();
+            // Production region only: test fixtures use non-emitted codes.
+            let prod = content.split("#[cfg(test)]").next().unwrap_or(&content);
+            for code in mdatron_codes_in(prod) {
+                if lookup(&code).is_none() {
+                    missing.push((f.display().to_string(), code));
+                }
+            }
+        }
+        assert!(
+            missing.is_empty(),
+            "production codes with no explain page (add the page + BASELINE entry): {missing:?}"
+        );
+    }
+
+    // TRIPWIRE (#90): the committed code-semantics catalog
+    // (`schema/code-catalog.json`, code -> one-line summary from each page's
+    // H1) is current. Changing a code's MEANING (its page summary) without
+    // regenerating the catalog FAILS — the "seeded code-meaning change fails
+    // CI" criterion; the regen is the intentional acknowledgment.
+    #[test]
+    fn code_semantics_catalog_is_current() {
+        let dir = repo_root().join("src").join("explain");
+        let mut built: std::collections::BTreeMap<String, String> = Default::default();
+        for e in std::fs::read_dir(&dir).unwrap().flatten() {
+            let p = e.path();
+            let name = p.file_name().and_then(|s| s.to_str()).unwrap_or("");
+            if !(name.starts_with("MDATRON-") && name.ends_with(".md")) {
+                continue;
+            }
+            let first = std::fs::read_to_string(&p).unwrap();
+            let h1 = first.lines().next().unwrap_or("");
+            let (code, summary) = h1
+                .strip_prefix("# ")
+                .and_then(|s| s.split_once(" \u{2014} "))
+                .unwrap_or_else(|| {
+                    panic!("page {name} H1 must be `# CODE \u{2014} summary`; got {h1:?}")
+                });
+            built.insert(code.trim().to_string(), summary.trim().to_string());
+        }
+        let golden: std::collections::BTreeMap<String, String> = serde_json::from_str(
+            &std::fs::read_to_string(repo_root().join("schema/code-catalog.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            built, golden,
+            "code-semantics drift: regenerate schema/code-catalog.json (a code's meaning changed)"
+        );
+    }
+
+    // Consistency: the BASELINE list, the explain-page files, and the golden
+    // catalog are the same code set — adding a code requires touching all three.
+    #[test]
+    fn baseline_pages_and_catalog_are_the_same_code_set() {
+        use std::collections::BTreeSet;
+        let baseline: BTreeSet<&str> = BASELINE.iter().copied().collect();
+        let mut pages: BTreeSet<String> = Default::default();
+        for e in std::fs::read_dir(repo_root().join("src/explain"))
+            .unwrap()
+            .flatten()
+        {
+            let name = e.file_name().to_string_lossy().into_owned();
+            if let Some(code) = name.strip_prefix("").and_then(|n| n.strip_suffix(".md")) {
+                if code.starts_with("MDATRON-") {
+                    pages.insert(code.to_string());
+                }
+            }
+        }
+        let pages_ref: BTreeSet<&str> = pages.iter().map(|s| s.as_str()).collect();
+        assert_eq!(
+            baseline, pages_ref,
+            "BASELINE and explain-page files must match exactly"
+        );
+        let golden: std::collections::BTreeMap<String, String> = serde_json::from_str(
+            &std::fs::read_to_string(repo_root().join("schema/code-catalog.json")).unwrap(),
+        )
+        .unwrap();
+        let golden_codes: BTreeSet<&str> = golden.keys().map(|s| s.as_str()).collect();
+        assert_eq!(
+            baseline, golden_codes,
+            "BASELINE and the golden catalog must match"
+        );
+    }
+
     #[test]
     fn every_baseline_code_has_a_catalog_page() {
         for code in BASELINE {

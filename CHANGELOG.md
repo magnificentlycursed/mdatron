@@ -10,6 +10,9 @@ the TRON blockchain.
 
 ## [Unreleased]
 
+### Added
+- envelope contract-stability + per-verify family activity (#90, first-consumer rank-1 ask; envelope version 1.0.0 -> 1.1.0): `mdatron verify --json` now carries a `families` object reporting each of the five check families as `active`|`inactive` — active meaning data was supplied and the family ran this pass (invoked, not fired), so a consumer can audit that a required family was actually invoked; the same field satisfies DESIGN's 'the inactivity is reported' criterion. A machine-readable envelope schema is published at `schema/mdatron-output.schema.json` (draft 2020-12, strict) for consumers to pin and validate. Contract-stability tripwires in CI: the emitted envelope validates against the published schema (shape-change fails without a schema update), schema version tracks `OUTPUT_VERSION` in lockstep, the three output forms agree on findings, every production code literal resolves in the explain catalog, and a committed code-semantics golden (`schema/code-catalog.json`) fails on any code-meaning change without regeneration
+
 ## [0.2.0] - 2026-07-28
 
 ### Fixed
