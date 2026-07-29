@@ -1,5 +1,5 @@
 {
-  "next_display_id": 95,
+  "next_display_id": 96,
   "next_comment_id": 254,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -61,6 +61,7 @@
     "a401d8c9-183e-4999-9f71-2d7b6c5ef835": 58,
     "a446eaf1-18df-440b-9718-0442873be9d3": 60,
     "a67c98ab-e717-49f1-81d5-88c3dacd7c0a": 27,
+    "a89629bc-8e2a-4193-adaa-78efe28381e3": 95,
     "a8e5a57b-9652-4feb-9927-f4229585515c": 21,
     "a943580f-3634-4daa-a8f1-5d31c8af3f1b": 16,
     "ab161d79-2af6-4e4f-93c9-068243b3878b": 38,
@@ -2339,6 +2340,16 @@
         }
       }
     },
+    "a89629bc-8e2a-4193-adaa-78efe28381e3": {
+      "uuid": "a89629bc-8e2a-4193-adaa-78efe28381e3",
+      "display_id": 95,
+      "title": "vocab: a term declared registered AND draft resolves to draft with a warning (DESIGN L140 agnosticism conflict outcome; #91 residual)",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-07-29T01:20:36.181900Z",
+      "updated_at": "2026-07-29T01:20:36.181900Z"
+    },
     "a8e5a57b-9652-4feb-9927-f4229585515c": {
       "uuid": "a8e5a57b-9652-4feb-9927-f4229585515c",
       "display_id": 21,
@@ -3979,8 +3990,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T01:20:30.553866Z",
+    "timestamp": "2026-07-29T01:20:36.181900Z",
     "agent_id": "79Ig",
-    "agent_seq": 249
+    "agent_seq": 250
   }
 }
