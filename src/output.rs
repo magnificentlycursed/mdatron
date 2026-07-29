@@ -21,7 +21,7 @@ use crate::diagnostic::{Finding, Severity};
 /// new consumers audit per-verify family activity. Must move in lockstep with
 /// the published envelope schema (`schema/mdatron-output.schema.json`); the
 /// `envelope_version_matches_published_schema` tripwire enforces it.
-pub const OUTPUT_VERSION: &str = "1.3.0";
+pub const OUTPUT_VERSION: &str = "1.4.0";
 
 /// Whether a check family was invoked in a verify run — active means its data
 /// was supplied and the family ran (NOT that it produced findings; a clean
