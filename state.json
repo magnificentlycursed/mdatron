@@ -218,7 +218,10 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-07-29T14:06:11.265548Z",
-      "updated_at": "2026-07-29T14:06:11.265548Z"
+      "updated_at": "2026-07-29T14:06:15.221116Z",
+      "labels": [
+        "from:vsdd-cli"
+      ]
     },
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": {
       "uuid": "1198bf2d-1428-40e0-8e18-cbf40d2df45d",
@@ -5173,8 +5176,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T14:06:11.265548Z",
+    "timestamp": "2026-07-29T14:06:15.221116Z",
     "agent_id": "79Ig",
-    "agent_seq": 474
+    "agent_seq": 475
   }
 }
