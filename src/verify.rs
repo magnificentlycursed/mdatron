@@ -149,6 +149,11 @@ pub enum VerifyError {
 pub struct VerifyReport {
     pub findings: Vec<Finding>,
     pub families: crate::output::Families,
+    /// The number of files this run actually validated (ran the per-file schema
+    /// and rule checks on) — the true audit signal, not a count of files that
+    /// happened to produce findings (#105). A clean run over N files reports N;
+    /// an empty jurisdiction reports 0.
+    pub files_checked: u32,
 }
 
 /// A completed incremental run (#102): the report plus the observable
@@ -159,13 +164,14 @@ pub struct IncrementalReport {
     pub visited: Option<BTreeSet<PathBuf>>,
 }
 
-/// The internal pipeline result: findings, per-family activity, and the visited
-/// scope (`None` for a whole-tree run).
+/// The internal pipeline result: findings, per-family activity, the visited
+/// scope (`None` for a whole-tree run), and the count of files validated (#105).
 type RunResult = Result<
     (
         Vec<Finding>,
         crate::output::Families,
         Option<BTreeSet<PathBuf>>,
+        u32,
     ),
     VerifyError,
 >;
@@ -181,8 +187,12 @@ pub fn verify(config: &VerifyConfig) -> Result<Vec<Finding>, VerifyError> {
 /// when its data was supplied and it ran this pass — independent of whether it
 /// produced findings.
 pub fn verify_report(config: &VerifyConfig) -> Result<VerifyReport, VerifyError> {
-    let (findings, families, _visited) = run(config, None, None)?;
-    Ok(VerifyReport { findings, families })
+    let (findings, families, _visited, files_checked) = run(config, None, None)?;
+    Ok(VerifyReport {
+        findings,
+        families,
+        files_checked,
+    })
 }
 
 /// Incremental verification (#102, sub-lane C of #92): verify only the changed
@@ -194,9 +204,13 @@ pub fn verify_incremental(
     config: &VerifyConfig,
     changed: &Path,
 ) -> Result<IncrementalReport, VerifyError> {
-    let (findings, families, visited) = run(config, Some(changed), None)?;
+    let (findings, families, visited, files_checked) = run(config, Some(changed), None)?;
     Ok(IncrementalReport {
-        report: VerifyReport { findings, families },
+        report: VerifyReport {
+            findings,
+            families,
+            files_checked,
+        },
         visited,
     })
 }
@@ -474,6 +488,7 @@ fn run(
     // the incremental walk sees only part of the tree.
     let vocab_scoped = vocab.is_some() && !vocab_globs.is_empty();
     let mut vocab_scoped_hits = 0usize;
+    let mut files_checked: u32 = 0;
     for (path, rel) in &governed {
         // Incremental: skip files outside the scope.
         if let Some(scope) = &scope {
@@ -510,6 +525,9 @@ fn run(
             &registry,
             &mut findings,
         )?;
+        // A validated file (#105): the audit signal counts files the per-file
+        // checks actually ran on, not files that produced findings.
+        files_checked += 1;
     }
 
     // #95: registry-level vocabulary findings (a registered-and-draft term
@@ -585,7 +603,7 @@ fn run(
             .cmp(&b.location.file)
             .then_with(|| a.code.cmp(&b.code))
     });
-    Ok((findings, families, scope))
+    Ok((findings, families, scope, files_checked))
 }
 
 /// Resolve a caller-supplied changed path to its root-relative form IF it names
@@ -1867,6 +1885,63 @@ mod tests {
         );
     }
 
+    // #105 (audit signal): files_checked is the count of files VALIDATED, not
+    // files that produced findings — a clean run over N files reports N, so
+    // "checked N, all clean" is distinguishable from "checked nothing".
+    #[test]
+    fn files_checked_counts_validated_files_not_findings() {
+        let proj = TempProject::new("files-checked");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write("docs/a.md", "---\nschema_class: x\n---\n");
+        proj.write("docs/b.md", "---\nschema_class: x\n---\n");
+        proj.write("docs/c.md", "---\nschema_class: x\n---\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let report = verify_report(&cfg).unwrap();
+        assert!(report.findings.is_empty(), "the corpus is clean");
+        assert_eq!(
+            report.files_checked, 3,
+            "a clean run over 3 files reports 3, not 0"
+        );
+    }
+
+    // An empty jurisdiction validates 0 files — distinguishable from a clean
+    // corpus (which reports N), closing the through-line audit-signal gap.
+    #[test]
+    fn files_checked_is_zero_for_empty_jurisdiction() {
+        let proj = TempProject::new("files-checked-empty");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"nothing/**/*.md\"\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        assert_eq!(verify_report(&cfg).unwrap().files_checked, 0);
+    }
+
+    // Incremental mode counts only the files it validated (the scope).
+    #[test]
+    fn files_checked_in_incremental_is_the_scope_size() {
+        let proj = TempProject::new("files-checked-inc");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write("docs/a.md", "---\nschema_class: x\n---\n");
+        proj.write("docs/b.md", "---\nschema_class: x\n---\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        // docs/a.md has no dependents -> scope {a}; one file validated.
+        let inc = verify_incremental(&cfg, Path::new("docs/a.md")).unwrap();
+        assert_eq!(
+            inc.report.files_checked, 1,
+            "only the changed file validated"
+        );
+    }
+
     // #85 inactivity: no vocabulary.yaml -> family inactive.
     #[test]
     fn absent_vocabulary_file_keeps_family_inactive() {
@@ -2270,7 +2345,7 @@ pattern:
         let mutate = || {
             std::fs::write(&doc, "---\nschema_class: blog\n---\n").unwrap();
         };
-        let (findings, _fam, _vis) = run(&cfg, None, Some(&mutate)).unwrap();
+        let (findings, _fam, _vis, _n) = run(&cfg, None, Some(&mutate)).unwrap();
         assert!(
             findings.is_empty(),
             "the run reports against snapshot bytes, not the post-capture mutation; got {findings:?}"
