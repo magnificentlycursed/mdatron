@@ -1739,11 +1739,12 @@
       "uuid": "8929a168-665b-4be1-8b8d-441e73f742c4",
       "display_id": 90,
       "title": "v0.3.0: published JSON envelope schema + contract-stability CI + per-verify family-activity reporting (vsdd rank 1)",
-      "status": "open",
+      "status": "closed",
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T00:26:41.636883Z",
-      "updated_at": "2026-07-29T01:00:25.184184Z",
+      "updated_at": "2026-07-29T01:08:35.741291Z",
+      "closed_at": "2026-07-29T01:08:35.741276Z",
       "labels": [
         "feature"
       ],
@@ -3971,8 +3972,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T01:00:25.184184Z",
+    "timestamp": "2026-07-29T01:08:35.741291Z",
     "agent_id": "79Ig",
-    "agent_seq": 246
+    "agent_seq": 247
   }
 }
