@@ -1,6 +1,6 @@
 {
   "next_display_id": 95,
-  "next_comment_id": 253,
+  "next_comment_id": 254,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -649,13 +649,24 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-29T00:27:29.859089Z",
-      "updated_at": "2026-07-29T00:30:42.920924Z",
+      "updated_at": "2026-07-29T01:20:30.553866Z",
       "labels": [
         "feature"
       ],
       "related": [
         "8929a168-665b-4be1-8b8d-441e73f742c4"
-      ]
+      ],
+      "comments": {
+        "24801340-f1ef-4be7-9a88-ffef693b9bf8": {
+          "display_id": 253,
+          "author": "79Ig",
+          "content": "Built on feature/91-agnosticism (c519578), CI-green. All four residuals mechanized in tests/agnosticism.rs: methodology-denylist sweep, dependency-manifest allowlist, no-adopter-data-families-inactive, symlink-cycle-bounded-scan. THE TWO TRIPWIRES FIRED (real gaps caught+fixed): (1) methodology leaks — 'domain-prompts' example in index module doc + E0094 page's vsdd-specific numeric example, both made agnostic; (2) missing dep records — added saphyr.md + libc.md, replaced stale serde_yaml.md (archived, migrated off #69) with serde_yaml_ng.md. 331 tests. NOTE: one agnosticism-audit item remains outside this lane's 4-item scope — the registered-and-draft-term-resolves-to-draft-with-warning vocab conflict outcome (DESIGN L140); small vocab follow-up, filing separately.",
+          "created_at": "2026-07-29T01:20:30.539314Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAzCuy7vGoVGEaYkokiS9i2xxm22W/j+qbVcISRGr0QV1iMHPCIbTw7A8cwJvzW8UNPvhTFEieljVlzZqh3ZUECQ=="
+        }
+      }
     },
     "2cf9c6a8-984e-448b-bf67-a2acd6b9fa13": {
       "uuid": "2cf9c6a8-984e-448b-bf67-a2acd6b9fa13",
@@ -3968,8 +3979,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T01:08:41.277546Z",
+    "timestamp": "2026-07-29T01:20:30.553866Z",
     "agent_id": "79Ig",
-    "agent_seq": 248
+    "agent_seq": 249
   }
 }
