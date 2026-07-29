@@ -3514,7 +3514,10 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T07:22:08.149420Z",
-      "updated_at": "2026-07-29T07:22:08.149420Z"
+      "updated_at": "2026-07-29T07:22:11.732974Z",
+      "labels": [
+        "feature"
+      ]
     },
     "cc1c41ae-b96a-4d9a-b7f5-2608f7821b6a": {
       "uuid": "cc1c41ae-b96a-4d9a-b7f5-2608f7821b6a",
@@ -4490,8 +4493,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T07:22:08.149420Z",
+    "timestamp": "2026-07-29T07:22:11.732974Z",
     "agent_id": "79Ig",
-    "agent_seq": 340
+    "agent_seq": 341
   }
 }
