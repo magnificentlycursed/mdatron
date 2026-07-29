@@ -183,6 +183,21 @@ fn pipeline_failure_json_quiet_carries_structured_reason() {
     );
 }
 
+// #127 (roast SHO10): `mdatron schema` prints the published envelope schema so a
+// binary-only consumer can pin/validate without a repo checkout.
+#[test]
+fn schema_subcommand_prints_the_published_envelope_schema() {
+    let out = run(&["schema"]);
+    assert_eq!(out.status.code(), Some(0));
+    let v: serde_json::Value =
+        serde_json::from_slice(&out.stdout).expect("valid JSON Schema on stdout");
+    assert_eq!(
+        v["properties"]["mdatron_output_version"]["const"], "2.1.0",
+        "schema is in lockstep with OUTPUT_VERSION"
+    );
+    assert!(v["$id"].as_str().unwrap().contains("mdatron-output"));
+}
+
 // #117 (vsdd W4): `mdatron explain` accepts a short code (`E0050` -> the MDATRON
 // namespace) and `--list` enumerates the catalog — so an operator can discover
 // and recall codes without pasting a full namespaced code.

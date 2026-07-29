@@ -128,6 +128,11 @@ enum Command {
         #[arg(long = "quiet", short = 'q')]
         quiet: bool,
     },
+
+    /// Print the published `verify --json` output-envelope JSON Schema on stdout
+    /// (#127) — so a binary-only consumer can pin and validate against it without
+    /// a repo checkout. Kept in lockstep with `mdatron_output_version`.
+    Schema,
 }
 
 fn parse_explain_code(s: &str) -> Result<String, String> {
@@ -212,7 +217,16 @@ fn main() -> ExitCode {
             project_root,
             quiet,
         } => cmd_init(project_root, quiet),
+        Command::Schema => cmd_schema(),
     }
+}
+
+/// Print the embedded output-envelope schema to stdout (#127). A binary-only
+/// consumer can `mdatron schema > mdatron-output.schema.json` and validate the
+/// `verify --json` envelope against it.
+fn cmd_schema() -> ExitCode {
+    print!("{}", mdatron::output::OUTPUT_SCHEMA);
+    ExitCode::SUCCESS
 }
 
 fn cmd_pin(project_root: Option<PathBuf>, update: bool, dry_run: bool, quiet: bool) -> ExitCode {
