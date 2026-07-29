@@ -1,6 +1,6 @@
 {
   "next_display_id": 100,
-  "next_comment_id": 271,
+  "next_comment_id": 272,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -3335,7 +3335,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-29T02:34:51.044647Z",
-      "updated_at": "2026-07-29T02:35:17.725408Z",
+      "updated_at": "2026-07-29T05:06:24.105515Z",
       "labels": [
         "enhancement"
       ],
@@ -3351,6 +3351,15 @@
           "kind": "plan",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAoQCGB2+M96+trwM9Ho3nexqvheryEQ/B0J7+GKPWIiTPc2xpF8oprJJ0F3rQDtaKnh2DQ4F6Vp2V/A0it/I7BA=="
+        },
+        "5c7af1e7-113c-4fe4-a9ad-90009b49cdf3": {
+          "display_id": 271,
+          "author": "79Ig",
+          "content": "Built on feature/98-vocab-globs-loudness (950bbab). MDATRON-W0043 (vocabulary-scope-matches-nothing): a present-but-zero-match vocabulary_globs now reports once, mirroring E0030 route-coverage loudness; empty/absent globs unaffected (scan-all fallback). Full code ritual (emission + explain page + BASELINE + catalog golden + DESIGN/README reconciliation). Red gate green, full suite + explain/catalog tests green, self-verify + pin clean. Resolves the #97 F1 follow-on. AWAITING merge gate.",
+          "created_at": "2026-07-29T05:06:24.086725Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAvkIY06b8hHdn8vileM9JkDqpRP8IpMNsOr55SoVELvbdz3Npu15BFskDmwEzsxTDwGvWTuF7pu/VigvcwMNTDA=="
         }
       }
     },
@@ -4236,8 +4245,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T04:28:59.639263Z",
+    "timestamp": "2026-07-29T05:06:24.105515Z",
     "agent_id": "79Ig",
-    "agent_seq": 293
+    "agent_seq": 294
   }
 }
