@@ -1,6 +1,6 @@
 {
   "next_display_id": 114,
-  "next_comment_id": 315,
+  "next_comment_id": 316,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -3134,7 +3134,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T10:44:27.681108Z",
-      "updated_at": "2026-07-29T10:49:46.107532Z",
+      "updated_at": "2026-07-29T10:54:21.313670Z",
       "labels": [
         "bug"
       ],
@@ -3150,6 +3150,15 @@
           "kind": "result",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAwPC8r/ps4pgS+/sErKBZQGT8WK15t0hAhPp3FndWk4b5BmGobf7X0AGaLLKSbv7ZwaR0G+3apTBMduEs9jxoCw=="
+        },
+        "c2a51f33-4c51-44a2-bf04-61961cd1e5b5": {
+          "display_id": 315,
+          "author": "79Ig",
+          "content": "Merged to main (operator-ratified 2026-07-29); gauntlet green.",
+          "created_at": "2026-07-29T10:54:21.298437Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAgC1RPQ4EgXg+4sp8Rqk35qky5kBQ33si/CTaoMezmFvZdLgcPIJ0CJ+Sy7RQp3RBLN3gDtFcI2S+FL7YFwmjBA=="
         }
       }
     },
@@ -4931,8 +4940,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T10:54:16.213575Z",
+    "timestamp": "2026-07-29T10:54:21.313670Z",
     "agent_id": "79Ig",
-    "agent_seq": 421
+    "agent_seq": 422
   }
 }
