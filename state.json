@@ -1,6 +1,6 @@
 {
   "next_display_id": 101,
-  "next_comment_id": 278,
+  "next_comment_id": 279,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -3884,7 +3884,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-29T05:22:21.086795Z",
-      "updated_at": "2026-07-29T05:24:44.486430Z",
+      "updated_at": "2026-07-29T05:28:07.330327Z",
       "labels": [
         "feature"
       ],
@@ -3892,6 +3892,15 @@
         "a0e4b4b2-63f5-41c1-a62d-7713001a66d8"
       ],
       "comments": {
+        "4458d90d-d90c-4900-93ba-cd03bcca7d2a": {
+          "display_id": 278,
+          "author": "79Ig",
+          "content": "Landed the methodology-enforcement arc (#96 conduct + amendment-citation friction guardrail; #97 governed-estate register / vocabulary_globs CI-backed; #99 dropped the leaky session-stop hook and adopted vsdd's enforcement-grades model per #819). Merged v0.3.0 polish #98 (W0043 zero-match loudness) + #95 (W0044 registered-and-draft). Also merged #93 (DSL filter). Ratified the #92 incremental-verify decomposition (5 sub-lanes A-E); designed sub-lane B (#100, dependency resolver) and cut its branch — implementation deferred to a fresh session (key blocker: index lacks file provenance). Deferred routing-before-fix-close + round-result parity as conduct-only (honest boundary). main green + pushed. 0.3.0 cuttable; #48 publish held.",
+          "created_at": "2026-07-29T05:28:07.316270Z",
+          "kind": "handoff",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA10gPVjQr3nYFHUsMC/xTunw0oKftxAMVejt9Edxvy53SXQU1zlp3zHHsdlhd3DC6GDgmB1iuCFXcfgSKNT9gAw=="
+        },
         "5badc1e2-36c1-4e1a-84a5-e0209b281812": {
           "display_id": 277,
           "author": "79Ig",
@@ -4315,8 +4324,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T05:28:01.815159Z",
+    "timestamp": "2026-07-29T05:28:07.330327Z",
     "agent_id": "79Ig",
-    "agent_seq": 309
+    "agent_seq": 310
   }
 }
