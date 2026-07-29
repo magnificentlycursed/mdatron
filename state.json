@@ -1,6 +1,6 @@
 {
   "next_display_id": 103,
-  "next_comment_id": 290,
+  "next_comment_id": 291,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -1827,7 +1827,7 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-07-29T00:28:31.764518Z",
-      "updated_at": "2026-07-29T06:57:58.130268Z",
+      "updated_at": "2026-07-29T07:17:33.665595Z",
       "labels": [
         "enhancement"
       ],
@@ -1844,6 +1844,15 @@
           "kind": "note",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABATGNmVTRJU8zN+1rY/ghnOAYpLQAdLjnFKbc+yd7M7zJqMXrCJeuiTsJUGjuTewqBOSceAg3cLqGdPSqy+G5RAA=="
+        },
+        "9c3959c8-85d2-45ee-8782-6fe6e96f7bfd": {
+          "display_id": 290,
+          "author": "79Ig",
+          "content": "DONE — vsdd-cli's three drift cases intaken as a regression fixture (26d698b, feature/94-e0094-fixtures). Case 1 (plain count) + Case 2 (decomposed, role component drift) caught by E0094; Case 3 (unperformable basis) documented as clean-but-unverifiable — the boundary of a digit-comparison check. Gauntlet green (test-only change). SURFACED FOLLOW-ON CANDIDATE: mechanizing the 'performable-basis' half (Case 3 — 'the number's stated verification path doesn't resolve') is a genuine future check beyond E0094's count comparison; vsdd calls it the harder, higher-value part. Not filed as an issue pending operator interest. AWAITING merge.",
+          "created_at": "2026-07-29T07:17:33.636146Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAyxxjgPyfXRE+Ego7qhXvvTBDngyorCWJtljgS0maWWLgCaqQg2YBKWJ5KHITBdu8CjVAjJqFRPynvHp93kCjAA=="
         }
       }
     },
@@ -4464,8 +4473,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T07:13:08.670662Z",
+    "timestamp": "2026-07-29T07:17:33.665595Z",
     "agent_id": "79Ig",
-    "agent_seq": 335
+    "agent_seq": 336
   }
 }
