@@ -1246,13 +1246,24 @@ fn interpolate_message(
                     .map_err(|e| format!("interpolation '{expr_str}' eval: {e}"))?;
                 // The interpolated value is adopter document content. Keep it out
                 // of the engine message — an inline value is a forgeable marking
-                // (DESIGN §Output). The message carries a `{binding}` placeholder;
-                // the value renders in a prefix-marked block beneath it.
-                out.push('{');
-                out.push_str(expr_str);
-                out.push('}');
+                // (DESIGN §Output). The message carries a `[see: <label>]`
+                // cross-reference (#116, vsdd ruling on item 8 part 1); the value
+                // renders in the labeled, prefix-marked quoted block beneath it.
+                // The label drops the `$self.` prefix so it reads as a field name,
+                // and numbers a collision/repeat so each pointer resolves to one
+                // block (the fallback vsdd reserved for shared labels).
+                let base_label = expr_str.strip_prefix("$self.").unwrap_or(expr_str);
+                let mut label = base_label.to_string();
+                let mut n = 2;
+                while quoted.iter().any(|q: &QuotedRegion| q.label == label) {
+                    label = format!("{base_label} [{n}]");
+                    n += 1;
+                }
+                out.push_str("[see: ");
+                out.push_str(&label);
+                out.push(']');
                 quoted.push(QuotedRegion {
-                    label: expr_str.to_string(),
+                    label,
                     content: format_value(&value),
                 });
                 i = expr_end + 2;
@@ -3040,9 +3051,10 @@ pattern:
         assert_eq!(findings.len(), 1);
         assert_eq!(findings[0].code, "TEST-E0001");
         // The interpolated value is marked out-of-line: the message keeps a
-        // `{binding}` placeholder and the value rides in a quoted region.
+        // `[see: <label>]` cross-reference (#116) and the value rides in a quoted
+        // region — never inline.
         assert!(
-            findings[0].message.contains("{$self.phase}")
+            findings[0].message.contains("[see: phase]")
                 && !findings[0].message.contains("phase-2a"),
             "interpolated value must not be inline; got: {}",
             findings[0].message
@@ -3258,11 +3270,57 @@ pattern:
         let project_v = Value::Null;
         let ctx = EvalContext::new(&self_v, &file_v, &project_v);
         let (message, quoted) = interpolate_message("got phase: {{$self.phase}}", &ctx).unwrap();
-        // The value is out-of-line: the message keeps a `{binding}` placeholder.
-        assert_eq!(message, "got phase: {$self.phase}");
+        // The value stays out-of-line (DESIGN §Output — never inline); the message
+        // carries a `[see: <label>]` cross-reference to the labeled quoted block
+        // (#116, vsdd ruling on item 8 part 1). The label drops the `$self.`
+        // prefix so it reads as a field name pointing at the `=phase:` block.
+        assert_eq!(message, "got phase: [see: phase]");
         assert_eq!(quoted.len(), 1);
-        assert_eq!(quoted[0].label, "$self.phase");
+        assert_eq!(quoted[0].label, "phase");
         assert_eq!(quoted[0].content, "phase-2a");
+    }
+
+    // #116: two references to the SAME value, and two distinct exprs that would
+    // clean to the SAME label, both disambiguate by number — the fallback vsdd
+    // reserved for collisions/repeats. Each `[see: …]` resolves to exactly one
+    // block.
+    #[test]
+    fn interpolate_message_numbers_colliding_labels() {
+        let self_v = Value::Object(BTreeMap::from([
+            ("status".to_string(), Value::Str("draft".into())),
+            (
+                "nested".to_string(),
+                Value::Object(BTreeMap::from([(
+                    "status".to_string(),
+                    Value::Str("final".into()),
+                )])),
+            ),
+        ]));
+        let file_v = Value::Null;
+        let project_v = Value::Null;
+        let ctx = EvalContext::new(&self_v, &file_v, &project_v);
+        // First and third reference the same expr; the second is a different expr
+        // whose base label ("status") collides.
+        let (message, quoted) = interpolate_message(
+            "a {{$self.status}} b {{$self.nested.status}} c {{$self.status}}",
+            &ctx,
+        )
+        .unwrap();
+        // Each pointer resolves to a uniquely-labeled block; no bare label repeats.
+        let labels: Vec<&str> = quoted.iter().map(|q| q.label.as_str()).collect();
+        let mut sorted = labels.clone();
+        sorted.sort_unstable();
+        sorted.dedup();
+        assert_eq!(sorted.len(), labels.len(), "labels are unique: {labels:?}");
+        // Every `[see: X]` in the message names a real block.
+        for q in &quoted {
+            assert!(
+                message.contains(&format!("[see: {}]", q.label)),
+                "pointer for {:?} present in {message:?}",
+                q.label
+            );
+        }
+        assert!(!message.contains('{'), "no legacy brace placeholder: {message}");
     }
 
     #[test]
@@ -3275,8 +3333,9 @@ pattern:
         let project_v = Value::Null;
         let ctx = EvalContext::new(&self_v, &file_v, &project_v);
         let (message, quoted) = interpolate_message("domains: {{$self.domains}}", &ctx).unwrap();
-        assert_eq!(message, "domains: {$self.domains}");
+        assert_eq!(message, "domains: [see: domains]");
         assert_eq!(quoted.len(), 1);
+        assert_eq!(quoted[0].label, "domains");
         assert_eq!(quoted[0].content, "se, qe");
     }
 
