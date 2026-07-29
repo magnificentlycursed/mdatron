@@ -1,6 +1,6 @@
 {
   "next_display_id": 108,
-  "next_comment_id": 302,
+  "next_comment_id": 303,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -3906,13 +3906,24 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T08:29:53.972421Z",
-      "updated_at": "2026-07-29T08:30:10.840006Z",
+      "updated_at": "2026-07-29T08:39:43.342293Z",
       "labels": [
         "enhancement"
       ],
       "related": [
         "18545077-3dbb-4401-847d-c6b4bdbe7d78"
-      ]
+      ],
+      "comments": {
+        "94cda27f-048e-4509-be55-326ac5f8de1d": {
+          "display_id": 302,
+          "author": "79Ig",
+          "content": "DONE (feature/107-families-tristate, 9856658). families in --json is now a tri-state {state: active|inert|inactive, reason} — vsdd's 'unfalsifiable' item 4 resolved. active=ran, inert=configured-but-no-work (e.g. vocabulary_globs matched nothing), inactive=not-configured; the reason documents precisely why (vocabulary_globs-set-no-registry now reads inactive with the clarifying reason). Envelope 1.1.0->1.2.0 (shape change); schema + contract-stability tests updated; DESIGN contract amended. Proportionate review: SE self-review + the contract-stability tests (envelope validates against the new published schema, version lockstep) + live smoke. AWAITING merge. W1 audit-signal: items 1 (#105), 3 (#106) MERGED; item 4 (this) done. Remaining W1: item 2 (missing/empty schemas -> not-silent-clean), item 10 (jurisdiction-shrink warning + jurisdiction hash).",
+          "created_at": "2026-07-29T08:39:43.326930Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAdbJMtQ2dl0X+aU7C3PlbRS46t/BrdM6sCiNqDuYCBz6syzXOHnClmBuBtgR6qxvVxEnCBonwH6B+XG3OeRFHAQ=="
+        }
+      }
     },
     "dc7c4aa3-af1b-41be-87dd-2a778fcd6c8d": {
       "uuid": "dc7c4aa3-af1b-41be-87dd-2a778fcd6c8d",
@@ -4679,8 +4690,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T08:30:10.840006Z",
+    "timestamp": "2026-07-29T08:39:43.342293Z",
     "agent_id": "79Ig",
-    "agent_seq": 372
+    "agent_seq": 373
   }
 }
