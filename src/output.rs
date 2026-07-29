@@ -21,7 +21,7 @@ use crate::diagnostic::{Finding, Severity};
 /// new consumers audit per-verify family activity. Must move in lockstep with
 /// the published envelope schema (`schema/mdatron-output.schema.json`); the
 /// `envelope_version_matches_published_schema` tripwire enforces it.
-pub const OUTPUT_VERSION: &str = "1.2.0";
+pub const OUTPUT_VERSION: &str = "1.3.0";
 
 /// Whether a check family was invoked in a verify run — active means its data
 /// was supplied and the family ran (NOT that it produced findings; a clean
@@ -101,6 +101,23 @@ pub enum PipelineStatus {
     Failed,
 }
 
+/// The structured reason a pipeline failed, emitted as the optional
+/// `pipeline_error` field when `pipeline_status` is `failed` (#112, vsdd items
+/// 5 + 6). It carries the failure INTO the envelope — the stderr note is
+/// suppressed by `--quiet`, so a `--json --quiet` consumer previously got
+/// `findings: []` with no cause. `kind` disambiguates the many senses that the
+/// single `MDATRON-E0080` code conflated (config vs io vs schema-load vs …), so
+/// a consumer can branch on the failure class without parsing prose.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PipelineError {
+    /// The namespace code (`MDATRON-E0080`); stable across kinds.
+    pub code: String,
+    /// The failure class (e.g. `config`, `io`, `schema_load`, `glob`).
+    pub kind: String,
+    /// The rendered failure reason.
+    pub message: String,
+}
+
 /// Per-severity finding counts emitted under the output object's `summary` field.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Summary {
@@ -146,6 +163,10 @@ pub struct Output {
     pub mdatron_output_version: String,
     pub mdatron_version: String,
     pub pipeline_status: PipelineStatus,
+    /// Present only on a failed pipeline (#112). Omitted entirely on success, so
+    /// a clean run's envelope is unchanged.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pipeline_error: Option<PipelineError>,
     pub summary: Summary,
     pub families: Families,
     pub findings: Vec<Finding>,
@@ -163,6 +184,7 @@ impl Output {
         findings: Vec<Finding>,
         files_checked: u32,
         pipeline_status: PipelineStatus,
+        pipeline_error: Option<PipelineError>,
         families: Families,
         mdatron_version: &str,
     ) -> Self {
@@ -171,6 +193,7 @@ impl Output {
             mdatron_output_version: OUTPUT_VERSION.to_string(),
             mdatron_version: mdatron_version.to_string(),
             pipeline_status,
+            pipeline_error,
             summary,
             families,
             findings,
@@ -248,6 +271,7 @@ mod tests {
             vec![],
             0,
             PipelineStatus::Ok,
+            None,
             Families::all_inactive(),
             "0.1.0",
         );
@@ -262,6 +286,7 @@ mod tests {
             vec![],
             5,
             PipelineStatus::Ok,
+            None,
             Families::all_inactive(),
             "0.1.0",
         );
@@ -274,6 +299,7 @@ mod tests {
             vec![err_finding("MDATRON-E0001")],
             5,
             PipelineStatus::Ok,
+            None,
             Families::all_inactive(),
             "0.1.0",
         );
@@ -287,10 +313,49 @@ mod tests {
             vec![warn_finding("MDATRON-W0050")],
             5,
             PipelineStatus::Ok,
+            None,
             Families::all_inactive(),
             "0.1.0",
         );
         assert_eq!(env.derive_exit_code(), 0);
+    }
+
+    #[test]
+    fn pipeline_error_is_carried_and_omitted_on_success() {
+        // Failed pipeline: the field is present and round-trips (#112).
+        let failed = Output::build(
+            vec![],
+            0,
+            PipelineStatus::Failed,
+            Some(PipelineError {
+                code: "MDATRON-E0080".into(),
+                kind: "config".into(),
+                message: "no jurisdiction declared".into(),
+            }),
+            Families::all_inactive(),
+            "0.3.0",
+        );
+        let json = serde_json::to_value(&failed).unwrap();
+        assert_eq!(json["pipeline_error"]["kind"], "config");
+        assert_eq!(json["pipeline_error"]["message"], "no jurisdiction declared");
+        let back: Output = serde_json::from_value(json).unwrap();
+        assert_eq!(back, failed, "pipeline_error round-trips");
+
+        // Clean pipeline: the field is omitted entirely, so a success envelope is
+        // byte-unchanged from before the field existed.
+        let ok = Output::build(
+            vec![],
+            3,
+            PipelineStatus::Ok,
+            None,
+            Families::all_inactive(),
+            "0.3.0",
+        );
+        let json = serde_json::to_value(&ok).unwrap();
+        assert!(
+            json.get("pipeline_error").is_none(),
+            "pipeline_error must be absent on success; got {json}"
+        );
     }
 
     #[test]
@@ -299,6 +364,7 @@ mod tests {
             vec![],
             0,
             PipelineStatus::Failed,
+            None,
             Families::all_inactive(),
             "0.1.0",
         );
@@ -325,6 +391,7 @@ mod tests {
             ],
             3,
             PipelineStatus::Ok,
+            None,
             Families {
                 schema: FamilyActivity::active("schemas supplied"),
                 route: FamilyActivity::active("routes supplied"),
@@ -358,6 +425,21 @@ mod tests {
                 vec![],
                 0,
                 PipelineStatus::Failed,
+                None,
+                Families::all_inactive(),
+                "0.3.0",
+            ),
+            // #112: a failed pipeline carrying a structured pipeline_error must
+            // validate against the published schema (the new optional field).
+            Output::build(
+                vec![],
+                0,
+                PipelineStatus::Failed,
+                Some(PipelineError {
+                    code: "MDATRON-E0080".into(),
+                    kind: "config".into(),
+                    message: "no jurisdiction declared".into(),
+                }),
                 Families::all_inactive(),
                 "0.3.0",
             ),
@@ -365,6 +447,7 @@ mod tests {
                 vec![],
                 5,
                 PipelineStatus::Ok,
+                None,
                 Families::all_inactive(),
                 "0.3.0",
             ),

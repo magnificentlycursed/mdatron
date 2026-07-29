@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://mdatron.dev/schema/mdatron-output/1.2.0",
+  "$id": "https://mdatron.dev/schema/mdatron-output/1.3.0",
   "title": "mdatron verify --json output envelope",
-  "description": "The machine interface of `mdatron verify --json`. Versioned: mdatron_output_version tracks THIS schema (currently 1.2.0). A published contract (DESIGN.md § Diagnostics are a versioned contract) — consumers pin and validate against it.",
+  "description": "The machine interface of `mdatron verify --json`. Versioned: mdatron_output_version tracks THIS schema (currently 1.3.0). A published contract (DESIGN.md § Diagnostics are a versioned contract) — consumers pin and validate against it.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -16,7 +16,7 @@
   "properties": {
     "mdatron_output_version": {
       "type": "string",
-      "const": "1.2.0",
+      "const": "1.3.0",
       "description": "Semver of this envelope schema. Moves with the schema; a change here signals a contract change."
     },
     "mdatron_version": {
@@ -26,6 +26,19 @@
     },
     "pipeline_status": {
       "enum": ["ok", "failed"]
+    },
+    "pipeline_error": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Present only when pipeline_status is \"failed\" (omitted on success). Carries the failure reason IN the envelope so a --json --quiet consumer receives it (the stderr note is suppressed by --quiet). `kind` disambiguates the senses the single MDATRON-E0080 code conflates.",
+      "required": ["code", "kind", "message"],
+      "properties": {
+        "code": { "type": "string" },
+        "kind": {
+          "enum": ["config", "io", "schema_load", "pattern_load", "glob", "frontmatter", "index_build", "expr_parse", "eval"]
+        },
+        "message": { "type": "string" }
+      }
     },
     "summary": {
       "type": "object",

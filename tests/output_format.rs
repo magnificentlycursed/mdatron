@@ -178,8 +178,8 @@ fn absent_family_data_reports_inactive_and_version_bumped() {
     }
     assert_eq!(
         env.get("mdatron_output_version").and_then(|v| v.as_str()),
-        Some("1.2.0"),
-        "the tri-state families field bumped the envelope minor version"
+        Some("1.3.0"),
+        "the envelope minor version (tri-state families 1.2.0, then pipeline_error 1.3.0)"
     );
 }
 

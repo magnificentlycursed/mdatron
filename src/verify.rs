@@ -144,6 +144,27 @@ pub enum VerifyError {
     Frontmatter { path: String, error: String },
 }
 
+impl VerifyError {
+    /// A stable failure-class discriminator for the envelope's
+    /// `pipeline_error.kind` (#112). Disambiguates the senses the single
+    /// `MDATRON-E0080` code otherwise conflates, letting a machine consumer
+    /// branch on the failure class without parsing the message prose. Exhaustive
+    /// so a new variant forces a kind here.
+    pub fn kind(&self) -> &'static str {
+        match self {
+            VerifyError::Io { .. } => "io",
+            VerifyError::SchemaLoad { .. } => "schema_load",
+            VerifyError::PatternLoad { .. } => "pattern_load",
+            VerifyError::IndexBuild(_) => "index_build",
+            VerifyError::ExprParse { .. } => "expr_parse",
+            VerifyError::Eval { .. } => "eval",
+            VerifyError::Glob(_) => "glob",
+            VerifyError::Config(_) => "config",
+            VerifyError::Frontmatter { .. } => "frontmatter",
+        }
+    }
+}
+
 /// A completed verification run: the findings plus which check families were
 /// invoked (#90). The envelope's `families` field is built from `families`.
 pub struct VerifyReport {
