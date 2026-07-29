@@ -1,9 +1,10 @@
 {
-  "next_display_id": 93,
+  "next_display_id": 94,
   "next_comment_id": 249,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
+    "12afc5cc-5cb5-4494-8835-3d16d53616f6": 93,
     "15d7981a-008d-4805-8a69-f3e4f414caf0": 75,
     "1a48e540-17b6-4a8f-9681-62cffd446bc3": 14,
     "1b58cd40-d953-4626-b2c8-be53d696aee3": 19,
@@ -196,6 +197,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAVy1jEzwWdLx/WWU1xj0KdolHd1dMw516eifg0v/R2hwPRzDifoU8ihVx66Uo0xJ2UAhhU2A+vn5lQjOCUnDvDA=="
         }
       }
+    },
+    "12afc5cc-5cb5-4494-8835-3d16d53616f6": {
+      "uuid": "12afc5cc-5cb5-4494-8835-3d16d53616f6",
+      "display_id": 93,
+      "title": "DSL expansion decision: filter/count-with-predicate for exactly-N/at-least-N audit rules (vsdd rank 3; needs SO scope ruling + falsifiability leg per the gate)",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-07-29T00:28:11.615654Z",
+      "updated_at": "2026-07-29T00:28:11.615654Z"
     },
     "15d7981a-008d-4805-8a69-f3e4f414caf0": {
       "uuid": "15d7981a-008d-4805-8a69-f3e4f414caf0",
@@ -3871,8 +3882,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T00:28:03.842517Z",
+    "timestamp": "2026-07-29T00:28:11.615654Z",
     "agent_id": "79Ig",
-    "agent_seq": 229
+    "agent_seq": 230
   }
 }
