@@ -734,11 +734,12 @@
       "uuid": "238317fa-9b8f-4ff1-9774-90c8dffb9a2e",
       "display_id": 125,
       "title": "robustness: non-UTF8 filename blanks --json; U+2028/2029 leak in location line; config-typo jurisdiction overreach (roast SHO4/SHO5/SHO7)",
-      "status": "open",
+      "status": "closed",
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T17:21:57.083205Z",
-      "updated_at": "2026-07-29T17:22:17.186133Z",
+      "updated_at": "2026-07-29T18:30:37.895334Z",
+      "closed_at": "2026-07-29T18:30:37.895320Z",
       "labels": [
         "security"
       ],
@@ -5476,8 +5477,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T18:25:19.902601Z",
+    "timestamp": "2026-07-29T18:30:37.895334Z",
     "agent_id": "79Ig",
-    "agent_seq": 528
+    "agent_seq": 529
   }
 }
