@@ -1,6 +1,6 @@
 {
   "next_display_id": 95,
-  "next_comment_id": 250,
+  "next_comment_id": 251,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -215,10 +215,21 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-29T00:28:11.615654Z",
-      "updated_at": "2026-07-29T00:28:16.398380Z",
+      "updated_at": "2026-07-29T00:30:36.667005Z",
       "labels": [
         "enhancement"
-      ]
+      ],
+      "comments": {
+        "1e714519-5f4d-48d1-9530-98bf4b3aec3b": {
+          "display_id": 250,
+          "author": "79Ig",
+          "content": "vsdd rank 3 (2026-07-28): D1 filter/count-with-predicate — their audit rules want exactly-one / at-least-one (one composition declaration per phase entry; one disposition per finding per round). 'The workaround costs clarity; not blocking.' -> real but non-urgent; scope it for v0.3.0 with the falsifiability leg, no rush.",
+          "created_at": "2026-07-29T00:30:36.651553Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAK5VkSD8h0IOF5Xl7mAbfTq3BPlqhNHcUUFng6Z7V5s3YL8tX1C+VTeV+XeDyzjbZCK7/SrDbE0ayS04K5ljPAQ=="
+        }
+      }
     },
     "15d7981a-008d-4805-8a69-f3e4f414caf0": {
       "uuid": "15d7981a-008d-4805-8a69-f3e4f414caf0",
@@ -3918,8 +3929,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T00:30:30.192022Z",
+    "timestamp": "2026-07-29T00:30:36.667005Z",
     "agent_id": "79Ig",
-    "agent_seq": 236
+    "agent_seq": 237
   }
 }
