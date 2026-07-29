@@ -1,6 +1,6 @@
 {
   "next_display_id": 100,
-  "next_comment_id": 270,
+  "next_comment_id": 271,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -607,7 +607,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T01:38:59.747297Z",
-      "updated_at": "2026-07-29T02:44:37.364430Z",
+      "updated_at": "2026-07-29T04:28:59.639263Z",
       "labels": [
         "process"
       ],
@@ -624,6 +624,15 @@
           "kind": "note",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAym5MQbf/MprVr/tMmZDmFK7QUauMzAqrm4lRR+J4xnj/vOcW+RrQe5Hk704WwSMo6+bEDB6YU7bgl82qBP9pDw=="
+        },
+        "067b8d47-10aa-46f9-b31c-18c8b0c6ed41": {
+          "display_id": 270,
+          "author": "79Ig",
+          "content": "STATE after the enforcement arc. MECHANIZED HALF COMPLETE + merged: (1) conduct governing docs (methodology.md + methodology-enforcement.md, now on the grades model); (2) amendment-citation guardrail = friction (#96); (3) governed-estate register = CI-backed block (#97). Session-stop guardrail DROPPED (#99) — grade-2 friction that can't self-protect; durable third leg reframed to CI-tested integrity per vsdd-cli #819. DEFERRED as conduct-only (operator ruling 2026-07-28): routing-before-fix-close + round-result parity — both are crosslink-querying process-integrity checks that sit on the honest boundary (need vsdd-cli's process-integrity queries); building leaky local friction versions now would repeat the session-stop mistake. Open follow-ons: #98 (vocabulary_globs zero-match loudness); a cold multi-lens review of the methodology docs themselves per their own §3 (low priority, callable when wanted). Keeping #96 open as the standing home for the methodology practice (per the standing directive until vsdd-cli alpha).",
+          "created_at": "2026-07-29T04:28:59.625468Z",
+          "kind": "note",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAd5OdGdbbVhq2BpQYNoNe2rAbEQCy5LZj9UQDZfGti4+1WZdISpB9oQIV50X5kBVTHyOvJyV0DwX8HzFPUFrlDg=="
         },
         "204e255b-1564-43ee-bc58-73537619c1f7": {
           "display_id": 256,
@@ -4227,8 +4236,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T04:28:53.181819Z",
+    "timestamp": "2026-07-29T04:28:59.639263Z",
     "agent_id": "79Ig",
-    "agent_seq": 292
+    "agent_seq": 293
   }
 }
