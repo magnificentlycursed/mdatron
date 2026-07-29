@@ -329,7 +329,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T07:55:05.605670Z",
-      "updated_at": "2026-07-29T12:28:22.020694Z",
+      "updated_at": "2026-07-29T12:34:28.981984Z",
       "labels": [
         "enhancement"
       ],
@@ -337,6 +337,7 @@
         "1ba1bc71-1b50-4f6c-b672-1524a61a3096",
         "4237af12-ff53-4d2f-beac-cff1fe994e9a",
         "59693794-3a00-4af8-a42f-477ed3766f24",
+        "685a5139-6347-4bf4-abd8-ce9c7ac48024",
         "72e27489-2e30-4b01-9833-62299f42c542",
         "82cb584a-cbc0-4ddd-9c36-0bd7a641a7a5",
         "87e35dbb-43b8-4ebb-a0f2-06777d8f956d",
@@ -1676,9 +1677,12 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-29T12:34:12.376568Z",
-      "updated_at": "2026-07-29T12:34:16.451449Z",
+      "updated_at": "2026-07-29T12:34:28.981984Z",
       "labels": [
         "enhancement"
+      ],
+      "related": [
+        "18545077-3dbb-4401-847d-c6b4bdbe7d78"
       ]
     },
     "69b33517-946c-45ba-9287-c1231028d5ec": {
@@ -5063,8 +5067,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T12:34:22.755348Z",
+    "timestamp": "2026-07-29T12:34:28.981984Z",
     "agent_id": "79Ig",
-    "agent_seq": 450
+    "agent_seq": 451
   }
 }
