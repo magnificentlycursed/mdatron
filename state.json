@@ -1,6 +1,6 @@
 {
   "next_display_id": 122,
-  "next_comment_id": 325,
+  "next_comment_id": 326,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "0943c25f-129e-492b-a326-fff0d809c6c0": 121,
@@ -222,10 +222,21 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-07-29T14:06:11.265548Z",
-      "updated_at": "2026-07-29T14:06:15.221116Z",
+      "updated_at": "2026-07-29T14:06:28.374125Z",
       "labels": [
         "from:vsdd-cli"
-      ]
+      ],
+      "comments": {
+        "91a038aa-75ef-4dee-a3e5-0cbdd6c1100c": {
+          "display_id": 325,
+          "author": "79Ig",
+          "content": "Requested by vsdd-cli (magnificentlycursed/mdatron#1, §6): W0045/W0046 warnings don't fail the gate (exit 0, pipeline_status ok) — a defensible advisory default, but a consumer wiring verify as a HARD gate may want to escalate warnings to failures. A --strict / --deny-warnings flag (or prominently documenting the exit-code contract) would help gate-authors. Explicitly NOT a publish-blocker per vsdd. First inbound item on the new GitHub relay channel [[vsdd-cli-relay]].",
+          "created_at": "2026-07-29T14:06:28.359355Z",
+          "kind": "note",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABArqQjNE4IepZJtr86uKnDEax2KVdQUiqtnKidrkpWpXDh07BoN27QLPWFvXYN2IfKPCvC2k43NcuneJRE5JGCAg=="
+        }
+      }
     },
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": {
       "uuid": "1198bf2d-1428-40e0-8e18-cbf40d2df45d",
@@ -5180,8 +5191,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T14:06:21.624049Z",
+    "timestamp": "2026-07-29T14:06:28.374125Z",
     "agent_id": "79Ig",
-    "agent_seq": 476
+    "agent_seq": 477
   }
 }
