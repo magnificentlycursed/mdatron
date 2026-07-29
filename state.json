@@ -1,5 +1,5 @@
 {
-  "next_display_id": 107,
+  "next_display_id": 108,
   "next_comment_id": 302,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -90,6 +90,7 @@
     "cc1c41ae-b96a-4d9a-b7f5-2608f7821b6a": 4,
     "cd29ff68-de48-4a6e-98c3-a03b0a4a6dca": 59,
     "d2bcf2cb-f611-4a11-bc88-00a0ace5e037": 101,
+    "d6a9a419-11bd-4e47-bbfc-1cd8940f61a1": 107,
     "dc7c4aa3-af1b-41be-87dd-2a778fcd6c8d": 43,
     "defb3290-053e-4af9-989f-daf56c87410a": 102,
     "e06b1201-7654-4266-ad6b-93d5c3daabf9": 12,
@@ -3892,6 +3893,16 @@
         }
       }
     },
+    "d6a9a419-11bd-4e47-bbfc-1cd8940f61a1": {
+      "uuid": "d6a9a419-11bd-4e47-bbfc-1cd8940f61a1",
+      "display_id": 107,
+      "title": "audit-signal #4: families tri-state + reason (ran/inert/not-configured) + falsifiable per-family activity",
+      "status": "open",
+      "priority": "high",
+      "created_by": "79Ig",
+      "created_at": "2026-07-29T08:29:53.972421Z",
+      "updated_at": "2026-07-29T08:29:53.972421Z"
+    },
     "dc7c4aa3-af1b-41be-87dd-2a778fcd6c8d": {
       "uuid": "dc7c4aa3-af1b-41be-87dd-2a778fcd6c8d",
       "display_id": 43,
@@ -4657,8 +4668,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T08:29:02.176596Z",
+    "timestamp": "2026-07-29T08:29:53.972421Z",
     "agent_id": "79Ig",
-    "agent_seq": 368
+    "agent_seq": 369
   }
 }
