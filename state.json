@@ -1733,12 +1733,13 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T00:26:41.636883Z",
-      "updated_at": "2026-07-29T00:30:42.920924Z",
+      "updated_at": "2026-07-29T00:30:49.716512Z",
       "labels": [
         "feature"
       ],
       "related": [
-        "2b207fbe-b656-4cc1-8c3a-db693dfb36ff"
+        "2b207fbe-b656-4cc1-8c3a-db693dfb36ff",
+        "a0e4b4b2-63f5-41c1-a62d-7713001a66d8"
       ],
       "comments": {
         "eb188fb3-ff3a-456b-b4a3-aea140bf3eb3": {
@@ -2069,9 +2070,12 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-29T00:27:50.651130Z",
-      "updated_at": "2026-07-29T00:30:30.192022Z",
+      "updated_at": "2026-07-29T00:30:49.716512Z",
       "labels": [
         "feature"
+      ],
+      "related": [
+        "8929a168-665b-4be1-8b8d-441e73f742c4"
       ],
       "comments": {
         "078bf37c-ca6e-42ad-a2df-24949084264f": {
@@ -3935,8 +3939,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T00:30:42.920924Z",
+    "timestamp": "2026-07-29T00:30:49.716512Z",
     "agent_id": "79Ig",
-    "agent_seq": 238
+    "agent_seq": 239
   }
 }
