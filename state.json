@@ -1332,11 +1332,12 @@
       "uuid": "59693794-3a00-4af8-a42f-477ed3766f24",
       "display_id": 105,
       "title": "audit-signal #1: files_checked reports files VALIDATED, not files-with-findings (a clean run over N files must report N, not 0)",
-      "status": "open",
+      "status": "closed",
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T08:04:11.467066Z",
-      "updated_at": "2026-07-29T08:16:40.137374Z",
+      "updated_at": "2026-07-29T08:16:45.566933Z",
+      "closed_at": "2026-07-29T08:16:45.566922Z",
       "labels": [
         "bug"
       ],
@@ -4621,8 +4622,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T08:16:40.137374Z",
+    "timestamp": "2026-07-29T08:16:45.566933Z",
     "agent_id": "79Ig",
-    "agent_seq": 358
+    "agent_seq": 359
   }
 }
