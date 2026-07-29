@@ -1,6 +1,6 @@
 {
   "next_display_id": 116,
-  "next_comment_id": 318,
+  "next_comment_id": 319,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -2501,13 +2501,24 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T12:04:41.320194Z",
-      "updated_at": "2026-07-29T12:04:57.535193Z",
+      "updated_at": "2026-07-29T12:21:12.190996Z",
       "labels": [
         "bug"
       ],
       "related": [
         "18545077-3dbb-4401-847d-c6b4bdbe7d78"
-      ]
+      ],
+      "comments": {
+        "4bf9e257-7a6a-4f07-9ded-b35f00c6c086": {
+          "display_id": 318,
+          "author": "79Ig",
+          "content": "Built on feature/115-compact-value-budget. Compact now budgets the quoted value ahead of message prose (no dangling placeholder), AND closes a pre-existing 512-cap breach the cold review found (essential in [488,512] + quoted region -> up to 537B). Two red gates green; cold review of the reorder confirmed I2/I3/I4 held, this closes its I1 finding. Gauntlet green. Awaiting operator merge gate.",
+          "created_at": "2026-07-29T12:21:12.171691Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAmRVfPtGjz0Q8CYqAo698MpUpYOTC0tR19vVnOLwKM2CVaAjJn94gXNcle31fmK27pv+qBbdjLKfdlZ+wFKOqBQ=="
+        }
+      }
     },
     "9242e6c2-32a3-45f1-8478-d1fec3a8ce8b": {
       "uuid": "9242e6c2-32a3-45f1-8478-d1fec3a8ce8b",
@@ -4998,8 +5009,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T12:04:57.535193Z",
+    "timestamp": "2026-07-29T12:21:12.190996Z",
     "agent_id": "79Ig",
-    "agent_seq": 436
+    "agent_seq": 437
   }
 }
