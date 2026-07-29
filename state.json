@@ -1,5 +1,5 @@
 {
-  "next_display_id": 117,
+  "next_display_id": 118,
   "next_comment_id": 321,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -41,6 +41,7 @@
     "6135d3c6-44c0-43d1-8080-dd5fd5cda222": 23,
     "6778c47f-8706-4a31-9cbe-2d60f8fdf19c": 50,
     "67c6fa14-5eb9-4657-abd6-904507360757": 99,
+    "685a5139-6347-4bf4-abd8-ce9c7ac48024": 117,
     "69b33517-946c-45ba-9287-c1231028d5ec": 47,
     "700bbf38-a0db-46e2-90a8-36df989ecb06": 53,
     "72e27489-2e30-4b01-9833-62299f42c542": 111,
@@ -1662,6 +1663,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA6gIjKZGcGkd4VnJ5a+OD1j3zHkxitGJldZqnqBUjB0lAlSiT3hDeCIeaI7EI+iB86yVtpw5BSHcmwv8yCc2KBw=="
         }
       }
+    },
+    "685a5139-6347-4bf4-abd8-ce9c7ac48024": {
+      "uuid": "685a5139-6347-4bf4-abd8-ce9c7ac48024",
+      "display_id": 117,
+      "title": "W4 polish: --json double-emit, explain --list/short-code, See-also link resolution, schema discoverability (vsdd v0.3.0 review medium/low)",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-07-29T12:34:12.376568Z",
+      "updated_at": "2026-07-29T12:34:12.376568Z"
     },
     "69b33517-946c-45ba-9287-c1231028d5ec": {
       "uuid": "69b33517-946c-45ba-9287-c1231028d5ec",
@@ -5045,8 +5056,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T12:32:37.482737Z",
+    "timestamp": "2026-07-29T12:34:12.376568Z",
     "agent_id": "79Ig",
-    "agent_seq": 447
+    "agent_seq": 448
   }
 }
