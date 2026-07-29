@@ -1,6 +1,6 @@
 {
   "next_display_id": 102,
-  "next_comment_id": 283,
+  "next_comment_id": 284,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -3664,11 +3664,20 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T06:01:32.163103Z",
-      "updated_at": "2026-07-29T06:06:52.316876Z",
+      "updated_at": "2026-07-29T06:07:54.188045Z",
       "labels": [
         "release"
       ],
       "comments": {
+        "0acbc8da-0f81-4de4-b7a1-a3954aa1e1a1": {
+          "display_id": 283,
+          "author": "79Ig",
+          "content": "CUT. v0.3.0 tagged (5b62f30) + pushed; GitHub pre-release live at https://github.com/magnificentlycursed/mdatron/releases/tag/v0.3.0 (crates.io publish #48 still held). Docs swept (CHANGELOG 0.3.0 section, README 0.2.x->0.3.x + W0044 note), version 0.3.0 in Cargo.toml/lock, mdatron --version confirms 0.3.0. Integrated gauntlet green.",
+          "created_at": "2026-07-29T06:07:54.173724Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAbHCLUNKW4otsceTRtA1HH0Q5GJIJybsClJ5JdOwqtkE9YsM4vAm6tXlz+euNK06RO1uG73UC6mEoc9HBhMZ7BQ=="
+        },
         "18f09405-e6a2-4d47-adb4-4c2bba3181c1": {
           "display_id": 282,
           "author": "79Ig",
@@ -4381,8 +4390,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T06:06:52.316876Z",
+    "timestamp": "2026-07-29T06:07:54.188045Z",
     "agent_id": "79Ig",
-    "agent_seq": 320
+    "agent_seq": 321
   }
 }
