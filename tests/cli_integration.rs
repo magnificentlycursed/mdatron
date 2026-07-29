@@ -279,7 +279,10 @@ pattern:
       message: "status must be published"
 "#,
     );
-    proj.write("doc.md", "---\nschema_class: note\nstatus: draft\n---\nbody\n");
+    proj.write(
+        "doc.md",
+        "---\nschema_class: note\nstatus: draft\n---\nbody\n",
+    );
 
     // TTY: the finding renders, but with NO dead explain line.
     let out = run_verify_tty(&proj);

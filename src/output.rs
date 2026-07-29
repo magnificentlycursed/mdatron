@@ -352,7 +352,10 @@ mod tests {
         );
         let json = serde_json::to_value(&failed).unwrap();
         assert_eq!(json["pipeline_error"]["kind"], "config");
-        assert_eq!(json["pipeline_error"]["message"], "no jurisdiction declared");
+        assert_eq!(
+            json["pipeline_error"]["message"],
+            "no jurisdiction declared"
+        );
         let back: Output = serde_json::from_value(json).unwrap();
         assert_eq!(back, failed, "pipeline_error round-trips");
 
