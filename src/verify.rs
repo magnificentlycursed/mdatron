@@ -331,12 +331,17 @@ fn run(
         }
         None => None,
     };
-    // Collect the governed files once (absolute + root-relative paths).
+    // Collect the governed files once (absolute + root-relative paths). Each
+    // `file_globs` entry that matches nothing is a shrunk jurisdiction (#108,
+    // vsdd item 10): recorded here so a whole-tree run can flag it (W0046) rather
+    // than walking fewer files than the adopter declared, silently.
     let mut governed: Vec<(PathBuf, PathBuf)> = Vec::new();
+    let mut dead_globs: Vec<String> = Vec::new();
     for glob_pattern in &config.file_globs {
         let absolute = project_root.join(glob_pattern);
         let paths = glob::glob(&absolute.to_string_lossy())
             .map_err(|e| VerifyError::Glob(format!("'{glob_pattern}': {e}")))?;
+        let mut matched = false;
         for entry in paths {
             let path = entry.map_err(|e| VerifyError::Glob(format!("'{glob_pattern}': {e}")))?;
             let rel = path
@@ -344,6 +349,10 @@ fn run(
                 .unwrap_or(&path)
                 .to_path_buf();
             governed.push((path, rel));
+            matched = true;
+        }
+        if !matched {
+            dead_globs.push(glob_pattern.clone());
         }
     }
 
@@ -531,6 +540,46 @@ fn run(
     if let Some(v) = vocab.as_ref() {
         let vocab_path = project_root.join(".mdatron").join(crate::vocab::VOCAB_NAME);
         crate::vocab::registry_findings(v, &vocab_path, &mut findings);
+    }
+
+    // #108 (vsdd item 10): a `file_globs` entry that matches no file shrinks the
+    // checked corpus silently — verify walks fewer files than declared and still
+    // exits 0, indistinguishable from a clean jurisdiction. W0046 makes each dead
+    // glob loud, naming the pattern so a typo or a stale path is caught. Whole-
+    // tree only: an incremental walk sees part of the tree, so "matched nothing"
+    // there is expected, not a jurisdiction defect (mirrors W0043's gate; the
+    // scope filter above would drop a config-located finding anyway).
+    if scope.is_none() {
+        let config_path = project_root
+            .join(".mdatron")
+            .join(crate::config::CONFIG_NAME);
+        for pattern in &dead_globs {
+            findings.push(Finding {
+                code: "MDATRON-W0046".into(),
+                severity: Severity::Warning,
+                summary: "jurisdiction-glob-matches-nothing".into(),
+                message: "a `file_globs` entry in .mdatron/config.yaml matches no \
+                          file, so it contributes nothing to the checked corpus — a \
+                          typo or a stale path narrows the jurisdiction silently, and \
+                          the run exits as if that slice were clean"
+                    .into(),
+                help: Some(
+                    "correct the glob to cover the files it should govern, or remove \
+                     it if the jurisdiction genuinely no longer includes them"
+                        .into(),
+                ),
+                location: Location {
+                    file: config_path.clone(),
+                    line: 1,
+                    column: 0,
+                },
+                explain_ref: Some("MDATRON-W0046".into()),
+                quoted: vec![QuotedRegion {
+                    label: "glob".into(),
+                    content: pattern.clone(),
+                }],
+            });
+        }
     }
 
     // #98: a scoped register that matched nothing is loud (whole-tree only —
@@ -1460,10 +1509,10 @@ mod tests {
             ".mdatron/schemas/phase-primer.json",
             minimal_phase_primer_schema(),
         );
-        proj.write(
-            ".mdatron/config.yaml",
-            "file_globs:\n  - \"docs/**/*.md\"\n",
-        );
+        // The governed files sit at the root, so the jurisdiction glob must reach
+        // them — a `docs/**/*.md` here would be a dead glob (W0046, #108), since
+        // the pin family reads pins.yaml directly and never needed the walk.
+        proj.write(".mdatron/config.yaml", "file_globs:\n  - \"**/*.md\"\n");
         proj.write("GOVERNING.md", "# governing doc\n");
         proj.write("governed.md", content);
         let sha = crate::init::sha256_hex(content.as_bytes());
@@ -1716,6 +1765,67 @@ mod tests {
             codes_of(&findings, "MDATRON-E0091"),
             0,
             "the register was scoped away from the only walked file"
+        );
+    }
+
+    // #108 (vsdd item 10): a `file_globs` entry that matches no file silently
+    // shrinks the checked corpus — verify exits 0 having walked fewer files than
+    // the adopter declared, indistinguishable from "the jurisdiction is clean".
+    // W0046 makes a dead jurisdiction glob loud, naming the pattern so a typo or
+    // a stale path is caught rather than passing as coverage.
+    #[test]
+    fn file_glob_matching_nothing_is_loud() {
+        let proj = TempProject::new("file-glob-zero-match");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"live/**/*.md\"\n  - \"typo-dir/**/*.md\"\n",
+        );
+        proj.write("live/doc.md", "body\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert_eq!(
+            codes_of(&findings, "MDATRON-W0046"),
+            1,
+            "exactly the dead glob must be loud; got {findings:?}"
+        );
+        let dead = findings
+            .iter()
+            .find(|f| f.code == "MDATRON-W0046")
+            .expect("W0046 present");
+        assert_eq!(
+            dead.quoted.first().map(|q| q.content.as_str()),
+            Some("typo-dir/**/*.md"),
+            "the finding must carry the dead pattern as quoted adopter text"
+        );
+    }
+
+    // #108: the mirror-image guard — a config whose every `file_globs` entry
+    // matches at least one file is healthy and stays silent. Guards against
+    // W0046 firing on a live jurisdiction (the false positive that would train
+    // adopters to ignore it).
+    #[test]
+    fn file_globs_all_matching_stays_quiet() {
+        let proj = TempProject::new("file-glob-all-match");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"live/**/*.md\"\n  - \"archive/**/*.md\"\n",
+        );
+        proj.write("live/doc.md", "body\n");
+        proj.write("archive/old.md", "body\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert_eq!(
+            codes_of(&findings, "MDATRON-W0046"),
+            0,
+            "a fully-live jurisdiction must not warn; got {findings:?}"
         );
     }
 
