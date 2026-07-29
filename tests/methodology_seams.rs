@@ -47,7 +47,7 @@ fn seeded_repo(label: &str) -> PathBuf {
         )
         .unwrap();
     }
-    git(&root, &["init", "-q"]);
+    git(&root, &["-c", "init.defaultBranch=main", "init", "-q"]);
     git(&root, &["config", "user.email", "seed@test"]);
     git(&root, &["config", "user.name", "seed"]);
     git(&root, &["config", "commit.gpgsign", "false"]);
@@ -83,6 +83,41 @@ fn s1_design_amendment_requires_ratification_citation() {
         "docs(#96): record the ratified methodology decision (operator ruling)",
     );
     assert!(valid, "a cited DESIGN change is accepted: {:?}", git(&root, &["log", "--oneline"]));
+
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+// S1 scope (routed finding, #96): an integration merge of a DESIGN-touching
+// branch is NOT gated — the amendment discipline gates the authoring commit
+// (still refused above), not its integration. Pins the corrected scope so a
+// future weakening that also un-gated authoring would fail the seed above.
+#[test]
+fn s1_does_not_gate_integration_merges() {
+    let root = seeded_repo("s1-merge");
+
+    // Author the DESIGN change on a branch with a properly cited message.
+    git(&root, &["checkout", "-q", "-b", "feat"]);
+    assert!(
+        commit(
+            &root,
+            "DESIGN.md",
+            "# design\nlane edit\n",
+            "docs(#96): lane DESIGN change (operator ruling)",
+        ),
+        "the in-lane authoring commit is cited and accepted"
+    );
+
+    // Integrate with a bare --no-ff merge message (no citation): must succeed,
+    // because a merge integrates already-gated authoring, it does not amend.
+    git(&root, &["checkout", "-q", "main"]);
+    let merged = git(&root, &["merge", "--no-ff", "-m", "Merge feat", "feat"])
+        .status
+        .success();
+    assert!(
+        merged,
+        "an integration merge touching DESIGN with a bare message is not gated: {:?}",
+        git(&root, &["log", "--oneline"])
+    );
 
     let _ = std::fs::remove_dir_all(&root);
 }

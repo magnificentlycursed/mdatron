@@ -8,6 +8,15 @@
 set -eu
 msg_file="$1"
 
+# Integration merges carry authoring commits that were already gated in-lane;
+# the amendment discipline gates the AUTHORING of a spec change, not its
+# integration. Skip when a merge is in progress (routed finding, #96: the seam
+# scope distinguishes authoring from integration). Residual: a DESIGN edit made
+# solely during merge-conflict resolution is not gated (acceptable, low-risk).
+if git rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1; then
+    exit 0
+fi
+
 # Only governed-DESIGN changes are gated.
 if ! git diff --cached --name-only | grep -qx 'DESIGN.md'; then
     exit 0
