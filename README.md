@@ -245,7 +245,8 @@ restating a configured frontmatter field's count and drifting from it
 (`E0094`). By default the scan covers every walked file; set `vocabulary_globs`
 in `config.yaml` (a scope list beside `require_frontmatter`) to restrict it —
 e.g. to apply the register to your live specs while leaving a historical archive
-walked and routed but unscanned.
+walked and routed but unscanned. A `vocabulary_globs` that matches nothing is
+loud (`W0043`), so a mistyped glob can't silently disable the register.
 
 **Citations** — data-less; opt a route in with `citations: true` and its
 files' `path:line` / `path:start-end` references are verified against the

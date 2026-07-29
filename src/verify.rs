@@ -267,6 +267,11 @@ pub fn verify_report(config: &VerifyConfig) -> Result<VerifyReport, VerifyError>
         }
         None => None,
     };
+    // #98: track whether a scoped register (vocabulary.yaml present, non-empty
+    // vocabulary_globs) matched any walked file. Zero matches means the whole
+    // family is silently inert — a mistyped glob passing as "nothing to flag".
+    let vocab_scoped = vocab.is_some() && !vocab_globs.is_empty();
+    let mut vocab_scoped_hits = 0usize;
     for glob_pattern in &config.file_globs {
         let absolute = project_root.join(glob_pattern);
         let paths = glob::glob(&absolute.to_string_lossy())
@@ -282,6 +287,9 @@ pub fn verify_report(config: &VerifyConfig) -> Result<VerifyReport, VerifyError>
             // Vocabulary scope (#97): empty globs = every walked file.
             let vocab_enabled =
                 vocab_globs.is_empty() || vocab_globs.iter().any(|p| p.matches_path(rel));
+            if vocab_scoped && vocab_enabled {
+                vocab_scoped_hits += 1;
+            }
             verify_file(
                 &path,
                 &project_root,
@@ -294,6 +302,36 @@ pub fn verify_report(config: &VerifyConfig) -> Result<VerifyReport, VerifyError>
                 &mut findings,
             )?;
         }
+    }
+
+    // #98: a scoped register that matched nothing is loud, mirroring route
+    // coverage loudness (E0030) — silence here would hide a mistyped glob.
+    if vocab_scoped && vocab_scoped_hits == 0 {
+        let config_path = project_root
+            .join(".mdatron")
+            .join(crate::config::CONFIG_NAME);
+        findings.push(Finding {
+            code: "MDATRON-W0043".into(),
+            severity: Severity::Warning,
+            summary: "vocabulary-scope-matches-nothing".into(),
+            message: "a `vocabulary.yaml` registry is present but the \
+                      `vocabulary_globs` in .mdatron/config.yaml match no walked \
+                      file, so the whole vocabulary family is inert — a mistyped \
+                      glob would pass silently as if there were nothing to flag"
+                .into(),
+            help: Some(
+                "correct the `vocabulary_globs` to cover the files the register \
+                 should scan, or remove the list to scan every walked file"
+                    .into(),
+            ),
+            location: Location {
+                file: config_path,
+                line: 1,
+                column: 0,
+            },
+            explain_ref: Some("MDATRON-W0043".into()),
+            quoted: Vec::new(),
+        });
     }
 
     findings.sort_by(|a, b| {
@@ -1265,6 +1303,41 @@ mod tests {
         assert!(
             f.location.file.ends_with("live/doc.md"),
             "the finding is on the in-scope file, not the archive"
+        );
+    }
+
+    // #98 red gate: vocabulary.yaml present (register active) but
+    // vocabulary_globs matches no walked file -> the whole family is silently
+    // inert. W0043 makes that loud, so a mistyped glob is not indistinguishable
+    // from "nothing to flag" (the F1 footgun routed from #97).
+    #[test]
+    fn vocabulary_globs_matching_nothing_is_loud() {
+        let proj = TempProject::new("vocab-zero-match");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"live/**/*.md\"\nvocabulary_globs:\n  - \"does-not-exist/**/*.md\"\n",
+        );
+        proj.write(
+            ".mdatron/vocabulary.yaml",
+            "label_schemes:\n  allow:\n  - \"^MDATRON-[ELW][0-9]{4}$\"\n",
+        );
+        proj.write("live/doc.md", "Coined: ZQ7 here.\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert_eq!(
+            codes_of(&findings, "MDATRON-W0043"),
+            1,
+            "a zero-match active register must be loud; got {findings:?}"
+        );
+        // The register really was inert — the coined cluster went unscanned.
+        assert_eq!(
+            codes_of(&findings, "MDATRON-E0091"),
+            0,
+            "the register was scoped away from the only walked file"
         );
     }
 
