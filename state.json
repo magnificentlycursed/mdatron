@@ -1,5 +1,5 @@
 {
-  "next_display_id": 129,
+  "next_display_id": 130,
   "next_comment_id": 328,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -126,6 +126,7 @@
     "f7b7edd2-26cc-4bf0-839d-af22d2b8ca75": 45,
     "fa076a04-5085-46c5-a300-eb89b8bb1015": 127,
     "fa49e671-ea0b-4abd-b218-ddc1d39b5c8a": 54,
+    "fb3b39b8-04f7-47eb-95d0-c3bc51f71548": 129,
     "fbaae8f9-41ac-498e-ae2e-019a69bd0b14": 55,
     "fd19315f-a56d-4b81-a131-e8a697a3a77b": 84,
     "fea9b536-a072-4342-afe0-0a87fe5ca8bd": 48,
@@ -5095,6 +5096,16 @@
         }
       }
     },
+    "fb3b39b8-04f7-47eb-95d0-c3bc51f71548": {
+      "uuid": "fb3b39b8-04f7-47eb-95d0-c3bc51f71548",
+      "display_id": 129,
+      "title": "README + docs pre-publish rewrite pass: envelope/--changed/DSL/version/links + DESIGN staleness->1a (roast DOC1-DOC10)",
+      "status": "open",
+      "priority": "high",
+      "created_by": "79Ig",
+      "created_at": "2026-07-29T17:23:26.393142Z",
+      "updated_at": "2026-07-29T17:23:26.393142Z"
+    },
     "fbaae8f9-41ac-498e-ae2e-019a69bd0b14": {
       "uuid": "fbaae8f9-41ac-498e-ae2e-019a69bd0b14",
       "display_id": 55,
@@ -5365,8 +5376,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T17:23:21.768561Z",
+    "timestamp": "2026-07-29T17:23:26.393142Z",
     "agent_id": "79Ig",
-    "agent_seq": 507
+    "agent_seq": 508
   }
 }
