@@ -72,8 +72,16 @@ fn s1_design_amendment_requires_ratification_citation() {
     let root = seeded_repo("s1");
 
     // Forged: bare message, no authorizing citation -> refused, no commit.
-    let forged = commit(&root, "DESIGN.md", "# design\nedit one\n", "docs: tweak design");
-    assert!(!forged, "a DESIGN change with no ratification citation must be refused");
+    let forged = commit(
+        &root,
+        "DESIGN.md",
+        "# design\nedit one\n",
+        "docs: tweak design",
+    );
+    assert!(
+        !forged,
+        "a DESIGN change with no ratification citation must be refused"
+    );
 
     // Valid: cites the issue and a ratified decision -> accepted.
     let valid = commit(
@@ -82,7 +90,11 @@ fn s1_design_amendment_requires_ratification_citation() {
         "# design\nedit two\n",
         "docs(#96): record the ratified methodology decision (operator ruling)",
     );
-    assert!(valid, "a cited DESIGN change is accepted: {:?}", git(&root, &["log", "--oneline"]));
+    assert!(
+        valid,
+        "a cited DESIGN change is accepted: {:?}",
+        git(&root, &["log", "--oneline"])
+    );
 
     let _ = std::fs::remove_dir_all(&root);
 }
