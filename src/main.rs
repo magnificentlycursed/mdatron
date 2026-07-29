@@ -10,7 +10,7 @@ use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
 use mdatron::diagnostic::{Finding, Location, Severity};
-use mdatron::verify::{verify, VerifyConfig, VerifyError};
+use mdatron::verify::{verify_report, VerifyConfig, VerifyError};
 
 mod explain;
 
@@ -317,7 +317,7 @@ fn cmd_verify(
     compact: bool,
     quiet: bool,
 ) -> ExitCode {
-    use mdatron::output::{Output, PipelineStatus};
+    use mdatron::output::{Families, Output, PipelineStatus};
 
     let root = match project_root.map(Ok).unwrap_or_else(std::env::current_dir) {
         Ok(r) => r,
@@ -341,9 +341,10 @@ fn cmd_verify(
         c.file_globs = files;
         Ok(c)
     };
-    let (findings, pipeline_status, pipeline_err) = match config_result {
+    let (findings, families, pipeline_status, pipeline_err) = match config_result {
         Err(e) => (
             Vec::new(),
+            Families::all_inactive(),
             PipelineStatus::Failed,
             Some(VerifyError::Config(e.to_string())),
         ),
@@ -354,9 +355,15 @@ fn cmd_verify(
             if let Some(p) = patterns {
                 config.patterns_dir = p;
             }
-            match verify(&config) {
-                Ok(f) => (f, PipelineStatus::Ok, None),
-                Err(e) => (Vec::new(), PipelineStatus::Failed, Some(e)),
+            match verify_report(&config) {
+                Ok(r) => (r.findings, r.families, PipelineStatus::Ok, None),
+                // A failed pipeline reports no family as invoked.
+                Err(e) => (
+                    Vec::new(),
+                    Families::all_inactive(),
+                    PipelineStatus::Failed,
+                    Some(e),
+                ),
             }
         }
     };
@@ -379,6 +386,7 @@ fn cmd_verify(
         findings,
         files_checked,
         pipeline_status,
+        families,
         env!("CARGO_PKG_VERSION"),
     );
 

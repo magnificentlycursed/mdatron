@@ -113,6 +113,62 @@ fn output_carries_mdatron_output_version_field() {
     );
 }
 
+// RED GATE (#90, vsdd rank-1 ask): the envelope reports per-family activity so
+// a consumer can audit that a required family was actually invoked. Active =
+// data supplied and the family ran (invoked, not fired).
+#[test]
+fn families_field_reports_per_verify_activity() {
+    let proj = TempProject::new("families");
+    proj.seed_minimal(); // schema data present
+    proj.write("GOVERNING.md", "# gov\n");
+    proj.write(
+        ".mdatron/routes.yaml",
+        "routes:\n- files: \"**/*.md\"\n  governed_by: GOVERNING.md\n",
+    );
+    proj.write(
+        ".mdatron/vocabulary.yaml",
+        "terms:\n- term: mdatron\n  status: registered\n  sense: the engine\n",
+    );
+    // No pins.yaml, and the route does not opt into citations.
+    proj.seed_clean_md("post.md");
+
+    let env = parse_output(&run_verify_json(&proj));
+    let fam = env.get("families").and_then(|v| v.as_object()).unwrap();
+    for k in ["schema", "route", "pin", "vocabulary", "citation"] {
+        let v = fam.get(k).and_then(|v| v.as_str()).unwrap_or("MISSING");
+        assert!(
+            matches!(v, "active" | "inactive"),
+            "family {k} must be active|inactive; got {v}"
+        );
+    }
+    assert_eq!(fam["schema"], "active", "schema data supplied");
+    assert_eq!(fam["route"], "active", "routes.yaml supplied");
+    assert_eq!(fam["vocabulary"], "active", "vocabulary.yaml supplied");
+    assert_eq!(fam["pin"], "inactive", "no pins.yaml");
+    assert_eq!(fam["citation"], "inactive", "no route opted into citations");
+}
+
+// #90: a family with no data reports inactive — the DESIGN "inactivity is
+// reported" criterion satisfied by the same field, and the output version
+// moved to reflect the additive field.
+#[test]
+fn absent_family_data_reports_inactive_and_version_bumped() {
+    let proj = TempProject::new("fam-inactive");
+    proj.seed_minimal();
+    proj.seed_clean_md("post.md");
+    let env = parse_output(&run_verify_json(&proj));
+    let fam = env.get("families").and_then(|v| v.as_object()).unwrap();
+    assert_eq!(fam["schema"], "active");
+    for k in ["route", "pin", "vocabulary", "citation"] {
+        assert_eq!(fam[k], "inactive", "{k} has no data supplied");
+    }
+    assert_eq!(
+        env.get("mdatron_output_version").and_then(|v| v.as_str()),
+        Some("1.1.0"),
+        "the families field bumped the envelope minor version"
+    );
+}
+
 #[test]
 fn output_top_level_shape_is_complete() {
     let proj = TempProject::new("bc2");
@@ -127,6 +183,7 @@ fn output_top_level_shape_is_complete() {
         "mdatron_version",
         "pipeline_status",
         "summary",
+        "families",
         "findings",
     ] {
         assert!(
