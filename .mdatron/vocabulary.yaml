@@ -1,0 +1,13 @@
+# mdatron's own naming register (methodology §5), scoped by vocabulary_globs
+# (#97) to the governance docs that govern mdatron's development. This is the
+# dogfood: mdatron's own engine enforcing its own naming discipline on its own
+# prose.
+#
+# label_schemes.allow registers the permitted label schemes; a letter-plus-
+# number cluster outside them fires MDATRON-E0091 (the letter-cluster
+# prohibition, the register's flagship). mdatron's own diagnostic codes are the
+# one registered scheme that may appear in governance prose; a coined cluster
+# (a struck seam handle, an invented label) is not — it fires.
+label_schemes:
+  allow:
+    - "^MDATRON-[EWL][0-9]{4}$"

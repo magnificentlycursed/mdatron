@@ -47,6 +47,9 @@ pub struct VerifyConfig {
     /// Globs whose matching files must carry frontmatter (`MDATRON-W0040`
     /// on absence). Empty disables the check (#80 D2).
     pub require_frontmatter: Vec<String>,
+    /// Globs whose matching files the vocabulary family scans (#97). Empty
+    /// falls back to every walked file (prior behavior).
+    pub vocabulary_globs: Vec<String>,
 }
 
 impl VerifyConfig {
@@ -59,6 +62,7 @@ impl VerifyConfig {
             project_root: root,
             file_globs: vec!["**/*.md".to_string()],
             require_frontmatter: Vec::new(),
+            vocabulary_globs: Vec::new(),
         }
     }
 
@@ -90,6 +94,7 @@ impl VerifyConfig {
             cfg.file_globs = pc.file_globs;
         }
         cfg.require_frontmatter = pc.require_frontmatter;
+        cfg.vocabulary_globs = pc.vocabulary_globs;
         Ok(cfg)
     }
 }
@@ -197,6 +202,19 @@ pub fn verify_report(config: &VerifyConfig) -> Result<VerifyReport, VerifyError>
         })
         .collect::<Result<_, _>>()?;
 
+    // Vocabulary scope (#97): the naming register applies only to these globs
+    // when supplied; empty falls back to every walked file (prior behavior).
+    // Kept separate from file_globs so a historical archive stays walked +
+    // routed without its retired handle scheme tripping the register.
+    let vocab_globs: Vec<glob::Pattern> = config
+        .vocabulary_globs
+        .iter()
+        .map(|g| {
+            glob::Pattern::new(g)
+                .map_err(|e| VerifyError::Config(format!("vocabulary_globs '{g}': {e}")))
+        })
+        .collect::<Result<_, _>>()?;
+
     // Route family (#83): load + compile the allowlist; absent file = family
     // inactive. Per-entry defects arrive as findings (confinement escapes drop
     // the entry fail-closed; an absent governing doc reports once, entry stays
@@ -256,17 +274,20 @@ pub fn verify_report(config: &VerifyConfig) -> Result<VerifyReport, VerifyError>
         for entry in paths {
             let path = entry.map_err(|e| VerifyError::Glob(format!("'{glob_pattern}': {e}")))?;
             let mut cite_enabled = false;
+            let rel = path.strip_prefix(&project_root).unwrap_or(&path);
             if let Some(routes) = &routes {
-                let rel = path.strip_prefix(&project_root).unwrap_or(&path);
                 crate::route::check_file(routes, rel, &path, &mut findings);
                 cite_enabled = crate::route::citations_enabled(routes, rel);
             }
+            // Vocabulary scope (#97): empty globs = every walked file.
+            let vocab_enabled =
+                vocab_globs.is_empty() || vocab_globs.iter().any(|p| p.matches_path(rel));
             verify_file(
                 &path,
                 &project_root,
                 &require,
                 cite_enabled,
-                vocab.as_ref(),
+                vocab.as_ref().filter(|_| vocab_enabled),
                 &schemas,
                 &patterns,
                 &registry,
@@ -1209,6 +1230,108 @@ mod tests {
         let f = findings.iter().find(|f| f.code == "MDATRON-E0091").unwrap();
         assert!(f.quoted.iter().any(|q| q.content == "SEC-F3"));
         assert_eq!(f.location.line, 7, "body line 2 = file line 7 (5 fm lines)");
+    }
+
+    // #97: vocabulary_globs scopes the register. A cluster in an in-scope file
+    // fires E0091; the same shape in a file that is walked but OUTSIDE
+    // vocabulary_globs stays silent — the mechanism that keeps a historical
+    // archive's retired handles frozen while the register governs live prose.
+    #[test]
+    fn vocabulary_globs_scopes_the_register() {
+        let proj = TempProject::new("vocab-scope");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"live/**/*.md\"\n  - \"archive/**/*.md\"\nvocabulary_globs:\n  - \"live/**/*.md\"\n",
+        );
+        proj.write(
+            ".mdatron/vocabulary.yaml",
+            "label_schemes:\n  allow:\n  - \"^MDATRON-[ELW][0-9]{4}$\"\n",
+        );
+        proj.write("live/doc.md", "Coined here: ZQ7 recurs.\n");
+        proj.write("archive/old.md", "Frozen handle: SEC-F3 stays.\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert_eq!(
+            codes_of(&findings, "MDATRON-E0091"),
+            1,
+            "only the in-scope file's cluster fires; got {findings:?}"
+        );
+        let f = findings.iter().find(|f| f.code == "MDATRON-E0091").unwrap();
+        assert!(f.quoted.iter().any(|q| q.content == "ZQ7"));
+        assert!(
+            f.location.file.ends_with("live/doc.md"),
+            "the finding is on the in-scope file, not the archive"
+        );
+    }
+
+    // #97 (phase-3 F2): the scope gate covers the frontmatter branch too, not
+    // just prose-only files. Both files carry frontmatter (the review-log's own
+    // shape, and the only path where E0094 can fire), so this exercises the
+    // second `vocab::check_file` call site — the out-of-scope cluster must still
+    // stay silent. Guards a refactor that split the gate and left the
+    // frontmatter branch scanning unconditionally.
+    #[test]
+    fn vocabulary_globs_scopes_frontmatter_files() {
+        let proj = TempProject::new("vocab-scope-fm");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"live/**/*.md\"\n  - \"archive/**/*.md\"\nvocabulary_globs:\n  - \"live/**/*.md\"\n",
+        );
+        proj.write(
+            ".mdatron/vocabulary.yaml",
+            "label_schemes:\n  allow:\n  - \"^MDATRON-[ELW][0-9]{4}$\"\n",
+        );
+        let fm = "---\nschema_class: phase-primer\nphase: phase-1a\nrelevant_domains: [se, qe, pe]\n---\n";
+        proj.write("live/doc.md", &format!("{fm}Coined: ZQ7 here.\n"));
+        proj.write("archive/old.md", &format!("{fm}Frozen: SEC-F3 stays.\n"));
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert_eq!(
+            codes_of(&findings, "MDATRON-E0091"),
+            1,
+            "only the in-scope frontmattered file's cluster fires; got {findings:?}"
+        );
+        let f = findings.iter().find(|f| f.code == "MDATRON-E0091").unwrap();
+        assert!(
+            f.location.file.ends_with("live/doc.md"),
+            "the finding is on the in-scope file, not the archive"
+        );
+    }
+
+    // #97: an empty (absent) vocabulary_globs falls back to every walked file —
+    // the register still bites without the scoping field, so configs predating
+    // it are unaffected.
+    #[test]
+    fn empty_vocabulary_globs_scans_every_walked_file() {
+        let proj = TempProject::new("vocab-scope-empty");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"live/**/*.md\"\n",
+        );
+        proj.write(
+            ".mdatron/vocabulary.yaml",
+            "label_schemes:\n  allow:\n  - \"^MDATRON-[ELW][0-9]{4}$\"\n",
+        );
+        proj.write("live/doc.md", "Coined here: ZQ7 recurs.\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert_eq!(
+            codes_of(&findings, "MDATRON-E0091"),
+            1,
+            "no vocabulary_globs means the register still scans; got {findings:?}"
+        );
     }
 
     // RED GATE (#85): a reserved-status term appearing in prose is flagged

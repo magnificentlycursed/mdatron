@@ -1,8 +1,8 @@
 #!/bin/sh
-# S1 (methodology §3, amendment discipline): a commit touching the governing
+# Amendment-citation seam (methodology §3): a commit touching the governing
 # DESIGN.md must cite its authorizing issue AND a ratified review/decision.
 # A DESIGN change that self-asserts (no external ratification citation) is
-# refused at the act. Catches escape E-e (forge a self-authored record).
+# refused at the act. Catches the forged-record dodge (a self-authored record).
 #
 # Install: git config core.hooksPath .githooks
 set -eu

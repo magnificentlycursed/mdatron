@@ -30,6 +30,16 @@ pub struct ProjectConfig {
     /// silently. Empty (the default) disables the check.
     #[serde(default)]
     pub require_frontmatter: Vec<String>,
+    /// Globs whose matching files the vocabulary family (the naming register)
+    /// scans (#97). Kept separate from `file_globs` — mirroring
+    /// `require_frontmatter` — so the register applies to forward-looking
+    /// governance prose while a historical archive (e.g. the review-log, whose
+    /// retired finding-handle scheme is frozen evidence) stays governed by
+    /// route and frontmatter only. Empty (the default) falls back to every
+    /// walked file, preserving prior behavior for configs that predate this
+    /// field.
+    #[serde(default)]
+    pub vocabulary_globs: Vec<String>,
 }
 
 /// Load `<project_root>/.mdatron/config.yaml`.
