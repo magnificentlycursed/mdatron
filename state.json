@@ -1,5 +1,5 @@
 {
-  "next_display_id": 113,
+  "next_display_id": 114,
   "next_comment_id": 313,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -78,6 +78,7 @@
     "ae2f415b-24e4-48b1-85ff-44033199129a": 20,
     "b1c5d325-ab66-41f7-8346-5c3e4b117555": 61,
     "b5d10e39-0bfb-404b-9751-2bff8c71ecaa": 42,
+    "b696933e-86e0-4ffa-8930-363e6dd16bfa": 113,
     "b8c80dd7-30d0-4776-93e3-5c45695b62c1": 1,
     "bb1578a3-5e79-4e29-a2fb-4c6e1c88eb7f": 72,
     "bc81359e-bf75-45ec-896a-418745373491": 56,
@@ -3124,6 +3125,16 @@
         }
       }
     },
+    "b696933e-86e0-4ffa-8930-363e6dd16bfa": {
+      "uuid": "b696933e-86e0-4ffa-8930-363e6dd16bfa",
+      "display_id": 113,
+      "title": "W3 #7: pattern-rule findings advertise 'mdatron explain <adopter-code>' the binary rejects (explain dead-end) — set explain_ref only when a page resolves",
+      "status": "open",
+      "priority": "high",
+      "created_by": "79Ig",
+      "created_at": "2026-07-29T10:44:27.681108Z",
+      "updated_at": "2026-07-29T10:44:27.681108Z"
+    },
     "b8c80dd7-30d0-4776-93e3-5c45695b62c1": {
       "uuid": "b8c80dd7-30d0-4776-93e3-5c45695b62c1",
       "display_id": 1,
@@ -4892,8 +4903,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T10:42:15.346729Z",
+    "timestamp": "2026-07-29T10:44:27.681108Z",
     "agent_id": "79Ig",
-    "agent_seq": 413
+    "agent_seq": 414
   }
 }
