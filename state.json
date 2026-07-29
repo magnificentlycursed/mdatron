@@ -4327,11 +4327,12 @@
       "uuid": "ea18ea7f-05a6-4d32-8549-09f2137b5eb6",
       "display_id": 112,
       "title": "W2: pipeline_error{code,kind,message} in the verify --json envelope (#5 E0080 overload + #6 --json --quiet drops the reason)",
-      "status": "open",
+      "status": "closed",
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T10:25:55.415804Z",
-      "updated_at": "2026-07-29T10:54:06.544964Z",
+      "updated_at": "2026-07-29T10:54:11.618493Z",
+      "closed_at": "2026-07-29T10:54:11.618094Z",
       "labels": [
         "enhancement"
       ],
@@ -4934,8 +4935,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T10:54:06.544964Z",
+    "timestamp": "2026-07-29T10:54:11.618493Z",
     "agent_id": "79Ig",
-    "agent_seq": 419
+    "agent_seq": 420
   }
 }
