@@ -1,6 +1,6 @@
 {
   "next_display_id": 132,
-  "next_comment_id": 328,
+  "next_comment_id": 329,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "0943c25f-129e-492b-a326-fff0d809c6c0": 121,
@@ -571,7 +571,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T14:23:17.967852Z",
-      "updated_at": "2026-07-29T17:24:50.648823Z",
+      "updated_at": "2026-07-29T17:24:55.705820Z",
       "labels": [
         "enhancement"
       ],
@@ -605,6 +605,15 @@
           "kind": "decision",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAZQm4hVez33LCeboRyVUYlgXDWwTEhOvwuuYs3I1EHGQJZskC6LO5/IqSM5g87WpR5d+yaPsSkO535bI3qS8JDQ=="
+        },
+        "65d5c781-2c2a-4e99-8296-8828149dc9ac": {
+          "display_id": 328,
+          "author": "79Ig",
+          "content": "PHASE-4 EXIT: complete. routed_count=27 surviving findings (5 refuted, dropped). Full routing table in review-log/2026-07-29-phase4-routing-prepublish-roast.md (review #19, passes self-verify). Anti-2b-collapse check: 0 findings route to 2b-only. Routed lanes: #123 publish-gate (BLOCKS #48), #124 input-hardening, #125 robustness, #126 contract-consistency, #127 mdatron-schema, #128 supply-chain, #129 README/docs, #131 design-questions. DEF1 (0.4.0-vs-v1.0 milestone) = operator ruling, GATES publish. DEF3 -> #121. Next: fix #123 (min publish bar) + docs #129, then re-roast to MVR (iterative), then #48.",
+          "created_at": "2026-07-29T17:24:55.686344Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA6Nux5j0rOHWzwBTri1MyP/GC2+tBBYHrjfURfHlUfd9TloFxfvc7PWFignPDerpSF0/btHmB6/iMFbovodkyCQ=="
         }
       }
     },
@@ -5431,8 +5440,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T17:24:50.648823Z",
+    "timestamp": "2026-07-29T17:24:55.705820Z",
     "agent_id": "79Ig",
-    "agent_seq": 519
+    "agent_seq": 520
   }
 }
