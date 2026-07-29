@@ -181,7 +181,7 @@ pub fn verify(config: &VerifyConfig) -> Result<Vec<Finding>, VerifyError> {
 /// when its data was supplied and it ran this pass — independent of whether it
 /// produced findings.
 pub fn verify_report(config: &VerifyConfig) -> Result<VerifyReport, VerifyError> {
-    let (findings, families, _visited) = run(config, None)?;
+    let (findings, families, _visited) = run(config, None, None)?;
     Ok(VerifyReport { findings, families })
 }
 
@@ -194,7 +194,7 @@ pub fn verify_incremental(
     config: &VerifyConfig,
     changed: &Path,
 ) -> Result<IncrementalReport, VerifyError> {
-    let (findings, families, visited) = run(config, Some(changed))?;
+    let (findings, families, visited) = run(config, Some(changed), None)?;
     Ok(IncrementalReport {
         report: VerifyReport { findings, families },
         visited,
@@ -206,7 +206,11 @@ pub fn verify_incremental(
 /// only the findings located in that scope, so the result equals the whole-tree
 /// result filtered to the scope. A `.mdatron/` change forces whole-tree.
 /// Returns `(findings, families, visited)`; `visited` is `None` for whole-tree.
-fn run(config: &VerifyConfig, changed: Option<&Path>) -> RunResult {
+fn run(
+    config: &VerifyConfig,
+    changed: Option<&Path>,
+    on_capture_complete: Option<&dyn Fn()>,
+) -> RunResult {
     // BC-4 pipeline-fail detection: refuse to proceed when neither schemas nor patterns
     // directories exist. A project without either has nothing to validate against; this
     // is a configuration error, not a clean run with zero findings.
@@ -333,6 +337,105 @@ fn run(config: &VerifyConfig, changed: Option<&Path>) -> RunResult {
         }
     }
 
+    // Confined snapshot of the governed-file BODY (#103, security): each
+    // governed file's body is read ONCE through a confined no-follow handle, so
+    // the per-file schema and rule checks run against those bytes — a mutation
+    // after capture cannot change what they see, and a symlinked governed-file
+    // component is refused (E0012) rather than followed, closing the raw-read
+    // gap where verify_file used std::fs::read_to_string. PARTIAL (security
+    // review A, tracked on #103): the cross-file index is built earlier and the
+    // pin/citation families still read independently, so this is not yet the
+    // single-immutable-snapshot contract for ALL inputs — only the body read.
+    let mut snapshot: BTreeMap<PathBuf, String> = BTreeMap::new();
+    for (abs, rel) in &governed {
+        let confined = match crate::confine::confine_lexically(rel) {
+            Ok(c) => c,
+            // A governed file whose path escapes the root (a `file_globs` with an
+            // absolute or `..` component) is a confinement violation, reported —
+            // never a silent skip (#103 security review D).
+            Err(v) => {
+                let (code, summary) = match v {
+                    crate::confine::LexicalViolation::Absolute => {
+                        ("MDATRON-E0010", "governed-path-absolute")
+                    }
+                    crate::confine::LexicalViolation::ParentSegment => {
+                        ("MDATRON-E0011", "governed-path-parent-traversal")
+                    }
+                };
+                findings.push(Finding {
+                    code: code.into(),
+                    severity: Severity::Error,
+                    summary: summary.into(),
+                    message: "a governed file resolves outside the project root; \
+                              confinement rejects it — narrow the file_globs to the \
+                              governed tree"
+                        .into(),
+                    help: None,
+                    location: Location {
+                        file: abs.clone(),
+                        line: 1,
+                        column: 0,
+                    },
+                    explain_ref: Some(code.into()),
+                    quoted: Vec::new(),
+                });
+                continue;
+            }
+        };
+        match crate::confine::open_confined(&project_root, &confined) {
+            Ok(mut handle) => {
+                use std::io::Read;
+                let mut content = String::new();
+                if let Err(e) = handle.read_to_string(&mut content) {
+                    return Err(VerifyError::Io {
+                        path: abs.to_string_lossy().into_owned(),
+                        error: e.to_string(),
+                    });
+                }
+                snapshot.insert(rel.clone(), content);
+            }
+            Err(crate::confine::OpenViolation::Symlink { component }) => {
+                findings.push(Finding {
+                    code: "MDATRON-E0012".into(),
+                    severity: Severity::Error,
+                    summary: "symlinked-component-refused".into(),
+                    message: "a governed file resolves through a symbolic link; \
+                              no-follow resolution refuses it (the handle that \
+                              passed confinement is the handle that is read)"
+                        .into(),
+                    help: Some(
+                        "replace the symlink with the real file inside the \
+                         governed tree"
+                            .into(),
+                    ),
+                    location: Location {
+                        file: abs.clone(),
+                        line: 1,
+                        column: 0,
+                    },
+                    explain_ref: Some("MDATRON-E0012".into()),
+                    quoted: vec![QuotedRegion {
+                        label: "component".into(),
+                        content: component.to_string_lossy().into_owned(),
+                    }],
+                });
+            }
+            Err(crate::confine::OpenViolation::Io(e)) => {
+                return Err(VerifyError::Io {
+                    path: abs.to_string_lossy().into_owned(),
+                    error: e.to_string(),
+                });
+            }
+        }
+    }
+
+    // Capture-complete seam (#103): the snapshot is sealed. A test injects a
+    // mutation here to prove the run reports against the snapshot bytes rather
+    // than racing a real filesystem window.
+    if let Some(cb) = on_capture_complete {
+        cb();
+    }
+
     // Incremental scope (#102, cold-review F3/F4): resolve the changed path to a
     // governed file by canonicalizing both sides — robust to symlinked roots
     // (/tmp -> /private/tmp) and absolute/relative forms. Anything that does not
@@ -348,9 +451,9 @@ fn run(config: &VerifyConfig, changed: Option<&Path>) -> RunResult {
     let scope: Option<BTreeSet<PathBuf>> = if let Some(changed_rel) = &incremental_changed {
         let govfiles: Vec<crate::dep::GovernedFile> = governed
             .iter()
-            .map(|(abs, rel)| crate::dep::GovernedFile {
+            .map(|(_abs, rel)| crate::dep::GovernedFile {
                 path: rel.clone(),
-                schema_class: read_schema_class(abs),
+                schema_class: snapshot.get(rel).and_then(|c| read_schema_class(c)),
             })
             .collect();
         let graph = crate::dep::DepGraph::build(
@@ -389,8 +492,15 @@ fn run(config: &VerifyConfig, changed: Option<&Path>) -> RunResult {
         if vocab_scoped && vocab_enabled {
             vocab_scoped_hits += 1;
         }
+        // Read from the immutable snapshot, never the filesystem (#103). A file
+        // refused at capture (symlinked) has no snapshot entry and its E0012 was
+        // already recorded.
+        let Some(content) = snapshot.get(rel) else {
+            continue;
+        };
         verify_file(
             path,
+            content,
             &project_root,
             &require,
             cite_enabled,
@@ -499,12 +609,11 @@ fn resolve_changed_rel(
     governed_rels.contains(&rel).then_some(rel)
 }
 
-/// Read a governed file's `schema_class` for the dependency pre-pass (#102) —
-/// a light frontmatter parse, independent of the full per-file check. `None`
-/// when the file is unreadable, has no frontmatter, or declares no class.
-fn read_schema_class(path: &Path) -> Option<String> {
-    let content = std::fs::read_to_string(path).ok()?;
-    let (fm, _body) = crate::frontmatter::parse(&content).ok().flatten()?;
+/// A governed file's `schema_class` from its snapshot content, for the
+/// dependency pre-pass (#102/#103) — a light frontmatter parse, independent of
+/// the full per-file check. `None` when there is no frontmatter or class.
+fn read_schema_class(content: &str) -> Option<String> {
+    let (fm, _body) = crate::frontmatter::parse(content).ok().flatten()?;
     let internal = crate::dsl::index::yaml_to_value(&fm);
     internal
         .as_object()
@@ -592,8 +701,10 @@ fn load_patterns(dir: &Path) -> Result<Vec<PatternFile>, VerifyError> {
 // ── Per-file processing ────────────────────────────────────────────────────────
 
 #[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments)]
 fn verify_file(
     path: &Path,
+    content: &str,
     project_root: &Path,
     require_frontmatter: &[glob::Pattern],
     cite_enabled: bool,
@@ -603,10 +714,11 @@ fn verify_file(
     registry: &IndexRegistry,
     findings: &mut Vec<Finding>,
 ) -> Result<(), VerifyError> {
-    let content = std::fs::read_to_string(path).map_err(|e| VerifyError::Io {
-        path: path.to_string_lossy().into_owned(),
-        error: e.to_string(),
-    })?;
+    // Content comes from the immutable snapshot (#103): every governed file is
+    // read once through a confined no-follow handle in `run`, never from the
+    // filesystem here — so a mutation after capture cannot change what this
+    // check sees, and a symlinked component was already refused at capture.
+    let content = content.to_string();
 
     let fm_opt = match frontmatter::parse(&content) {
         Ok(opt) => opt,
@@ -2128,6 +2240,74 @@ pattern:
             e0061(&inc_o.report.findings),
             0,
             "stale pin not surfaced for an unrelated scope"
+        );
+    }
+
+    // #103: the governed-file BODY snapshot is immutable — a mutation injected
+    // at the capture-complete seam does not change what the per-file schema/rule
+    // checks verify (they report against the snapshot bytes), deterministically
+    // via the seam. Scoped to the body read: the pin/citation families read
+    // separately today (security review A/B — full-input unification is remaining
+    // #103 work), so this fixture uses no pins and no citations.
+    #[test]
+    fn snapshot_body_is_immutable_against_mutation_at_capture_seam() {
+        let proj = TempProject::new("snapshot-immutable");
+        proj.write(
+            ".mdatron/schemas/blog.json",
+            r#"{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","required":["schema_class","title"],"properties":{"schema_class":{"const":"blog"},"title":{"type":"string"}},"additionalProperties":false}"#,
+        );
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        // Valid at capture time (has the required title).
+        proj.write("docs/d.md", "---\nschema_class: blog\ntitle: ok\n---\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+
+        // At the seam (snapshot sealed), mutate the file to a schema-violating
+        // form. The run must NOT see it — it verifies the snapshot bytes.
+        let doc = proj.0.join("docs/d.md");
+        let mutate = || {
+            std::fs::write(&doc, "---\nschema_class: blog\n---\n").unwrap();
+        };
+        let (findings, _fam, _vis) = run(&cfg, None, Some(&mutate)).unwrap();
+        assert!(
+            findings.is_empty(),
+            "the run reports against snapshot bytes, not the post-capture mutation; got {findings:?}"
+        );
+
+        // A subsequent run captures a fresh snapshot and DOES see the mutation.
+        let after = verify_report(&cfg).unwrap().findings;
+        assert_eq!(
+            codes_of(&after, "MDATRON-E0050"),
+            1,
+            "a later run sees the now-invalid file"
+        );
+    }
+
+    // #103 security: a symlinked governed file is REFUSED at capture (E0012),
+    // not followed — closing the raw-read gap where verify_file read the
+    // symlink's target.
+    #[cfg(unix)]
+    #[test]
+    fn symlinked_governed_file_is_refused_not_followed() {
+        let proj = TempProject::new("snapshot-symlink");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write("secret.md", "---\nschema_class: x\n---\n");
+        proj.write("docs/real.md", "---\nschema_class: x\n---\n");
+        // docs/link.md is a symlink to ../secret.md — a symlinked governed file.
+        let link = proj.0.join("docs/link.md");
+        std::os::unix::fs::symlink("../secret.md", &link).unwrap();
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert_eq!(
+            codes_of(&findings, "MDATRON-E0012"),
+            1,
+            "the symlinked governed file is refused; got {findings:?}"
         );
     }
 
