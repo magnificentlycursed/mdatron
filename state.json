@@ -3351,11 +3351,12 @@
       "uuid": "c19c5caa-1166-4cad-be76-506a2166d22c",
       "display_id": 98,
       "title": "vocabulary_globs zero-match should be loud",
-      "status": "open",
+      "status": "closed",
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-29T02:34:51.044647Z",
-      "updated_at": "2026-07-29T05:21:24.766463Z",
+      "updated_at": "2026-07-29T05:21:38.987507Z",
+      "closed_at": "2026-07-29T05:21:38.987490Z",
       "labels": [
         "enhancement"
       ],
@@ -4274,8 +4275,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T05:21:24.766463Z",
+    "timestamp": "2026-07-29T05:21:38.987507Z",
     "agent_id": "79Ig",
-    "agent_seq": 297
+    "agent_seq": 298
   }
 }
