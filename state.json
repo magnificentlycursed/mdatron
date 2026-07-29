@@ -4316,11 +4316,12 @@
       "uuid": "ed48043d-4d35-4ce5-af15-81f01cbbbdd7",
       "display_id": 110,
       "title": "audit-signal #2: missing .mdatron/schemas/ dir -> a finding, not silent false-clean",
-      "status": "open",
+      "status": "closed",
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T09:38:10.128462Z",
-      "updated_at": "2026-07-29T10:23:53.889386Z",
+      "updated_at": "2026-07-29T10:24:00.267376Z",
+      "closed_at": "2026-07-29T10:24:00.267364Z",
       "labels": [
         "bug"
       ],
@@ -4862,8 +4863,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T10:23:53.889386Z",
+    "timestamp": "2026-07-29T10:24:00.267376Z",
     "agent_id": "79Ig",
-    "agent_seq": 406
+    "agent_seq": 407
   }
 }
