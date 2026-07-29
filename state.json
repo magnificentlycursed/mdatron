@@ -331,11 +331,12 @@
       "uuid": "18545077-3dbb-4401-847d-c6b4bdbe7d78",
       "display_id": 104,
       "title": "v0.3.0 diagnostic-efficacy review (vsdd-cli): the checked-N-vs-checked-nothing through-line + 9 more",
-      "status": "open",
+      "status": "closed",
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T07:55:05.605670Z",
-      "updated_at": "2026-07-29T12:47:47.267640Z",
+      "updated_at": "2026-07-29T12:47:52.049524Z",
+      "closed_at": "2026-07-29T12:47:52.049513Z",
       "labels": [
         "enhancement"
       ],
@@ -5130,8 +5131,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T12:47:47.267640Z",
+    "timestamp": "2026-07-29T12:47:52.049524Z",
     "agent_id": "79Ig",
-    "agent_seq": 464
+    "agent_seq": 465
   }
 }
