@@ -1,6 +1,6 @@
 {
   "next_display_id": 110,
-  "next_comment_id": 307,
+  "next_comment_id": 308,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -2083,7 +2083,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-29T09:19:14.903045Z",
-      "updated_at": "2026-07-29T09:19:41.794048Z",
+      "updated_at": "2026-07-29T09:29:14.398900Z",
       "labels": [
         "bug"
       ],
@@ -2092,6 +2092,15 @@
         "8c4eab12-ffd1-4077-9afa-29257925a0aa"
       ],
       "comments": {
+        "64a078ac-924a-4cc5-93c0-4d9b42b9806b": {
+          "display_id": 307,
+          "author": "79Ig",
+          "content": "Built on feature/109-governed-dedup. governed list deduped by root-relative path (seen-set); overlapping file_globs now check each file once. Red gate overlapping_file_globs_check_each_file_once (files_checked==1, one W0040) red->green; live demo: overlapping globs + schema-violating file -> one E0050, files_checked=1. W0046 dead-glob detection preserved (matched set per disk hit). Fix implements the #108 review's prescribed remedy. Gauntlet green: fmt/clippy/9 test-binaries/self-verify/pin. Awaiting operator merge gate.",
+          "created_at": "2026-07-29T09:29:14.383760Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAiQI7rjzdcyc/PNG9TWB4ntIscmxPC2uUzSFyARrkxiAPnylstUa79DfVjvtHgsQRQ2L++TgyJjZsKS31YrRWCQ=="
+        },
         "edd6f87d-102a-4c80-9eec-b49567e826c8": {
           "display_id": 304,
           "author": "79Ig",
@@ -4770,8 +4779,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T09:24:36.688222Z",
+    "timestamp": "2026-07-29T09:29:14.398900Z",
     "agent_id": "79Ig",
-    "agent_seq": 390
+    "agent_seq": 391
   }
 }
