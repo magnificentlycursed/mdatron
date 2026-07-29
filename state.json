@@ -1,5 +1,5 @@
 {
-  "next_display_id": 100,
+  "next_display_id": 101,
   "next_comment_id": 277,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -93,6 +93,7 @@
     "e8fa2d59-abe7-455a-a264-097fc431c1c3": 32,
     "eacfd6f1-3490-4d19-bd5c-be5825553a19": 68,
     "eddd10af-f936-439c-9ead-0f9d6b9832b3": 28,
+    "f00730f0-5883-4ad4-9ae0-9a665b2baa0b": 100,
     "f46bbe99-0826-4d9b-910d-557d5c3277a7": 41,
     "f66effba-1ef2-402d-9b3c-527b9ef4ea80": 26,
     "f7b7edd2-26cc-4bf0-839d-af22d2b8ca75": 45,
@@ -3874,6 +3875,16 @@
         }
       }
     },
+    "f00730f0-5883-4ad4-9ae0-9a665b2baa0b": {
+      "uuid": "f00730f0-5883-4ad4-9ae0-9a665b2baa0b",
+      "display_id": 100,
+      "title": "incremental sub-lane B: dependency resolver — transitive closure over rule-reference + governance + shared-key edges (#92)",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-07-29T05:22:21.086795Z",
+      "updated_at": "2026-07-29T05:22:21.086795Z"
+    },
     "f46bbe99-0826-4d9b-910d-557d5c3277a7": {
       "uuid": "f46bbe99-0826-4d9b-910d-557d5c3277a7",
       "display_id": 41,
@@ -4286,8 +4297,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T05:22:14.939818Z",
+    "timestamp": "2026-07-29T05:22:21.086795Z",
     "agent_id": "79Ig",
-    "agent_seq": 303
+    "agent_seq": 304
   }
 }
