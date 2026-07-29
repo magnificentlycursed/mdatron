@@ -3130,11 +3130,12 @@
       "uuid": "b696933e-86e0-4ffa-8930-363e6dd16bfa",
       "display_id": 113,
       "title": "W3 #7: pattern-rule findings advertise 'mdatron explain <adopter-code>' the binary rejects (explain dead-end) — set explain_ref only when a page resolves",
-      "status": "open",
+      "status": "closed",
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T10:44:27.681108Z",
-      "updated_at": "2026-07-29T10:54:21.313670Z",
+      "updated_at": "2026-07-29T10:54:26.122601Z",
+      "closed_at": "2026-07-29T10:54:26.122590Z",
       "labels": [
         "bug"
       ],
@@ -4940,8 +4941,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T10:54:21.313670Z",
+    "timestamp": "2026-07-29T10:54:26.122601Z",
     "agent_id": "79Ig",
-    "agent_seq": 422
+    "agent_seq": 423
   }
 }
