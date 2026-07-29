@@ -135,17 +135,31 @@ fn families_field_reports_per_verify_activity() {
     let env = parse_output(&run_verify_json(&proj));
     let fam = env.get("families").and_then(|v| v.as_object()).unwrap();
     for k in ["schema", "route", "pin", "vocabulary", "citation"] {
-        let v = fam.get(k).and_then(|v| v.as_str()).unwrap_or("MISSING");
+        let v = fam
+            .get(k)
+            .and_then(|v| v.get("state"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("MISSING");
         assert!(
-            matches!(v, "active" | "inactive"),
-            "family {k} must be active|inactive; got {v}"
+            matches!(v, "active" | "inert" | "inactive"),
+            "family {k} state must be tri-state; got {v}"
+        );
+        assert!(
+            fam[k].get("reason").and_then(|r| r.as_str()).is_some(),
+            "family {k} carries a falsifiable reason"
         );
     }
-    assert_eq!(fam["schema"], "active", "schema data supplied");
-    assert_eq!(fam["route"], "active", "routes.yaml supplied");
-    assert_eq!(fam["vocabulary"], "active", "vocabulary.yaml supplied");
-    assert_eq!(fam["pin"], "inactive", "no pins.yaml");
-    assert_eq!(fam["citation"], "inactive", "no route opted into citations");
+    assert_eq!(fam["schema"]["state"], "active", "schema data supplied");
+    assert_eq!(fam["route"]["state"], "active", "routes.yaml supplied");
+    assert_eq!(
+        fam["vocabulary"]["state"], "active",
+        "vocabulary.yaml supplied"
+    );
+    assert_eq!(fam["pin"]["state"], "inactive", "no pins.yaml");
+    assert_eq!(
+        fam["citation"]["state"], "inactive",
+        "no route opted into citations"
+    );
 }
 
 // #90: a family with no data reports inactive — the DESIGN "inactivity is
@@ -158,14 +172,14 @@ fn absent_family_data_reports_inactive_and_version_bumped() {
     proj.seed_clean_md("post.md");
     let env = parse_output(&run_verify_json(&proj));
     let fam = env.get("families").and_then(|v| v.as_object()).unwrap();
-    assert_eq!(fam["schema"], "active");
+    assert_eq!(fam["schema"]["state"], "active");
     for k in ["route", "pin", "vocabulary", "citation"] {
-        assert_eq!(fam[k], "inactive", "{k} has no data supplied");
+        assert_eq!(fam[k]["state"], "inactive", "{k} has no data supplied");
     }
     assert_eq!(
         env.get("mdatron_output_version").and_then(|v| v.as_str()),
-        Some("1.1.0"),
-        "the families field bumped the envelope minor version"
+        Some("1.2.0"),
+        "the tri-state families field bumped the envelope minor version"
     );
 }
 

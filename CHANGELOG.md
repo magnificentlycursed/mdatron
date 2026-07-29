@@ -10,6 +10,9 @@ the TRON blockchain.
 
 ## [Unreleased]
 
+### Changed
+- `families` in the `verify --json` envelope is now a **tri-state plus a reason** (#107, vsdd-cli v0.3.0 diagnostic-efficacy review item 4 — "families was unfalsifiable"). Each of the five families reports `{ "state": "active" | "inert" | "inactive", "reason": "..." }`: `active` = data supplied and the check ran this pass; `inert` = configured but did no work (e.g. `vocabulary.yaml` present but `vocabulary_globs` matched no walked file); `inactive` = not configured. The `reason` documents precisely why — resolving the ambiguity where `active`/`inactive` conflated configured-vs-ran (e.g. `vocabulary_globs` set with no `vocabulary.yaml` now reads `inactive` with the clarifying reason). Envelope shape change: `mdatron_output_version` and the published schema move **1.1.0 → 1.2.0**.
+
 ### Fixed
 - `summary.files_checked` now reports the true number of files **validated** this run, not a count of files that produced findings (#105, vsdd-cli v0.3.0 diagnostic-efficacy review item 1). The old v0.1.0 stub counted unique files referenced in findings, so a clean run over N files reported `0` — indistinguishable from an empty jurisdiction. The count is threaded from `verify` (`VerifyReport.files_checked`); incremental runs count the scope. Field type unchanged (integer); the published output schema gains a `description`. Closes the core of the "checked N vs checked nothing" audit-signal gap.
 

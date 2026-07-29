@@ -21,34 +21,55 @@ use crate::diagnostic::{Finding, Severity};
 /// new consumers audit per-verify family activity. Must move in lockstep with
 /// the published envelope schema (`schema/mdatron-output.schema.json`); the
 /// `envelope_version_matches_published_schema` tripwire enforces it.
-pub const OUTPUT_VERSION: &str = "1.1.0";
+pub const OUTPUT_VERSION: &str = "1.2.0";
 
 /// Whether a check family was invoked in a verify run — active means its data
 /// was supplied and the family ran (NOT that it produced findings; a clean
 /// active family is distinguishable from an inactive one). Per the ratified
 /// #90 envelope shape (vsdd-cli consumer ask + DESIGN § Validation is
 /// data-driven "the inactivity is reported").
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
+/// Per-family activity as a tri-state plus a reason (#107, falsifiable audit
+/// signal — vsdd-cli v0.3.0 review item 4). A consumer can tell "ran this pass"
+/// (`active`) from "configured but did no work" (`inert`) from "not configured"
+/// (`inactive`), and the `reason` documents precisely why — closing the
+/// ambiguity where `active`/`inactive` conflated configured-vs-ran.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "state", rename_all = "lowercase")]
 pub enum FamilyActivity {
-    Active,
-    Inactive,
+    /// Data supplied and the check ran this pass.
+    Active { reason: String },
+    /// Data supplied but the check did no work this pass (e.g. its scope
+    /// matched no walked file) — configured, but not exercised.
+    Inert { reason: String },
+    /// No data supplied — the family is not part of this project's config.
+    Inactive { reason: String },
 }
 
 impl FamilyActivity {
-    /// `Active` when `data_supplied`, else `Inactive`.
-    pub fn from_supplied(data_supplied: bool) -> Self {
-        if data_supplied {
-            Self::Active
-        } else {
-            Self::Inactive
+    pub fn active(reason: impl Into<String>) -> Self {
+        Self::Active {
+            reason: reason.into(),
         }
+    }
+    pub fn inert(reason: impl Into<String>) -> Self {
+        Self::Inert {
+            reason: reason.into(),
+        }
+    }
+    pub fn inactive(reason: impl Into<String>) -> Self {
+        Self::Inactive {
+            reason: reason.into(),
+        }
+    }
+    /// True when the check ran this pass (`active`) — the primary audit signal.
+    pub fn is_active(&self) -> bool {
+        matches!(self, Self::Active { .. })
     }
 }
 
 /// Per-verify activity of the five check families (`DESIGN.md` § Five check
 /// families), emitted under the envelope's `families` field.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Families {
     pub schema: FamilyActivity,
     pub route: FamilyActivity,
@@ -61,12 +82,13 @@ impl Families {
     /// All families inactive — the state when the pipeline did not run (a
     /// pipeline-error envelope reports no family as invoked).
     pub fn all_inactive() -> Self {
+        let reason = || FamilyActivity::inactive("the pipeline did not run");
         Self {
-            schema: FamilyActivity::Inactive,
-            route: FamilyActivity::Inactive,
-            pin: FamilyActivity::Inactive,
-            vocabulary: FamilyActivity::Inactive,
-            citation: FamilyActivity::Inactive,
+            schema: reason(),
+            route: reason(),
+            pin: reason(),
+            vocabulary: reason(),
+            citation: reason(),
         }
     }
 }
@@ -304,11 +326,11 @@ mod tests {
             3,
             PipelineStatus::Ok,
             Families {
-                schema: FamilyActivity::Active,
-                route: FamilyActivity::Active,
-                pin: FamilyActivity::Inactive,
-                vocabulary: FamilyActivity::Inactive,
-                citation: FamilyActivity::Inactive,
+                schema: FamilyActivity::active("schemas supplied"),
+                route: FamilyActivity::active("routes supplied"),
+                pin: FamilyActivity::inactive("no pins.yaml"),
+                vocabulary: FamilyActivity::inactive("no vocabulary.yaml"),
+                citation: FamilyActivity::inactive("no citations route"),
             },
             "0.3.0",
         )

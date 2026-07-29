@@ -156,11 +156,11 @@ fn no_adopter_data_runs_with_all_families_inactive() {
     let report = verify_report(&cfg).expect("verify runs with no adopter data");
     assert!(report.findings.is_empty(), "no data -> no findings");
     let f = report.families;
-    assert!(matches!(f.schema, FamilyActivity::Inactive));
-    assert!(matches!(f.route, FamilyActivity::Inactive));
-    assert!(matches!(f.pin, FamilyActivity::Inactive));
-    assert!(matches!(f.vocabulary, FamilyActivity::Inactive));
-    assert!(matches!(f.citation, FamilyActivity::Inactive));
+    assert!(matches!(f.schema, FamilyActivity::Inactive { .. }));
+    assert!(matches!(f.route, FamilyActivity::Inactive { .. }));
+    assert!(matches!(f.pin, FamilyActivity::Inactive { .. }));
+    assert!(matches!(f.vocabulary, FamilyActivity::Inactive { .. }));
+    assert!(matches!(f.citation, FamilyActivity::Inactive { .. }));
 
     let _ = fs::remove_dir_all(&root);
 }

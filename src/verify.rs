@@ -301,22 +301,18 @@ fn run(
         Err(e) => return Err(VerifyError::Config(e.to_string())),
     };
 
-    // Capture per-family activity before the Options are consumed (#90).
-    // Active = data supplied and the family ran this pass. Citation is
-    // data-less, activating only via a route opting in with `citations: true`.
+    // Capture data-presence per family BEFORE the Options are consumed (#90);
+    // the tri-state families object (#107) is built after the walk, since
+    // vocabulary's `inert` state needs the scope-hit count.
     use crate::output::{Families, FamilyActivity};
-    let families = Families {
-        schema: FamilyActivity::from_supplied(!schemas.is_empty()),
-        route: FamilyActivity::from_supplied(routes.is_some()),
-        pin: FamilyActivity::from_supplied(pin_data.is_some()),
-        vocabulary: FamilyActivity::from_supplied(vocab.is_some()),
-        citation: FamilyActivity::from_supplied(
-            routes
-                .as_ref()
-                .map(|r| r.routes.iter().any(|x| x.citations))
-                .unwrap_or(false),
-        ),
-    };
+    let schemas_supplied = !schemas.is_empty();
+    let route_supplied = routes.is_some();
+    let pin_supplied = pin_data.is_some();
+    let vocab_supplied = vocab.is_some();
+    let citation_supplied = routes
+        .as_ref()
+        .map(|r| r.routes.iter().any(|x| x.citations))
+        .unwrap_or(false);
 
     let mut findings: Vec<Finding> = Vec::new();
     // Keep the pins for after the scope filter: a pin finding locates at
@@ -596,6 +592,44 @@ fn run(
             crate::pin::check(&project_root, std::slice::from_ref(pin), &mut findings);
         }
     }
+
+    // Tri-state families (#107): each carries the reason that makes the audit
+    // signal falsifiable. Vocabulary distinguishes not-configured (no registry)
+    // from inert (registry present but scoped to nothing) — the ambiguity
+    // vsdd-cli's review flagged (vocabulary_globs alone does not activate it).
+    let families = Families {
+        schema: if schemas_supplied {
+            FamilyActivity::active("schemas supplied; Layer 1 ran")
+        } else {
+            FamilyActivity::inactive("no schemas in .mdatron/schemas/")
+        },
+        route: if route_supplied {
+            FamilyActivity::active(".mdatron/routes.yaml supplied")
+        } else {
+            FamilyActivity::inactive("no .mdatron/routes.yaml")
+        },
+        pin: if pin_supplied {
+            FamilyActivity::active(".mdatron/pins.yaml supplied")
+        } else {
+            FamilyActivity::inactive("no .mdatron/pins.yaml")
+        },
+        vocabulary: if !vocab_supplied {
+            FamilyActivity::inactive(
+                "no .mdatron/vocabulary.yaml (vocabulary_globs alone does not activate the family)",
+            )
+        } else if vocab_scoped && vocab_scoped_hits == 0 {
+            FamilyActivity::inert(
+                "vocabulary.yaml present but vocabulary_globs matched no walked file",
+            )
+        } else {
+            FamilyActivity::active("vocabulary.yaml supplied; scanned the corpus")
+        },
+        citation: if citation_supplied {
+            FamilyActivity::active("a route opts in with citations: true")
+        } else {
+            FamilyActivity::inactive("no route opts in with citations: true")
+        },
+    };
 
     findings.sort_by(|a, b| {
         a.location
