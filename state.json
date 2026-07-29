@@ -2562,11 +2562,12 @@
       "uuid": "a89629bc-8e2a-4193-adaa-78efe28381e3",
       "display_id": 95,
       "title": "vocab: a term declared registered AND draft resolves to draft with a warning (DESIGN L140 agnosticism conflict outcome; #91 residual)",
-      "status": "open",
+      "status": "closed",
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-07-29T01:20:36.181900Z",
-      "updated_at": "2026-07-29T05:21:52.154611Z",
+      "updated_at": "2026-07-29T05:22:00.076088Z",
+      "closed_at": "2026-07-29T05:22:00.076077Z",
       "labels": [
         "enhancement"
       ],
@@ -4280,8 +4281,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T05:21:52.154611Z",
+    "timestamp": "2026-07-29T05:22:00.076088Z",
     "agent_id": "79Ig",
-    "agent_seq": 300
+    "agent_seq": 301
   }
 }
