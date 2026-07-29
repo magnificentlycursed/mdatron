@@ -23,5 +23,6 @@
   "MDATRON-L0001": "governance-weakening-standing",
   "MDATRON-W0040": "governed-file-has-no-frontmatter",
   "MDATRON-W0041": "name-underivable",
-  "MDATRON-W0042": "governance-weakening-unjustified"
+  "MDATRON-W0042": "governance-weakening-unjustified",
+  "MDATRON-W0043": "vocabulary-scope-matches-nothing"
 }
