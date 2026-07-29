@@ -234,6 +234,12 @@ fn run(
             error: "no schemas or patterns directory; run `mdatron init` first".into(),
         });
     }
+    // #110 (vsdd item 2): past the both-missing guard, a still-absent schemas dir
+    // means Layer 1 cannot run at all — a false-clean the run would otherwise
+    // report silently. Captured here (the load below fails safe to empty) and
+    // surfaced as W0047 on a whole-tree pass. A present-but-empty dir is a
+    // deliberate opt-out, not drift, so only true absence is flagged.
+    let schemas_dir_missing = !config.schemas_dir.is_dir();
     let schemas = load_schemas(&config.schemas_dir)?;
     let patterns = load_patterns(&config.patterns_dir)?;
 
@@ -504,6 +510,11 @@ fn run(
     let vocab_scoped = vocab.is_some() && !vocab_globs.is_empty();
     let mut vocab_scoped_hits = 0usize;
     let mut files_checked: u32 = 0;
+    // #110: does any walked file declare a schema_class that routed to neither a
+    // schema nor a rule context? With the schemas dir missing entirely, that is
+    // an unserved Layer-1 request (W0047) even where W0045's has-infra gate stays
+    // its hand.
+    let mut any_unrouted_schema_class = false;
     for (path, rel) in &governed {
         // Incremental: skip files outside the scope.
         if let Some(scope) = &scope {
@@ -528,7 +539,7 @@ fn run(
         let Some(content) = snapshot.get(rel) else {
             continue;
         };
-        verify_file(
+        any_unrouted_schema_class |= verify_file(
             path,
             content,
             &project_root,
@@ -588,6 +599,40 @@ fn run(
                     label: "glob".into(),
                     content: pattern.clone(),
                 }],
+            });
+        }
+
+        // #110 (vsdd item 2): the schemas dir is absent AND a walked file declares
+        // a schema_class that routed to neither a schema nor a rule context — an
+        // unserved Layer-1 request. Without the schemas dir the family validated
+        // nothing, yet the run would exit clean; W0047 makes that false-clean
+        // loud. Gated on an actual unrouted class so a Schematron-only project
+        // (whose schema_class selects a rule context) is not nagged for the
+        // schemas dir it never needed.
+        if schemas_dir_missing && any_unrouted_schema_class {
+            findings.push(Finding {
+                code: "MDATRON-W0047".into(),
+                severity: Severity::Warning,
+                summary: "schema-dir-missing".into(),
+                message: "the `.mdatron/schemas/` directory is absent, so the schema \
+                          family (Layer 1) validated nothing — a file declares a \
+                          `schema_class` that no schema and no rule context serves, so \
+                          it passes unchecked and the run exits as if its frontmatter \
+                          were conformant"
+                    .into(),
+                help: Some(
+                    "run `mdatron init` to restore the skeleton and add \
+                     `.mdatron/schemas/<class>.json`, or add a pattern rule with \
+                     `context: <class>`, or correct the schema_class"
+                        .into(),
+                ),
+                location: Location {
+                    file: project_root.join(".mdatron").join("schemas"),
+                    line: 1,
+                    column: 0,
+                },
+                explain_ref: Some("MDATRON-W0047".into()),
+                quoted: Vec::new(),
             });
         }
     }
@@ -824,7 +869,7 @@ fn verify_file(
     patterns: &[PatternFile],
     registry: &IndexRegistry,
     findings: &mut Vec<Finding>,
-) -> Result<(), VerifyError> {
+) -> Result<bool, VerifyError> {
     // Content comes from the immutable snapshot (#103): every governed file is
     // read once through a confined no-follow handle in `run`, never from the
     // filesystem here — so a mutation after capture cannot change what this
@@ -848,7 +893,8 @@ fn verify_file(
                 explain_ref: Some("MDATRON-E0001".into()),
                 quoted: Vec::new(),
             });
-            return Ok(());
+            // Unparseable frontmatter has no readable schema_class to route.
+            return Ok(false);
         }
     };
 
@@ -891,7 +937,8 @@ fn verify_file(
                     quoted: Vec::new(),
                 });
             }
-            return Ok(());
+            // No frontmatter -> no schema_class declared -> nothing to route.
+            return Ok(false);
         }
     };
 
@@ -1001,8 +1048,16 @@ fn verify_file(
     // schema or pattern): a project doing no class-validation at all is not
     // nagged, preserving the "no adopter data -> clean" property.
     let has_validation_infra = !schemas.is_empty() || !patterns.is_empty();
+    // A declared schema_class matched by neither a schema nor a rule context is
+    // unrouted — nothing validated it. W0045 reports this per file, but only when
+    // some validation infrastructure exists (preserving no-adopter-data-clean).
+    // The raw signal (ungated) is returned so `run` can raise the project-level
+    // W0047 (#110) when the schemas dir is missing entirely — the has-infra gap
+    // W0045 deliberately leaves.
+    let unrouted_schema_class =
+        schema_class_opt.is_some() && !schema_matched && !any_context_matched;
     if let Some(schema_class) = &schema_class_opt {
-        if has_validation_infra && !schema_matched && !any_context_matched {
+        if has_validation_infra && unrouted_schema_class {
             findings.push(Finding {
                 code: "MDATRON-W0045".into(),
                 severity: Severity::Warning,
@@ -1028,7 +1083,7 @@ fn verify_file(
             });
         }
     }
-    Ok(())
+    Ok(unrouted_schema_class)
 }
 
 struct RuleContext<'a> {
@@ -1869,6 +1924,92 @@ mod tests {
             1,
             "one naked file yields one W0040, not one per matching glob; got {:?}",
             report.findings
+        );
+    }
+
+    // #110 (vsdd item 2): an absent `.mdatron/schemas/` dir leaves Layer 1 unable
+    // to run, yet verify exits 0 "clean" — a false-clean only `families.schema`
+    // hints at. (Both dirs absent already hard-errors; this is the single-missing
+    // case that slipped through.) W0047 makes the missing skeleton dir loud. An
+    // *empty* dir is a legitimate opt-out and stays quiet — only a *missing* dir,
+    // which `mdatron init` would have created, is drift.
+    #[test]
+    fn missing_schemas_dir_is_loud() {
+        let proj = TempProject::new("missing-schemas");
+        proj.write(".mdatron/config.yaml", "file_globs:\n  - \"**/*.md\"\n");
+        // A file declaring a schema_class that nothing serves: no schema (dir
+        // absent) and no rule context (patterns empty). This is the unserved
+        // Layer-1 request that the missing schemas dir turns into a false-clean.
+        proj.write("doc.md", "---\nschema_class: ghost\n---\nbody\n");
+        // patterns dir present (empty) so the both-missing pipeline error does not
+        // fire; schemas dir deliberately absent -> Layer 1 cannot run.
+        std::fs::create_dir_all(proj.0.join(".mdatron/patterns")).unwrap();
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert_eq!(
+            codes_of(&findings, "MDATRON-W0047"),
+            1,
+            "an absent schemas dir with an unserved schema_class must be loud; got {findings:?}"
+        );
+        // W0047 fills exactly the has-infra gap W0045 leaves: with both dirs empty
+        // there is no validation infrastructure, so W0045 stays silent — only the
+        // project-level W0047 catches this false-clean.
+        assert_eq!(
+            codes_of(&findings, "MDATRON-W0045"),
+            0,
+            "W0045 is gated on has-infra; here W0047 is the sole signal; got {findings:?}"
+        );
+    }
+
+    // #110: a Schematron-only project (a schema_class that selects a rule context,
+    // no schemas dir) is legitimate and must NOT trip W0047 — the schema_class is
+    // doing Layer-2 work, so the absent schemas dir is not a false-clean.
+    #[test]
+    fn missing_schemas_dir_with_layer_two_coverage_stays_quiet() {
+        let proj = TempProject::new("missing-schemas-l2");
+        // A pattern whose rule context is `note`: it serves schema_class `note`
+        // via Layer 2, so the file is validated despite the absent schemas dir.
+        proj.write(
+            ".mdatron/patterns/notes.yaml",
+            r#"mdatron_dsl_version: 1
+pattern:
+  id: notes
+  rules:
+    - id: note-ok
+      context: note
+      assert: $self.schema_class == "note"
+      code: TEST-E0001
+      message: "note check"
+"#,
+        );
+        proj.write("doc.md", "---\nschema_class: note\n---\nbody\n");
+        let cfg = VerifyConfig::new(&proj.0);
+        let findings = verify(&cfg).unwrap();
+        assert_eq!(
+            codes_of(&findings, "MDATRON-W0047"),
+            0,
+            "a schema_class served by a rule context is not a false-clean; got {findings:?}"
+        );
+    }
+
+    // #110: the negative guard — a present schemas dir (even one seeded with a
+    // real schema) must not warn. Guards against W0047 firing on a healthy
+    // skeleton.
+    #[test]
+    fn present_schemas_dir_stays_quiet() {
+        let proj = TempProject::new("present-schemas");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(".mdatron/config.yaml", "file_globs:\n  - \"**/*.md\"\n");
+        proj.write("doc.md", "body\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert_eq!(
+            codes_of(&findings, "MDATRON-W0047"),
+            0,
+            "a present schemas dir must not warn; got {findings:?}"
         );
     }
 
