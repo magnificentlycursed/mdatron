@@ -1,5 +1,5 @@
 {
-  "next_display_id": 112,
+  "next_display_id": 113,
   "next_comment_id": 312,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -101,6 +101,7 @@
     "e504525f-77cd-4dfc-94f1-ba221ebab2f2": 22,
     "e5469003-6d79-499a-9c31-6a24b24e594f": 33,
     "e8fa2d59-abe7-455a-a264-097fc431c1c3": 32,
+    "ea18ea7f-05a6-4d32-8549-09f2137b5eb6": 112,
     "eacfd6f1-3490-4d19-bd5c-be5825553a19": 68,
     "ed48043d-4d35-4ce5-af15-81f01cbbbdd7": 110,
     "eddd10af-f936-439c-9ead-0f9d6b9832b3": 28,
@@ -4284,6 +4285,16 @@
         }
       }
     },
+    "ea18ea7f-05a6-4d32-8549-09f2137b5eb6": {
+      "uuid": "ea18ea7f-05a6-4d32-8549-09f2137b5eb6",
+      "display_id": 112,
+      "title": "W2: pipeline_error{code,kind,message} in the verify --json envelope (#5 E0080 overload + #6 --json --quiet drops the reason)",
+      "status": "open",
+      "priority": "high",
+      "created_by": "79Ig",
+      "created_at": "2026-07-29T10:25:55.415804Z",
+      "updated_at": "2026-07-29T10:25:55.415804Z"
+    },
     "eacfd6f1-3490-4d19-bd5c-be5825553a19": {
       "uuid": "eacfd6f1-3490-4d19-bd5c-be5825553a19",
       "display_id": 68,
@@ -4859,8 +4870,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T10:24:05.458813Z",
+    "timestamp": "2026-07-29T10:25:55.415804Z",
     "agent_id": "79Ig",
-    "agent_seq": 408
+    "agent_seq": 409
   }
 }
