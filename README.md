@@ -27,25 +27,30 @@ output for machine consumers.
 
 ## Install
 
-mdatron is pre-publish (v0.3.x); the crates.io release is tracked as the
-v1.0 publish milestone (tracker #48). For now, install from a checkout:
+mdatron ships as an early **0.x** crate — usable now, with the CLI and the
+`--json` diagnostic contract still evolving under SemVer (pre-1.0, a breaking
+change moves the `0.MINOR` position, so `^0.4` will not silently pull a breaking
+`0.5`). Install from crates.io:
+
+```
+cargo install mdatron --locked
+```
+
+Pin the minor to avoid an unintended breaking upgrade in CI:
+
+```
+cargo install mdatron --locked --version "0.4"
+```
+
+`--locked` pins transitive dependencies to the shipped `Cargo.lock`; recommended
+for reproducible builds. To build from a checkout instead (the clone creates a
+`mdatron/` directory, so `--path mdatron` resolves to it):
 
 ```
 git clone https://github.com/magnificentlycursed/mdatron
 cargo install --path mdatron --locked
 mdatron --version
 ```
-
-The `--locked` flag pins transitive dependencies to `Cargo.lock`; recommended
-for reproducible builds and CI.
-
-Once mdatron is published to crates.io, the install command becomes:
-
-```
-cargo install mdatron --locked --version "0.3.0"
-```
-
-(Version-pin to avoid unintentional upgrades when the crate publishes.)
 
 ## First run
 
@@ -103,11 +108,30 @@ stdout, and `--compact` emits one size-capped block per finding (512 bytes,
 a contract limit) for agent-context consumers; add `--quiet` to silence the
 stderr rendering (and, under `--json`, to keep stdout the only stream).
 
-The `--json` envelope is a published, versioned contract: its JSON Schema lives
-at [`schema/mdatron-output.schema.json`](schema/mdatron-output.schema.json)
-(the `mdatron_output_version` field tracks it), so a consumer can pin and
-validate against it. `mdatron explain --list` enumerates every diagnostic code;
-`mdatron explain <code>` (the short form `E0050` works too) shows a code's page.
+The `--json` envelope is a published, versioned contract (`mdatron_output_version`,
+currently `2.1.0`). The load-bearing fields for a machine consumer:
+
+- `pipeline_status` — `"ok"` or `"failed"`; on failure, `pipeline_error`
+  `{code, kind, message}` carries the reason **in-band** (it survives `--quiet`),
+  `kind` disambiguating the failure class (`config`, `io`, `bound_exceeded`, …).
+- `summary.files_checked` — the true count of files **validated** (a clean run
+  over N reports N, not 0).
+- `families` — each of the five check families as `{state, reason}` (`active` /
+  `inert` / `inactive`), so "checked N, all clean" is distinguishable from
+  "checked nothing".
+- `findings[].code` / `.severity` / `.location`; and `findings[].quoted[]`,
+  which carries adopter-derived text marked `origin: "adopter"`, `trusted: false`
+  so a consumer never mistakes document content for engine output.
+
+Pin and validate against the schema at
+[`schema/mdatron-output.schema.json`](schema/mdatron-output.schema.json); a
+binary-only install can print it with `mdatron schema`. `mdatron explain --list`
+enumerates every diagnostic code; `mdatron explain <code>` (the short form
+`E0050` works too) shows a code's page.
+
+For fast local runs, `mdatron verify --changed <file>` verifies only the changed
+file plus its transitive dependents (a `.mdatron/` change falls back to
+whole-tree); whole-tree verify remains the gate and CI mode.
 
 ## Pre-commit integration
 
@@ -193,25 +217,28 @@ pattern:
     - id: title-must-be-set
       context: blog
       assert: $self.title != ""
-      code: MDATRON-W0100
+      code: BLOG-W0001
       message: "title is empty for the blog post"
 ```
 <!-- mdatron-roundtrip:pattern-end -->
 
 `context: blog` selects every file whose frontmatter `schema_class` is `blog`.
 `assert:` fires the diagnostic when the expression evaluates to `false`. See
-[`DESIGN.md`](./DESIGN.md) § Cross-file semantics stay narrowed for the
-operator + function reference (`every`, `some`, `in`, `defined`, `count`,
-`len`, `union`, `intersect`, `difference`, `concat`, `join`, and the
-path-confined `key()` cross-file index mechanism). The DSL's scope is
+[`docs/dsl-reference.md`](./docs/dsl-reference.md) for the **complete,
+canonical** operator + function inventory — including `every`, `some`, `in`,
+`not_in`, `filter`, `let:` bindings, `defined`, `count`, `len`, `union`,
+`intersect`, `difference`, `concat`, `join`, and the path-confined `key()`
+cross-file index mechanism (this list is illustrative, not exhaustive). The
+DSL's scope is
 cross-file and registry validation; body-content extraction functions are
 out of scope.
 
 ## Conformance families (Layer 2 data)
 
-Beyond schemas and rule patterns, four generic engines activate on adopter
-data under `.mdatron/` — each inactive until its file exists, each strict-
-parsed, every path confined to the governed tree:
+The schema family (Layer 1) is the first of **five** check families. Beyond it,
+four generic Layer-2 engines activate on adopter data under `.mdatron/` — each
+inactive until its file exists, each strict-parsed, every path confined to the
+governed tree:
 
 **Routes** (`routes.yaml`) — the closed-world allowlist:
 
@@ -290,17 +317,16 @@ project — Architecture Decision Records, RFC collections, structured
 changelogs, methodology specs. If you're not adopting VSDD, you can stop
 reading this section here.
 
-If you *are* adopting VSDD: [vsdd](../vsdd-cli/) is the first downstream
+If you *are* adopting VSDD: [vsdd](https://github.com/magnificentlycursed/vsdd-cli) is the first downstream
 adopter of mdatron and the source of the methodology vocabulary (phase
 primers, domain prompts, finding artifacts, the VSDD whitepaper alignment).
 vsdd composes mdatron in two ways:
 
 - **vsdd's `verify` subcommand spawns `mdatron verify --json`** as a
-  subprocess and parses the output object on stdout per the
-  [Phase 0 output-format contract](
-  ../vsdd-cli/docs/refactor/phase-0-output-format/DESIGN.md). Error-code
-  namespaces stay strictly separate: mdatron emits `MDATRON-Exxxx`, vsdd
-  emits `VSDD-Exxxx`. No proxy, no intercept.
+  subprocess and parses the output object on stdout against mdatron's published
+  envelope schema (`schema/mdatron-output.schema.json`). Error-code namespaces
+  stay strictly separate: mdatron emits `MDATRON-Exxxx`, vsdd emits `VSDD-Exxxx`.
+  No proxy, no intercept.
 - **vsdd ships its own JSON Schemas and DSL patterns** that adopters deploy
   into `.mdatron/schemas/` and `.mdatron/patterns/` via `vsdd init`. The
   methodology is encoded as mdatron schemas + patterns; mdatron is the
@@ -322,7 +348,7 @@ is deferred to adopter evidence per the absorption ledger — see
   (frontmatter, confinement, schema, init, jurisdiction, route, pin,
   vocabulary, and citation codes); the catalog grows by one entry per
   newly-emitted code
-- [vsdd-cli](../vsdd-cli/) — if you are adopting VSDD, the vsdd toolkit
+- [vsdd-cli](https://github.com/magnificentlycursed/vsdd-cli) — if you are adopting VSDD, the vsdd toolkit
   composes mdatron + ships the methodology artifacts; `vsdd init` deploys
   both
 - [The VSDD whitepaper](
