@@ -2497,11 +2497,12 @@
       "uuid": "9149809f-422d-4870-8cca-53832d051a70",
       "display_id": 115,
       "title": "W3 #8 part 2: compact budgeting drops a quoted value while its message placeholder survives (dangling reference) — budget the value ahead of the template",
-      "status": "open",
+      "status": "closed",
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T12:04:41.320194Z",
-      "updated_at": "2026-07-29T12:26:28.467224Z",
+      "updated_at": "2026-07-29T12:26:33.658164Z",
+      "closed_at": "2026-07-29T12:26:33.658153Z",
       "labels": [
         "bug"
       ],
@@ -5018,8 +5019,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T12:26:28.467224Z",
+    "timestamp": "2026-07-29T12:26:33.658164Z",
     "agent_id": "79Ig",
-    "agent_seq": 438
+    "agent_seq": 439
   }
 }
