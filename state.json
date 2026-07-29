@@ -1,6 +1,6 @@
 {
   "next_display_id": 95,
-  "next_comment_id": 252,
+  "next_comment_id": 253,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -1743,7 +1743,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T00:26:41.636883Z",
-      "updated_at": "2026-07-29T00:45:49.415147Z",
+      "updated_at": "2026-07-29T01:00:25.184184Z",
       "labels": [
         "feature"
       ],
@@ -1772,6 +1772,15 @@
           "kind": "plan",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAKYymzzW4HT9aBbqGwEI9d4X2AfYcX30tZHjri7imC+Av3MVfCoB6JhtI7JfaKQ3i2vlvaYzYNGGQRMXsZ2u8Bw=="
+        },
+        "faaebece-839c-4e91-bf4c-138cd0198dbe": {
+          "display_id": 252,
+          "author": "79Ig",
+          "content": "Built on feature/90-envelope-contract (de009e2). Envelope families field (ratified shape) + published schema/mdatron-output.schema.json (strict, version-pinned) + full contract-stability tripwire set: envelope-validates-schema, version lockstep, three-forms-agree, every-production-code-resolves-in-explain, code-semantics golden (schema/code-catalog.json), baseline/pages/catalog consistency. Envelope 1.0.0->1.1.0. Drove on repo's own data: families={schema:active, route:active, pin:active, vocabulary:inactive, citation:inactive}. 314 tests green. Pushed for CI. vsdd-cli can pin the published schema now.",
+          "created_at": "2026-07-29T01:00:25.169279Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAvoMTBo5mEON91q3k6LU7g1pC3Bg1Iuw2ciHKPjIBIGMGaaV4OszHBVHZuF0dFqydZznFhCojErGMJkaZG/6dAw=="
         }
       }
     },
@@ -3962,8 +3971,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T00:45:49.415147Z",
+    "timestamp": "2026-07-29T01:00:25.184184Z",
     "agent_id": "79Ig",
-    "agent_seq": 245
+    "agent_seq": 246
   }
 }
