@@ -1,6 +1,6 @@
 {
   "next_display_id": 123,
-  "next_comment_id": 326,
+  "next_comment_id": 327,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "0943c25f-129e-492b-a326-fff0d809c6c0": 121,
@@ -510,13 +510,24 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T14:23:17.967852Z",
-      "updated_at": "2026-07-29T14:23:34.316845Z",
+      "updated_at": "2026-07-29T16:23:32.234715Z",
       "labels": [
         "enhancement"
       ],
       "related": [
         "fea9b536-a072-4342-afe0-0a87fe5ca8bd"
-      ]
+      ],
+      "comments": {
+        "51d38def-78eb-466a-99a3-12a294bb4db6": {
+          "display_id": 326,
+          "author": "79Ig",
+          "content": "PHASE-3 COMPOSITION — operator_confirmation: CONFIRMED (2026-07-29).\nphase: phase-3 (Adversarial Refinement / The VDD Roast)\nscope: full-app (src/, DESIGN.md, README, docs/, schema/, CI, Cargo manifest)\ncomposition_mode: reviewer-cold-session (fresh subagents, no memory)\ncluster_shape: per-domain (high-stakes / first-public-publish)\nsycophancy_compensation: ON (Claude authored 0.4.0 -> cold adversarial, Exacting Mentor)\nactive_domains (11): software-engineer, security, red-team, technical-writer, documentation-reviewer, ai-engineer, solution-owner, platform-engineer, solution-architect, data-engineer, sanity-check\nadversarial-pair separation: Security/Red-Team + TW/DR run as independent cold agents.\nMissing primers (red-team, data-engineer) pulled from vsdd-cli canonical repo into local .claude/commands/ (gitignored). Orchestration: Workflow swarm (fan out -> verify severe -> synthesize). Findings -> review-log + routed crosslink issues -> fix (incl polish #111/#118/#119/#121 + README) -> re-roast to MVR -> publish #48.",
+          "created_at": "2026-07-29T16:23:32.219210Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAZQm4hVez33LCeboRyVUYlgXDWwTEhOvwuuYs3I1EHGQJZskC6LO5/IqSM5g87WpR5d+yaPsSkO535bI3qS8JDQ=="
+        }
+      }
     },
     "1da67425-f44d-40d6-8ba1-2d2ed768de38": {
       "uuid": "1da67425-f44d-40d6-8ba1-2d2ed768de38",
@@ -5213,8 +5224,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T14:23:34.316845Z",
+    "timestamp": "2026-07-29T16:23:32.234715Z",
     "agent_id": "79Ig",
-    "agent_seq": 481
+    "agent_seq": 482
   }
 }
