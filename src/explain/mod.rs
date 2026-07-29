@@ -166,6 +166,17 @@ pub fn is_mdatron_namespace(code: &str) -> bool {
     code.starts_with("MDATRON-")
 }
 
+/// The published code catalog as `(code, summary)` pairs, sorted by code (#117,
+/// vsdd W4 — powers `mdatron explain --list`). Sourced from the golden
+/// `schema/code-catalog.json` so the list can never drift from the contract the
+/// tripwires enforce.
+pub fn catalog() -> Vec<(String, String)> {
+    const CODE_CATALOG_JSON: &str = include_str!("../../schema/code-catalog.json");
+    let map: std::collections::BTreeMap<String, String> =
+        serde_json::from_str(CODE_CATALOG_JSON).unwrap_or_default();
+    map.into_iter().collect()
+}
+
 /// Migration-note pairs surfaced when an operator searches for a code
 /// whose semantic meaning has SHIFTED across emission sites during the
 /// bootstrap period. Each entry pairs `(code, prior-meaning-context)`

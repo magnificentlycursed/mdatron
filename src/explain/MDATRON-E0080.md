@@ -52,7 +52,7 @@ apply the matching corrective pattern below.
 
 ## See also
 
-- [`DESIGN.md` § Summary](../../DESIGN.md#summary)
+- the mdatron design reference, § Summary (in the project repository)
   — how mdatron loads schemas + patterns before the pipeline runs
 
 ## Related codes

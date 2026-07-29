@@ -101,7 +101,13 @@ malformed pattern file, IO failure) print on stderr and exit 2. Two machine
 forms share the same findings: `--json` emits a single output object on
 stdout, and `--compact` emits one size-capped block per finding (512 bytes,
 a contract limit) for agent-context consumers; add `--quiet` to silence the
-stderr rendering.
+stderr rendering (and, under `--json`, to keep stdout the only stream).
+
+The `--json` envelope is a published, versioned contract: its JSON Schema lives
+at [`schema/mdatron-output.schema.json`](schema/mdatron-output.schema.json)
+(the `mdatron_output_version` field tracks it), so a consumer can pin and
+validate against it. `mdatron explain --list` enumerates every diagnostic code;
+`mdatron explain <code>` (the short form `E0050` works too) shows a code's page.
 
 ## Pre-commit integration
 

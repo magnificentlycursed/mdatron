@@ -183,6 +183,67 @@ fn pipeline_failure_json_quiet_carries_structured_reason() {
     );
 }
 
+// #117 (vsdd W4): `mdatron explain` accepts a short code (`E0050` -> the MDATRON
+// namespace) and `--list` enumerates the catalog — so an operator can discover
+// and recall codes without pasting a full namespaced code.
+#[test]
+fn explain_accepts_short_code_and_lists_catalog() {
+    let out = run(&["explain", "E0050"]);
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "short code E0050 resolves: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&out.stdout).contains("MDATRON-E0050"),
+        "the E0050 page renders"
+    );
+
+    let out = run(&["explain", "--list"]);
+    assert_eq!(out.status.code(), Some(0));
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        stdout.contains("MDATRON-E0050") && stdout.contains("MDATRON-W0047"),
+        "the catalog listing includes known codes: {stdout}"
+    );
+    assert!(
+        stdout.lines().count() > 10,
+        "the listing enumerates the catalog"
+    );
+}
+
+// #117 (vsdd item, W4): `--json` without `-q` used to emit the machine envelope
+// on stdout AND re-render every finding as human TTY text on stderr — a ~1.7x
+// token cost for an agent capturing both streams, and fully redundant with the
+// envelope. Under `--json` the envelope is authoritative; stderr carries no
+// duplicate finding rendering.
+#[test]
+fn json_without_quiet_does_not_also_emit_human_findings() {
+    let proj = TempProject::new("json-no-double-emit");
+    proj.seed_blog_schema();
+    proj.seed_schema_violation_md("bad.md");
+    let out = Command::new(mdatron_bin())
+        .args(["verify", "--project-root"])
+        .arg(proj.path())
+        .arg("--json")
+        .output()
+        .expect("mdatron binary executes");
+    assert_eq!(out.status.code(), Some(1), "the violation still exits 1");
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    // The envelope is on stdout.
+    let env: serde_json::Value = serde_json::from_str(stdout.trim())
+        .unwrap_or_else(|e| panic!("stdout is the JSON envelope: {e}; got {stdout:?}"));
+    assert_eq!(env["pipeline_status"], "ok");
+    assert!(!env["findings"].as_array().unwrap().is_empty());
+    // stderr does NOT re-render the finding as TTY text.
+    assert!(
+        !stderr.contains("= explain:") && !stderr.contains("--> "),
+        "under --json, findings must not also render on stderr; got stderr: {stderr:?}"
+    );
+}
+
 // #113 (vsdd item 7): a pattern-rule finding carries an ADOPTER-defined code
 // (e.g. VSDD-E0201) for which mdatron has no explain page. It must NOT advertise
 // `mdatron explain VSDD-E0201` — the same binary rejects it (a dead-end). The

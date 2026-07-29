@@ -44,4 +44,4 @@ by repository commit review, not by the engine.
 
 ## See also
 
-- [`DESIGN.md` § Governance data is governed](../../DESIGN.md#summary)
+- the mdatron design reference, § Governance data is governed (in the project repository)

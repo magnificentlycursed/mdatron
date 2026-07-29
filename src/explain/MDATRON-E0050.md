@@ -30,7 +30,7 @@ violations) and the first fix may unlock the rest.
 
 ## See also
 
-- [`DESIGN.md` § Five check families](../../DESIGN.md#five-check-families)
+- the mdatron design reference, § Five check families (in the project repository)
   — schema validation semantics + edge cases
 
 ## Related codes
