@@ -1,6 +1,6 @@
 {
   "next_display_id": 98,
-  "next_comment_id": 260,
+  "next_comment_id": 261,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -361,13 +361,24 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T02:01:06.243338Z",
-      "updated_at": "2026-07-29T02:01:33.379168Z",
+      "updated_at": "2026-07-29T02:01:42.668436Z",
       "labels": [
         "enhancement"
       ],
       "related": [
         "2881253a-3641-4d7b-a6c1-e09cbbd2d140"
-      ]
+      ],
+      "comments": {
+        "d7176107-0105-49f3-bb1b-526e94469551": {
+          "display_id": 260,
+          "author": "79Ig",
+          "content": "PLAN (child of #96, seam S5). Gap: mdatron governs only review-log/**/*.md; the methodology docs that govern mdatron's OWN development (docs/methodology*.md) are themselves ungoverned by mdatron, and no vocabulary registry enforces the naming register (methodology §5: no coined labels / letter-clusters / all-caps tokens). Design: the naming register maps directly onto mdatron's vocabulary family — E0091 (letter+number label clusters outside label_schemes.allow), E0090 (bold-introduced coinages absent from the registry), E0093 (anti-patterns). Dogfood property: to make the methodology docs PASS, their own durable vocabulary (mdatron, vsdd, crosslink; phase handles 1a-2c; seam handles S1-S5) must be REGISTERED in .mdatron/vocabulary.yaml + allowlisted label schemes — which is precisely §5's 'a durable term is a registration act.' Phases: 2a red gate — a planted coinage/bogus letter-cluster in a governed doc is NOT caught today (docs out of scope); 2b — author .mdatron/vocabulary.yaml + bring docs/methodology*.md into file_globs + a route; green when the docs pass (vocabulary registered) AND the planted violation fires; 2c/3/4/5 per the lane. Domain: SE minimum. Standing-doc sweep: DESIGN.md §Five-families + config jurisdiction (#77). Pin dogfood re-run before commit.",
+          "created_at": "2026-07-29T02:01:42.549753Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAhz7vBxtSi4vYiC4LBR64ebNoHG6Oo4A1FYkicKqlD/jK9QJ0G6Tj7C0HOrCxz5XFYbg9vntlIi1omB3NfAknCA=="
+        }
+      }
     },
     "1ff675c3-889e-4de4-84da-352debc4b1f7": {
       "uuid": "1ff675c3-889e-4de4-84da-352debc4b1f7",
@@ -4093,8 +4104,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T02:01:33.379168Z",
+    "timestamp": "2026-07-29T02:01:42.668436Z",
     "agent_id": "79Ig",
-    "agent_seq": 270
+    "agent_seq": 271
   }
 }
