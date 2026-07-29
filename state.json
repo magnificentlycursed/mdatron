@@ -1,6 +1,6 @@
 {
   "next_display_id": 132,
-  "next_comment_id": 329,
+  "next_comment_id": 330,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "0943c25f-129e-492b-a326-fff0d809c6c0": 121,
@@ -886,13 +886,24 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T17:21:15.283796Z",
-      "updated_at": "2026-07-29T17:21:31.839403Z",
+      "updated_at": "2026-07-29T18:02:17.718668Z",
       "labels": [
         "bug"
       ],
       "related": [
         "1cafa0f3-dcdd-491b-b455-52af79c6c85d"
-      ]
+      ],
+      "comments": {
+        "c22d3a1f-c180-4a10-afa1-3d90b9b5f991": {
+          "display_id": 329,
+          "author": "79Ig",
+          "content": "Done: LICENSE added; Cargo.toml include allowlist (payload 221->76 files, zero internal apparatus, LICENSE ships); REPLACE removed; CI package job (payload-allowlist assert + cargo publish --dry-run). Verified: cargo publish --dry-run compiles the packaged crate clean.",
+          "created_at": "2026-07-29T18:02:17.694936Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAUgWY3vtIezN1gSeVjCMcB/OTPkRUodK6wzkgezs3hc5QvhLGuuDXetgYa/wsfwYRYCvNYJi7nFpmGAzscWVQDA=="
+        }
+      }
     },
     "277a179b-fdda-44e7-a79b-f9e096e12789": {
       "uuid": "277a179b-fdda-44e7-a79b-f9e096e12789",
@@ -5440,8 +5451,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T17:24:55.705820Z",
+    "timestamp": "2026-07-29T18:02:17.718668Z",
     "agent_id": "79Ig",
-    "agent_seq": 520
+    "agent_seq": 521
   }
 }
