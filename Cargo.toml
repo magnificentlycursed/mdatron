@@ -9,6 +9,23 @@ repository = "https://github.com/magnificentlycursed/mdatron"
 description = "Typed-markdown validator with rustc-shaped diagnostics (descended from Schematron, not related to the TRON blockchain)"
 keywords = ["markdown", "schema", "validation", "schematron", "linter"]
 categories = ["command-line-utilities", "development-tools"]
+readme = "README.md"
+# Packaging allowlist (#123, roast blocker BLO2): publish ONLY the crate's own
+# source + consumer-facing docs. Without this, `cargo package` shipped 221 files
+# — the entire internal apparatus (.claude/, .crosslink/ incl. a committed key,
+# review-log/, .vsdd/, .mdatron/). `src/**` + `schema/**` are build-required
+# (include_str! of the explain pages, the output schema, and the code catalog);
+# the rest are the docs a consumer wants. Verified with `cargo package --list`.
+include = [
+    "src/**/*",
+    "schema/**/*",
+    "README.md",
+    "CHANGELOG.md",
+    "DESIGN.md",
+    "LICENSE",
+    "docs/dsl-reference.md",
+    "docs/dependencies/*.md",
+]
 
 # Single-crate, binary-first (#81, operator ruling 2026-07-22 executing the
 # 2026-06-02 binary-first directive): mdatron is consumed AS A BINARY. The lib

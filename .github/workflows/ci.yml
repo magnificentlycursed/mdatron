@@ -136,3 +136,37 @@ jobs:
       # The gate: every review-log entry must satisfy schemas/review-entry.json.
       - name: Verify this repo against its own .mdatron/ config
         run: cargo run -q -p mdatron --locked -- verify --project-root .
+
+  package:
+    # Publish rehearsal (#123, roast SHO3): green code-CI says nothing about what
+    # the crate ARTIFACT contains. This job proves the package is publishable AND
+    # that the include-allowlist holds — the internal apparatus (.claude/,
+    # .crosslink/ incl. a committed key, review-log/, .vsdd/, .mdatron/) must NOT
+    # ship. Without this gate, the LICENSE + 221-file-bloat blockers were invisible.
+    name: Package rehearsal (cargo publish --dry-run + payload allowlist)
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain (pinned to the project MSRV)
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.88"
+
+      - uses: Swatinem/rust-cache@v2
+
+      # The payload must contain the LICENSE and must NOT contain any internal
+      # apparatus. Fail loudly on a leak rather than discovering it post-publish.
+      - name: Assert the package payload matches the allowlist
+        run: |
+          files="$(cargo package --list --locked)"
+          echo "$files"
+          echo "$files" | grep -qx 'LICENSE' || { echo '::error::LICENSE missing from package payload'; exit 1; }
+          if echo "$files" | grep -Eq '^(\.claude/|\.crosslink/|review-log/|\.vsdd/|\.mdatron/|REPLACE$|BOOTSTRAP-|dsl-falsifiability)'; then
+            echo '::error::internal apparatus leaked into the crate payload — tighten Cargo.toml include'
+            exit 1
+          fi
+
+      - name: cargo publish --dry-run
+        run: cargo publish --dry-run --locked
