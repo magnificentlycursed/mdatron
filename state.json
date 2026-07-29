@@ -1,6 +1,6 @@
 {
   "next_display_id": 105,
-  "next_comment_id": 296,
+  "next_comment_id": 297,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -308,11 +308,20 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T07:55:05.605670Z",
-      "updated_at": "2026-07-29T07:55:22.772537Z",
+      "updated_at": "2026-07-29T08:00:34.823141Z",
       "labels": [
         "enhancement"
       ],
       "comments": {
+        "0c1b23c9-3ca5-41a4-a85f-3936053a111e": {
+          "display_id": 296,
+          "author": "79Ig",
+          "content": "VERIFICATION + DECOMPOSITION for the fresh start.\n\nTwo 'absent' items RESOLVED: schema/mdatron-output.schema.json EXISTS (published #90, 3581 bytes) and the contract test envelope_validates_against_published_schema is live in src/output.rs. vsdd's 'output.schema.json absent / no contract test' is a DISCOVERABILITY gap — they looked for output.schema.json; ours is schema/mdatron-output.schema.json behind a versioned $id. Fix is docs/discoverability (point adopters at the path, or alias the name), not implementation.\n\nLIGHTWEIGHT DECOMPOSITION (each item likely its own fix-lane; sequence TBD in the fresh design pass):\n- W1 AUDIT-SIGNAL (the through-line, vsdd-rated load-bearing across all 6 lenses): #1 files_checked -> true files_walked/in_scope/routed counts; #2 missing schemas/ -> finding not silent-clean; #3 unroutable schema_class -> finding; #4 families tri-state + reason + map pattern-rule execution to families (overlaps #48-A); #10 jurisdiction shrink -> warn on zero-match globs + record a jurisdiction hash. RECOMMEND STARTING HERE.\n- W2 CI ENVELOPE: #5 E0080 overloaded -> split codes or pipeline_error:{code,kind,note}/checked:false; #6 --json --quiet carries the failure reason into the envelope.\n- W3 VSDD-CONSUMER SURFACE: #7 resolve/redirect VSDD-namespace explain (dead-end); #8 fix {{...}} pattern-message interpolation (+ compact value budgeting); #9 mark quoted adopter content origin:'adopter'/trusted:false (SECURITY / diagnostics-are-a-trust-surface, overlaps DESIGN).\n- W4 POLISH (medium/low): See-also link resolution + anchors; E0080 'v0.1.x init' framing; --json-without-q double-emit; pattern-rule location precision (:1 col 0 -> :line:col); explain --list + full-code UX; --compact mid-sentence truncation; schema discoverability (above).\nStanding focus per operator 2026-07-29; taken fresh.",
+          "created_at": "2026-07-29T08:00:34.809972Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAjWkI1wXf0VWa6VrWBgz51+2FB1Q6B8MbqjobR/szxILF0LYxJdith918hhuFhvdaYrG/lZc/kuS3UAkBjhfbAg=="
+        },
         "589bedde-7450-4981-ac08-3dd3246f0fff": {
           "display_id": 294,
           "author": "79Ig",
@@ -4559,8 +4568,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T08:00:00.383385Z",
+    "timestamp": "2026-07-29T08:00:34.823141Z",
     "agent_id": "79Ig",
-    "agent_seq": 350
+    "agent_seq": 351
   }
 }
