@@ -2349,12 +2349,13 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-29T00:27:50.651130Z",
-      "updated_at": "2026-07-29T06:20:05.656477Z",
+      "updated_at": "2026-07-29T07:22:25.017732Z",
       "labels": [
         "feature"
       ],
       "related": [
         "8929a168-665b-4be1-8b8d-441e73f742c4",
+        "ca2e6c21-f9fd-4751-9ca4-24ef840c72e0",
         "defb3290-053e-4af9-989f-daf56c87410a",
         "f00730f0-5883-4ad4-9ae0-9a665b2baa0b"
       ],
@@ -3518,9 +3519,12 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T07:22:08.149420Z",
-      "updated_at": "2026-07-29T07:22:11.732974Z",
+      "updated_at": "2026-07-29T07:22:25.017732Z",
       "labels": [
         "feature"
+      ],
+      "related": [
+        "a0e4b4b2-63f5-41c1-a62d-7713001a66d8"
       ]
     },
     "cc1c41ae-b96a-4d9a-b7f5-2608f7821b6a": {
@@ -4497,8 +4501,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T07:22:18.221356Z",
+    "timestamp": "2026-07-29T07:22:25.017732Z",
     "agent_id": "79Ig",
-    "agent_seq": 342
+    "agent_seq": 343
   }
 }
