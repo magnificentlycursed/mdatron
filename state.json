@@ -611,12 +611,13 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T01:38:59.747297Z",
-      "updated_at": "2026-07-29T02:01:33.379168Z",
+      "updated_at": "2026-07-29T02:44:37.364430Z",
       "labels": [
         "process"
       ],
       "related": [
-        "1da67425-f44d-40d6-8ba1-2d2ed768de38"
+        "1da67425-f44d-40d6-8ba1-2d2ed768de38",
+        "67c6fa14-5eb9-4657-abd6-904507360757"
       ],
       "comments": {
         "051fdee6-8af5-4d45-8b2d-10b050ffbcf8": {
@@ -1426,9 +1427,12 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T02:44:16.945659Z",
-      "updated_at": "2026-07-29T02:44:21.728214Z",
+      "updated_at": "2026-07-29T02:44:37.364430Z",
       "labels": [
         "enhancement"
+      ],
+      "related": [
+        "2881253a-3641-4d7b-a6c1-e09cbbd2d140"
       ]
     },
     "69b33517-946c-45ba-9287-c1231028d5ec": {
@@ -4179,8 +4183,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T02:44:29.676326Z",
+    "timestamp": "2026-07-29T02:44:37.364430Z",
     "agent_id": "79Ig",
-    "agent_seq": 284
+    "agent_seq": 285
   }
 }
