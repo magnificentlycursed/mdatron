@@ -1,6 +1,6 @@
 {
   "next_display_id": 95,
-  "next_comment_id": 251,
+  "next_comment_id": 252,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -1743,7 +1743,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T00:26:41.636883Z",
-      "updated_at": "2026-07-29T00:31:07.676798Z",
+      "updated_at": "2026-07-29T00:45:49.415147Z",
       "labels": [
         "feature"
       ],
@@ -1755,6 +1755,15 @@
         "f7b7edd2-26cc-4bf0-839d-af22d2b8ca75"
       ],
       "comments": {
+        "c21bf019-568b-4052-9809-bd9ef8f231ee": {
+          "display_id": 251,
+          "author": "79Ig",
+          "content": "ENVELOPE SHAPE RATIFIED (operator 2026-07-28): families: {schema, route, pin, vocabulary, citation} each 'active'|'inactive'; active = data supplied AND the family ran this verify (invoked, not fired — a clean active family is distinguishable from inactive). Lands with the published schema; exercises the envelope-shape-change tripwire on first outing. Building.",
+          "created_at": "2026-07-29T00:45:49.400045Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA/N18ipJ/m1zYkPeFWb5qFw/Y9Q2oN9rUCqi9ATzIktwbMeIwCSZcBGKV4qem8e1ZRp1Ox+NESNOKaXm/rXjqDw=="
+        },
         "eb188fb3-ff3a-456b-b4a3-aea140bf3eb3": {
           "display_id": 248,
           "author": "79Ig",
@@ -3953,8 +3962,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T00:31:19.644894Z",
+    "timestamp": "2026-07-29T00:45:49.415147Z",
     "agent_id": "79Ig",
-    "agent_seq": 244
+    "agent_seq": 245
   }
 }
