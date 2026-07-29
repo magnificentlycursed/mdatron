@@ -1690,6 +1690,42 @@ pattern:
         );
     }
 
+    // RED GATE (#93, vsdd rank-3): the exactly-one rule shape — count over a
+    // predicate-filtered array — works end to end. Two lanes fire; one is clean.
+    #[test]
+    fn exactly_one_via_count_filter_runs_end_to_end() {
+        let proj = TempProject::new("filter-e2e");
+        proj.write(
+            ".mdatron/patterns/lanes.yaml",
+            r#"mdatron_dsl_version: 1
+pattern:
+  id: lane-count
+  rules:
+    - id: exactly-one-lane
+      context: registry
+      assert: 'count(filter(m in $self.members, $m.kind == "lane")) == 1'
+      code: TEST-E0009
+      message: "the registry must declare exactly one lane member"
+"#,
+        );
+        // Two lanes -> fires.
+        proj.write(
+            "bad.md",
+            "---\nschema_class: registry\nmembers:\n- kind: lane\n- kind: domain\n- kind: lane\n---\n",
+        );
+        let cfg = VerifyConfig::new(&proj.0);
+        let findings = verify(&cfg).unwrap();
+        assert_eq!(findings.len(), 1, "two lanes must fire; got {findings:?}");
+        assert_eq!(findings[0].code, "TEST-E0009");
+
+        // Exactly one lane -> clean.
+        proj.write(
+            "bad.md",
+            "---\nschema_class: registry\nmembers:\n- kind: lane\n- kind: domain\n---\n",
+        );
+        assert!(verify(&cfg).unwrap().is_empty(), "one lane is clean");
+    }
+
     #[test]
     fn cross_file_rule_with_key_lookup_runs_end_to_end() {
         let proj = TempProject::new("e2e-key");

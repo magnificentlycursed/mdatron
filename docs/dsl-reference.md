@@ -77,11 +77,25 @@ elements are not supported).
 ```text
 every(x in <array-expr>, <predicate>)
 some(x in <array-expr>, <predicate>)
+filter(x in <array-expr>, <predicate>)
 ```
 
-Binds `x` (referenced as `$x`) over each element. `every` is true when the
-predicate holds for all elements (true over an empty array); `some` when it
-holds for at least one (false over an empty array).
+Each binds `x` (referenced as `$x`) over every element. `every` is true when
+the predicate holds for all elements (true over an empty array); `some` when it
+holds for at least one (false over an empty array). `filter` returns the
+**sub-array** of elements for which the predicate holds. A `Null` collection is
+treated as empty (empty array for `filter`).
+
+`filter` composes with `count`/`len` for arity rules — exactly-N, at-least-N —
+that the boolean quantifiers cannot express directly:
+
+```yaml
+# exactly one member carries kind "lane"
+assert: count(filter(m in $self.members, $m.kind == "lane")) == 1
+# at least two do
+assert: count(filter(m in $self.members, $m.kind == "lane")) != 1
+        and some(m in $self.members, $m.kind == "lane")
+```
 
 ## Functions
 
