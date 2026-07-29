@@ -940,11 +940,12 @@
       "uuid": "2caa1838-562d-461f-9b53-05dbf16b73f4",
       "display_id": 120,
       "title": "release: cut 0.4.0 (breaking envelope changes since 0.3.0) + adopt SemVer discipline as a standing rule",
-      "status": "open",
+      "status": "closed",
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T13:04:44.715271Z",
-      "updated_at": "2026-07-29T13:31:13.303317Z",
+      "updated_at": "2026-07-29T13:31:19.239412Z",
+      "closed_at": "2026-07-29T13:31:19.239399Z",
       "labels": [
         "release"
       ],
@@ -5156,8 +5157,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T13:31:13.303317Z",
+    "timestamp": "2026-07-29T13:31:19.239412Z",
     "agent_id": "79Ig",
-    "agent_seq": 470
+    "agent_seq": 471
   }
 }
