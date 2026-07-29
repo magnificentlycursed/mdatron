@@ -1685,6 +1685,76 @@ mod tests {
         assert_eq!(codes_of(&findings, "MDATRON-E0094"), 1, "got {findings:?}");
     }
 
+    // #94: vsdd-cli's three real E0094 numeric-claims drift cases, intaken
+    // verbatim as regression fixtures (vsdd-cli rounds #684/#705/#710). Cases
+    // 1-2 are count drift E0094 catches; case 3 is the unperformable-basis class
+    // it does NOT catch (the digit agrees but its verification path dangles) —
+    // pinned as the documented boundary of the check.
+    #[test]
+    fn intake_vsdd_numeric_claims_drift_cases() {
+        fn e0094(label: &str, frontmatter: &str, body: &str, fields: &[&str]) -> usize {
+            let proj = TempProject::new(label);
+            proj.write(".mdatron/schemas/.keep.json", "{}");
+            proj.write(
+                ".mdatron/config.yaml",
+                "file_globs:\n  - \"docs/**/*.md\"\n",
+            );
+            let claims: String = fields.iter().map(|f| format!("- field: {f}\n")).collect();
+            proj.write(
+                ".mdatron/vocabulary.yaml",
+                &format!("numeric_claims:\n{claims}"),
+            );
+            proj.write("docs/d.md", &format!("---\n{frontmatter}---\n{body}"));
+            let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+            codes_of(&verify(&cfg).unwrap(), "MDATRON-E0094")
+        }
+
+        // CASE 1 — plain count drift (installed-artifact-manifest.md:83): prose
+        // "27 members / 17 domain prompts" vs disk 28 / 18. Both drift.
+        assert_eq!(
+            e0094(
+                "e0094-case1",
+                "members: 28\ndomain_prompts: 18\n",
+                "There are 27 members and 17 domain prompts on disk.\n",
+                &["members", "domain_prompts"],
+            ),
+            2,
+            "case 1: plain count drift caught on both fields"
+        );
+
+        // CASE 2 — decomposed drift (economics-data.md:35): prose "18 total: 15
+        // role + 2 meta" vs disk total 18 / role 16 / meta 2. The role component
+        // drifted (15 vs 16) while the arithmetic stayed internally consistent
+        // (15+2=17); E0094 checks each component against its basis, catching it.
+        assert_eq!(
+            e0094(
+                "e0094-case2",
+                "total: 18\nrole: 16\nmeta: 2\n",
+                "The 18 total breaks down as 15 role and 2 meta.\n",
+                &["total", "role", "meta"],
+            ),
+            1,
+            "case 2: the drifted role component is caught; total and meta agree"
+        );
+
+        // CASE 3 — unperformable basis (the high-value case): prose "six core
+        // role domains" where the configured field's count IS six. The digit
+        // agrees, so E0094 stays clean — it cannot see that the six-member
+        // subset is enumerated nowhere. This pins the BOUNDARY: E0094 mechanizes
+        // "the number is wrong," not "the number's verification path doesn't
+        // resolve" — the harder, higher-value half, not yet mechanized.
+        assert_eq!(
+            e0094(
+                "e0094-case3",
+                "role_domains: 6\n",
+                "There are six core role domains.\n",
+                &["role_domains"],
+            ),
+            0,
+            "case 3: the digit agrees, so E0094 is clean — the unperformable-basis class is beyond it"
+        );
+    }
+
     // #85 inactivity: no vocabulary.yaml -> family inactive.
     #[test]
     fn absent_vocabulary_file_keeps_family_inactive() {
