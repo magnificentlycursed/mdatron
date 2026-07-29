@@ -1,6 +1,6 @@
 {
   "next_display_id": 102,
-  "next_comment_id": 282,
+  "next_comment_id": 283,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -3664,10 +3664,21 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T06:01:32.163103Z",
-      "updated_at": "2026-07-29T06:01:37.142295Z",
+      "updated_at": "2026-07-29T06:06:52.316876Z",
       "labels": [
         "release"
-      ]
+      ],
+      "comments": {
+        "18f09405-e6a2-4d47-adb4-4c2bba3181c1": {
+          "display_id": 282,
+          "author": "79Ig",
+          "content": "PLAN: cut v0.3.0 as a GitHub pre-release (crates.io publish #48 stays held). Steps: (1) documentation sweep — CHANGELOG 0.3.0 section (filter #93, agnosticism #91, envelope #90, vocabulary_globs #97, W0043 #98, W0044 #95, methodology enforcement #96/#99, dependency resolver #100), README version refs 0.2.x->0.3.x + W0044 note; (2) Cargo.toml/lock version 0.2.0->0.3.0; (3) merge to main, tag v0.3.0, push, gh pre-release. Gauntlet green post-bump.",
+          "created_at": "2026-07-29T06:06:52.283356Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA3ftWvxx4CNuJMKbqDK0WETPXtLbIW1akteTNoVZ7OrISoDx1rM4G4RqDAz18ccsKwJNlh7bC5wwFz5p2Flu5DA=="
+        }
+      }
     },
     "dc7c4aa3-af1b-41be-87dd-2a778fcd6c8d": {
       "uuid": "dc7c4aa3-af1b-41be-87dd-2a778fcd6c8d",
@@ -4370,8 +4381,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T06:01:45.545853Z",
+    "timestamp": "2026-07-29T06:06:52.316876Z",
     "agent_id": "79Ig",
-    "agent_seq": 319
+    "agent_seq": 320
   }
 }
