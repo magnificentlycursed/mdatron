@@ -525,11 +525,12 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T14:23:17.967852Z",
-      "updated_at": "2026-07-29T17:21:52.739805Z",
+      "updated_at": "2026-07-29T17:22:17.186133Z",
       "labels": [
         "enhancement"
       ],
       "related": [
+        "238317fa-9b8f-4ff1-9774-90c8dffb9a2e",
         "262c8f3f-bab5-4796-b735-b24d9bf01ac9",
         "277a179b-fdda-44e7-a79b-f9e096e12789",
         "fea9b536-a072-4342-afe0-0a87fe5ca8bd"
@@ -684,9 +685,12 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T17:21:57.083205Z",
-      "updated_at": "2026-07-29T17:22:01.222359Z",
+      "updated_at": "2026-07-29T17:22:17.186133Z",
       "labels": [
         "security"
+      ],
+      "related": [
+        "1cafa0f3-dcdd-491b-b455-52af79c6c85d"
       ]
     },
     "2456d20a-0560-437f-81a0-2d54a1b96d80": {
@@ -5295,8 +5299,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T17:22:09.713522Z",
+    "timestamp": "2026-07-29T17:22:17.186133Z",
     "agent_id": "79Ig",
-    "agent_seq": 494
+    "agent_seq": 495
   }
 }
