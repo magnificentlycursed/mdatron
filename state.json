@@ -213,11 +213,12 @@
       "uuid": "12afc5cc-5cb5-4494-8835-3d16d53616f6",
       "display_id": 93,
       "title": "DSL expansion decision: filter/count-with-predicate for exactly-N/at-least-N audit rules (vsdd rank 3; needs SO scope ruling + falsifiability leg per the gate)",
-      "status": "open",
+      "status": "closed",
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-29T00:28:11.615654Z",
-      "updated_at": "2026-07-29T01:57:18.090193Z",
+      "updated_at": "2026-07-29T01:57:25.938920Z",
+      "closed_at": "2026-07-29T01:57:25.938905Z",
       "labels": [
         "enhancement"
       ],
@@ -4063,8 +4064,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T01:57:18.090193Z",
+    "timestamp": "2026-07-29T01:57:25.938920Z",
     "agent_id": "79Ig",
-    "agent_seq": 263
+    "agent_seq": 264
   }
 }
