@@ -119,7 +119,7 @@ Evidence: self-verification was discovered absent during cleanup — `verify` on
 
 Referenced by leading name.
 
-- **Init** — `mdatron init` deploys the `.mdatron/` skeleton (schema, pattern, route, registry, and pin directories; config; the init manifest defining the managed partition) with a pre-flight check; idempotent; refuses drifted managed files. New work: the subcommand does not exist today (the boundary preamble's older surface sketch listed `verify hook` and `schema` subcommands; both are dropped, and this document's surface list is authoritative).
+- **Init** — `mdatron init` deploys the `.mdatron/` skeleton (the `schemas/` and `patterns/` directories; the single-file families `routes.yaml`, `pins.yaml`, `vocabulary.yaml`; `config.yaml`; the init manifest defining the managed partition — the route/pin/vocabulary families are files, not directories, #126) with a pre-flight check; idempotent; refuses drifted managed files. New work: the subcommand does not exist today (the boundary preamble's older surface sketch listed `verify hook` and `schema` subcommands; both are dropped, and this document's surface list is authoritative).
 - **Family engines** — the route, pin, vocabulary, and citation families as verify pipeline stages beside the existing schema family, each activated by the presence of its supplied data, each with a reserved code range, explain pages, and engine-shipped schemas for its data formats.
 - **Incremental verify** — the changed-file-plus-dependents mode per the dependent definition in Verification is fast where it is invoked, invocable per file, with the visited-file trace observable.
 - **Compact verify output** — the compact form emitted by `verify` itself (today only `explain` has it), under the per-finding size limit.
