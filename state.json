@@ -339,7 +339,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T07:55:05.605670Z",
-      "updated_at": "2026-07-29T12:45:33.399696Z",
+      "updated_at": "2026-07-29T12:45:57.932065Z",
       "labels": [
         "enhancement"
       ],
@@ -357,7 +357,8 @@
         "b996b1ec-a892-47dc-9569-7b00b64bdeec",
         "d6a9a419-11bd-4e47-bbfc-1cd8940f61a1",
         "ea18ea7f-05a6-4d32-8549-09f2137b5eb6",
-        "ed48043d-4d35-4ce5-af15-81f01cbbbdd7"
+        "ed48043d-4d35-4ce5-af15-81f01cbbbdd7",
+        "f187546d-64e0-4da8-9b7c-6f1023106726"
       ],
       "comments": {
         "0c1b23c9-3ca5-41a4-a85f-3936053a111e": {
@@ -4683,9 +4684,12 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-07-29T12:45:42.194036Z",
-      "updated_at": "2026-07-29T12:45:45.855317Z",
+      "updated_at": "2026-07-29T12:45:57.932065Z",
       "labels": [
         "enhancement"
+      ],
+      "related": [
+        "18545077-3dbb-4401-847d-c6b4bdbe7d78"
       ]
     },
     "f46bbe99-0826-4d9b-910d-557d5c3277a7": {
@@ -5109,8 +5113,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T12:45:51.984701Z",
+    "timestamp": "2026-07-29T12:45:57.932065Z",
     "agent_id": "79Ig",
-    "agent_seq": 459
+    "agent_seq": 460
   }
 }
