@@ -1,6 +1,6 @@
 {
   "next_display_id": 91,
-  "next_comment_id": 248,
+  "next_comment_id": 249,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -1660,10 +1660,21 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T00:26:41.636883Z",
-      "updated_at": "2026-07-29T00:26:47.026070Z",
+      "updated_at": "2026-07-29T00:27:24.400430Z",
       "labels": [
         "feature"
-      ]
+      ],
+      "comments": {
+        "eb188fb3-ff3a-456b-b4a3-aea140bf3eb3": {
+          "display_id": 248,
+          "author": "79Ig",
+          "content": "FIRST-CONSUMER PRIORITIZATION (vsdd-cli relay 2026-07-28): RANK 1. Scope (Cluster B core): (1) published JSON envelope schema — vsdd WILL pin+validate it in their pair convention (seam governed both ends); (2) contract-stability CI tripwires: seeded code-meaning change and seeded envelope-shape change each fail CI without a version bump; seeded out-of-range code fails; three-output-forms-agree fixtures; every-emitted-code-resolves-in-explain sweep; (3) THE NEW DESIGN ASK (vsdd, design-specific): the envelope exposes WHICH check families ran / were active per verify — 'a family that should fire but doesn't is an un-invoked mechanism' — so a consumer can audit that a required family was actually invoked. Proposed shape (operator ratifies in-lane): envelope gains families: {schema, route, pin, vocabulary, citation} each active|inactive — which ALSO satisfies DESIGN's 'families inactive and the inactivity is reported' agnosticism criterion via one mechanism (plus the standing-lint rendering for TTY). Envelope addition = versioned-contract change: lands WITH the published schema at 0.3.0, exercising the new tripwires on their first outing. Rationale quote: makes the reserved-code-semantic-swap class 'structurally impossible — catch by mechanism, not by hand as #12's children did'.",
+          "created_at": "2026-07-29T00:27:24.386836Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAKYymzzW4HT9aBbqGwEI9d4X2AfYcX30tZHjri7imC+Av3MVfCoB6JhtI7JfaKQ3i2vlvaYzYNGGQRMXsZ2u8Bw=="
+        }
+      }
     },
     "8ac50e86-5777-4068-8ce0-3d628ff48d30": {
       "uuid": "8ac50e86-5777-4068-8ce0-3d628ff48d30",
@@ -3824,8 +3835,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T00:26:54.555630Z",
+    "timestamp": "2026-07-29T00:27:24.400430Z",
     "agent_id": "79Ig",
-    "agent_seq": 222
+    "agent_seq": 223
   }
 }
