@@ -1,6 +1,6 @@
 {
   "next_display_id": 100,
-  "next_comment_id": 272,
+  "next_comment_id": 273,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -2561,13 +2561,24 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-07-29T01:20:36.181900Z",
-      "updated_at": "2026-07-29T01:20:58.121349Z",
+      "updated_at": "2026-07-29T05:13:06.425164Z",
       "labels": [
         "enhancement"
       ],
       "related": [
         "2b207fbe-b656-4cc1-8c3a-db693dfb36ff"
-      ]
+      ],
+      "comments": {
+        "eb81d1eb-ebc4-476a-8424-72ca7d80af71": {
+          "display_id": 272,
+          "author": "79Ig",
+          "content": "Built on feature/95-vocab-registered-and-draft (W0044). Implements the pre-existing DESIGN acceptance criterion (a registered-and-draft term resolves to draft with a warning) — the #91 residual; no DESIGN change needed. load() groups terms + resolves the conflict to draft; registry_findings emits W0044 once per conflicting term (term rides quoted). Full code ritual (explain page + BASELINE + catalog). Seed green, full suite + self-verify + pin clean. Took W0044 to avoid collision with #98's W0043. AWAITING merge gate.",
+          "created_at": "2026-07-29T05:13:06.409588Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABANXu89bK4Ip82qX5ORUKAi6i8AXn+8gfrLCqUpnW5FnaqBxoAdbP/ZotZKTMNonEOvYhUD6KMEJKUOR9ewn1GDQ=="
+        }
+      }
     },
     "a8e5a57b-9652-4feb-9927-f4229585515c": {
       "uuid": "a8e5a57b-9652-4feb-9927-f4229585515c",
@@ -4245,8 +4256,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T05:06:24.105515Z",
+    "timestamp": "2026-07-29T05:13:06.425164Z",
     "agent_id": "79Ig",
-    "agent_seq": 294
+    "agent_seq": 295
   }
 }
