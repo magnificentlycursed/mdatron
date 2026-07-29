@@ -1,6 +1,6 @@
 {
   "next_display_id": 121,
-  "next_comment_id": 324,
+  "next_comment_id": 325,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -1841,7 +1841,7 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-07-29T10:01:17.140659Z",
-      "updated_at": "2026-07-29T10:01:44.069567Z",
+      "updated_at": "2026-07-29T14:06:06.490080Z",
       "labels": [
         "question"
       ],
@@ -1858,6 +1858,15 @@
           "kind": "observation",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABACDChaOAW63OlLLFFYUEr2eXsi2/2FG4K4vzE3nInNOBCeJYzxvsl0xt5yvyR+AXlhZCnHEZWNTbQnAU8mt0EBw=="
+        },
+        "f0db40ce-8729-4769-acf2-e303a505f4fa": {
+          "display_id": 324,
+          "author": "79Ig",
+          "content": "ANSWERED by vsdd-cli (magnificentlycursed/mdatron#1 GitHub, from:vsdd-cli, 2026-07-29): YES this is a real gap (same silent-false-clean class as non-vacuity — a file that looks validated but has no schema behind it). But do NOT break the no-adopter-data invariant wholesale. Direction: a truly-fresh adopter (no schemas/, no schema_class files) stays clean; an adopter that DECLARES a schema_class which no schema serves gets a WARNING (not error), reached via the empty-schemas-dir path. Conceptually the SAME predicate as W0045 (schema-class-unrouted), just also reached when schemas/ is present-but-empty. So: fire the unrouted-schema_class warning even when has_validation_infra is false, gated on 'a schema_class is actually declared' — preserving fresh-init-clean. NOTE: the no_adopter_data_runs_with_all_families_inactive test (doc.md declares schema_class: anything + empty schemas -> asserts clean) will need updating: that file now warrants the warning; keep the truly-no-schema_class case clean. UNBLOCKED, ready to build.",
+          "created_at": "2026-07-29T14:06:06.475232Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA3Ak2io/3ngqCC6kk/iM3uTYy1qe+76dX/BS8gijyxQcIF+Wz9CQYnj6DYGwzmhOzwc1jyKUtSWfinW90omCwBQ=="
         }
       }
     },
@@ -5153,8 +5162,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T13:31:23.941273Z",
+    "timestamp": "2026-07-29T14:06:06.490080Z",
     "agent_id": "79Ig",
-    "agent_seq": 472
+    "agent_seq": 473
   }
 }
