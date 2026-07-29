@@ -571,7 +571,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T14:23:17.967852Z",
-      "updated_at": "2026-07-29T17:24:09.457863Z",
+      "updated_at": "2026-07-29T17:24:50.648823Z",
       "labels": [
         "enhancement"
       ],
@@ -582,6 +582,7 @@
         "277a179b-fdda-44e7-a79b-f9e096e12789",
         "27c148a2-87df-4d35-8f22-46b99666de3f",
         "4fe1ca8e-6b24-4d43-86c1-7a29b108f3ac",
+        "b527a823-f4d3-4fb4-bfe8-de996e714488",
         "fa076a04-5085-46c5-a300-eb89b8bb1015",
         "fb3b39b8-04f7-47eb-95d0-c3bc51f71548",
         "fea9b536-a072-4342-afe0-0a87fe5ca8bd"
@@ -3513,9 +3514,12 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-07-29T17:24:33.803049Z",
-      "updated_at": "2026-07-29T17:24:37.550921Z",
+      "updated_at": "2026-07-29T17:24:50.648823Z",
       "labels": [
         "question"
+      ],
+      "related": [
+        "1cafa0f3-dcdd-491b-b455-52af79c6c85d"
       ]
     },
     "b5d10e39-0bfb-404b-9751-2bff8c71ecaa": {
@@ -5427,8 +5431,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T17:24:44.010483Z",
+    "timestamp": "2026-07-29T17:24:50.648823Z",
     "agent_id": "79Ig",
-    "agent_seq": 518
+    "agent_seq": 519
   }
 }
