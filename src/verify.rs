@@ -301,10 +301,15 @@ fn run(config: &VerifyConfig, changed: Option<&Path>) -> RunResult {
     };
 
     let mut findings: Vec<Finding> = Vec::new();
-    if let Some(mut loaded) = pin_data {
+    // Keep the pins for after the scope filter: a pin finding locates at
+    // pins.yaml but is ABOUT the pinned file, so incremental includes it by the
+    // pinned file's scope membership, not by the finding's own location (#102).
+    let pins: Vec<crate::pin::Pin> = if let Some(mut loaded) = pin_data {
         findings.append(&mut loaded.findings);
-        crate::pin::check(&project_root, &loaded.pins, &mut findings);
-    }
+        loaded.pins
+    } else {
+        Vec::new()
+    };
     let routes = match routes {
         Some(mut loaded) => {
             findings.append(&mut loaded.findings);
@@ -436,8 +441,8 @@ fn run(config: &VerifyConfig, changed: Option<&Path>) -> RunResult {
 
     // Incremental soundness (#102): keep only findings located within the
     // scope. verify_file findings are already scope-local (it ran on scope
-    // files only); this filters the whole-run checks (pin, W0044) to scope, so
-    // the result equals the whole-tree result filtered to the scope.
+    // files only); this filters the location-based whole-run findings (route
+    // load, W0043/W0044) to scope.
     if let Some(scope) = &scope {
         findings.retain(|f| {
             let rel = f
@@ -447,6 +452,21 @@ fn run(config: &VerifyConfig, changed: Option<&Path>) -> RunResult {
                 .unwrap_or(&f.location.file);
             scope.contains(rel)
         });
+    }
+
+    // Pin findings (#102 B1): a pin's staleness is a finding ABOUT the pinned
+    // file (E0061/E0062), but it locates at pins.yaml — so the location filter
+    // above would wrongly drop it. Include it by the PINNED FILE's scope
+    // membership instead (whole-tree includes every pin). Added after the
+    // filter so a stale pin on a changed governed file is caught incrementally,
+    // not silently missed.
+    for pin in &pins {
+        let relevant = scope
+            .as_ref()
+            .is_none_or(|s| s.contains(Path::new(&pin.file)));
+        if relevant {
+            crate::pin::check(&project_root, std::slice::from_ref(pin), &mut findings);
+        }
     }
 
     findings.sort_by(|a, b| {
@@ -1999,6 +2019,46 @@ pattern:
             "a non-governed path fails safe to whole-tree"
         );
         assert_eq!(inc_typo.report.findings.len(), 3);
+    }
+
+    // #102 B1: a stale pin on a governed file is caught INCREMENTALLY when that
+    // file is in scope — even though the finding locates at pins.yaml. An
+    // unrelated changed file's scope excludes it.
+    #[test]
+    fn incremental_includes_stale_pin_for_in_scope_file() {
+        let proj = TempProject::new("incremental-pin");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write("docs/x.md", "---\nschema_class: doc\n---\n# x\n");
+        proj.write("docs/other.md", "---\nschema_class: doc\n---\n# other\n");
+        // A pin over docs/x.md with a deliberately wrong sha -> stale (E0061).
+        proj.write(
+            ".mdatron/pins.yaml",
+            "pins:\n- governing: docs/other.md\n  file: docs/x.md\n  sha256: \
+             0000000000000000000000000000000000000000000000000000000000000000\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let e0061 = |fs: &[Finding]| fs.iter().filter(|f| f.code == "MDATRON-E0061").count();
+        assert_eq!(
+            e0061(&verify_report(&cfg).unwrap().findings),
+            1,
+            "whole-tree sees the stale pin"
+        );
+        let inc_x = verify_incremental(&cfg, Path::new("docs/x.md")).unwrap();
+        assert_eq!(
+            e0061(&inc_x.report.findings),
+            1,
+            "stale pin caught incrementally for the pinned file"
+        );
+        let inc_o = verify_incremental(&cfg, Path::new("docs/other.md")).unwrap();
+        assert_eq!(
+            e0061(&inc_o.report.findings),
+            0,
+            "stale pin not surfaced for an unrelated scope"
+        );
     }
 
     // #89 (#47 cold-run finding): chained let bindings evaluate in declaration

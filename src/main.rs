@@ -404,14 +404,16 @@ fn cmd_verify(
                                 for p in visited {
                                     eprintln!("  visited: {}", escape_trace_path(&p.to_string_lossy()));
                                 }
-                                // #102 B1 (known limitation): whole-run findings
-                                // located at .mdatron/ (pin staleness E0061/E0062,
-                                // route-load, vocab-registry) are not in a
-                                // governed-file scope, so incremental omits them.
+                                // #102: a stale pin over an in-scope governed
+                                // file IS included (by the pinned file's scope
+                                // membership). The remaining omissions are the
+                                // config-level checks located under .mdatron/
+                                // (route-config, vocabulary-registry), which a
+                                // .mdatron/ change forces whole-tree anyway.
                                 eprintln!(
-                                    "  note: incremental mode omits config/governance findings \
-                                     (pin staleness, route-load, vocab-registry) — run a whole-tree \
-                                     `mdatron verify` for those"
+                                    "  note: incremental mode omits config-level findings under \
+                                     .mdatron/ (route-config, vocabulary-registry); a stale pin is \
+                                     included when its pinned file is in scope"
                                 );
                             }
                             None => eprintln!(
