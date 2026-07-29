@@ -25,7 +25,7 @@ Two corrective paths:
 
 ## See also
 
-- [`DESIGN.md` § Summary](../../DESIGN.md#summary)
+- the mdatron design reference, § Summary (in the project repository)
   — `--project-root` flag semantics
 
 ## Related codes

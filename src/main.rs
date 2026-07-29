@@ -71,8 +71,14 @@ enum Command {
         /// Must match `^[A-Z][A-Z0-9]*-[ELW][0-9]{4}$` — operator-pasted from
         /// diagnostic output. Rejects ANSI escapes and shell-meta injection
         /// (crosslink #13 SEC/F1 + RT/F2 convergence).
-        #[arg(value_parser = parse_explain_code)]
-        code: String,
+        #[arg(value_parser = parse_explain_code, required_unless_present = "list")]
+        code: Option<String>,
+
+        /// List every code in mdatron's explain catalog (`code — summary`),
+        /// sorted, then exit — so an operator can discover codes without a full
+        /// code in hand (#117, vsdd W4).
+        #[arg(long = "list")]
+        list: bool,
 
         /// Emit the explain page as a structured JSON object on stdout
         /// (per crosslink #13 AIE/F7). Without this flag, the markdown body
@@ -121,6 +127,16 @@ enum Command {
 }
 
 fn parse_explain_code(s: &str) -> Result<String, String> {
+    // Short form (#117, vsdd W4): a bare `E0050` / `W0043` / `L0001` normalizes to
+    // mdatron's namespace, so an operator need not paste the full `MDATRON-`
+    // prefix. Anything already namespaced falls through to full validation.
+    if !s.contains('-')
+        && s.len() == 5
+        && matches!(s.as_bytes().first(), Some(b'E' | b'L' | b'W'))
+        && s.as_bytes()[1..].iter().all(u8::is_ascii_digit)
+    {
+        return Ok(format!("MDATRON-{s}"));
+    }
     let bytes = s.as_bytes();
     let prefix_len = bytes.iter().position(|b| *b == b'-').ok_or_else(|| {
         format!("code must have form '<NAMESPACE>-<L><NNNN>' (e.g. MDATRON-E0001); got: {s}")
@@ -178,9 +194,10 @@ fn main() -> ExitCode {
         ),
         Command::Explain {
             code,
+            list,
             json,
             compact,
-        } => cmd_explain(&code, json, compact),
+        } => cmd_explain(code.as_deref(), list, json, compact),
         Command::Pin {
             project_root,
             update,
@@ -513,7 +530,11 @@ fn cmd_verify(
         }
     }
 
-    if !quiet {
+    // Under --json the envelope on stdout is the authoritative output; re-rendering
+    // findings (and the pipeline error, now carried in the envelope, #112) as human
+    // TTY text on stderr is a redundant ~1.7x token cost for a machine consumer
+    // (#117, vsdd W4). The human block is emitted only when NOT in --json mode.
+    if !quiet && !json {
         if let Some(e) = &pipeline_err {
             print_pipeline_error(e);
         } else {
@@ -521,12 +542,7 @@ fn cmd_verify(
                 print_finding(f);
             }
             if output.summary.error_count == 0 && output.summary.warning_count == 0 {
-                if !json {
-                    // Summary line on stderr (consistent with the count summary
-                    // below + with rustc convention). Per crosslink #13 QE/F2
-                    // surfacing the inconsistency during README test tightening.
-                    eprintln!("mdatron verify: clean");
-                }
+                eprintln!("mdatron verify: clean");
             } else {
                 eprintln!(
                     "mdatron verify: {} error(s), {} warning(s) across {} finding(s)",
@@ -572,7 +588,16 @@ fn print_pipeline_error(e: &VerifyError) {
     eprintln!("{}", pipeline_error_finding(e).format_tty());
 }
 
-fn cmd_explain(code: &str, json: bool, compact: bool) -> ExitCode {
+fn cmd_explain(code: Option<&str>, list: bool, json: bool, compact: bool) -> ExitCode {
+    // `--list` enumerates the catalog and exits (#117, vsdd W4).
+    if list {
+        for (c, summary) in explain::catalog() {
+            println!("{c} — {summary}");
+        }
+        return ExitCode::from(0);
+    }
+    // clap's `required_unless_present = "list"` guarantees a code here.
+    let code = code.expect("a code is required unless --list");
     if compact {
         if let Some(line) = explain::lookup_compact(code) {
             println!("{line}");

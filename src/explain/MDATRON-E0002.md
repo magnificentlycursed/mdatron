@@ -26,7 +26,7 @@ Three corrective paths, listed in order of likelihood:
 
 ## See also
 
-- [`DESIGN.md` § Five check families](../../DESIGN.md#five-check-families)
+- the mdatron design reference, § Five check families (in the project repository)
   — schema routing + `schema_class` frontmatter binding
 
 ## Related codes
