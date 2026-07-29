@@ -5198,11 +5198,12 @@
       "uuid": "fb3b39b8-04f7-47eb-95d0-c3bc51f71548",
       "display_id": 129,
       "title": "README + docs pre-publish rewrite pass: envelope/--changed/DSL/version/links + DESIGN staleness->1a (roast DOC1-DOC10)",
-      "status": "open",
+      "status": "closed",
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T17:23:26.393142Z",
-      "updated_at": "2026-07-29T19:01:52.875944Z",
+      "updated_at": "2026-07-29T19:01:58.136125Z",
+      "closed_at": "2026-07-29T19:01:58.136112Z",
       "labels": [
         "documentation"
       ],
@@ -5500,8 +5501,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T19:01:52.875944Z",
+    "timestamp": "2026-07-29T19:01:58.136125Z",
     "agent_id": "79Ig",
-    "agent_seq": 537
+    "agent_seq": 538
   }
 }
