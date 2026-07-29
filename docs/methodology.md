@@ -60,14 +60,21 @@ governed artifacts; the same discipline applies to mdatron's development.
 
 The parts that need vsdd-cli — phase-answer derivation, process-integrity
 status queries, the mechanized gate commands — are not shippable yet. Those
-stay conduct plus cold review until vsdd-cli ships. Everything else is
-mechanized now (enforcement doc). Do not wait on the tool for the rest.
+stay conduct plus cold review until vsdd-cli ships. So is tamper-proof
+enforcement against an agent that controls all local state: it needs an
+independent corroboration oracle the agent cannot author (vsdd-cli #815), which
+is not shippable here. Everything else is mechanized now (enforcement doc). Do
+not wait on the tool for the rest.
 
 ## Enforcement, in one line
 
-Conduct alone drifts. The disciplines above are bound — by mdatron's own engine
-over the design and review-log estate, a git pre-commit hook, and a
-session-stop hook — so that a deviation produces compiler-shaped feedback at the
-act, not a latent record. The escape corpus (`docs/methodology-enforcement.md`)
-is the regression-seed set: if the seams do not catch each escape, they are
+Conduct alone drifts. The disciplines above are bound by grade — mdatron's own
+engine over the governed markdown, git-hook friction at the act, and a CI-backed
+block as the durable leg (the escape corpus's regression seeds run in CI and
+re-derive integrity over the checkers' own wiring) — so that a deviation
+produces compiler-shaped feedback at the act, not a latent record. A
+runtime-harness session-stop hook is not one of the legs: it is in-repo code
+that cannot self-protect, so it would assert enforcement it cannot deliver
+(#99). The escape corpus (`docs/methodology-enforcement.md`) is the
+regression-seed set: if the guardrails do not catch each escape, they are
 insufficient.
