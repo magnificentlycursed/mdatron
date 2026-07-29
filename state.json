@@ -1,5 +1,5 @@
 {
-  "next_display_id": 119,
+  "next_display_id": 120,
   "next_comment_id": 321,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -112,6 +112,7 @@
     "ed48043d-4d35-4ce5-af15-81f01cbbbdd7": 110,
     "eddd10af-f936-439c-9ead-0f9d6b9832b3": 28,
     "f00730f0-5883-4ad4-9ae0-9a665b2baa0b": 100,
+    "f187546d-64e0-4da8-9b7c-6f1023106726": 119,
     "f46bbe99-0826-4d9b-910d-557d5c3277a7": 41,
     "f66effba-1ef2-402d-9b3c-527b9ef4ea80": 26,
     "f7b7edd2-26cc-4bf0-839d-af22d2b8ca75": 45,
@@ -4670,6 +4671,16 @@
         }
       }
     },
+    "f187546d-64e0-4da8-9b7c-6f1023106726": {
+      "uuid": "f187546d-64e0-4da8-9b7c-6f1023106726",
+      "display_id": 119,
+      "title": "W4 polish: --compact prose truncation cuts mid-word; prefer a word boundary",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-07-29T12:45:42.194036Z",
+      "updated_at": "2026-07-29T12:45:42.194036Z"
+    },
     "f46bbe99-0826-4d9b-910d-557d5c3277a7": {
       "uuid": "f46bbe99-0826-4d9b-910d-557d5c3277a7",
       "display_id": 41,
@@ -5091,8 +5102,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T12:45:37.976649Z",
+    "timestamp": "2026-07-29T12:45:42.194036Z",
     "agent_id": "79Ig",
-    "agent_seq": 456
+    "agent_seq": 457
   }
 }
