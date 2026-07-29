@@ -32,6 +32,12 @@ use crate::diagnostic::{Finding, Severity};
 /// tripwire enforces it.
 pub const OUTPUT_VERSION: &str = "2.1.0";
 
+/// The published output-envelope JSON Schema, embedded so `mdatron schema` can
+/// print it to stdout for a binary-only (`cargo install`) consumer that has no
+/// repo checkout (#127, roast SHO10 / DataEng-1). Kept in lockstep with
+/// [`OUTPUT_VERSION`] by the contract-stability tripwires.
+pub const OUTPUT_SCHEMA: &str = include_str!("../schema/mdatron-output.schema.json");
+
 /// Whether a check family was invoked in a verify run — active means its data
 /// was supplied and the family ran (NOT that it produced findings; a clean
 /// active family is distinguishable from an inactive one). Per the ratified
