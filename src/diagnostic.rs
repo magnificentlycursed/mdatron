@@ -278,55 +278,97 @@ impl Finding {
             Severity::Warning => 'W',
             Severity::Lint => 'L',
         };
-        let mut head = format!("{sev}[{}] ", self.code);
+        // Essential identity — code, location, summary. Always retained (elided
+        // only if it alone exceeds the limit). Adopter content never rides here.
+        let mut essential = format!("{sev}[{}] ", self.code);
         if self.location.line > 0 {
             let _ = write!(
-                head,
+                essential,
                 "{}:{}",
                 self.location.safe_display(),
                 self.location.line
             );
             if self.location.column > 0 {
-                let _ = write!(head, ":{}", self.location.column);
+                let _ = write!(essential, ":{}", self.location.column);
             }
-            head.push(' ');
+            essential.push(' ');
         }
-        let _ = write!(head, "{}", self.summary);
-        if self.message != self.summary {
-            // Engine-authored message; flatten any internal newline so the
-            // head stays one line (quoted adopter content never rides here).
-            let flat = self.message.replace(['\n', '\r'], " ");
-            let _ = write!(head, " — {flat}");
-        }
-        // Oversized head: elide at a char boundary (engine text is not a
-        // forgery surface; the marking discipline binds quoted content).
-        if head.len() > COMPACT_FINDING_LIMIT {
+        let _ = write!(essential, "{}", self.summary);
+        // Oversized identity: elide at a char boundary and stop (rare — a code +
+        // location + summary over the whole budget leaves no room for the rest).
+        if essential.len() > COMPACT_FINDING_LIMIT {
             let mut cut = COMPACT_FINDING_LIMIT - '…'.len_utf8();
-            while !head.is_char_boundary(cut) {
+            while !essential.is_char_boundary(cut) {
                 cut -= 1;
             }
-            head.truncate(cut);
-            head.push('…');
-            return head;
+            essential.truncate(cut);
+            essential.push('…');
+            return essential;
+        }
+
+        // Quoted value blocks are budgeted AHEAD of the message prose (#115, vsdd
+        // item 8 part 2): the value a message placeholder points at is retained
+        // first, and lower-priority engine prose yields — so a placeholder can
+        // never outlive the value it references. The budget here counts only the
+        // essential head; the prose is fitted afterward from whatever remains, so
+        // the value's space is reserved rather than consumed by the template.
+        // Open the quoted section only when the essential identity leaves room
+        // for at least the elision marker (+1 newline). Otherwise opening a region
+        // would append an elision that itself overflows the cap when the identity
+        // sits in (limit-reserve, limit] — the pre-existing hole #115's review
+        // caught. When a region IS opened, the reserve keeps room for the elision,
+        // so a cut always closes (I3) and the running total never exceeds the cap.
+        let reserve = 1 + COMPACT_ELISION.len();
+        let mut quoted_out = String::new();
+        if essential.len() + reserve <= COMPACT_FINDING_LIMIT {
+            'regions: for region in &self.quoted {
+                let label_line = format!("={}:", region.label);
+                let body = render_quoted(&region.content, COMPACT_QUOTE_PREFIX);
+                for line in std::iter::once(label_line.as_str()).chain(body.split('\n')) {
+                    if essential.len() + quoted_out.len() + 1 + line.len()
+                        > COMPACT_FINDING_LIMIT.saturating_sub(reserve)
+                    {
+                        quoted_out.push('\n');
+                        quoted_out.push_str(COMPACT_ELISION);
+                        break 'regions;
+                    }
+                    quoted_out.push('\n');
+                    quoted_out.push_str(line);
+                }
+            }
+        }
+
+        // Engine message prose fills the budget LEFT after the essential head and
+        // the quoted blocks — lowest priority, truncated or dropped so the value
+        // survives. Flatten internal newlines so it stays one line (quoted adopter
+        // content never rides here).
+        let mut head = essential;
+        if self.message != self.summary {
+            let flat = self.message.replace(['\n', '\r'], " ");
+            let prose = format!(" — {flat}");
+            let avail = COMPACT_FINDING_LIMIT
+                .saturating_sub(head.len())
+                .saturating_sub(quoted_out.len());
+            if prose.len() <= avail {
+                head.push_str(&prose);
+            } else {
+                // Truncate at a char boundary, leaving room for the ellipsis; drop
+                // the prose entirely if there is not even room for a separator +
+                // some text (so no dangling placeholder outlives its value).
+                let budget = avail.saturating_sub('…'.len_utf8());
+                let mut cut = budget.min(prose.len());
+                while cut > 0 && !prose.is_char_boundary(cut) {
+                    cut -= 1;
+                }
+                if cut > " — ".len() {
+                    head.push_str(&prose[..cut]);
+                    head.push('…');
+                }
+            }
         }
 
         let mut out = head;
-        'regions: for region in &self.quoted {
-            let label_line = format!("={}:", region.label);
-            let body = render_quoted(&region.content, COMPACT_QUOTE_PREFIX);
-            for line in std::iter::once(label_line.as_str()).chain(body.split('\n')) {
-                // +1 for the joining newline; reserve room for the elision
-                // line so a cut always closes the region.
-                let reserve = 1 + COMPACT_ELISION.len();
-                if out.len() + 1 + line.len() > COMPACT_FINDING_LIMIT.saturating_sub(reserve) {
-                    out.push('\n');
-                    out.push_str(COMPACT_ELISION);
-                    break 'regions;
-                }
-                out.push('\n');
-                out.push_str(line);
-            }
-        }
+        out.push_str(&quoted_out);
         debug_assert!(out.len() <= COMPACT_FINDING_LIMIT);
         out
     }
@@ -411,6 +453,79 @@ mod tests {
         assert!(
             rendered.contains("\\x1C"),
             "FS must be escaped inert, not split on"
+        );
+    }
+
+    // #115: the 512-byte cap must hold even when the essential identity itself
+    // lands just under the limit (a long summary or adopter filename) AND a
+    // quoted region is present. The old first-line elision appended ~25 bytes
+    // unconditionally, overflowing to as much as 537; the guard must refuse to
+    // open (or elide) a region there is no room for.
+    #[test]
+    fn compact_never_exceeds_cap_with_near_limit_essential() {
+        for summary_len in [470usize, 474, 480, 485, 486, 490, 500] {
+            let finding = Finding {
+                code: "MDATRON-E0050".into(),
+                severity: Severity::Error,
+                // message == summary => no prose, isolating the essential+quoted
+                // interaction the overflow lived in.
+                summary: "s".repeat(summary_len),
+                message: "s".repeat(summary_len),
+                help: None,
+                location: Location {
+                    file: "doc.md".into(),
+                    line: 1,
+                    column: 0,
+                },
+                explain_ref: None,
+                quoted: vec![QuotedRegion {
+                    label: "x".into(),
+                    content: "v".into(),
+                }],
+            };
+            let out = finding.format_compact();
+            assert!(
+                out.len() <= COMPACT_FINDING_LIMIT,
+                "cap breached at summary_len={summary_len}: {} bytes",
+                out.len()
+            );
+        }
+    }
+
+    // #115 (vsdd item 8 part 2): when the compact budget is tight, the quoted
+    // VALUE is retained ahead of the lower-priority engine message prose —
+    // otherwise a placeholder in the message outlives the value it points at (a
+    // dangling reference). Here the long message would crowd the value out under
+    // the old append-last order; the value must still appear, and the 512-byte
+    // cap must hold.
+    #[test]
+    fn compact_budgets_quoted_value_ahead_of_message_prose() {
+        let finding = Finding {
+            code: "MDATRON-E0050".into(),
+            severity: Severity::Error,
+            summary: "s".into(),
+            message: "m".repeat(470),
+            help: None,
+            location: Location {
+                file: "doc.md".into(),
+                line: 1,
+                column: 0,
+            },
+            explain_ref: None,
+            quoted: vec![QuotedRegion {
+                label: "status".into(),
+                content: "DRAFTVALUE".into(),
+            }],
+        };
+        let out = finding.format_compact();
+        assert!(
+            out.len() <= COMPACT_FINDING_LIMIT,
+            "the hard cap holds: {} bytes",
+            out.len()
+        );
+        assert!(
+            out.contains("DRAFTVALUE"),
+            "the quoted value must survive ahead of the message prose; got:\n{out}"
         );
     }
 
