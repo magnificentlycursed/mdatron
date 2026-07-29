@@ -1,5 +1,5 @@
 {
-  "next_display_id": 103,
+  "next_display_id": 104,
   "next_comment_id": 292,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -83,6 +83,7 @@
     "c5dc858e-4a6e-4662-9360-2aac4b0c176d": 18,
     "c80e0096-9ce9-4085-a622-b46b6b0ed8e6": 71,
     "ca04fb0c-6c95-4f52-ab78-d7a1c0b05bf9": 36,
+    "ca2e6c21-f9fd-4751-9ca4-24ef840c72e0": 103,
     "cc1c41ae-b96a-4d9a-b7f5-2608f7821b6a": 4,
     "cd29ff68-de48-4a6e-98c3-a03b0a4a6dca": 59,
     "d2bcf2cb-f611-4a11-bc88-00a0ace5e037": 101,
@@ -3505,6 +3506,16 @@
         }
       }
     },
+    "ca2e6c21-f9fd-4751-9ca4-24ef840c72e0": {
+      "uuid": "ca2e6c21-f9fd-4751-9ca4-24ef840c72e0",
+      "display_id": 103,
+      "title": "incremental sub-lane A: immutable snapshot seam — read-once via confined no-follow handles + capture-complete seam (#92, security)",
+      "status": "open",
+      "priority": "high",
+      "created_by": "79Ig",
+      "created_at": "2026-07-29T07:22:08.149420Z",
+      "updated_at": "2026-07-29T07:22:08.149420Z"
+    },
     "cc1c41ae-b96a-4d9a-b7f5-2608f7821b6a": {
       "uuid": "cc1c41ae-b96a-4d9a-b7f5-2608f7821b6a",
       "display_id": 4,
@@ -4479,8 +4490,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T07:21:33.364227Z",
+    "timestamp": "2026-07-29T07:22:08.149420Z",
     "agent_id": "79Ig",
-    "agent_seq": 339
+    "agent_seq": 340
   }
 }
