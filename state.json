@@ -1,5 +1,5 @@
 {
-  "next_display_id": 130,
+  "next_display_id": 131,
   "next_comment_id": 328,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -20,6 +20,7 @@
     "2456d20a-0560-437f-81a0-2d54a1b96d80": 65,
     "262c8f3f-bab5-4796-b735-b24d9bf01ac9": 123,
     "277a179b-fdda-44e7-a79b-f9e096e12789": 124,
+    "27c148a2-87df-4d35-8f22-46b99666de3f": 130,
     "2881253a-3641-4d7b-a6c1-e09cbbd2d140": 96,
     "28885c69-878b-4b5d-b165-8a917d7056e3": 83,
     "291f852d-9a3c-429a-8ba1-83a1010974d1": 29,
@@ -888,6 +889,16 @@
       "related": [
         "1cafa0f3-dcdd-491b-b455-52af79c6c85d"
       ]
+    },
+    "27c148a2-87df-4d35-8f22-46b99666de3f": {
+      "uuid": "27c148a2-87df-4d35-8f22-46b99666de3f",
+      "display_id": 130,
+      "title": "design-questions from roast: abs-vs-rel paths, data-format versioning, mdatron.dev $id ownership, aggregate token cap, cost-ledger coverage (roast DEF2/4/5/6/7)",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-07-29T17:23:50.580524Z",
+      "updated_at": "2026-07-29T17:23:50.580524Z"
     },
     "2881253a-3641-4d7b-a6c1-e09cbbd2d140": {
       "uuid": "2881253a-3641-4d7b-a6c1-e09cbbd2d140",
@@ -5387,8 +5398,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T17:23:45.514721Z",
+    "timestamp": "2026-07-29T17:23:50.580524Z",
     "agent_id": "79Ig",
-    "agent_seq": 511
+    "agent_seq": 512
   }
 }
