@@ -510,9 +510,12 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T14:23:17.967852Z",
-      "updated_at": "2026-07-29T14:23:21.939141Z",
+      "updated_at": "2026-07-29T14:23:34.316845Z",
       "labels": [
         "enhancement"
+      ],
+      "related": [
+        "fea9b536-a072-4342-afe0-0a87fe5ca8bd"
       ]
     },
     "1da67425-f44d-40d6-8ba1-2d2ed768de38": {
@@ -5075,12 +5078,13 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-19T20:53:20.240290Z",
-      "updated_at": "2026-07-29T06:58:18.870957Z",
+      "updated_at": "2026-07-29T14:23:34.316845Z",
       "labels": [
         "feature",
         "v1.0"
       ],
       "related": [
+        "1cafa0f3-dcdd-491b-b455-52af79c6c85d",
         "8fc6916d-2d90-430e-af0d-fdebc0367dca"
       ],
       "comments": {
@@ -5209,8 +5213,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T14:23:28.168216Z",
+    "timestamp": "2026-07-29T14:23:34.316845Z",
     "agent_id": "79Ig",
-    "agent_seq": 480
+    "agent_seq": 481
   }
 }
