@@ -142,6 +142,43 @@ pub enum VerifyError {
 
     #[error("frontmatter parse error at '{path}': {error}")]
     Frontmatter { path: String, error: String },
+
+    // A declared hook-time resource bound was exceeded (#124, roast SHO1). Loud
+    // by design (DESIGN § Verification is fast where invoked: "exceeding a bound
+    // is itself a diagnostic — no silent degradation").
+    #[error("resource bound exceeded ({bound}): {detail}")]
+    BoundExceeded { bound: String, detail: String },
+}
+
+/// Declared hook-time resource limits (#124). Shipped as constants (the "declared
+/// limits" of DESIGN § Verification is fast where invoked). Generous for real
+/// governed markdown; a hostile oversized or deeply-nested input trips a loud
+/// `BoundExceeded` (pipeline_error kind `bound_exceeded`) instead of exhausting
+/// CPU/memory silently.
+pub const MAX_FILE_BYTES: usize = 8 * 1024 * 1024;
+pub const MAX_AGGREGATE_BYTES: usize = 64 * 1024 * 1024;
+pub const MAX_STRUCTURAL_NESTING: usize = 256;
+
+/// Maximum flow-collection nesting depth (`[`/`{`) in a governed file (#124,
+/// roast SHO1 depth-bomb). O(n) pre-scan: a compact deeply-nested collection is
+/// the cheapest way to drive quadratic YAML-parse blowup, and 256 is far beyond
+/// any legitimate frontmatter.
+pub fn max_flow_nesting(s: &str) -> usize {
+    let mut depth = 0usize;
+    let mut max = 0usize;
+    for b in s.bytes() {
+        match b {
+            b'[' | b'{' => {
+                depth += 1;
+                if depth > max {
+                    max = depth;
+                }
+            }
+            b']' | b'}' => depth = depth.saturating_sub(1),
+            _ => {}
+        }
+    }
+    max
 }
 
 impl VerifyError {
@@ -161,6 +198,7 @@ impl VerifyError {
             VerifyError::Glob(_) => "glob",
             VerifyError::Config(_) => "config",
             VerifyError::Frontmatter { .. } => "frontmatter",
+            VerifyError::BoundExceeded { .. } => "bound_exceeded",
         }
     }
 }
@@ -403,6 +441,9 @@ fn run(
     // pin/citation families still read independently, so this is not yet the
     // single-immutable-snapshot contract for ALL inputs — only the body read.
     let mut snapshot: BTreeMap<PathBuf, String> = BTreeMap::new();
+    // #124 (roast SHO1): running aggregate of the snapshot so an adversary can't
+    // exhaust memory by supplying many under-cap files.
+    let mut aggregate_bytes: usize = 0;
     for (abs, rel) in &governed {
         let confined = match crate::confine::confine_lexically(rel) {
             Ok(c) => c,
@@ -439,13 +480,47 @@ fn run(
             }
         };
         match crate::confine::open_confined(&project_root, &confined) {
-            Ok(mut handle) => {
+            Ok(handle) => {
                 use std::io::Read;
                 let mut content = String::new();
-                if let Err(e) = handle.read_to_string(&mut content) {
+                // #124 (roast SHO1): read at most MAX_FILE_BYTES + 1 so an
+                // oversized file caps memory here instead of loading gigabytes,
+                // then trips a loud bound rather than exhausting RAM.
+                if let Err(e) = handle
+                    .take(MAX_FILE_BYTES as u64 + 1)
+                    .read_to_string(&mut content)
+                {
                     return Err(VerifyError::Io {
                         path: abs.to_string_lossy().into_owned(),
                         error: e.to_string(),
+                    });
+                }
+                if content.len() > MAX_FILE_BYTES {
+                    return Err(VerifyError::BoundExceeded {
+                        bound: "max-input-size-per-file".into(),
+                        detail: format!(
+                            "'{}' exceeds the {MAX_FILE_BYTES}-byte per-file limit",
+                            rel.display()
+                        ),
+                    });
+                }
+                let nesting = max_flow_nesting(&content);
+                if nesting > MAX_STRUCTURAL_NESTING {
+                    return Err(VerifyError::BoundExceeded {
+                        bound: "structural-nesting-depth".into(),
+                        detail: format!(
+                            "'{}' nests flow collections {nesting} deep (limit {MAX_STRUCTURAL_NESTING})",
+                            rel.display()
+                        ),
+                    });
+                }
+                aggregate_bytes += content.len();
+                if aggregate_bytes > MAX_AGGREGATE_BYTES {
+                    return Err(VerifyError::BoundExceeded {
+                        bound: "aggregate-snapshot-size".into(),
+                        detail: format!(
+                            "the walked corpus exceeds the {MAX_AGGREGATE_BYTES}-byte aggregate limit"
+                        ),
                     });
                 }
                 snapshot.insert(rel.clone(), content);
@@ -894,10 +969,11 @@ fn verify_file(
     // Content comes from the immutable snapshot (#103): every governed file is
     // read once through a confined no-follow handle in `run`, never from the
     // filesystem here — so a mutation after capture cannot change what this
-    // check sees, and a symlinked component was already refused at capture.
-    let content = content.to_string();
+    // check sees, and a symlinked component was already refused at capture. The
+    // snapshot already owns the bytes (#124): verify_file borrows them, so no
+    // per-file owned copy is made (that doubled peak memory, roast SHO1).
 
-    let fm_opt = match frontmatter::parse(&content) {
+    let fm_opt = match frontmatter::parse(content) {
         Ok(opt) => opt,
         Err(e) => {
             findings.push(Finding {
@@ -928,10 +1004,10 @@ fn verify_file(
             // asymmetry. Matching is on the root-relative path.
             // Vocabulary scans prose-only files too (whole content as body).
             if let Some(v) = vocab {
-                crate::vocab::check_file(v, path, &content, 0, None, findings);
+                crate::vocab::check_file(v, path, content, 0, None, findings);
             }
             if cite_enabled {
-                crate::cite::check_file(project_root, path, &content, 0, findings);
+                crate::cite::check_file(project_root, path, content, 0, findings);
             }
             let rel = path.strip_prefix(project_root).unwrap_or(path);
             if require_frontmatter.iter().any(|p| p.matches_path(rel)) {
@@ -970,7 +1046,7 @@ fn verify_file(
         crate::vocab::check_file(
             v,
             path,
-            &content,
+            content,
             body_offset,
             Some(&frontmatter_value),
             findings,
@@ -978,7 +1054,7 @@ fn verify_file(
     }
     if cite_enabled {
         let body_offset = content.len() - body_len;
-        crate::cite::check_file(project_root, path, &content, body_offset, findings);
+        crate::cite::check_file(project_root, path, content, body_offset, findings);
     }
 
     let frontmatter_internal = crate::dsl::index::yaml_to_value(&frontmatter_value);
@@ -1012,7 +1088,7 @@ fn verify_file(
                     (ve.instance_path.as_str(), key)
                 })
                 .collect();
-            let locations = crate::frontmatter::resolve_e0050_locations(&content, &items);
+            let locations = crate::frontmatter::resolve_e0050_locations(content, &items);
             for (ve, loc) in violations.iter().zip(locations) {
                 let (line, column) = loc.unwrap_or((1, 0));
                 findings.push(Finding {
@@ -2043,6 +2119,40 @@ pattern:
             0,
             "a present schemas dir must not warn; got {findings:?}"
         );
+    }
+
+    // #124 (roast SHO1): the flow-nesting pre-scan counts bracket depth.
+    #[test]
+    fn max_flow_nesting_counts_bracket_depth() {
+        assert_eq!(max_flow_nesting("[[[]]]"), 3);
+        assert_eq!(max_flow_nesting("{a: [1, {b: 2}]}"), 3);
+        assert_eq!(max_flow_nesting("plain: value"), 0);
+    }
+
+    // #124 (roast SHO1): a deeply-nested frontmatter (the O(n^2) depth-bomb) trips
+    // a loud resource bound instead of driving quadratic parse CPU. The bound is a
+    // pipeline failure (kind `bound_exceeded`), never a silent hang.
+    #[test]
+    fn deeply_nested_frontmatter_trips_the_bound() {
+        let proj = TempProject::new("depth-bound");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(".mdatron/config.yaml", "file_globs:\n  - \"**/*.md\"\n");
+        let bomb = format!(
+            "---\nx: {}{}\n---\nbody\n",
+            "[".repeat(300),
+            "]".repeat(300)
+        );
+        proj.write("doc.md", &bomb);
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        match verify(&cfg) {
+            Err(VerifyError::BoundExceeded { bound, .. }) => {
+                assert_eq!(bound, "structural-nesting-depth")
+            }
+            other => panic!("expected BoundExceeded(structural-nesting-depth); got {other:?}"),
+        }
     }
 
     // #97 (phase-3 F2): the scope gate covers the frontmatter branch too, not

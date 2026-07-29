@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://mdatron.dev/schema/mdatron-output/2.0.0",
+  "$id": "https://mdatron.dev/schema/mdatron-output/2.1.0",
   "title": "mdatron verify --json output envelope",
-  "description": "The machine interface of `mdatron verify --json`. Versioned: mdatron_output_version tracks THIS schema (currently 2.0.0). A published contract (DESIGN.md § Diagnostics are a versioned contract) — consumers pin and validate against it.",
+  "description": "The machine interface of `mdatron verify --json`. Versioned: mdatron_output_version tracks THIS schema (currently 2.1.0). A published contract (DESIGN.md § Diagnostics are a versioned contract) — consumers pin and validate against it.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -16,7 +16,7 @@
   "properties": {
     "mdatron_output_version": {
       "type": "string",
-      "const": "2.0.0",
+      "const": "2.1.0",
       "description": "Semver of this envelope schema. Moves with the schema; a change here signals a contract change."
     },
     "mdatron_version": {
@@ -35,7 +35,7 @@
       "properties": {
         "code": { "type": "string" },
         "kind": {
-          "enum": ["config", "io", "schema_load", "pattern_load", "glob", "frontmatter", "index_build", "expr_parse", "eval"]
+          "enum": ["config", "io", "schema_load", "pattern_load", "glob", "frontmatter", "index_build", "expr_parse", "eval", "bound_exceeded"]
         },
         "message": { "type": "string" }
       }

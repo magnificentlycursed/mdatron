@@ -178,7 +178,7 @@ fn absent_family_data_reports_inactive_and_version_bumped() {
     }
     assert_eq!(
         env.get("mdatron_output_version").and_then(|v| v.as_str()),
-        Some("2.0.0"),
+        Some("2.1.0"),
         "envelope 2.0.0 for 0.4.0: a major bump from the last-released 1.1.0 (breaking families reshape + required quoted marking)"
     );
 }
