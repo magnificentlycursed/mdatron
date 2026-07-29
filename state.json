@@ -1,5 +1,5 @@
 {
-  "next_display_id": 111,
+  "next_display_id": 112,
   "next_comment_id": 309,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -42,6 +42,7 @@
     "67c6fa14-5eb9-4657-abd6-904507360757": 99,
     "69b33517-946c-45ba-9287-c1231028d5ec": 47,
     "700bbf38-a0db-46e2-90a8-36df989ecb06": 53,
+    "72e27489-2e30-4b01-9833-62299f42c542": 111,
     "730c7a15-f81f-449a-8323-8d09d5206454": 87,
     "74744f3a-fbb8-424a-897e-d4f2b2ed77ff": 40,
     "7515ecfd-31f2-4e53-bbb7-0e50c7cce064": 6,
@@ -1717,6 +1718,16 @@
           "kind": "result"
         }
       }
+    },
+    "72e27489-2e30-4b01-9833-62299f42c542": {
+      "uuid": "72e27489-2e30-4b01-9833-62299f42c542",
+      "display_id": 111,
+      "title": "design Q: empty (present) schemas dir + unrouted schema_class stays clean — tension with no-adopter-data-clean",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-07-29T10:01:17.140659Z",
+      "updated_at": "2026-07-29T10:01:17.140659Z"
     },
     "730c7a15-f81f-449a-8323-8d09d5206454": {
       "uuid": "730c7a15-f81f-449a-8323-8d09d5206454",
@@ -4807,8 +4818,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T09:38:27.121546Z",
+    "timestamp": "2026-07-29T10:01:17.140659Z",
     "agent_id": "79Ig",
-    "agent_seq": 398
+    "agent_seq": 399
   }
 }
