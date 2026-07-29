@@ -1,4 +1,4 @@
-# MDATRON-E0012 — key-source-symlink-refused
+# MDATRON-E0012 — symlinked-component-refused
 
 **Severity:** error
 **Status:** accepted

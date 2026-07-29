@@ -34,8 +34,10 @@ apply the matching corrective pattern below.
 **Common (operator-fixable):**
 
 - **Missing `.mdatron/` directory.** The project has not been initialized.
-  Run `mdatron init` to scaffold `.mdatron/` (schemas, patterns, routes,
-  registry, pins, config, and the init manifest) at the project root.
+  Run `mdatron init` to scaffold `.mdatron/` at the project root — the
+  `schemas/` and `patterns/` directories plus the seeded `config.yaml` and the
+  init manifest. The single-file check families (`routes.yaml`, `pins.yaml`,
+  `vocabulary.yaml`) are files, not directories.
 - **Malformed schema or pattern file.** A `.mdatron/schemas/*.json` or
   `.mdatron/patterns/*.yaml` file failed to parse. Validate the file
   out-of-band (`jq < schema.json`, `yq < pattern.yaml`) to surface the

@@ -39,11 +39,15 @@ enum Command {
         #[arg(long = "patterns", value_name = "DIR")]
         patterns: Option<PathBuf>,
 
-        /// File globs (relative to project root) to validate. Defaults to `**/*.md`.
+        /// File globs (relative to project root) — an explicit, ad-hoc
+        /// jurisdiction. Without --files, jurisdiction comes from
+        /// .mdatron/config.yaml's `file_globs`; an absent or globless config is
+        /// refused (jurisdiction is never guessed). (#125/#126)
         #[arg(long = "files", value_name = "GLOB", num_args = 1..)]
         files: Vec<String>,
 
-        /// Emit a JSON output object on stdout (per the Phase 0 output-format contract).
+        /// Emit the versioned JSON output envelope on stdout
+        /// (schema: schema/mdatron-output.schema.json). (#126)
         #[arg(long = "json")]
         json: bool,
 
