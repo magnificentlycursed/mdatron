@@ -1,6 +1,6 @@
 {
   "next_display_id": 112,
-  "next_comment_id": 310,
+  "next_comment_id": 311,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -4320,14 +4320,25 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T09:38:10.128462Z",
-      "updated_at": "2026-07-29T10:01:34.274622Z",
+      "updated_at": "2026-07-29T10:02:06.442759Z",
       "labels": [
         "bug"
       ],
       "related": [
         "18545077-3dbb-4401-847d-c6b4bdbe7d78",
         "72e27489-2e30-4b01-9833-62299f42c542"
-      ]
+      ],
+      "comments": {
+        "dcd9b4c7-cfbb-4843-a5b9-f96bc8e2c744": {
+          "display_id": 310,
+          "author": "79Ig",
+          "content": "Built on feature/110-missing-schemas. W0047 schema-dir-missing: fires when schemas dir absent AND a walked file's schema_class is served by neither a schema nor a rule context (the project-level companion to W0045, filling the has_validation_infra gap). verify_file returns the raw unrouted signal, OR'd across the walk. Cold SE review: SHIP (W0045 byte-identical, incremental gating confirmed, Schematron-only spared; residual empty-dir design Q -> #111). Red gate 3 tests red->green. Live demos confirm. Gauntlet green: fmt/clippy/294 lib+integration/self-verify/pin. Awaiting operator merge gate.",
+          "created_at": "2026-07-29T10:02:06.428676Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABALxcAmUYnwsUEun7ym5hplwqxCisSK8lgN3gYWN2p4prSY+Cr1nOSCfIukHuWSKQSJXJIONvx3192NoVmeBkYCw=="
+        }
+      }
     },
     "eddd10af-f936-439c-9ead-0f9d6b9832b3": {
       "uuid": "eddd10af-f936-439c-9ead-0f9d6b9832b3",
@@ -4842,8 +4853,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T10:01:44.069567Z",
+    "timestamp": "2026-07-29T10:02:06.442759Z",
     "agent_id": "79Ig",
-    "agent_seq": 404
+    "agent_seq": 405
   }
 }
