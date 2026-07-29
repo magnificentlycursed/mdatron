@@ -427,11 +427,12 @@
       "uuid": "1ba1bc71-1b50-4f6c-b672-1524a61a3096",
       "display_id": 116,
       "title": "W3 #8 part 1: render interpolation placeholder as [see: label] cross-reference (vsdd ruling), not {expr}",
-      "status": "open",
+      "status": "closed",
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T12:28:05.166600Z",
-      "updated_at": "2026-07-29T12:32:27.941314Z",
+      "updated_at": "2026-07-29T12:32:32.944654Z",
+      "closed_at": "2026-07-29T12:32:32.944643Z",
       "labels": [
         "enhancement"
       ],
@@ -5048,8 +5049,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T12:32:27.941314Z",
+    "timestamp": "2026-07-29T12:32:32.944654Z",
     "agent_id": "79Ig",
-    "agent_seq": 445
+    "agent_seq": 446
   }
 }
