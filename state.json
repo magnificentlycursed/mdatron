@@ -1,6 +1,6 @@
 {
   "next_display_id": 132,
-  "next_comment_id": 330,
+  "next_comment_id": 331,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "0943c25f-129e-492b-a326-fff0d809c6c0": 121,
@@ -910,13 +910,24 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T17:21:36.128832Z",
-      "updated_at": "2026-07-29T17:21:52.739805Z",
+      "updated_at": "2026-07-29T18:13:37.214201Z",
       "labels": [
         "security"
       ],
       "related": [
         "1cafa0f3-dcdd-491b-b455-52af79c6c85d"
-      ]
+      ],
+      "comments": {
+        "83291d37-192f-4684-9342-2637783cac26": {
+          "display_id": 330,
+          "author": "79Ig",
+          "content": "PART 1 done + merged: DSL expr MAX_DEPTH=256 kills the uncatchable SIGABRT (deep adopter assert -> kind:expr_parse in envelope, verified live) + DESIGN.md:99 bounds claim made honest (packaged doc no longer over-claims). REMAINING (keeping #124 open): frontmatter per-file byte cap + YAML nesting-depth + aggregate budget + drop redundant verify.rs:898 copy — the memory-bound sub-lane (roast SHO1 depth-bomb/memory).",
+          "created_at": "2026-07-29T18:13:37.196606Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAC1Br94400vkLDduJ62cA62xOhDEoVimqsObp16ylEa6CPHJ9Vr+tmOX9HA0/HvSU1rMXFEij+6ZxMeUgRN9bCA=="
+        }
+      }
     },
     "27c148a2-87df-4d35-8f22-46b99666de3f": {
       "uuid": "27c148a2-87df-4d35-8f22-46b99666de3f",
@@ -5448,8 +5459,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T18:04:10.874432Z",
+    "timestamp": "2026-07-29T18:13:37.214201Z",
     "agent_id": "79Ig",
-    "agent_seq": 523
+    "agent_seq": 524
   }
 }
