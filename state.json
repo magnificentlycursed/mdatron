@@ -1,6 +1,6 @@
 {
   "next_display_id": 110,
-  "next_comment_id": 304,
+  "next_comment_id": 305,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -2087,14 +2087,25 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-29T09:19:14.903045Z",
-      "updated_at": "2026-07-29T09:19:36.867725Z",
+      "updated_at": "2026-07-29T09:19:41.794048Z",
       "labels": [
         "bug"
       ],
       "related": [
         "18545077-3dbb-4401-847d-c6b4bdbe7d78",
         "8c4eab12-ffd1-4077-9afa-29257925a0aa"
-      ]
+      ],
+      "comments": {
+        "edd6f87d-102a-4c80-9eec-b49567e826c8": {
+          "display_id": 304,
+          "author": "79Ig",
+          "content": "Surfaced by the #108 cold SE review (observation A). Pre-existing, NOT introduced by W0046. Repro: file_globs [\"**/*.md\", \"docs/**/*.md\"] with one schema-violating docs/bad.md -> E0050 emitted TWICE and summary.files_checked double-counts, because `governed` is a Vec iterated directly in the walk (src/verify.rs ~497); the snapshot BTreeMap dedups the body READ but not the WALK. Fix candidate: dedup `governed` by rel path (or drive the walk off the deduped snapshot keys). Touches the #105 files_checked audit signal, hence related to #104.",
+          "created_at": "2026-07-29T09:19:41.777280Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAHxxyLUcYhF8CLZS+gcHqXZBPAafVImE7V/MLzsELeGyxBfyXQUtcijl6OpqMgqz7JDVVgdoGEzgEo2YYaOUtAw=="
+        }
+      }
     },
     "88be1f06-20a9-48da-8b35-4df657fbee27": {
       "uuid": "88be1f06-20a9-48da-8b35-4df657fbee27",
@@ -4742,8 +4753,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T09:19:36.867725Z",
+    "timestamp": "2026-07-29T09:19:41.794048Z",
     "agent_id": "79Ig",
-    "agent_seq": 385
+    "agent_seq": 386
   }
 }
