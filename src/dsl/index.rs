@@ -2,10 +2,10 @@
 //!
 //! Given a [`KeyDecl`] like:
 //! ```yaml
-//! - name: domain-prompts
-//!   source: .claude/commands/vsdd-domain-*.md
+//! - name: authors
+//!   source: people/*.md
 //!   select: $.frontmatter
-//!   indexed_by: $.domain_slug
+//!   indexed_by: $.id
 //! ```
 //! the index module:
 //! 1. resolves `source` (literal path or glob) under `project_root`
@@ -16,7 +16,7 @@
 //!
 //! The resulting [`Index`] is queryable via [`Index::lookup`]; multiple indices
 //! live in an [`IndexRegistry`] keyed by `name`. Rules reference indices via the
-//! `key()` standard-library function (`key("domain-prompts", "software-engineer")`).
+//! `key()` standard-library function (`key("authors", "jane-doe")`).
 //!
 //! Path-confinement (DESIGN.md § Five check families; carried from
 //! BOUNDARY-PREAMBLE § 7): sources are confined lexically before any
