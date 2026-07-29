@@ -1,6 +1,6 @@
 {
   "next_display_id": 106,
-  "next_comment_id": 297,
+  "next_comment_id": 298,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -1336,13 +1336,24 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T08:04:11.467066Z",
-      "updated_at": "2026-07-29T08:04:28.974753Z",
+      "updated_at": "2026-07-29T08:04:34.498537Z",
       "labels": [
         "bug"
       ],
       "related": [
         "18545077-3dbb-4401-847d-c6b4bdbe7d78"
-      ]
+      ],
+      "comments": {
+        "4735d7c4-e0fc-46bb-9a18-2039660c8482": {
+          "display_id": 297,
+          "author": "79Ig",
+          "content": "PLAN (W1 of #104, vsdd item 1). files_checked is a v0.1.0 STUB (main.rs): counts unique files referenced in FINDINGS, so a clean run over N files reports 0 — a clean corpus and an empty jurisdiction emit an identical envelope, the core audit-signal gap. FIX: verify returns the TRUE count of files validated (verify_file calls); the field means 'files checked this run'. 2a red gate: a clean N-file fixture asserts files_checked==N (currently 0). 2b: RunResult carries the count; VerifyReport.files_checked; verify_report/verify_incremental populate; cmd_verify uses report.files_checked, dropping the finding-derived stub. Envelope: field TYPE unchanged (u32), value SEMANTICS corrected (stub->real) — no shape change, no version bump; changelog note. Standing-doc sweep: the BC-2 stub comment + any DESIGN files_checked mention.",
+          "created_at": "2026-07-29T08:04:34.483706Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAUR3GxAg1QKEYvZBKaBJNH5hfFntU+PDdI3wv4pfuQPRt8EOW0LtiPZUcAgDG81HEQBBqgPB+kVwL5m6kNgyjBw=="
+        }
+      }
     },
     "5eb9d32c-b382-4b47-8abf-7b7f75de5916": {
       "uuid": "5eb9d32c-b382-4b47-8abf-7b7f75de5916",
@@ -4592,8 +4603,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T08:04:28.974753Z",
+    "timestamp": "2026-07-29T08:04:34.498537Z",
     "agent_id": "79Ig",
-    "agent_seq": 355
+    "agent_seq": 356
   }
 }
