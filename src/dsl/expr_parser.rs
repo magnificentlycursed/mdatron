@@ -73,14 +73,46 @@ pub fn parse_expression(input: &str) -> Result<Expr, ParseError> {
 
 // ── Parser ─────────────────────────────────────────────────────────────────────
 
+/// Maximum expression nesting depth (#124, roast SHO2). Bounds the recursive-
+/// descent so an adopter-controlled pattern `assert:` of deeply-nested parens or
+/// `not` chains yields a `ParseError`, not an uncatchable stack-overflow SIGABRT
+/// (which bypassed the `--json` envelope entirely). 256 is far beyond any
+/// legitimate expression; a real overflow needs tens of thousands of levels.
+const MAX_EXPR_DEPTH: usize = 256;
+
 struct Parser<'a> {
     input: &'a str,
     pos: usize,
+    /// Live recursion depth through the two unbounded roots (`parse_or_expr` via
+    /// parens, `parse_not_expr` via `not`-chains); bounded by [`MAX_EXPR_DEPTH`].
+    depth: usize,
 }
 
 impl<'a> Parser<'a> {
     fn new(input: &'a str) -> Self {
-        Self { input, pos: 0 }
+        Self {
+            input,
+            pos: 0,
+            depth: 0,
+        }
+    }
+
+    /// Guarded recursion entry: increments depth, refusing over-deep nesting
+    /// before it can overflow the stack. Paired with `leave` on every exit path.
+    fn enter(&mut self) -> Result<(), ParseError> {
+        self.depth += 1;
+        if self.depth > MAX_EXPR_DEPTH {
+            self.depth -= 1;
+            return Err(ParseError::new(
+                self.pos,
+                format!("expression nesting exceeds the maximum depth of {MAX_EXPR_DEPTH}"),
+            ));
+        }
+        Ok(())
+    }
+
+    fn leave(&mut self) {
+        self.depth -= 1;
     }
 
     fn skip_whitespace(&mut self) {
@@ -129,6 +161,13 @@ impl<'a> Parser<'a> {
     // ── Precedence chain ───────────────────────────────────────────────────
 
     fn parse_or_expr(&mut self) -> Result<Expr, ParseError> {
+        self.enter()?;
+        let r = self.parse_or_expr_inner();
+        self.leave();
+        r
+    }
+
+    fn parse_or_expr_inner(&mut self) -> Result<Expr, ParseError> {
         let mut left = self.parse_and_expr()?;
         loop {
             self.skip_whitespace();
@@ -163,6 +202,13 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_not_expr(&mut self) -> Result<Expr, ParseError> {
+        self.enter()?;
+        let r = self.parse_not_expr_inner();
+        self.leave();
+        r
+    }
+
+    fn parse_not_expr_inner(&mut self) -> Result<Expr, ParseError> {
         self.skip_whitespace();
         if self.consume_keyword("not") {
             self.skip_whitespace();
@@ -519,6 +565,33 @@ mod tests {
 
     fn s(name: &str) -> Value {
         Value::Str(name.to_string())
+    }
+
+    // #124 (roast SHO2): an adopter-controlled pattern `assert:` of deeply-nested
+    // parens or `not` chains previously overflowed the stack -> uncatchable
+    // SIGABRT with no `--json` envelope. The depth guard now returns a ParseError
+    // instead. Depth 300 exceeds MAX_EXPR_DEPTH (256) but is nowhere near a real
+    // stack overflow, so this asserts the guard fires cleanly without relying on
+    // (or triggering) an actual crash.
+    #[test]
+    fn deep_nesting_is_a_parse_error_not_a_stack_overflow() {
+        let deep_parens = format!("{}true{}", "(".repeat(300), ")".repeat(300));
+        let e = parse_expression(&deep_parens).unwrap_err();
+        assert!(
+            e.message.contains("maximum depth"),
+            "deep parens must be a bounded ParseError; got {e}"
+        );
+        let deep_not = format!("{}true", "not ".repeat(300));
+        assert!(
+            parse_expression(&deep_not)
+                .unwrap_err()
+                .message
+                .contains("maximum depth"),
+            "deep not-chain must be a bounded ParseError"
+        );
+        // A legitimately-nested expression well under the limit still parses.
+        let ok = format!("{}$self.x == 1{}", "(".repeat(20), ")".repeat(20));
+        assert!(parse_expression(&ok).is_ok(), "normal nesting still parses");
     }
 
     fn arr(values: impl IntoIterator<Item = Value>) -> Value {
