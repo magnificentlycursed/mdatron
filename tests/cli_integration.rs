@@ -183,6 +183,62 @@ fn pipeline_failure_json_quiet_carries_structured_reason() {
     );
 }
 
+// #113 (vsdd item 7): a pattern-rule finding carries an ADOPTER-defined code
+// (e.g. VSDD-E0201) for which mdatron has no explain page. It must NOT advertise
+// `mdatron explain VSDD-E0201` — the same binary rejects it (a dead-end). The
+// explain pointer is emitted only when a page actually resolves.
+#[test]
+fn adopter_coded_finding_does_not_advertise_a_dead_explain_page() {
+    let proj = TempProject::new("explain-deadend");
+    proj.write(
+        ".mdatron/patterns/p.yaml",
+        r#"mdatron_dsl_version: 1
+pattern:
+  id: p
+  rules:
+    - id: must-be-published
+      context: note
+      assert: $self.status == "published"
+      code: VSDD-E0201
+      message: "status must be published"
+"#,
+    );
+    proj.write("doc.md", "---\nschema_class: note\nstatus: draft\n---\nbody\n");
+
+    // TTY: the finding renders, but with NO dead explain line.
+    let out = run_verify_tty(&proj);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        stderr.contains("VSDD-E0201"),
+        "the rule finding fires: {stderr}"
+    );
+    assert!(
+        !stderr.contains("mdatron explain VSDD-E0201"),
+        "must not advertise an explain page the binary rejects: {stderr}"
+    );
+
+    // JSON: explain_ref is null (not the unresolvable code).
+    let out = Command::new(mdatron_bin())
+        .args(["verify", "--project-root"])
+        .arg(proj.path())
+        .args(["--json", "-q"])
+        .output()
+        .expect("mdatron binary executes");
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let env: serde_json::Value = serde_json::from_str(stdout.trim())
+        .unwrap_or_else(|e| panic!("json envelope: {e}; got {stdout:?}"));
+    let f = env["findings"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|f| f["code"] == "VSDD-E0201")
+        .expect("the VSDD-coded finding is present");
+    assert!(
+        f["explain_ref"].is_null(),
+        "explain_ref must be null for an unresolvable code: {f}"
+    );
+}
+
 // #44 / #80 D4: `verify --compact` emits size-capped agent-context blocks on
 // stdout — every block within the 512-byte contract limit, adopter content
 // prefix-marked, exit code unchanged.
