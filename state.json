@@ -1,6 +1,6 @@
 {
   "next_display_id": 103,
-  "next_comment_id": 286,
+  "next_comment_id": 287,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -1831,14 +1831,25 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-07-29T00:28:31.764518Z",
-      "updated_at": "2026-07-29T00:31:19.644894Z",
+      "updated_at": "2026-07-29T06:57:58.130268Z",
       "labels": [
         "enhancement"
       ],
       "related": [
         "3cc73526-d8d8-4eb3-9bd3-a7affee9ee90",
         "8929a168-665b-4be1-8b8d-441e73f742c4"
-      ]
+      ],
+      "comments": {
+        "3d28ab9f-fca0-49c3-bc00-0cc3e61bda89": {
+          "display_id": 286,
+          "author": "79Ig",
+          "content": "CASE TEXTS RECEIVED (vsdd-cli relay). Source: vsdd-cli rounds #684 (e61f28e5), #705 (026564ee), #710. Two lenses (DR+SA) converged on #684. The three verbatim E0094 drift cases for fixture intake:\n\nCASE 1 — plain count drift from disk. Site: installed-artifact-manifest.md:83. Claim: '27 members / 17 domain prompts'. Basis: count of installed prompt files on disk. Disk actual: '28 members / 18 domain prompts (+ 10 primers)'. Corrected to '28 members / 18 domain prompts + 10 primers' with a verified-against-disk citation.\n\nCASE 2 — decomposed-count drift (total AND component). Site: economics-data.md:35. Claim: '17: 15 role + 2 meta'. Disk actual: '18: 16 role + 2 meta'. Both total (17->18) and role component (15->16) drifted while arithmetic stayed internally consistent (15+2=17) — a checker that only re-adds stated components MISSES it; components must be checked against the basis. Corrected to '18 (16 role + 2 meta)'.\n\nCASE 3 — unperformable basis (the high-value case). Stage A (#684): claim 'seven core role domains'; tier basis yields six — wrong number. Stage B (#705): fix rewrote to 'six core role domains' = the tier field's own count, BUT no field named tier carries a domain count (only tier_effort_defaults) — number right, basis dangling. Stage C (#710): the 'six' cited installed prompts, but that basis verifies only the 18-total — the six-member subset is enumerated nowhere. Corrected (#710): name the six inline (software-engineer, security, ux, quality-engineer, solution-owner, solution-architect) — count+membership verifiable against the tier-marked installed prompts. WHY IT MATTERS: distinguishes 'the number is wrong' from 'the number's stated verification path doesn't resolve' — a digit-comparison passes Stage B (six IS the count) while the doc stays unverifiable. The performable-basis half is the harder, higher-value part of E0094. Ready for fixture intake.",
+          "created_at": "2026-07-29T06:57:58.100827Z",
+          "kind": "note",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABATGNmVTRJU8zN+1rY/ghnOAYpLQAdLjnFKbc+yd7M7zJqMXrCJeuiTsJUGjuTewqBOSceAg3cLqGdPSqy+G5RAA=="
+        }
+      }
     },
     "85c72705-2c55-4332-bb4d-9616e2ffef82": {
       "uuid": "85c72705-2c55-4332-bb4d-9616e2ffef82",
@@ -4429,8 +4440,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T06:48:56.587534Z",
+    "timestamp": "2026-07-29T06:57:58.130268Z",
     "agent_id": "79Ig",
-    "agent_seq": 329
+    "agent_seq": 330
   }
 }
