@@ -1,6 +1,6 @@
 {
   "next_display_id": 106,
-  "next_comment_id": 298,
+  "next_comment_id": 299,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -1336,7 +1336,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T08:04:11.467066Z",
-      "updated_at": "2026-07-29T08:04:34.498537Z",
+      "updated_at": "2026-07-29T08:13:28.057498Z",
       "labels": [
         "bug"
       ],
@@ -1352,6 +1352,15 @@
           "kind": "plan",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAUR3GxAg1QKEYvZBKaBJNH5hfFntU+PDdI3wv4pfuQPRt8EOW0LtiPZUcAgDG81HEQBBqgPB+kVwL5m6kNgyjBw=="
+        },
+        "a25de482-498d-4037-9632-425be67d7d78": {
+          "display_id": 298,
+          "author": "79Ig",
+          "content": "DONE (feature/105-files-checked-count, 8ef3593). files_checked now threads the true validated-file count from verify (VerifyReport.files_checked); stub dropped. Clean 3-file run reports 3, empty jurisdiction 0, incremental counts the scope. Live smoke: clean repo reports files_checked=40 (was 0). Schema description added (no shape change; contract-stability test green). Proportionate review: SE self-review + 3 seeds + live smoke (a count-threading bugfix). AWAITING merge. This is the FIRST W1 audit-signal item of #104; next candidates: #3 unroutable schema_class -> finding, #2 missing schemas -> not-silent-clean, #4 families tri-state, #10 jurisdiction-shrink warning.",
+          "created_at": "2026-07-29T08:13:28.043756Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAv7B6p7jMXqKlwxp/sTwnWh2bNAaHqo1FBLjcu6U/YGfOyZ8okg5p6Xd8Bnh+3OhVCzZSb83RtPvQzUVTK/fJAw=="
         }
       }
     },
@@ -4603,8 +4612,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T08:04:34.498537Z",
+    "timestamp": "2026-07-29T08:13:28.057498Z",
     "agent_id": "79Ig",
-    "agent_seq": 356
+    "agent_seq": 357
   }
 }
