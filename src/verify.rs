@@ -21,7 +21,7 @@
 //!   from its schema pointer (#65); other findings still land at line 1 column 0
 //!   pending their own precise-location work
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use thiserror::Error;
@@ -151,6 +151,25 @@ pub struct VerifyReport {
     pub families: crate::output::Families,
 }
 
+/// A completed incremental run (#102): the report plus the observable
+/// visited-file scope. `visited` is `None` when the change forced a whole-tree
+/// run (a `.mdatron/` input change), meaning every walked file was verified.
+pub struct IncrementalReport {
+    pub report: VerifyReport,
+    pub visited: Option<BTreeSet<PathBuf>>,
+}
+
+/// The internal pipeline result: findings, per-family activity, and the visited
+/// scope (`None` for a whole-tree run).
+type RunResult = Result<
+    (
+        Vec<Finding>,
+        crate::output::Families,
+        Option<BTreeSet<PathBuf>>,
+    ),
+    VerifyError,
+>;
+
 /// Run the verification pipeline. Returns findings sorted by file path then code.
 /// Thin wrapper over [`verify_report`] for callers that only need findings.
 pub fn verify(config: &VerifyConfig) -> Result<Vec<Finding>, VerifyError> {
@@ -162,6 +181,32 @@ pub fn verify(config: &VerifyConfig) -> Result<Vec<Finding>, VerifyError> {
 /// when its data was supplied and it ran this pass — independent of whether it
 /// produced findings.
 pub fn verify_report(config: &VerifyConfig) -> Result<VerifyReport, VerifyError> {
+    let (findings, families, _visited) = run(config, None)?;
+    Ok(VerifyReport { findings, families })
+}
+
+/// Incremental verification (#102, sub-lane C of #92): verify only the changed
+/// file and its transitive dependents (#100), against the full cross-file
+/// context, and report the same findings a whole-tree run would produce for
+/// those files. A change under `.mdatron/` forces a whole-tree run (the input
+/// data changed). `visited` is the observable scope.
+pub fn verify_incremental(
+    config: &VerifyConfig,
+    changed: &Path,
+) -> Result<IncrementalReport, VerifyError> {
+    let (findings, families, visited) = run(config, Some(changed))?;
+    Ok(IncrementalReport {
+        report: VerifyReport { findings, families },
+        visited,
+    })
+}
+
+/// The verification pipeline. `changed == None` runs whole-tree; `Some(path)`
+/// runs incrementally — verify the changed file plus its dependents, then keep
+/// only the findings located in that scope, so the result equals the whole-tree
+/// result filtered to the scope. A `.mdatron/` change forces whole-tree.
+/// Returns `(findings, families, visited)`; `visited` is `None` for whole-tree.
+fn run(config: &VerifyConfig, changed: Option<&Path>) -> RunResult {
     // BC-4 pipeline-fail detection: refuse to proceed when neither schemas nor patterns
     // directories exist. A project without either has nothing to validate against; this
     // is a configuration error, not a clean run with zero findings.
@@ -256,10 +301,15 @@ pub fn verify_report(config: &VerifyConfig) -> Result<VerifyReport, VerifyError>
     };
 
     let mut findings: Vec<Finding> = Vec::new();
-    if let Some(mut loaded) = pin_data {
+    // Keep the pins for after the scope filter: a pin finding locates at
+    // pins.yaml but is ABOUT the pinned file, so incremental includes it by the
+    // pinned file's scope membership, not by the finding's own location (#102).
+    let pins: Vec<crate::pin::Pin> = if let Some(mut loaded) = pin_data {
         findings.append(&mut loaded.findings);
-        crate::pin::check(&project_root, &loaded.pins, &mut findings);
-    }
+        loaded.pins
+    } else {
+        Vec::new()
+    };
     let routes = match routes {
         Some(mut loaded) => {
             findings.append(&mut loaded.findings);
@@ -267,41 +317,89 @@ pub fn verify_report(config: &VerifyConfig) -> Result<VerifyReport, VerifyError>
         }
         None => None,
     };
-    // #98: track whether a scoped register (vocabulary.yaml present, non-empty
-    // vocabulary_globs) matched any walked file. Zero matches means the whole
-    // family is silently inert — a mistyped glob passing as "nothing to flag".
-    let vocab_scoped = vocab.is_some() && !vocab_globs.is_empty();
-    let mut vocab_scoped_hits = 0usize;
+    // Collect the governed files once (absolute + root-relative paths).
+    let mut governed: Vec<(PathBuf, PathBuf)> = Vec::new();
     for glob_pattern in &config.file_globs {
         let absolute = project_root.join(glob_pattern);
         let paths = glob::glob(&absolute.to_string_lossy())
             .map_err(|e| VerifyError::Glob(format!("'{glob_pattern}': {e}")))?;
         for entry in paths {
             let path = entry.map_err(|e| VerifyError::Glob(format!("'{glob_pattern}': {e}")))?;
-            let mut cite_enabled = false;
-            let rel = path.strip_prefix(&project_root).unwrap_or(&path);
-            if let Some(routes) = &routes {
-                crate::route::check_file(routes, rel, &path, &mut findings);
-                cite_enabled = crate::route::citations_enabled(routes, rel);
-            }
-            // Vocabulary scope (#97): empty globs = every walked file.
-            let vocab_enabled =
-                vocab_globs.is_empty() || vocab_globs.iter().any(|p| p.matches_path(rel));
-            if vocab_scoped && vocab_enabled {
-                vocab_scoped_hits += 1;
-            }
-            verify_file(
-                &path,
-                &project_root,
-                &require,
-                cite_enabled,
-                vocab.as_ref().filter(|_| vocab_enabled),
-                &schemas,
-                &patterns,
-                &registry,
-                &mut findings,
-            )?;
+            let rel = path
+                .strip_prefix(&project_root)
+                .unwrap_or(&path)
+                .to_path_buf();
+            governed.push((path, rel));
         }
+    }
+
+    // Incremental scope (#102, cold-review F3/F4): resolve the changed path to a
+    // governed file by canonicalizing both sides — robust to symlinked roots
+    // (/tmp -> /private/tmp) and absolute/relative forms. Anything that does not
+    // resolve to a walked governed file (a `.mdatron/` change, a typo, a non-.md
+    // or deleted path) forces a fail-safe whole-tree run rather than silently
+    // verifying nothing.
+    let governed_rels: BTreeSet<PathBuf> = governed.iter().map(|(_, rel)| rel.clone()).collect();
+    let incremental_changed =
+        changed.and_then(|c| resolve_changed_rel(&project_root, c, &governed_rels));
+
+    // In incremental mode, resolve the changed file's dependents (#100) over the
+    // full file/route/pattern/index context, and scope the checks to them.
+    let scope: Option<BTreeSet<PathBuf>> = if let Some(changed_rel) = &incremental_changed {
+        let govfiles: Vec<crate::dep::GovernedFile> = governed
+            .iter()
+            .map(|(abs, rel)| crate::dep::GovernedFile {
+                path: rel.clone(),
+                schema_class: read_schema_class(abs),
+            })
+            .collect();
+        let graph = crate::dep::DepGraph::build(
+            &govfiles,
+            routes.as_deref().unwrap_or(&[]),
+            &patterns,
+            &registry,
+        );
+        let mut s = graph.dependents(changed_rel);
+        s.insert(changed_rel.clone());
+        Some(s)
+    } else {
+        None
+    };
+
+    // #98: track whether a scoped register matched any walked file. Whole-tree
+    // only — W0043 is `.mdatron/`-located (never in an incremental scope) and
+    // the incremental walk sees only part of the tree.
+    let vocab_scoped = vocab.is_some() && !vocab_globs.is_empty();
+    let mut vocab_scoped_hits = 0usize;
+    for (path, rel) in &governed {
+        // Incremental: skip files outside the scope.
+        if let Some(scope) = &scope {
+            if !scope.contains(rel) {
+                continue;
+            }
+        }
+        let mut cite_enabled = false;
+        if let Some(routes) = &routes {
+            crate::route::check_file(routes, rel, path, &mut findings);
+            cite_enabled = crate::route::citations_enabled(routes, rel);
+        }
+        // Vocabulary scope (#97): empty globs = every walked file.
+        let vocab_enabled =
+            vocab_globs.is_empty() || vocab_globs.iter().any(|p| p.matches_path(rel));
+        if vocab_scoped && vocab_enabled {
+            vocab_scoped_hits += 1;
+        }
+        verify_file(
+            path,
+            &project_root,
+            &require,
+            cite_enabled,
+            vocab.as_ref().filter(|_| vocab_enabled),
+            &schemas,
+            &patterns,
+            &registry,
+            &mut findings,
+        )?;
     }
 
     // #95: registry-level vocabulary findings (a registered-and-draft term
@@ -311,9 +409,9 @@ pub fn verify_report(config: &VerifyConfig) -> Result<VerifyReport, VerifyError>
         crate::vocab::registry_findings(v, &vocab_path, &mut findings);
     }
 
-    // #98: a scoped register that matched nothing is loud, mirroring route
-    // coverage loudness (E0030) — silence here would hide a mistyped glob.
-    if vocab_scoped && vocab_scoped_hits == 0 {
+    // #98: a scoped register that matched nothing is loud (whole-tree only —
+    // see the vocab_scoped comment above).
+    if scope.is_none() && vocab_scoped && vocab_scoped_hits == 0 {
         let config_path = project_root
             .join(".mdatron")
             .join(crate::config::CONFIG_NAME);
@@ -341,13 +439,78 @@ pub fn verify_report(config: &VerifyConfig) -> Result<VerifyReport, VerifyError>
         });
     }
 
+    // Incremental soundness (#102): keep only findings located within the
+    // scope. verify_file findings are already scope-local (it ran on scope
+    // files only); this filters the location-based whole-run findings (route
+    // load, W0043/W0044) to scope.
+    if let Some(scope) = &scope {
+        findings.retain(|f| {
+            let rel = f
+                .location
+                .file
+                .strip_prefix(&project_root)
+                .unwrap_or(&f.location.file);
+            scope.contains(rel)
+        });
+    }
+
+    // Pin findings (#102 B1): a pin's staleness is a finding ABOUT the pinned
+    // file (E0061/E0062), but it locates at pins.yaml — so the location filter
+    // above would wrongly drop it. Include it by the PINNED FILE's scope
+    // membership instead (whole-tree includes every pin). Added after the
+    // filter so a stale pin on a changed governed file is caught incrementally,
+    // not silently missed.
+    for pin in &pins {
+        let relevant = scope
+            .as_ref()
+            .is_none_or(|s| s.contains(Path::new(&pin.file)));
+        if relevant {
+            crate::pin::check(&project_root, std::slice::from_ref(pin), &mut findings);
+        }
+    }
+
     findings.sort_by(|a, b| {
         a.location
             .file
             .cmp(&b.location.file)
             .then_with(|| a.code.cmp(&b.code))
     });
-    Ok(VerifyReport { findings, families })
+    Ok((findings, families, scope))
+}
+
+/// Resolve a caller-supplied changed path to its root-relative form IF it names
+/// a walked governed file — canonicalizing both sides so a symlinked root or an
+/// absolute/relative form still matches the graph's node identity. Returns
+/// `None` otherwise, so the caller runs whole-tree: the fail-safe direction
+/// (never silently verify nothing) and the fix for the `.mdatron/`-change bypass
+/// (#102 cold-review F3/F4).
+fn resolve_changed_rel(
+    project_root: &Path,
+    changed: &Path,
+    governed_rels: &BTreeSet<PathBuf>,
+) -> Option<PathBuf> {
+    let candidate = if changed.is_absolute() {
+        changed.to_path_buf()
+    } else {
+        project_root.join(changed)
+    };
+    let canon = candidate.canonicalize().ok()?;
+    let rel = canon.strip_prefix(project_root).ok()?.to_path_buf();
+    governed_rels.contains(&rel).then_some(rel)
+}
+
+/// Read a governed file's `schema_class` for the dependency pre-pass (#102) —
+/// a light frontmatter parse, independent of the full per-file check. `None`
+/// when the file is unreadable, has no frontmatter, or declares no class.
+fn read_schema_class(path: &Path) -> Option<String> {
+    let content = std::fs::read_to_string(path).ok()?;
+    let (fm, _body) = crate::frontmatter::parse(&content).ok().flatten()?;
+    let internal = crate::dsl::index::yaml_to_value(&fm);
+    internal
+        .as_object()
+        .and_then(|o| o.get("schema_class"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
 }
 
 // ── Schema + pattern loading ───────────────────────────────────────────────────
@@ -1694,6 +1857,208 @@ pattern:
         let findings = verify(&cfg).unwrap();
         assert_eq!(findings.len(), 1, "zz misses; got {findings:?}");
         assert_eq!(findings[0].code, "T-E0001");
+    }
+
+    // #102 soundness oracle (cold-review F2): the reference scope is HAND-
+    // AUTHORED, independent of the engine's own resolution (DESIGN forbids a
+    // self-referential oracle). Asserts both that the resolver's visited set
+    // equals the hand-authored scope (catching a too-few/too-many resolver) and
+    // that incremental findings equal the whole-tree result filtered to it.
+    fn assert_incremental_sound(root: &Path, changed: &str, expected_scope: &[&str]) {
+        let cfg = VerifyConfig::from_project(root).unwrap();
+        let whole = verify_report(&cfg).unwrap().findings;
+        let inc = verify_incremental(&cfg, Path::new(changed)).unwrap();
+        let visited = inc
+            .visited
+            .expect("an in-tree change scopes, not whole-tree");
+        let expected_visited: BTreeSet<PathBuf> =
+            expected_scope.iter().map(PathBuf::from).collect();
+        assert_eq!(
+            visited, expected_visited,
+            "resolver scope for {changed} must equal the hand-authored dependent set"
+        );
+        let canon = root.canonicalize().unwrap();
+        let loc = |f: &Finding| -> (String, PathBuf, u32) {
+            let rel = f
+                .location
+                .file
+                .strip_prefix(&canon)
+                .unwrap_or(&f.location.file)
+                .to_path_buf();
+            (f.code.clone(), rel, f.location.line)
+        };
+        let expected: Vec<_> = whole
+            .iter()
+            .filter(|f| expected_visited.contains(&loc(f).1))
+            .map(loc)
+            .collect();
+        let got: Vec<_> = inc.report.findings.iter().map(loc).collect();
+        assert_eq!(
+            got, expected,
+            "incremental({changed}) must equal whole-tree filtered to the hand-authored scope"
+        );
+    }
+
+    #[test]
+    fn incremental_equals_whole_tree_filtered_to_scope() {
+        let proj = TempProject::new("incremental-sound");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(".mdatron/config.yaml", "file_globs:\n  - \"**/*.md\"\n");
+        proj.write(
+            ".mdatron/patterns/p.yaml",
+            r#"mdatron_dsl_version: 1
+pattern:
+  id: cross
+  keys:
+    - name: domains
+      source: "registry/domains.md"
+      select: "$.frontmatter.entries"
+      indexed_by: "$.id"
+    - name: others
+      source: "registry/others.md"
+      select: "$.frontmatter.entries"
+      indexed_by: "$.id"
+  rules:
+    - id: dr
+      context: work-entry
+      assert: 'every(d in $self.relevant_domains, defined(key("domains", $d)))'
+      code: T-E0001
+      message: "unresolvable domain"
+    - id: orr
+      context: other-entry
+      assert: 'every(d in $self.relevant, defined(key("others", $d)))'
+      code: T-E0002
+      message: "unresolvable other"
+"#,
+        );
+        proj.write(
+            "registry/domains.md",
+            "---\nschema_class: domain-registry\nentries:\n- id: se\n- id: qe\n---\n",
+        );
+        proj.write(
+            "registry/others.md",
+            "---\nschema_class: other-registry\nentries:\n- id: x\n---\n",
+        );
+        // Each fires (a missing domain/other); the other-entry is coupled to a
+        // different registry, so it stays out of the work-entry cluster's scope.
+        proj.write(
+            "docs/a.md",
+            "---\nschema_class: work-entry\nrelevant_domains: [se, zz]\n---\n",
+        );
+        proj.write(
+            "docs/b.md",
+            "---\nschema_class: work-entry\nrelevant_domains: [qe, ww]\n---\n",
+        );
+        proj.write(
+            "docs/other.md",
+            "---\nschema_class: other-entry\nrelevant: [x, yy]\n---\n",
+        );
+
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        assert_eq!(
+            verify_report(&cfg).unwrap().findings.len(),
+            3,
+            "three findings whole-tree"
+        );
+
+        // Soundness across several changed files.
+        // Hand-authored dependent sets (independent of the resolver): the
+        // work-entries couple through registry/domains.md; the other-entry
+        // couples through registry/others.md only.
+        assert_incremental_sound(
+            &proj.0,
+            "docs/a.md",
+            &["docs/a.md", "docs/b.md", "registry/domains.md"],
+        );
+        assert_incremental_sound(
+            &proj.0,
+            "docs/other.md",
+            &["docs/other.md", "registry/others.md"],
+        );
+        assert_incremental_sound(
+            &proj.0,
+            "registry/domains.md",
+            &["docs/a.md", "docs/b.md", "registry/domains.md"],
+        );
+
+        // The work-entry cluster's scope excludes the unrelated other-entry.
+        let inc_a = verify_incremental(&cfg, Path::new("docs/a.md")).unwrap();
+        let visited = inc_a.visited.unwrap();
+        assert!(visited.contains(Path::new("docs/a.md")));
+        assert!(
+            visited.contains(Path::new("docs/b.md")),
+            "cluster peer via the registry"
+        );
+        assert!(
+            !visited.contains(Path::new("docs/other.md")),
+            "unrelated file is not in scope"
+        );
+        assert_eq!(
+            inc_a.report.findings.len(),
+            2,
+            "only the cluster's findings"
+        );
+
+        // A .mdatron/ change forces a whole-tree run.
+        let inc_m = verify_incremental(&cfg, Path::new(".mdatron/config.yaml")).unwrap();
+        assert!(
+            inc_m.visited.is_none(),
+            "a .mdatron/ change forces whole-tree"
+        );
+        assert_eq!(
+            inc_m.report.findings.len(),
+            3,
+            "whole-tree fallback sees all"
+        );
+
+        // A non-governed / mistyped path fails safe to whole-tree (F3/F4) — it
+        // never silently verifies nothing.
+        let inc_typo = verify_incremental(&cfg, Path::new("docs/nope.md")).unwrap();
+        assert!(
+            inc_typo.visited.is_none(),
+            "a non-governed path fails safe to whole-tree"
+        );
+        assert_eq!(inc_typo.report.findings.len(), 3);
+    }
+
+    // #102 B1: a stale pin on a governed file is caught INCREMENTALLY when that
+    // file is in scope — even though the finding locates at pins.yaml. An
+    // unrelated changed file's scope excludes it.
+    #[test]
+    fn incremental_includes_stale_pin_for_in_scope_file() {
+        let proj = TempProject::new("incremental-pin");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write("docs/x.md", "---\nschema_class: doc\n---\n# x\n");
+        proj.write("docs/other.md", "---\nschema_class: doc\n---\n# other\n");
+        // A pin over docs/x.md with a deliberately wrong sha -> stale (E0061).
+        proj.write(
+            ".mdatron/pins.yaml",
+            "pins:\n- governing: docs/other.md\n  file: docs/x.md\n  sha256: \
+             0000000000000000000000000000000000000000000000000000000000000000\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let e0061 = |fs: &[Finding]| fs.iter().filter(|f| f.code == "MDATRON-E0061").count();
+        assert_eq!(
+            e0061(&verify_report(&cfg).unwrap().findings),
+            1,
+            "whole-tree sees the stale pin"
+        );
+        let inc_x = verify_incremental(&cfg, Path::new("docs/x.md")).unwrap();
+        assert_eq!(
+            e0061(&inc_x.report.findings),
+            1,
+            "stale pin caught incrementally for the pinned file"
+        );
+        let inc_o = verify_incremental(&cfg, Path::new("docs/other.md")).unwrap();
+        assert_eq!(
+            e0061(&inc_o.report.findings),
+            0,
+            "stale pin not surfaced for an unrelated scope"
+        );
     }
 
     // #89 (#47 cold-run finding): chained let bindings evaluate in declaration

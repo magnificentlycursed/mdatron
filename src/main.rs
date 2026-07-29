@@ -10,7 +10,7 @@ use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
 use mdatron::diagnostic::{Finding, Location, Severity};
-use mdatron::verify::{verify_report, VerifyConfig, VerifyError};
+use mdatron::verify::{verify_incremental, verify_report, VerifyConfig, VerifyError};
 
 mod explain;
 
@@ -56,6 +56,13 @@ enum Command {
         /// Suppress stderr human-readable diagnostics (machine-only consumers).
         #[arg(long = "quiet", short = 'q')]
         quiet: bool,
+
+        /// Incremental mode (#102): verify only this changed file and its
+        /// transitive dependents, reporting the same findings a whole-tree run
+        /// would for those files. A change under `.mdatron/` falls back to a
+        /// whole-tree run. The verified (visited) file set prints to stderr.
+        #[arg(long = "changed", value_name = "FILE")]
+        changed: Option<PathBuf>,
     },
 
     /// Show extended documentation for an error code (rustc --explain pattern).
@@ -158,7 +165,17 @@ fn main() -> ExitCode {
             json,
             compact,
             quiet,
-        } => cmd_verify(project_root, schemas, patterns, files, json, compact, quiet),
+            changed,
+        } => cmd_verify(
+            project_root,
+            schemas,
+            patterns,
+            files,
+            json,
+            compact,
+            quiet,
+            changed,
+        ),
         Command::Explain {
             code,
             json,
@@ -308,6 +325,21 @@ fn cmd_init(project_root: Option<PathBuf>, quiet: bool) -> ExitCode {
     }
 }
 
+/// Escape control and line/paragraph-separator code points in a visited-file
+/// trace path so an adverse filename cannot inject a fake trace line (#102).
+fn escape_trace_path(s: &str) -> String {
+    s.chars()
+        .map(|c| {
+            if c.is_control() || c == '\u{2028}' || c == '\u{2029}' {
+                format!("\\u{{{:04x}}}", c as u32)
+            } else {
+                c.to_string()
+            }
+        })
+        .collect()
+}
+
+#[allow(clippy::too_many_arguments)]
 fn cmd_verify(
     project_root: Option<PathBuf>,
     schemas: Option<PathBuf>,
@@ -316,6 +348,7 @@ fn cmd_verify(
     json: bool,
     compact: bool,
     quiet: bool,
+    changed: Option<PathBuf>,
 ) -> ExitCode {
     use mdatron::output::{Families, Output, PipelineStatus};
 
@@ -355,7 +388,44 @@ fn cmd_verify(
             if let Some(p) = patterns {
                 config.patterns_dir = p;
             }
-            match verify_report(&config) {
+            let result = match &changed {
+                // Incremental (#102): verify the changed file + dependents and
+                // emit the visited-file trace to stderr (control-escaped so an
+                // adverse filename cannot inject trace lines). A .mdatron/ change
+                // falls back to whole-tree (visited is None).
+                Some(c) => verify_incremental(&config, c).map(|inc| {
+                    if !quiet {
+                        match &inc.visited {
+                            Some(visited) => {
+                                eprintln!(
+                                    "mdatron verify --changed: {} file(s) verified (incremental scope)",
+                                    visited.len()
+                                );
+                                for p in visited {
+                                    eprintln!("  visited: {}", escape_trace_path(&p.to_string_lossy()));
+                                }
+                                // #102: a stale pin over an in-scope governed
+                                // file IS included (by the pinned file's scope
+                                // membership). The remaining omissions are the
+                                // config-level checks located under .mdatron/
+                                // (route-config, vocabulary-registry), which a
+                                // .mdatron/ change forces whole-tree anyway.
+                                eprintln!(
+                                    "  note: incremental mode omits config-level findings under \
+                                     .mdatron/ (route-config, vocabulary-registry); a stale pin is \
+                                     included when its pinned file is in scope"
+                                );
+                            }
+                            None => eprintln!(
+                                "mdatron verify --changed: change under .mdatron/ — whole-tree run"
+                            ),
+                        }
+                    }
+                    inc.report
+                }),
+                None => verify_report(&config),
+            };
+            match result {
                 Ok(r) => (r.findings, r.families, PipelineStatus::Ok, None),
                 // A failed pipeline reports no family as invoked.
                 Err(e) => (
