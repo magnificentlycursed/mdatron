@@ -1,6 +1,6 @@
 {
   "next_display_id": 96,
-  "next_comment_id": 254,
+  "next_comment_id": 255,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -212,7 +212,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-29T00:28:11.615654Z",
-      "updated_at": "2026-07-29T00:31:13.551862Z",
+      "updated_at": "2026-07-29T01:38:15.605601Z",
       "labels": [
         "enhancement"
       ],
@@ -221,6 +221,15 @@
         "8929a168-665b-4be1-8b8d-441e73f742c4"
       ],
       "comments": {
+        "13643c50-a513-42c7-bc46-b39794c50d0e": {
+          "display_id": 254,
+          "author": "79Ig",
+          "content": "EXIT-GATE (built, CI-green on feature/93-filter, awaiting merge): filter(x in arr, pred) construct; red gates (eval/parse/e2e exactly-one); DESIGN inventory + docs/dsl-reference.md amended; falsifiability known-limit CLOSED with a focused cold-authoring confirmation (fresh agent authored the previously-inexpressible exactly-one rule confidently in one pass). 337 tests, gauntlet+pins clean. Closes #73 uniqueness gap + #47 recorded limit.",
+          "created_at": "2026-07-29T01:38:15.590988Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAzRktfPgKP5038nrkAcCzChJO4MSsW6hXvEGl2A1EVLot5ZjwwgsqQj+97mdhwagDJt4LLsERGsbAASPjafYYDg=="
+        },
         "1e714519-5f4d-48d1-9530-98bf4b3aec3b": {
           "display_id": 250,
           "author": "79Ig",
@@ -3998,8 +4007,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T01:24:11.004092Z",
+    "timestamp": "2026-07-29T01:38:15.605601Z",
     "agent_id": "79Ig",
-    "agent_seq": 255
+    "agent_seq": 256
   }
 }
