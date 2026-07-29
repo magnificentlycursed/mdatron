@@ -1,6 +1,6 @@
 {
   "next_display_id": 105,
-  "next_comment_id": 295,
+  "next_comment_id": 296,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -3548,7 +3548,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T07:22:08.149420Z",
-      "updated_at": "2026-07-29T07:42:27.181877Z",
+      "updated_at": "2026-07-29T08:00:00.383385Z",
       "labels": [
         "feature"
       ],
@@ -3564,6 +3564,15 @@
           "kind": "decision",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAoDqlDSI5xnyfmySaChUNVB3a2eFhfdA9oUINm1TmBXbsQ45enmSIktcgKhGcoyJyjyWuv3uYD8aG5dNTZ3JmBw=="
+        },
+        "7c227e91-07ed-41c9-b980-ef9c82a10223": {
+          "display_id": 295,
+          "author": "79Ig",
+          "content": "PARTIAL merged to main (operator-ratified 2026-07-29): the confined no-follow body read + symlink refusal + capture-complete seam. #103 STAYS OPEN for the full immutable-snapshot unification (security review Finding A: index/pin/cite reading from one snapshot) — to be taken FRESH LATER with the security review front-loaded (operator ruling 2026-07-29). The Snapshot scaffolding was set aside; the design + the byte-snapshot approach are recorded above for the fresh start. Also carry the fixed should-fixes forward: C (non-UTF8 -> per-file finding, not whole-run abort), E (bounds -> sub-lane D), F (E0012 explain generalization).",
+          "created_at": "2026-07-29T08:00:00.366401Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAetqiCGBhlbRXpMYoZKRJDF5C3G43TsKBHQhwZo3NkbA//kaKIjVAElRkOFJ88dxM2TS3I7SqLkZyqQO+qczwCQ=="
         },
         "90a0d369-0dd3-4dc9-9584-62b186c1dd6a": {
           "display_id": 292,
@@ -4550,8 +4559,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T07:55:22.772537Z",
+    "timestamp": "2026-07-29T08:00:00.383385Z",
     "agent_id": "79Ig",
-    "agent_seq": 349
+    "agent_seq": 350
   }
 }
