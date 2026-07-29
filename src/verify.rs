@@ -331,11 +331,19 @@ fn run(
         }
         None => None,
     };
-    // Collect the governed files once (absolute + root-relative paths). Each
-    // `file_globs` entry that matches nothing is a shrunk jurisdiction (#108,
-    // vsdd item 10): recorded here so a whole-tree run can flag it (W0046) rather
-    // than walking fewer files than the adopter declared, silently.
+    // Collect the governed files once (absolute + root-relative paths). Two
+    // `file_globs` can overlap on the same file; it is deduped by root-relative
+    // path (#109) so the walk verifies each file exactly once — a doubled walk
+    // would double every per-file finding and over-count `files_checked` (#105),
+    // corrupting the checked-N-vs-checked-nothing audit signal.
+    //
+    // Each `file_globs` entry that matches nothing is a shrunk jurisdiction
+    // (#108, vsdd item 10): recorded here so a whole-tree run can flag it (W0046)
+    // rather than walking fewer files than the adopter declared, silently. The
+    // dead-glob test is per disk match, not per newly-inserted file — a glob that
+    // only re-matches an already-collected file is redundant, not dead.
     let mut governed: Vec<(PathBuf, PathBuf)> = Vec::new();
+    let mut seen: BTreeSet<PathBuf> = BTreeSet::new();
     let mut dead_globs: Vec<String> = Vec::new();
     for glob_pattern in &config.file_globs {
         let absolute = project_root.join(glob_pattern);
@@ -348,8 +356,10 @@ fn run(
                 .strip_prefix(&project_root)
                 .unwrap_or(&path)
                 .to_path_buf();
-            governed.push((path, rel));
             matched = true;
+            if seen.insert(rel.clone()) {
+                governed.push((path, rel));
+            }
         }
         if !matched {
             dead_globs.push(glob_pattern.clone());
@@ -1826,6 +1836,39 @@ mod tests {
             codes_of(&findings, "MDATRON-W0046"),
             0,
             "a fully-live jurisdiction must not warn; got {findings:?}"
+        );
+    }
+
+    // #109 (surfaced by the #108 cold SE review): two overlapping `file_globs`
+    // both match sub/x.md. Before the walk deduped `governed`, the file was
+    // verified once per matching glob — a doubled `W0040` and a `files_checked`
+    // that over-counts, corrupting the very audit signal (#105) meant to tell
+    // checked-N apart from checked-nothing.
+    #[test]
+    fn overlapping_file_globs_check_each_file_once() {
+        let proj = TempProject::new("overlap-globs");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"**/*.md\"\n  - \"sub/**/*.md\"\n\
+             require_frontmatter:\n  - \"sub/**/*.md\"\n",
+        );
+        proj.write("sub/x.md", "no frontmatter\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let report = verify_report(&cfg).unwrap();
+        assert_eq!(
+            report.files_checked, 1,
+            "sub/x.md is one file though two globs match it; got {}",
+            report.files_checked
+        );
+        assert_eq!(
+            codes_of(&report.findings, "MDATRON-W0040"),
+            1,
+            "one naked file yields one W0040, not one per matching glob; got {:?}",
+            report.findings
         );
     }
 
