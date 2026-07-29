@@ -90,9 +90,24 @@ impl VerifyConfig {
                     .display()
             )));
         };
-        if !pc.file_globs.is_empty() {
-            cfg.file_globs = pc.file_globs;
+        // A present config that declares NO file_globs must refuse, not silently
+        // fall back to the whole-tree `**/*.md` default (#125, roast SHO7): that
+        // fallback is the overreach #80-D1 forbids, and — because unknown fields
+        // are tolerated — a key typo (`file_glob:`) deserializes to empty and
+        // would silently broaden jurisdiction to the entire tree. The `**/*.md`
+        // default is reserved for the explicit `--files`/`new` ad-hoc path.
+        if pc.file_globs.is_empty() {
+            return Err(crate::Error::Config(format!(
+                "'{}' declares no `file_globs`: jurisdiction must be explicit (#80-D1). \
+                 Add a `file_globs` list (check for a typo'd key), or pass explicit \
+                 `--files` globs for an ad-hoc run.",
+                cfg.project_root
+                    .join(".mdatron")
+                    .join(crate::config::CONFIG_NAME)
+                    .display()
+            )));
         }
+        cfg.file_globs = pc.file_globs;
         cfg.require_frontmatter = pc.require_frontmatter;
         cfg.vocabulary_globs = pc.vocabulary_globs;
         Ok(cfg)
@@ -2103,6 +2118,29 @@ pattern:
     // #110: the negative guard — a present schemas dir (even one seeded with a
     // real schema) must not warn. Guards against W0047 firing on a healthy
     // skeleton.
+    // #125 (roast SHO7): a present config that declares no file_globs refuses
+    // rather than silently defaulting to whole-tree `**/*.md` (the #80-D1
+    // overreach; also what a typo'd `file_glob:` key would trigger).
+    #[test]
+    fn present_config_with_no_file_globs_refuses() {
+        let proj = TempProject::new("no-globs");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        // config present, but no file_globs list at all.
+        proj.write(
+            ".mdatron/config.yaml",
+            "require_frontmatter:\n  - \"**/*.md\"\n",
+        );
+        let err = VerifyConfig::from_project(&proj.0).unwrap_err();
+        let msg = format!("{err}");
+        assert!(
+            msg.contains("no `file_globs`") || msg.contains("jurisdiction must be explicit"),
+            "a globless config must refuse, not default to whole-tree; got: {msg}"
+        );
+    }
+
     #[test]
     fn present_schemas_dir_stays_quiet() {
         let proj = TempProject::new("present-schemas");

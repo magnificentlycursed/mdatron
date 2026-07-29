@@ -34,11 +34,30 @@ impl Severity {
 ///
 /// `line` and `column` are 1-based; column may be 0 if the validator could not pinpoint
 /// the column (e.g. whole-frontmatter findings).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct Location {
     pub file: PathBuf,
     pub line: u32,
     pub column: u32,
+}
+
+/// Serialize `file` LOSSILY (#125, roast SHO4). serde's default `PathBuf`
+/// serialization errors on a non-UTF8 path, and because the whole envelope
+/// serializes as one value, a SINGLE governed file with a non-UTF8 name aborted
+/// the entire `verify --json` output (empty stdout, exit 2) — a report-
+/// suppression surface on the primary agent consumer, reachable on Unix by
+/// adding one `*.md`. `to_string_lossy` always yields valid UTF-8, so one bad
+/// path can no longer poison the array; the lossy replacement is visible in the
+/// finding's location. TTY/compact already render the path through `safe_display`.
+impl Serialize for Location {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeStruct;
+        let mut st = serializer.serialize_struct("Location", 3)?;
+        st.serialize_field("file", &self.file.to_string_lossy())?;
+        st.serialize_field("line", &self.line)?;
+        st.serialize_field("column", &self.column)?;
+        st.end()
+    }
 }
 
 impl Location {
@@ -58,7 +77,12 @@ impl Location {
     pub fn safe_display(&self) -> String {
         let mut out = String::new();
         for ch in self.file.display().to_string().chars() {
-            if ch.is_control() {
+            // Escape every code point a consumer may treat as a line break: the
+            // C0/C1 controls (Cc, incl. NEL) AND the Zl/Zp separators U+2028/U+2029
+            // (#125, roast SHO5 — safe_display previously escaped only Cc, so a
+            // hostile filename injected a forged break on the highest-traffic
+            // surface, the `--> file:line` line). Matches the SPLIT_SET partition.
+            if ch.is_control() || matches!(ch, '\u{2028}' | '\u{2029}') {
                 use std::fmt::Write;
                 let _ = write!(out, "\\x{:02X}", ch as u32);
             } else {
@@ -535,6 +559,43 @@ mod tests {
     // convention (the TTY-only `> ` prefix). The marking is a constant of the
     // type: it cannot be omitted or set to `trusted:true` at any construction
     // site, so no code path can emit adopter content marked trusted.
+    // #125 (roast SHO4): a non-UTF8 governed filename must not abort the whole
+    // `--json` envelope. Location serializes its path lossily.
+    #[cfg(unix)]
+    #[test]
+    fn location_serializes_non_utf8_path_lossily() {
+        use std::os::unix::ffi::OsStrExt;
+        let loc = Location {
+            file: std::path::PathBuf::from(std::ffi::OsStr::from_bytes(b"bad\xFF.md")),
+            line: 3,
+            column: 0,
+        };
+        let v = serde_json::to_value(&loc)
+            .expect("a non-UTF8 path must serialize lossily, not abort the envelope");
+        assert!(
+            v["file"].as_str().unwrap().contains("bad"),
+            "lossy path present: {v}"
+        );
+        assert_eq!(v["line"], 3);
+    }
+
+    // #125 (roast SHO5): safe_display escapes the Zl/Zp line separators
+    // (U+2028/U+2029), not only Cc — so a hostile filename cannot forge a break
+    // on the `--> file:line` surface.
+    #[test]
+    fn safe_display_escapes_line_and_paragraph_separators() {
+        let loc = Location::whole_file("a\u{2028}b\u{2029}c.md");
+        let d = loc.safe_display();
+        assert!(
+            !d.contains('\u{2028}') && !d.contains('\u{2029}'),
+            "Zl/Zp must be escaped, not raw: {d:?}"
+        );
+        assert!(
+            d.contains("\\x2028") && d.contains("\\x2029"),
+            "escaped visibly: {d}"
+        );
+    }
+
     #[test]
     fn quoted_region_serializes_with_untrusted_marking() {
         let q = QuotedRegion {
