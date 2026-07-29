@@ -2087,12 +2087,13 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-29T09:19:14.903045Z",
-      "updated_at": "2026-07-29T09:19:31.397529Z",
+      "updated_at": "2026-07-29T09:19:36.867725Z",
       "labels": [
         "bug"
       ],
       "related": [
-        "18545077-3dbb-4401-847d-c6b4bdbe7d78"
+        "18545077-3dbb-4401-847d-c6b4bdbe7d78",
+        "8c4eab12-ffd1-4077-9afa-29257925a0aa"
       ]
     },
     "88be1f06-20a9-48da-8b35-4df657fbee27": {
@@ -2257,12 +2258,13 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T08:53:01.499674Z",
-      "updated_at": "2026-07-29T08:53:19.082573Z",
+      "updated_at": "2026-07-29T09:19:36.867725Z",
       "labels": [
         "bug"
       ],
       "related": [
-        "18545077-3dbb-4401-847d-c6b4bdbe7d78"
+        "18545077-3dbb-4401-847d-c6b4bdbe7d78",
+        "87e35dbb-43b8-4ebb-a0f2-06777d8f956d"
       ]
     },
     "8d5c2bfc-5f17-4577-bbab-0434c455005d": {
@@ -4740,8 +4742,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T09:19:31.397529Z",
+    "timestamp": "2026-07-29T09:19:36.867725Z",
     "agent_id": "79Ig",
-    "agent_seq": 384
+    "agent_seq": 385
   }
 }
