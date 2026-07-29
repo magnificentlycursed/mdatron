@@ -1098,6 +1098,8 @@ mod tests {
         let idx = Index {
             name: "matrix".to_string(),
             entries,
+            provenance: Default::default(),
+            sources: Default::default(),
         };
         let mut registry = IndexRegistry::new();
         registry.insert(idx);
@@ -1128,6 +1130,8 @@ mod tests {
         let idx = Index {
             name: "composition-matrix".to_string(),
             entries,
+            provenance: Default::default(),
+            sources: Default::default(),
         };
         let mut registry = IndexRegistry::new();
         registry.insert(idx);

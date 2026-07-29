@@ -25,7 +25,7 @@
 //! validated no-follow handle from [`crate::confine`], so a symlink at any
 //! path component is refused.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -44,6 +44,14 @@ use super::types::KeyDecl;
 pub struct Index {
     pub name: String,
     pub entries: BTreeMap<String, Value>,
+    /// Provenance (#100): each key mapped to the root-relative source files that
+    /// produced it. A key produced by more than one file is a shared-key edge in
+    /// the dependency graph. Does not change `entries` semantics (still last-wins).
+    pub provenance: BTreeMap<String, BTreeSet<PathBuf>>,
+    /// Every root-relative file the `source` glob resolved to, whether or not it
+    /// produced a key (#100). The rule-reference edge connects a rule's context
+    /// files to these source files.
+    pub sources: BTreeSet<PathBuf>,
 }
 
 impl Index {
@@ -155,6 +163,8 @@ fn build_index(project_root: &Path, decl: &KeyDecl) -> Result<Index, IndexError>
     // the trimmed value.
     let source = decl.source.trim();
     let mut entries: BTreeMap<String, Value> = BTreeMap::new();
+    let mut provenance: BTreeMap<String, BTreeSet<PathBuf>> = BTreeMap::new();
+    let mut sources: BTreeSet<PathBuf> = BTreeSet::new();
 
     for rel in resolve_source(project_root, source)? {
         let display = project_root.join(rel.as_path());
@@ -168,12 +178,32 @@ fn build_index(project_root: &Path, decl: &KeyDecl) -> Result<Index, IndexError>
                 error: e.to_string(),
             },
         })?;
-        extract_into(&display, file, &decl.select, &decl.indexed_by, &mut entries)?;
+        let rel_buf = rel.as_path().to_path_buf();
+        sources.insert(rel_buf.clone());
+        // Extract per file, then merge — so provenance records which file
+        // produced each key while `entries` keeps its cross-file last-wins.
+        let mut file_entries: BTreeMap<String, Value> = BTreeMap::new();
+        extract_into(
+            &display,
+            file,
+            &decl.select,
+            &decl.indexed_by,
+            &mut file_entries,
+        )?;
+        for (k, v) in file_entries {
+            provenance
+                .entry(k.clone())
+                .or_default()
+                .insert(rel_buf.clone());
+            entries.insert(k, v);
+        }
     }
 
     Ok(Index {
         name: decl.name.clone(),
         entries,
+        provenance,
+        sources,
     })
 }
 
