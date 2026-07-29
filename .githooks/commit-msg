@@ -30,6 +30,11 @@ fail() {
     echo "  A DESIGN.md change cites the issue and the ratified review/decision" >&2
     echo "  that authorized it. If this is a step-5 reconciliation recording an" >&2
     echo "  already-ratified decision, cite that decision's issue." >&2
+    # Owned-bypass stance (#99, vsdd-cli): this is friction, not a tamper-proof
+    # block — it cannot stop a determined bypass, only make the honest path easy
+    # and the deviation explicit. CI re-derives the gate independently.
+    echo "  (Genuine emergency: git commit --no-verify — the deviation is yours" >&2
+    echo "   to record. CI still re-checks this over the checker's own wiring.)" >&2
     exit 1
 }
 
