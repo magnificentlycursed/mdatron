@@ -27,5 +27,6 @@
   "MDATRON-W0043": "vocabulary-scope-matches-nothing",
   "MDATRON-W0044": "vocabulary-term-status-conflict",
   "MDATRON-W0045": "schema-class-unrouted",
-  "MDATRON-W0046": "jurisdiction-glob-matches-nothing"
+  "MDATRON-W0046": "jurisdiction-glob-matches-nothing",
+  "MDATRON-W0047": "schema-dir-missing"
 }
