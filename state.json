@@ -1,5 +1,5 @@
 {
-  "next_display_id": 105,
+  "next_display_id": 106,
   "next_comment_id": 297,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -33,6 +33,7 @@
     "49197eb8-d2b6-4462-9185-1e9065d2d847": 3,
     "52ecc683-68d9-47ce-934f-0d9b43c371f4": 70,
     "588a808f-de8c-4824-8347-2ed0a5891594": 44,
+    "59693794-3a00-4af8-a42f-477ed3766f24": 105,
     "5eb9d32c-b382-4b47-8abf-7b7f75de5916": 34,
     "5ee2ea80-c483-44f0-815d-81d8fa6cd9f4": 88,
     "6135d3c6-44c0-43d1-8080-dd5fd5cda222": 23,
@@ -1319,6 +1320,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAXRMVpRr4ioSmF3ImJ1q7drH+/QrTveVmFsIOD/9ZzWyQP+M5G0+4ZiI5rTfu1iUrpaUEGPb3AY6O7YqmcbsoAw=="
         }
       }
+    },
+    "59693794-3a00-4af8-a42f-477ed3766f24": {
+      "uuid": "59693794-3a00-4af8-a42f-477ed3766f24",
+      "display_id": 105,
+      "title": "audit-signal #1: files_checked reports files VALIDATED, not files-with-findings (a clean run over N files must report N, not 0)",
+      "status": "open",
+      "priority": "high",
+      "created_by": "79Ig",
+      "created_at": "2026-07-29T08:04:11.467066Z",
+      "updated_at": "2026-07-29T08:04:11.467066Z"
     },
     "5eb9d32c-b382-4b47-8abf-7b7f75de5916": {
       "uuid": "5eb9d32c-b382-4b47-8abf-7b7f75de5916",
@@ -4568,8 +4579,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T08:00:34.823141Z",
+    "timestamp": "2026-07-29T08:04:11.467066Z",
     "agent_id": "79Ig",
-    "agent_seq": 351
+    "agent_seq": 352
   }
 }
