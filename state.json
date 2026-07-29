@@ -1,6 +1,6 @@
 {
   "next_display_id": 104,
-  "next_comment_id": 293,
+  "next_comment_id": 294,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -3519,7 +3519,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T07:22:08.149420Z",
-      "updated_at": "2026-07-29T07:23:47.017704Z",
+      "updated_at": "2026-07-29T07:42:27.181877Z",
       "labels": [
         "feature"
       ],
@@ -3527,6 +3527,15 @@
         "a0e4b4b2-63f5-41c1-a62d-7713001a66d8"
       ],
       "comments": {
+        "564c0418-b56c-40d5-bcd5-3e97929e215a": {
+          "display_id": 293,
+          "author": "79Ig",
+          "content": "PHASE 3 SECURITY COLD REVIEW — 1 blocker + should-fixes. CLEAN: governed-file BODY read TOCTOU closed (open_confined returns the validated handle, that handle is read, no re-open by path); symlink refusal complete at every component (openat O_NOFOLLOW per-component); catalog tests unaffected.\n\nA (BLOCKER — contract not met): the snapshot covers ONLY the governed-file body read. IndexRegistry::build reads index sources BEFORE the snapshot; pin::check + cite::check_file read fresh from disk AFTER the seam. So 'all checks run against snapshot bytes' is FALSE — a concurrent mutation gives an inconsistent cross-check view within one run (rules evaluate body version B against an index built from A; pin certifies restored bytes Y while Layer-1/2 validated X). This is the CORE of sub-lane A's immutable-snapshot deliverable; achieving it fully requires unifying index/pin/cite reads through one snapshot built BEFORE any check. DISPOSITION: what's built (confined body read + symlink refusal + seam) is a real security fix but is PARTIAL — I will CORRECT THE OVERCLAIM in the code (not claim full immutability) and route the full snapshot-unification as the remaining A work for an owned decision (big cross-module refactor).\n\nB (should-fix): the seam covers only the body map; pin/cite read post-seam so 'deterministic via seam' is false for them. The immutability test only exercises the schema path (no pins/citations) — reframe honestly.\n\nC (should-fix, DoS): a non-UTF8/unreadable governed file -> VerifyError::Io aborts the WHOLE run (zero findings for the tree) — a denial-of-verification lever, and inconsistent with the symlink E0012 skip. FIX in-lane: a localized finding (like E0001), not a pipeline kill.\n\nD (should-fix, silent regression): a glob-matched governed file whose rel isn't lexically confinable (file_globs with ..) is silently skipped with NO finding (pre-#103 verified it via raw read). FIX in-lane: emit a finding, never a silent drop.\n\nE (should-fix, DoS) -> ROUTE to sub-lane D: no per-file/aggregate snapshot size bound (DESIGN lists these as declared bounds); incremental reads the whole tree into memory. Bounds are literally sub-lane D's scope.\n\nF (nit) -> follow-on: E0012 explain page is key-source-specific; reused for governed files (doc muddiness, no test breaks). Generalize the page across families.",
+          "created_at": "2026-07-29T07:42:27.159003Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAoDqlDSI5xnyfmySaChUNVB3a2eFhfdA9oUINm1TmBXbsQ45enmSIktcgKhGcoyJyjyWuv3uYD8aG5dNTZ3JmBw=="
+        },
         "90a0d369-0dd3-4dc9-9584-62b186c1dd6a": {
           "display_id": 292,
           "author": "79Ig",
@@ -4512,8 +4521,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T07:23:47.017704Z",
+    "timestamp": "2026-07-29T07:42:27.181877Z",
     "agent_id": "79Ig",
-    "agent_seq": 344
+    "agent_seq": 345
   }
 }
