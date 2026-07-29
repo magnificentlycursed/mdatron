@@ -296,6 +296,13 @@ pub fn verify_report(config: &VerifyConfig) -> Result<VerifyReport, VerifyError>
         }
     }
 
+    // #95: registry-level vocabulary findings (a registered-and-draft term
+    // resolves to draft with a W0044 warning) — file-independent, once per run.
+    if let Some(v) = vocab.as_ref() {
+        let vocab_path = project_root.join(".mdatron").join(crate::vocab::VOCAB_NAME);
+        crate::vocab::registry_findings(v, &vocab_path, &mut findings);
+    }
+
     findings.sort_by(|a, b| {
         a.location
             .file
@@ -1332,6 +1339,38 @@ mod tests {
             1,
             "no vocabulary_globs means the register still scans; got {findings:?}"
         );
+    }
+
+    // #95: a term declared both registered and draft resolves to draft (the
+    // permissive status) and names a W0044 warning — conflicting adopter data
+    // yields a diagnostic, not a silent first-wins pick (DESIGN acceptance).
+    #[test]
+    fn registered_and_draft_term_resolves_to_draft_with_warning() {
+        let proj = vocab_project(
+            "vocab-status-conflict",
+            "terms:\n- term: fixture\n  status: registered\n  sense: \"a\"\n- term: fixture\n  status: draft\n  sense: \"b\"\n",
+            "The **fixture** holds. The **coinage** floats.\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert_eq!(
+            codes_of(&findings, "MDATRON-W0044"),
+            1,
+            "the registered-and-draft conflict is warned once; got {findings:?}"
+        );
+        // Resolved to draft (in the registry, so exempt) — only the genuinely
+        // unregistered coinage flags E0090.
+        assert_eq!(
+            codes_of(&findings, "MDATRON-E0090"),
+            1,
+            "only the unregistered 'coinage' flags; got {findings:?}"
+        );
+        let w = findings.iter().find(|f| f.code == "MDATRON-W0044").unwrap();
+        assert!(
+            w.quoted.iter().any(|q| q.content == "fixture"),
+            "the conflicting term rides a quoted region"
+        );
+        assert!(!w.message.contains("fixture"), "the term is not inline");
     }
 
     // RED GATE (#85): a reserved-status term appearing in prose is flagged
