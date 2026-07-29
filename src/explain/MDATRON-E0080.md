@@ -11,16 +11,31 @@ could not be read, the project layout was malformed at the structural level, or
 JSON-output serialization itself failed. The pipeline did not run to
 completion; no finding-level diagnostics were emitted for the project files.
 
+`E0080` is a single code spanning several failure senses. Under `--json` the
+envelope carries a structured `pipeline_error` object that names the specific
+sense so a machine consumer need not parse prose (#112):
+
+```json
+"pipeline_error": { "code": "MDATRON-E0080", "kind": "config", "message": "…" }
+```
+
+`kind` is one of: `config` (jurisdiction/config load), `io` (a read failed),
+`schema_load`, `pattern_load`, `glob` (a bad `file_globs` pattern),
+`frontmatter`, `index_build`, `expr_parse`, `eval` (a rule expression). The
+object is present only when `pipeline_status` is `failed`, and — unlike the
+stderr `= note:` — it survives `--quiet`, so `--json --quiet` (the CI mode)
+receives the reason in-band.
+
 ## How to fix
 
-Read the accompanying `= note:` line for the specific failure shape, then
+Read the `pipeline_error.kind` / `= note:` for the specific failure sense, then
 apply the matching corrective pattern below.
 
 **Common (operator-fixable):**
 
 - **Missing `.mdatron/` directory.** The project has not been initialized.
-  Create `.mdatron/schemas/` and `.mdatron/patterns/` at the project root
-  (v0.1.x: `mdatron init` will scaffold this for you).
+  Run `mdatron init` to scaffold `.mdatron/` (schemas, patterns, routes,
+  registry, pins, config, and the init manifest) at the project root.
 - **Malformed schema or pattern file.** A `.mdatron/schemas/*.json` or
   `.mdatron/patterns/*.yaml` file failed to parse. Validate the file
   out-of-band (`jq < schema.json`, `yq < pattern.yaml`) to surface the

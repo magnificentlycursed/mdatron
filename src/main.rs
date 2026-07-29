@@ -350,7 +350,7 @@ fn cmd_verify(
     quiet: bool,
     changed: Option<PathBuf>,
 ) -> ExitCode {
-    use mdatron::output::{Families, Output, PipelineStatus};
+    use mdatron::output::{Families, Output, PipelineError, PipelineStatus};
 
     let root = match project_root.map(Ok).unwrap_or_else(std::env::current_dir) {
         Ok(r) => r,
@@ -446,6 +446,15 @@ fn cmd_verify(
         }
     };
 
+    // A failed pipeline carries its reason INTO the envelope (#112): the stderr
+    // note is suppressed by --quiet, so a --json --quiet consumer needs the cause
+    // in-band. `kind` disambiguates E0080's senses.
+    let pipeline_error = pipeline_err.as_ref().map(|e| PipelineError {
+        code: "MDATRON-E0080".into(),
+        kind: e.kind().into(),
+        message: e.to_string(),
+    });
+
     // files_checked (#105) is the true count of files this run VALIDATED,
     // threaded from the report — a clean run over N files reports N, not a count
     // of files that happened to produce findings (the old v0.1.0 stub).
@@ -453,6 +462,7 @@ fn cmd_verify(
         findings,
         files_checked,
         pipeline_status,
+        pipeline_error,
         families,
         env!("CARGO_PKG_VERSION"),
     );

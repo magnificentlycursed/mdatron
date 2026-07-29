@@ -141,6 +141,48 @@ fn verify_refuses_configless_tree_but_files_flag_escapes() {
     );
 }
 
+// #112 (vsdd items 5 + 6): a pipeline failure under `--json --quiet` (the
+// documented CI mode) must carry the reason IN the envelope — the stderr note is
+// suppressed by `-q`, so a machine consumer got `findings: []` with no cause. A
+// `pipeline_error{code,kind,message}` fixes it, and `kind` disambiguates the
+// many senses E0080 alone conflated.
+#[test]
+fn pipeline_failure_json_quiet_carries_structured_reason() {
+    let proj = TempProject::new("pipeline-err");
+    std::fs::create_dir_all(proj.path().join(".mdatron/schemas")).unwrap();
+    std::fs::remove_file(proj.path().join(".mdatron/config.yaml")).unwrap();
+    proj.write("doc.md", "# prose\n");
+
+    let out = Command::new(mdatron_bin())
+        .args(["verify", "--project-root"])
+        .arg(proj.path())
+        .args(["--json", "-q"])
+        .output()
+        .expect("mdatron binary executes");
+    assert_eq!(out.status.code(), Some(2), "pipeline failure exits 2");
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let env: serde_json::Value = serde_json::from_str(stdout.trim())
+        .unwrap_or_else(|e| panic!("stdout is a JSON envelope: {e}; got {stdout:?}"));
+    assert_eq!(env["pipeline_status"], "failed");
+    let pe = &env["pipeline_error"];
+    assert!(
+        pe.is_object(),
+        "the envelope must carry pipeline_error even under -q; got {env}"
+    );
+    assert_eq!(pe["code"], "MDATRON-E0080");
+    assert_eq!(
+        pe["kind"], "config",
+        "the config-load failure kind is disambiguated"
+    );
+    assert!(
+        pe["message"]
+            .as_str()
+            .unwrap_or("")
+            .contains("no jurisdiction declared"),
+        "the reason rides in the envelope (survives -q): {pe}"
+    );
+}
+
 // #44 / #80 D4: `verify --compact` emits size-capped agent-context blocks on
 // stdout — every block within the 512-byte contract limit, adopter content
 // prefix-marked, exit code unchanged.
