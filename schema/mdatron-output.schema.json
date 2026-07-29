@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://mdatron.dev/schema/mdatron-output/1.1.0",
+  "$id": "https://mdatron.dev/schema/mdatron-output/1.2.0",
   "title": "mdatron verify --json output envelope",
-  "description": "The machine interface of `mdatron verify --json`. Versioned: mdatron_output_version tracks THIS schema (currently 1.1.0). A published contract (DESIGN.md § Diagnostics are a versioned contract) — consumers pin and validate against it.",
+  "description": "The machine interface of `mdatron verify --json`. Versioned: mdatron_output_version tracks THIS schema (currently 1.2.0). A published contract (DESIGN.md § Diagnostics are a versioned contract) — consumers pin and validate against it.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -16,7 +16,7 @@
   "properties": {
     "mdatron_output_version": {
       "type": "string",
-      "const": "1.1.0",
+      "const": "1.2.0",
       "description": "Semver of this envelope schema. Moves with the schema; a change here signals a contract change."
     },
     "mdatron_version": {
@@ -41,7 +41,7 @@
     "families": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Per-verify activity of the five check families. active = data supplied and the family ran (invoked, not fired).",
+      "description": "Per-verify activity of the five check families as a tri-state plus a reason: active = data supplied and the check ran this pass; inert = configured but did no work (e.g. scoped to no file); inactive = not configured. The reason makes the audit signal falsifiable.",
       "required": ["schema", "route", "pin", "vocabulary", "citation"],
       "properties": {
         "schema": { "$ref": "#/$defs/activity" },
@@ -58,7 +58,13 @@
   },
   "$defs": {
     "activity": {
-      "enum": ["active", "inactive"]
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "reason"],
+      "properties": {
+        "state": { "enum": ["active", "inert", "inactive"] },
+        "reason": { "type": "string" }
+      }
     },
     "finding": {
       "type": "object",
