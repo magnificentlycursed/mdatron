@@ -1,6 +1,6 @@
 {
   "next_display_id": 110,
-  "next_comment_id": 306,
+  "next_comment_id": 307,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -2269,7 +2269,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T08:53:01.499674Z",
-      "updated_at": "2026-07-29T09:20:10.262850Z",
+      "updated_at": "2026-07-29T09:24:25.875295Z",
       "labels": [
         "bug"
       ],
@@ -2278,6 +2278,15 @@
         "87e35dbb-43b8-4ebb-a0f2-06777d8f956d"
       ],
       "comments": {
+        "c2dbddce-a270-476b-a873-ec504cb2054d": {
+          "display_id": 306,
+          "author": "79Ig",
+          "content": "Merged to main (operator-ratified 2026-07-29); gauntlet green.",
+          "created_at": "2026-07-29T09:24:25.856780Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAgC1RPQ4EgXg+4sp8Rqk35qky5kBQ33si/CTaoMezmFvZdLgcPIJ0CJ+Sy7RQp3RBLN3gDtFcI2S+FL7YFwmjBA=="
+        },
         "df7ff909-dab4-44df-92f0-12bf9e18dc19": {
           "display_id": 305,
           "author": "79Ig",
@@ -4764,8 +4773,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T09:20:10.262850Z",
+    "timestamp": "2026-07-29T09:24:25.875295Z",
     "agent_id": "79Ig",
-    "agent_seq": 387
+    "agent_seq": 388
   }
 }
