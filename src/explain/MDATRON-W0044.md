@@ -2,7 +2,7 @@
 
 **Severity:** warning
 **Status:** accepted
-**Introduced in:** 0.3.0
+**Introduced in:** 0.4.0
 
 ## What this means
 

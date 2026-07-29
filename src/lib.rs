@@ -16,11 +16,12 @@
 //! mdatron is descended from Schematron (ISO/IEC 19757-3). It is **not** related to the
 //! TRON blockchain. The `-tron` suffix evokes Schematron, the same way `jsontron` did for JSON.
 //!
-//! # Implementation state (v0.1.0)
+//! # Implementation state
 //!
 //! The verify pipeline is implemented end to end: frontmatter parsing, JSON Schema
 //! dispatch (Layer 1), DSL evaluation with the cross-file `key()` index (Layer 2),
-//! and rustc-shaped + JSON output. See CHANGELOG.md for the surface shipped per release.
+//! and rustc-shaped + JSON output. See CHANGELOG.md for the surface shipped per
+//! release (this crate is versioned in `Cargo.toml`, not pinned in this header).
 
 pub mod cite;
 pub mod codes;
