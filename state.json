@@ -1,6 +1,6 @@
 {
   "next_display_id": 100,
-  "next_comment_id": 268,
+  "next_comment_id": 269,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -1427,7 +1427,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T02:44:16.945659Z",
-      "updated_at": "2026-07-29T04:20:25.124164Z",
+      "updated_at": "2026-07-29T04:23:43.234175Z",
       "labels": [
         "enhancement"
       ],
@@ -1435,6 +1435,15 @@
         "2881253a-3641-4d7b-a6c1-e09cbbd2d140"
       ],
       "comments": {
+        "84c0010a-a59e-4aeb-aeda-bc21c6cc66b7": {
+          "display_id": 268,
+          "author": "79Ig",
+          "content": "EXIT (rescoped) — delivered the enforcement-grades model on feature/99-session-stop-seam (48062bd), NOT a session-stop hook. Per vsdd-cli #819: dropped the leaky session-stop attempt (grade-2 friction that can't self-protect); rewrote docs/methodology-enforcement.md around detection/friction/CI-backed-block/tamper-proof grades; checker-edit now recorded as caught by the CI-backed block (guardrail seeds re-derive integrity over the checker's own wiring) + friction (commit-time hook) + owned-bypass (--no-verify); tamper-proof residual named to the corroboration oracle (vsdd #815) as the honest boundary. methodology.md's three-mechanisms framing updated (durable third leg = CI-tested integrity). commit-msg carries the owned-bypass stance. Terminology re-grounded seam->guardrail. Gauntlet green: fmt/clippy clean, methodology_seams 5/5 (the CI-backed block validated this very edit to the checker), self-verify clean, pin clean. AWAITING operator merge gate. Remaining #96 lanes: routing-before-fix-close + round-result parity (both crosslink-query, near the vsdd-cli boundary — candidates to defer per the honest boundary).",
+          "created_at": "2026-07-29T04:23:43.220343Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA/GOeiZTf5ZOI0eB3BPu2bXywb9mQJIDkASgrhROwuvDhXqyJGHnwtsb/ySMI24OQcXb842UvzZKxMtGmIXW+Bw=="
+        },
         "a23a0751-7663-49c9-a26d-0d949a3c10be": {
           "display_id": 265,
           "author": "79Ig",
@@ -4212,8 +4221,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T04:20:25.124164Z",
+    "timestamp": "2026-07-29T04:23:43.234175Z",
     "agent_id": "79Ig",
-    "agent_seq": 288
+    "agent_seq": 289
   }
 }
