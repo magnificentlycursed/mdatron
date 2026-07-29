@@ -1,6 +1,6 @@
 {
   "next_display_id": 99,
-  "next_comment_id": 263,
+  "next_comment_id": 264,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -366,7 +366,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T02:01:06.243338Z",
-      "updated_at": "2026-07-29T02:35:11.498728Z",
+      "updated_at": "2026-07-29T02:38:58.954879Z",
       "labels": [
         "enhancement"
       ],
@@ -383,6 +383,15 @@
           "kind": "decision",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABApbHb3x+Mah5qQo+826cCL1YgcDmKSAC8jjrsBSabwmOD4+BVd6iJaC8CfaUesT/k/BzexX3r2Cjbkx6ukO2WCg=="
+        },
+        "8fea5a41-1239-4b57-ab4b-4ae098ddf0e8": {
+          "display_id": 263,
+          "author": "79Ig",
+          "content": "2c/5 EXIT — governed-estate register (naming-register half) bound on feature/97-mdatron-estate-vocabulary (88fac1c). mdatron's own engine now enforces its naming register on docs/methodology*.md via the vocabulary_globs config field; review-log's 1057 legacy handles stay walked+routed but unscanned (frozen evidence; vsdd-cli precedent confirmed). Coined S1-S5/E-a handles STRUCK to plain names (§5). Gauntlet: fmt clean, clippy -D warnings clean, full suite green, self-verify clean, pin 0 errors. Seeds: 3 vocabulary_globs unit tests (incl. frontmatter branch, F2) + repo-scope guard (F1 repo-risk). Phase-3 cold review: no blockers; F2/F3 fixed in-lane, F1 loudness routed to #98. The amendment-citation seam gated this very DESIGN commit and passed it on the citation — dogfood governing itself. AWAITING operator ratification at the merge gate (§3 exit). Follow-on #98 (zero-match loudness). Remaining #96 lanes: routing-before-fix-close, round-result parity, session-stop (S4 next per sequencing).",
+          "created_at": "2026-07-29T02:38:58.938922Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABANrjQAw65+fukrGc6aA/ye4cYF5FML9BXk7LM0u+fsUg+pNpG7tWZTYOnIhLMhQPNGCDlnFOjrcZeOkg9yMsYCA=="
         },
         "d7176107-0105-49f3-bb1b-526e94469551": {
           "display_id": 260,
@@ -4146,8 +4155,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T02:35:17.725408Z",
+    "timestamp": "2026-07-29T02:38:58.954879Z",
     "agent_id": "79Ig",
-    "agent_seq": 277
+    "agent_seq": 278
   }
 }
