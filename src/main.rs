@@ -374,7 +374,7 @@ fn cmd_verify(
         c.file_globs = files;
         Ok(c)
     };
-    let (findings, families, files_checked, pipeline_status, pipeline_err) = match config_result {
+    let (mut findings, families, files_checked, pipeline_status, pipeline_err) = match config_result {
         Err(e) => (
             Vec::new(),
             Families::all_inactive(),
@@ -445,6 +445,22 @@ fn cmd_verify(
             }
         }
     };
+
+    // #113 (vsdd item 7): advertise `mdatron explain <code>` only when a page
+    // actually resolves. A pattern-rule finding carries an adopter-defined code
+    // (e.g. VSDD-Exxxx) mdatron has no page for; a dead pointer the same binary
+    // rejects is worse than none. The explain catalog lives in this binary, so
+    // this is where the pointer is validated — nulling it corrects the tty,
+    // compact, and JSON forms alike (all read finding.explain_ref).
+    for f in &mut findings {
+        let unresolvable = f
+            .explain_ref
+            .as_deref()
+            .is_some_and(|code| explain::lookup(code).is_none());
+        if unresolvable {
+            f.explain_ref = None;
+        }
+    }
 
     // A failed pipeline carries its reason INTO the envelope (#112): the stderr
     // note is suppressed by --quiet, so a --json --quiet consumer needs the cause
