@@ -1,5 +1,5 @@
 {
-  "next_display_id": 122,
+  "next_display_id": 123,
   "next_comment_id": 326,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -11,6 +11,7 @@
     "1a48e540-17b6-4a8f-9681-62cffd446bc3": 14,
     "1b58cd40-d953-4626-b2c8-be53d696aee3": 19,
     "1ba1bc71-1b50-4f6c-b672-1524a61a3096": 116,
+    "1cafa0f3-dcdd-491b-b455-52af79c6c85d": 122,
     "1da67425-f44d-40d6-8ba1-2d2ed768de38": 97,
     "1ff675c3-889e-4de4-84da-352debc4b1f7": 5,
     "224e7d50-2f87-4c2e-abf7-317c23ccbada": 46,
@@ -496,6 +497,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAxrZdLcf81UTXnTQSjaHWsPBqkue4Rzfk+oSn6rdG1gTSztwLcvsx3bo/zcKUjvL+2LxgoQU+gVAYNgqWgKGECQ=="
         }
       }
+    },
+    "1cafa0f3-dcdd-491b-b455-52af79c6c85d": {
+      "uuid": "1cafa0f3-dcdd-491b-b455-52af79c6c85d",
+      "display_id": 122,
+      "title": "phase-3 adversarial review (The VDD Roast): full-app pre-publish roast + polish + docs/README, before crates.io #48",
+      "status": "open",
+      "priority": "high",
+      "created_by": "79Ig",
+      "created_at": "2026-07-29T14:23:17.967852Z",
+      "updated_at": "2026-07-29T14:23:17.967852Z"
     },
     "1da67425-f44d-40d6-8ba1-2d2ed768de38": {
       "uuid": "1da67425-f44d-40d6-8ba1-2d2ed768de38",
@@ -5191,8 +5202,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T14:06:28.374125Z",
+    "timestamp": "2026-07-29T14:23:17.967852Z",
     "agent_id": "79Ig",
-    "agent_seq": 477
+    "agent_seq": 478
   }
 }
