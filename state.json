@@ -326,7 +326,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T07:55:05.605670Z",
-      "updated_at": "2026-07-29T10:44:43.800625Z",
+      "updated_at": "2026-07-29T10:56:08.935437Z",
       "labels": [
         "enhancement"
       ],
@@ -334,6 +334,7 @@
         "4237af12-ff53-4d2f-beac-cff1fe994e9a",
         "59693794-3a00-4af8-a42f-477ed3766f24",
         "72e27489-2e30-4b01-9833-62299f42c542",
+        "82cb584a-cbc0-4ddd-9c36-0bd7a641a7a5",
         "87e35dbb-43b8-4ebb-a0f2-06777d8f956d",
         "8c4eab12-ffd1-4077-9afa-29257925a0aa",
         "b696933e-86e0-4ffa-8930-363e6dd16bfa",
@@ -2006,9 +2007,12 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T10:55:47.850451Z",
-      "updated_at": "2026-07-29T10:55:52.287538Z",
+      "updated_at": "2026-07-29T10:56:08.935437Z",
       "labels": [
         "security"
+      ],
+      "related": [
+        "18545077-3dbb-4401-847d-c6b4bdbe7d78"
       ]
     },
     "8368834a-bc3c-4500-a10a-7dad88e1c9ff": {
@@ -4955,8 +4959,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T10:56:00.575662Z",
+    "timestamp": "2026-07-29T10:56:08.935437Z",
     "agent_id": "79Ig",
-    "agent_seq": 427
+    "agent_seq": 428
   }
 }
