@@ -1,8 +1,9 @@
 {
-  "next_display_id": 121,
+  "next_display_id": 122,
   "next_comment_id": 325,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
+    "0943c25f-129e-492b-a326-fff0d809c6c0": 121,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
     "12afc5cc-5cb5-4494-8835-3d16d53616f6": 93,
     "15d7981a-008d-4805-8a69-f3e4f414caf0": 75,
@@ -208,6 +209,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAWISH+jE2wa+NM7fSL8jviHUL10RkHU6DvvyG3/3Yerhh2TSmxB0XlU8X2At8VKa7byo1MMRhx5IWNgoGmzzKCw=="
         }
       }
+    },
+    "0943c25f-129e-492b-a326-fff0d809c6c0": {
+      "uuid": "0943c25f-129e-492b-a326-fff0d809c6c0",
+      "display_id": 121,
+      "title": "verify: --strict/--deny-warnings to escalate warnings to a failing exit (gate-authors)",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-07-29T14:06:11.265548Z",
+      "updated_at": "2026-07-29T14:06:11.265548Z"
     },
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": {
       "uuid": "1198bf2d-1428-40e0-8e18-cbf40d2df45d",
@@ -5162,8 +5173,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T14:06:06.490080Z",
+    "timestamp": "2026-07-29T14:06:11.265548Z",
     "agent_id": "79Ig",
-    "agent_seq": 473
+    "agent_seq": 474
   }
 }
