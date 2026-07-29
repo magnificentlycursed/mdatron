@@ -1,11 +1,22 @@
 # mdatron configuration — seeded by `mdatron init`; adopter-owned (#77).
 # file_globs declare what is in mdatron's jurisdiction; files outside them are
-# not walked. mdatron's own governed corpus is the review-log typed markdown —
+# not walked. mdatron's own governed corpus is the review-log typed markdown
+# plus the methodology docs that govern mdatron's own development (#96/#97) —
 # tooling markdown deployed by the chassis (.claude/, .crosslink/) is not ours
 # to validate.
 file_globs:
   - "review-log/**/*.md"
+  - "docs/methodology*.md"
 # Opt-in loudness (#80 D2): every review-log entry must carry frontmatter —
 # a naked file in the corpus warns (MDATRON-W0040) instead of passing silently.
+# The methodology docs are prose-only (no frontmatter), so they are not listed.
 require_frontmatter:
   - "review-log/**/*.md"
+# Vocabulary scope (#97): the naming register (methodology §5) applies only to
+# the forward-looking governance prose. Setting this list gates the WHOLE
+# vocabulary family (E0090-E0094) to the matched files. The historical
+# review-log is walked and routed but NOT scanned — its retired finding-handle
+# scheme (AIE-F2, …, an E0091 shape) is frozen evidence, not a coinage to
+# relitigate (vsdd-cli precedent: no vocab over its review-log either).
+vocabulary_globs:
+  - "docs/methodology*.md"

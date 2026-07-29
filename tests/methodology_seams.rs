@@ -2,11 +2,11 @@
 //! catches its escape-corpus dodge (#96; `docs/methodology-enforcement.md`).
 //! "If your seams don't catch each, they're insufficient."
 //!
-//! S1 (amendment discipline): the `commit-msg` hook refuses a governing
+//! The amendment-citation seam: the `commit-msg` hook refuses a governing
 //! DESIGN.md change whose message does not cite its authorizing issue and a
-//! ratified review/decision — catching escape E-e (forge a self-authored
-//! record). Driven in a self-contained temp git repo so the seed does not
-//! depend on ambient git config.
+//! ratified review/decision — catching the forged-record dodge (a
+//! self-authored gate record). Driven in a self-contained temp git repo so the
+//! seed does not depend on ambient git config.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -65,10 +65,10 @@ fn commit(root: &Path, file: &str, contents: &str, msg: &str) -> bool {
     git(root, &["commit", "-q", "-m", msg]).status.success()
 }
 
-// S1 / escape E-e: a DESIGN change with a self-asserting (uncited) message is
-// refused; the same change with an issue + ratification citation is accepted.
+// Forged-record dodge: a DESIGN change with a self-asserting (uncited) message
+// is refused; the same change with an issue + ratification citation is accepted.
 #[test]
-fn s1_design_amendment_requires_ratification_citation() {
+fn amendment_citation_requires_ratification() {
     let root = seeded_repo("s1");
 
     // Forged: bare message, no authorizing citation -> refused, no commit.
@@ -99,12 +99,12 @@ fn s1_design_amendment_requires_ratification_citation() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-// S1 scope (routed finding, #96): an integration merge of a DESIGN-touching
+// Seam scope (routed finding, #96): an integration merge of a DESIGN-touching
 // branch is NOT gated — the amendment discipline gates the authoring commit
 // (still refused above), not its integration. Pins the corrected scope so a
 // future weakening that also un-gated authoring would fail the seed above.
 #[test]
-fn s1_does_not_gate_integration_merges() {
+fn amendment_citation_ignores_integration_merges() {
     let root = seeded_repo("s1-merge");
 
     // Author the DESIGN change on a branch with a properly cited message.
@@ -134,21 +134,45 @@ fn s1_does_not_gate_integration_merges() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-// S1 boundary: a non-DESIGN change is not gated (the amendment discipline is
+// Seam boundary: a non-DESIGN change is not gated (the amendment discipline is
 // specific to the governing document).
 #[test]
-fn s1_does_not_gate_non_design_commits() {
+fn amendment_citation_ignores_non_design_commits() {
     let root = seeded_repo("s1-boundary");
-    let ok = commit(&root, "src.rs", "fn main() {}\n", "feat: add a thing");
+    let ok = commit(
+        &root,
+        "src.rs",
+        "pub const VERSION: u8 = 1;\n",
+        "feat: add a thing",
+    );
     assert!(ok, "a non-DESIGN commit with a bare message is not gated");
     let _ = std::fs::remove_dir_all(&root);
 }
 
-// Escape E-f (edit the checker itself): the seam script is version-controlled
-// and its behavior is pinned by these tests, so a change that weakened it would
-// have to also defeat these seeds. Guard: the hook exists and is the gate.
+// Governed-estate register (#97, phase-3 F1 repo guard): a zero-match
+// vocabulary_globs silently disables the whole register (verify stays clean
+// while scanning nothing). This pins that this repo's scope still names the
+// methodology docs, so a dropped or mistyped glob fails loudly in CI rather
+// than quietly un-governing our own governance prose.
 #[test]
-fn s1_checker_is_version_controlled_and_gating() {
+fn repo_register_stays_scoped_to_the_methodology_docs() {
+    let cfg = std::fs::read_to_string(repo().join(".mdatron/config.yaml")).unwrap();
+    assert!(
+        cfg.contains("vocabulary_globs"),
+        "config must scope the vocabulary family:\n{cfg}"
+    );
+    assert!(
+        cfg.lines()
+            .any(|l| l.contains("docs/methodology") && l.contains("*.md")),
+        "vocabulary_globs must still cover docs/methodology*.md; got:\n{cfg}"
+    );
+}
+
+// Checker-edit dodge: the seam script is version-controlled and its behavior is
+// pinned by these tests, so a change that weakened it would have to also defeat
+// these seeds. Guard: the hook exists and is the gate.
+#[test]
+fn amendment_citation_checker_is_version_controlled() {
     let hook = repo().join(".githooks/commit-msg");
     assert!(hook.is_file(), "the commit-msg seam must be repo-tracked");
     let body = std::fs::read_to_string(&hook).unwrap();

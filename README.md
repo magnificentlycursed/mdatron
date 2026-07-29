@@ -242,7 +242,10 @@ bold-introduced coinages (`E0090`, draft-status exempt), letter-plus-number
 label clusters outside your allowlist (`E0091`), reserved-word use (`E0092`),
 listed register anti-patterns (`E0093`), and numeric claims — a prose numeral
 restating a configured frontmatter field's count and drifting from it
-(`E0094`).
+(`E0094`). By default the scan covers every walked file; set `vocabulary_globs`
+in `config.yaml` (a scope list beside `require_frontmatter`) to restrict it —
+e.g. to apply the register to your live specs while leaving a historical archive
+walked and routed but unscanned.
 
 **Citations** — data-less; opt a route in with `citations: true` and its
 files' `path:line` / `path:start-end` references are verified against the
