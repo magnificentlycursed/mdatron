@@ -1,6 +1,6 @@
 {
   "next_display_id": 117,
-  "next_comment_id": 320,
+  "next_comment_id": 321,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -431,13 +431,24 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T12:28:05.166600Z",
-      "updated_at": "2026-07-29T12:28:22.020694Z",
+      "updated_at": "2026-07-29T12:32:27.941314Z",
       "labels": [
         "enhancement"
       ],
       "related": [
         "18545077-3dbb-4401-847d-c6b4bdbe7d78"
-      ]
+      ],
+      "comments": {
+        "ecfff1c1-4abb-4c70-a363-823ac39ea93d": {
+          "display_id": 320,
+          "author": "79Ig",
+          "content": "Built + interpolation placeholder now [see: label]; value stays in prefix-marked quoted[]. Red gates green, live demo confirms vsdd's spec. Merging.",
+          "created_at": "2026-07-29T12:32:27.926843Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAxrZdLcf81UTXnTQSjaHWsPBqkue4Rzfk+oSn6rdG1gTSztwLcvsx3bo/zcKUjvL+2LxgoQU+gVAYNgqWgKGECQ=="
+        }
+      }
     },
     "1da67425-f44d-40d6-8ba1-2d2ed768de38": {
       "uuid": "1da67425-f44d-40d6-8ba1-2d2ed768de38",
@@ -5037,8 +5048,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T12:28:22.020694Z",
+    "timestamp": "2026-07-29T12:32:27.941314Z",
     "agent_id": "79Ig",
-    "agent_seq": 444
+    "agent_seq": 445
   }
 }
