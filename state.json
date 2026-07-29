@@ -1,6 +1,6 @@
 {
   "next_display_id": 103,
-  "next_comment_id": 287,
+  "next_comment_id": 288,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -4315,7 +4315,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-19T20:53:20.240290Z",
-      "updated_at": "2026-07-28T21:05:29.755319Z",
+      "updated_at": "2026-07-29T06:58:18.870957Z",
       "labels": [
         "feature",
         "v1.0"
@@ -4332,6 +4332,15 @@
           "kind": "decision",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAhjf/2DzfQtN1wa4M+7d1ML2MumhMf5Oz5uNPfvAnIaCVSRCTM9ahOyyO9zmWxYrRfBPf9dj+TDNOziPr4h3DAA=="
+        },
+        "ac1f1011-972b-4845-bfb7-b6a7f254fb13": {
+          "display_id": 287,
+          "author": "79Ig",
+          "content": "vsdd-cli 0.1.0->0.3.0 UPGRADE FEEDBACK (relay, from the actual flip 2026-07-28). VERDICT: clear-to-publish is DEFERRED until they've built on v0.3.0 across a couple slices — this is adoption feedback, NOT the final #48 go/no-go. HOLD #48 on their account; NOTHING BLOCKING found in adoption. 'Don't wait on us if you'd rather ship on your own judgment.'\n\nWorked well: (1) E0080 jurisdiction path — migration was config.yaml alone, message pointed straight at the fix; (2) mdatron init idempotency + adopter/managed split (standout — on a mirror of their 0.1.x layout, init added only the missing managed manifest.yaml and preserved their adopter-owned config.yaml hash-checked; E0060 refusal on managed hand-edits 'exactly right'); (3) families report (#90) on --json; tag hygiene (0.3.0 bump) correct; their pre-commit ran v0.3.0 verify live during the flip — clean.\n\nFEEDBACK / QUESTIONS (candidate enhancements — propose filing each):\n- (A, load-bearing) families active/inactive SEMANTICS. On a clean run (0 findings) they get schema=active but vocabulary=inactive EVEN THOUGH vocabulary_globs is set. So 'active' isn't 'produced findings' (run was clean) and 'inactive' isn't 'not configured' (vocab IS configured). For families to serve as the un-invoked-mechanism audit signal they asked for, document precisely what active vs inactive mean — ideally a TRI-STATE separating 'invoked, ran, nothing to act on (clean)' from 'not invoked / not applicable'. [NOTE: this smells like a real bug — vocabulary should report active when vocabulary.yaml is present; investigate whether from_supplied(vocab.is_some()) is being overridden.]\n- (B) init discoverability on 0.1.x upgrades. They hand-built .mdatron/ under 0.1.x and never knew to run init; verify is clean without manifest.yaml, so nothing surfaced the missing managed manifest. Suggest a migration note or a verify hint when .mdatron/ predates the managed-manifest layout.\n- (C) pin (#84) baseline. 'mdatron pin' reports 'no pin record (pins.yaml absent)'; init doesn't scaffold it. Is pins.yaml part of the recommended adoption baseline or an advanced opt-in? Clarify in adoption docs.",
+          "created_at": "2026-07-29T06:58:18.851903Z",
+          "kind": "note",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABARiCCZqz/Z4GvblccOHMgwrIets0qq0MhmOQOKuorZFjUKSP1OA66d8A9M9BMGPXJf3EsL3bgL89dZRFD5G9ODw=="
         },
         "cda9baf8-669a-4094-96b2-57221b79c4c7": {
           "display_id": 247,
@@ -4440,8 +4449,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T06:57:58.130268Z",
+    "timestamp": "2026-07-29T06:58:18.870957Z",
     "agent_id": "79Ig",
-    "agent_seq": 330
+    "agent_seq": 331
   }
 }
