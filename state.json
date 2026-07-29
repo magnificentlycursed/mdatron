@@ -1,5 +1,5 @@
 {
-  "next_display_id": 131,
+  "next_display_id": 132,
   "next_comment_id": 328,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -90,6 +90,7 @@
     "ad262d4e-1a34-496d-9f64-802bc05ea4fd": 39,
     "ae2f415b-24e4-48b1-85ff-44033199129a": 20,
     "b1c5d325-ab66-41f7-8346-5c3e4b117555": 61,
+    "b527a823-f4d3-4fb4-bfe8-de996e714488": 131,
     "b5d10e39-0bfb-404b-9751-2bff8c71ecaa": 42,
     "b696933e-86e0-4ffa-8930-363e6dd16bfa": 113,
     "b8c80dd7-30d0-4776-93e3-5c45695b62c1": 1,
@@ -3500,6 +3501,16 @@
         }
       }
     },
+    "b527a823-f4d3-4fb4-bfe8-de996e714488": {
+      "uuid": "b527a823-f4d3-4fb4-bfe8-de996e714488",
+      "display_id": 131,
+      "title": "design-questions from roast: abs-vs-rel diagnostic paths, routes/pins/vocab format-versioning, mdatron.dev $id ownership, aggregate token cap, cost-ledger single-family coverage (roast DEF2/4/5/6/7)",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-07-29T17:24:33.803049Z",
+      "updated_at": "2026-07-29T17:24:33.803049Z"
+    },
     "b5d10e39-0bfb-404b-9751-2bff8c71ecaa": {
       "uuid": "b5d10e39-0bfb-404b-9751-2bff8c71ecaa",
       "display_id": 42,
@@ -5409,8 +5420,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T17:24:09.457863Z",
+    "timestamp": "2026-07-29T17:24:33.803049Z",
     "agent_id": "79Ig",
-    "agent_seq": 515
+    "agent_seq": 516
   }
 }
