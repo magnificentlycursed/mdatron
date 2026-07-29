@@ -1,6 +1,6 @@
 {
   "next_display_id": 112,
-  "next_comment_id": 311,
+  "next_comment_id": 312,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -4320,7 +4320,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T09:38:10.128462Z",
-      "updated_at": "2026-07-29T10:02:06.442759Z",
+      "updated_at": "2026-07-29T10:23:53.889386Z",
       "labels": [
         "bug"
       ],
@@ -4329,6 +4329,15 @@
         "72e27489-2e30-4b01-9833-62299f42c542"
       ],
       "comments": {
+        "0d220f2e-0b45-41d9-a610-74cb89944e15": {
+          "display_id": 311,
+          "author": "79Ig",
+          "content": "Merged to main (operator-ratified 2026-07-29); gauntlet green. Completes the #104 W1 audit-signal cluster.",
+          "created_at": "2026-07-29T10:23:53.867002Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABACHL9ntPGQH8Z8sAOQB/icNnTubpq6+UnJSzs/pAYsXYIOaPryk73k/t+1uvfR0dJU2EvAKnHviE0kHihgTpDCQ=="
+        },
         "dcd9b4c7-cfbb-4843-a5b9-f96bc8e2c744": {
           "display_id": 310,
           "author": "79Ig",
@@ -4853,8 +4862,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-29T10:02:06.442759Z",
+    "timestamp": "2026-07-29T10:23:53.889386Z",
     "agent_id": "79Ig",
-    "agent_seq": 405
+    "agent_seq": 406
   }
 }
