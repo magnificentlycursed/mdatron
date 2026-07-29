@@ -409,7 +409,8 @@ fn cmd_verify(
         c.file_globs = files;
         Ok(c)
     };
-    let (mut findings, families, files_checked, pipeline_status, pipeline_err) = match config_result {
+    let (mut findings, families, files_checked, pipeline_status, pipeline_err) = match config_result
+    {
         Err(e) => (
             Vec::new(),
             Families::all_inactive(),

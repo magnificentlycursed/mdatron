@@ -3468,7 +3468,10 @@ pattern:
                 q.label
             );
         }
-        assert!(!message.contains('{'), "no legacy brace placeholder: {message}");
+        assert!(
+            !message.contains('{'),
+            "no legacy brace placeholder: {message}"
+        );
     }
 
     #[test]
