@@ -17,9 +17,9 @@ use serde_yaml_ng::Value as YamlValue;
 /// A compiled JSON Schema ready for validation against many instances.
 ///
 /// Compile once per schema file; validate many times. Wraps the `jsonschema` crate's
-/// `JSONSchema` type so adopters never need to depend on it directly.
+/// `Validator` type so adopters never need to depend on it directly.
 pub struct Schema {
-    compiled: jsonschema::JSONSchema,
+    compiled: jsonschema::Validator,
 }
 
 /// A single validation failure: the JSONPath where the failure occurred + a human-readable
@@ -45,9 +45,17 @@ impl Schema {
     ///
     /// Returns an error if the schema is not valid JSON Schema draft 2020-12.
     pub fn compile(schema_json: &JsonValue) -> Result<Self, Error> {
-        let compiled = jsonschema::JSONSchema::options()
+        // #135 (roast C1): validate `pattern`/`patternProperties` with the
+        // LINEAR-time `regex` engine, not the default backtracking `fancy-regex`.
+        // A backtracking engine on adopter-authored patterns over contributor
+        // frontmatter is a ReDoS surface on the verify gate; the linear engine
+        // guarantees O(n) matching (DESIGN § Validation: linear-time engines), at
+        // the cost of rejecting look-around/backreferences (which we do not need
+        // for frontmatter shape validation).
+        let compiled = jsonschema::options()
             .with_draft(jsonschema::Draft::Draft202012)
-            .compile(schema_json)
+            .with_pattern_options(jsonschema::PatternOptions::regex())
+            .build(schema_json)
             .map_err(|e| Error::Config(format!("schema compile failed: {e}")))?;
         Ok(Self { compiled })
     }
@@ -71,17 +79,17 @@ impl Schema {
 
         // Collect into owned strings inside the borrow scope so we don't return
         // an iterator that borrows from `json` (which would drop at end of fn).
+        // `iter_errors` yields every violation (0.49 API; `validate` returns only
+        // the first).
         let mut collected = Vec::new();
-        if let Err(errors) = self.compiled.validate(&json) {
-            for e in errors {
-                let (message, quoted) = describe(&e);
-                collected.push(ValidationError {
-                    instance_path: e.instance_path.to_string(),
-                    schema_path: e.schema_path.to_string(),
-                    message,
-                    quoted,
-                });
-            }
+        for e in self.compiled.iter_errors(&json) {
+            let (message, quoted) = describe(&e);
+            collected.push(ValidationError {
+                instance_path: e.instance_path().to_string(),
+                schema_path: e.schema_path().to_string(),
+                message,
+                quoted,
+            });
         }
         collected
     }
@@ -101,17 +109,17 @@ impl Schema {
 fn describe(e: &jsonschema::ValidationError) -> (String, Vec<QuotedRegion>) {
     use jsonschema::error::ValidationErrorKind as K;
 
-    let at = at_pointer(&e.instance_path.to_string());
+    let at = at_pointer(&e.instance_path().to_string());
     // The failing document value, compactly serialized, as a quoted region.
     let found = || {
         vec![QuotedRegion {
             label: "found".into(),
-            content: serde_json::to_string(&*e.instance)
+            content: serde_json::to_string(e.instance())
                 .unwrap_or_else(|_| "<unserializable value>".into()),
         }]
     };
 
-    match &e.kind {
+    match e.kind() {
         K::AdditionalProperties { unexpected } | K::UnevaluatedProperties { unexpected } => {
             let plural = if unexpected.len() == 1 {
                 "property"
@@ -182,7 +190,7 @@ fn describe(e: &jsonschema::ValidationError) -> (String, Vec<QuotedRegion>) {
         _ => (
             format!(
                 "value{at} does not satisfy the schema ({})",
-                at_pointer(&e.schema_path.to_string()).trim_start()
+                at_pointer(&e.schema_path().to_string()).trim_start()
             ),
             found(),
         ),
@@ -313,6 +321,43 @@ mod tests {
         assert_eq!(
             errors[0].instance_path, "/count",
             "instance_path should pinpoint the failing field"
+        );
+    }
+
+    // #135 (roast C1): adopter `pattern`s run on the LINEAR-time `regex` engine
+    // (PatternOptions::regex), not backtracking fancy-regex. Proof 1: a
+    // backreference — a fancy-regex-only feature — is refused at compile, so an
+    // adopter pattern can never reach a backtracking matcher.
+    #[test]
+    fn linear_engine_refuses_backreference_pattern() {
+        let backref = json!({
+            "type": "object",
+            "properties": { "x": { "type": "string", "pattern": "(a)\\1" } }
+        });
+        assert!(
+            Schema::compile(&backref).is_err(),
+            "a backreference pattern must be refused by the linear regex engine"
+        );
+    }
+
+    // Proof 2: a classic catastrophic-backtracking pattern uses no fancy features,
+    // so it is accepted and matches in LINEAR time — the adversarial input returns
+    // a normal non-match error promptly rather than hanging the verify gate. On a
+    // backtracking engine this would not terminate within the test timeout.
+    #[test]
+    fn catastrophic_pattern_matches_in_linear_time() {
+        let schema = Schema::compile(&json!({
+            "type": "object",
+            "properties": { "x": { "type": "string", "pattern": "^(a+)+$" } }
+        }))
+        .unwrap();
+        // 40 'a's then a non-'a': the classic ReDoS trigger for `(a+)+`.
+        let evil = format!("x: {}!", "a".repeat(40));
+        let errors = schema.validate(&yaml(&evil));
+        assert_eq!(
+            errors.len(),
+            1,
+            "the adversarial value does not match -> exactly one pattern error"
         );
     }
 

@@ -2359,8 +2359,15 @@ pattern:
             .find(|f| f.code == "TEST-E0002")
             .expect("the rule fires");
         let quoted: Vec<&str> = f.quoted.iter().map(|q| q.content.as_str()).collect();
+        // Separator-agnostic: `$file.path` renders with the OS separator (a
+        // backslash on Windows), so compare as a Path, not a raw string. (The
+        // envelope carrying OS-native separators, rather than always `/`, is a
+        // cross-platform reproducibility gap tracked separately as a DEF4
+        // follow-up.)
         assert!(
-            quoted.contains(&"sub/doc.md"),
+            quoted
+                .iter()
+                .any(|c| std::path::Path::new(c) == std::path::Path::new("sub/doc.md")),
             "$file.path is project-root-relative; got {quoted:?}"
         );
         let abs = proj.0.to_string_lossy().into_owned();
