@@ -421,12 +421,12 @@ mod tests {
         )
     }
 
-    fn compile_published() -> jsonschema::JSONSchema {
+    fn compile_published() -> jsonschema::Validator {
         let schema_json: serde_json::Value =
             serde_json::from_str(PUBLISHED_SCHEMA).expect("published schema is valid JSON");
-        jsonschema::JSONSchema::options()
+        jsonschema::options()
             .with_draft(jsonschema::Draft::Draft202012)
-            .compile(&schema_json)
+            .build(&schema_json)
             .expect("published schema compiles")
     }
 
@@ -471,12 +471,10 @@ mod tests {
             ),
         ] {
             let json = serde_json::to_value(&env).expect("envelope serializes");
-            let errs: Vec<String> = match compiled.validate(&json) {
-                Ok(()) => Vec::new(),
-                Err(errors) => errors
-                    .map(|e| format!("{e} at {}", e.instance_path))
-                    .collect(),
-            };
+            let errs: Vec<String> = compiled
+                .iter_errors(&json)
+                .map(|e| format!("{e} at {}", e.instance_path()))
+                .collect();
             assert!(
                 errs.is_empty(),
                 "envelope failed the published schema:\n{}",
