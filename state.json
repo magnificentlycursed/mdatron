@@ -1,5 +1,5 @@
 {
-  "next_display_id": 134,
+  "next_display_id": 135,
   "next_comment_id": 343,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -77,6 +77,7 @@
     "9149809f-422d-4870-8cca-53832d051a70": 115,
     "9242e6c2-32a3-45f1-8478-d1fec3a8ce8b": 76,
     "9a9d6a89-465b-47fe-bacb-e0589ebccf91": 89,
+    "9bd3c0b2-d7fc-48ba-aa0f-bdc122f3eac6": 134,
     "9e14b0dd-b125-4e1c-a9eb-0c15086a3f1e": 10,
     "9e78b47b-77c9-44f9-9419-b4977f1f46ca": 82,
     "9ee63c25-b225-4882-a3cd-2469994d2bce": 37,
@@ -3008,6 +3009,16 @@
         }
       }
     },
+    "9bd3c0b2-d7fc-48ba-aa0f-bdc122f3eac6": {
+      "uuid": "9bd3c0b2-d7fc-48ba-aa0f-bdc122f3eac6",
+      "display_id": 134,
+      "title": "Lane1/roast-r1: complete DEF4 — relativize pipeline_error.message + $file.path + E0010/E0011 escape findings",
+      "status": "open",
+      "priority": "high",
+      "created_by": "79Ig",
+      "created_at": "2026-07-30T19:16:15.548132Z",
+      "updated_at": "2026-07-30T19:16:15.548132Z"
+    },
     "9e14b0dd-b125-4e1c-a9eb-0c15086a3f1e": {
       "uuid": "9e14b0dd-b125-4e1c-a9eb-0c15086a3f1e",
       "display_id": 10,
@@ -5582,8 +5593,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-30T15:41:13.345745Z",
+    "timestamp": "2026-07-30T19:16:15.548132Z",
     "agent_id": "79Ig",
-    "agent_seq": 564
+    "agent_seq": 565
   }
 }
