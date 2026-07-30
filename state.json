@@ -1,5 +1,5 @@
 {
-  "next_display_id": 132,
+  "next_display_id": 133,
   "next_comment_id": 342,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -36,6 +36,7 @@
     "3584e906-268f-45e3-96ef-9d107e4ade52": 64,
     "39fb91bc-ed4a-4358-a8f9-75a737bd1e3b": 8,
     "3bf8a891-a8c6-44cc-9698-1b69f2a3b3c1": 62,
+    "3c7fe1d8-b93c-42dd-aa1d-612342174488": 132,
     "3cc73526-d8d8-4eb3-9bd3-a7affee9ee90": 79,
     "4237af12-ff53-4d2f-beac-cff1fe994e9a": 106,
     "44e04ea5-0edc-4919-bcf7-7c234a3c8954": 74,
@@ -1433,6 +1434,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAC1FHOkT5DEM1/kgRK7fGqUuX+BYzsriLmyfuHbNJZzF0Nsg3cYL1XZHs4clwQ0CWlYWz+Afk9xUW8MavpoilCw=="
         }
       }
+    },
+    "3c7fe1d8-b93c-42dd-aa1d-612342174488": {
+      "uuid": "3c7fe1d8-b93c-42dd-aa1d-612342174488",
+      "display_id": 132,
+      "title": "DEF5: add mdatron_format_version to routes/pins/vocabulary data files",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-07-30T15:34:58.467197Z",
+      "updated_at": "2026-07-30T15:34:58.467197Z"
     },
     "3cc73526-d8d8-4eb3-9bd3-a7affee9ee90": {
       "uuid": "3cc73526-d8d8-4eb3-9bd3-a7affee9ee90",
@@ -5540,8 +5551,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-30T15:27:34.247363Z",
+    "timestamp": "2026-07-30T15:34:58.467197Z",
     "agent_id": "79Ig",
-    "agent_seq": 555
+    "agent_seq": 556
   }
 }
