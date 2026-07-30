@@ -234,7 +234,10 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-07-30T15:35:19.787585Z",
-      "updated_at": "2026-07-30T15:35:19.787585Z"
+      "updated_at": "2026-07-30T15:35:24.883673Z",
+      "labels": [
+        "question"
+      ]
     },
     "0943c25f-129e-492b-a326-fff0d809c6c0": {
       "uuid": "0943c25f-129e-492b-a326-fff0d809c6c0",
@@ -5569,8 +5572,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-30T15:35:19.787585Z",
+    "timestamp": "2026-07-30T15:35:24.883673Z",
     "agent_id": "79Ig",
-    "agent_seq": 559
+    "agent_seq": 560
   }
 }
