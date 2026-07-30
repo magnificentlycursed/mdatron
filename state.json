@@ -1,6 +1,6 @@
 {
   "next_display_id": 132,
-  "next_comment_id": 339,
+  "next_comment_id": 340,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "0943c25f-129e-492b-a326-fff0d809c6c0": 121,
@@ -1637,7 +1637,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-29T17:22:22.325868Z",
-      "updated_at": "2026-07-29T18:35:46.250485Z",
+      "updated_at": "2026-07-30T12:31:33.560982Z",
       "labels": [
         "bug"
       ],
@@ -1645,6 +1645,15 @@
         "1cafa0f3-dcdd-491b-b455-52af79c6c85d"
       ],
       "comments": {
+        "24981c93-2dab-4811-97ee-9c4711dc3799": {
+          "display_id": 339,
+          "author": "79Ig",
+          "content": "DEF8 shipped via PR #7 (merge b0529117): pins.yaml + manifest now written atomically via new atomic::write (same-dir temp + fsync + rename; atomic replace on Unix rename(2) and Windows MoveFileExW+REPLACE_EXISTING; no new dep). All production init/pin writes routed through it. Contract tests: new-file, complete-overwrite, no-residue. This closes the last remaining item on #126 (SHO6/8/9/11 done earlier).",
+          "created_at": "2026-07-30T12:31:33.545958Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABArxzgS6bzKwOHlO8EtrJcpvMZLDW2x9IlVwvZqksudNPzAkXyZMfUhMrOoHUaUYmbnVMaayOoEE86sAhLrb80DA=="
+        },
         "e1e76226-25df-4add-8305-e4c8bb93e3f5": {
           "display_id": 333,
           "author": "79Ig",
@@ -5517,8 +5526,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-30T12:21:34.717332Z",
+    "timestamp": "2026-07-30T12:31:33.560982Z",
     "agent_id": "79Ig",
-    "agent_seq": 548
+    "agent_seq": 549
   }
 }
