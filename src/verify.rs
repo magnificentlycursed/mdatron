@@ -847,6 +847,19 @@ fn run(
         },
     };
 
+    // DEF4 (#131 SO ruling): every diagnostic path is project-root-relative, so
+    // the JSON envelope neither leaks the host filesystem layout nor differs
+    // across machines (a machine consumer can diff two runs' findings). Per-file
+    // findings already carry a relativized path; this single pass also relativizes
+    // the project-level findings (schemas dir, config, vocab, routes/pins) whose
+    // sources build absolute paths via `project_root.join(...)`. It is a no-op on
+    // an already-relative path (strip_prefix fails → kept), and runs before the
+    // sort so ordering is by relative path too (equally reproducible).
+    for f in &mut findings {
+        if let Ok(rel) = f.location.file.strip_prefix(&project_root) {
+            f.location.file = rel.to_path_buf();
+        }
+    }
     findings.sort_by(|a, b| {
         a.location
             .file
@@ -2162,6 +2175,39 @@ pattern:
             codes_of(&findings, "MDATRON-W0047"),
             0,
             "a present schemas dir must not warn; got {findings:?}"
+        );
+    }
+
+    // DEF4 (#131 SO ruling): every diagnostic path in a verify run is
+    // project-root-relative — no absolute host path leaks into the envelope, and
+    // two machines' runs are diffable. W0047 (a project-level finding) previously
+    // emitted an absolute `project_root.join(...)` path.
+    #[test]
+    fn all_diagnostic_paths_are_project_root_relative() {
+        let proj = TempProject::new("rel-paths");
+        proj.write(".mdatron/config.yaml", "file_globs:\n  - \"**/*.md\"\n");
+        // schemas dir absent -> W0047 (a project-level finding); patterns present.
+        std::fs::create_dir_all(proj.0.join(".mdatron/patterns")).unwrap();
+        proj.write("doc.md", "---\nschema_class: ghost\n---\nbody\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert!(!findings.is_empty(), "the scenario yields findings");
+        for f in &findings {
+            assert!(
+                f.location.file.is_relative(),
+                "diagnostic path must be project-root-relative; got absolute {:?} for {}",
+                f.location.file,
+                f.code
+            );
+        }
+        let w0047 = findings
+            .iter()
+            .find(|f| f.code == "MDATRON-W0047")
+            .expect("the absent schemas dir warns");
+        assert_eq!(
+            w0047.location.file,
+            std::path::Path::new(".mdatron/schemas"),
+            "the project-level finding carries the relative skeleton path"
         );
     }
 

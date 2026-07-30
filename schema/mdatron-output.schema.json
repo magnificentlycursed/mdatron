@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://mdatron.dev/schema/mdatron-output/2.1.0",
+  "$id": "https://github.com/magnificentlycursed/mdatron/schema/mdatron-output/2.1.0",
   "title": "mdatron verify --json output envelope",
   "description": "The machine interface of `mdatron verify --json`. Versioned: mdatron_output_version tracks THIS schema (currently 2.1.0). A published contract (DESIGN.md § Diagnostics are a versioned contract) — consumers pin and validate against it.",
   "type": "object",
