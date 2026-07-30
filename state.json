@@ -1,6 +1,6 @@
 {
   "next_display_id": 132,
-  "next_comment_id": 341,
+  "next_comment_id": 342,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "0943c25f-129e-492b-a326-fff0d809c6c0": 121,
@@ -925,13 +925,24 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-07-29T17:23:50.580524Z",
-      "updated_at": "2026-07-29T17:24:09.457863Z",
+      "updated_at": "2026-07-30T15:27:21.377212Z",
       "labels": [
         "question"
       ],
       "related": [
         "1cafa0f3-dcdd-491b-b455-52af79c6c85d"
-      ]
+      ],
+      "comments": {
+        "6b9099c4-d5d7-4ffe-9dbb-509fcfa38321": {
+          "display_id": 341,
+          "author": "79Ig",
+          "content": "Duplicate of #131 (same DEF2/4/5/6/7 design-Q set, created ~1min earlier, no rulings). Canonical tracking + SO rulings live on #131. Closing as duplicate.",
+          "created_at": "2026-07-30T15:27:21.361759Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAZtQ+k3PJrEsY1WOCLl2C15FsgCw+xELYdhR20XfyHQC4S6MWYyKt8KCUWnkEvFmHQ6ChH0fZVjg1yibdceEQAg=="
+        }
+      }
     },
     "2881253a-3641-4d7b-a6c1-e09cbbd2d140": {
       "uuid": "2881253a-3641-4d7b-a6c1-e09cbbd2d140",
@@ -5532,8 +5543,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-30T15:27:14.900081Z",
+    "timestamp": "2026-07-30T15:27:21.377212Z",
     "agent_id": "79Ig",
-    "agent_seq": 552
+    "agent_seq": 553
   }
 }
