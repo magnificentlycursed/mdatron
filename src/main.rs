@@ -67,6 +67,13 @@ enum Command {
         /// whole-tree run. The verified (visited) file set prints to stderr.
         #[arg(long = "changed", value_name = "FILE")]
         changed: Option<PathBuf>,
+
+        /// Escalate warnings to a failing exit (#121, requested by vsdd-cli): a
+        /// warnings-only run exits `1` instead of `0`, so a consumer wiring
+        /// `verify` as a hard gate need not parse the envelope. Errors still exit
+        /// `1`, a clean run `0`, and a pipeline failure `2`, unchanged.
+        #[arg(long = "deny-warnings", visible_alias = "strict")]
+        deny_warnings: bool,
     },
 
     /// Show extended documentation for an error code (rustc --explain pattern).
@@ -191,6 +198,7 @@ fn main() -> ExitCode {
             compact,
             quiet,
             changed,
+            deny_warnings,
         } => cmd_verify(
             project_root,
             schemas,
@@ -200,6 +208,7 @@ fn main() -> ExitCode {
             compact,
             quiet,
             changed,
+            deny_warnings,
         ),
         Command::Explain {
             code,
@@ -384,6 +393,7 @@ fn cmd_verify(
     compact: bool,
     quiet: bool,
     changed: Option<PathBuf>,
+    deny_warnings: bool,
 ) -> ExitCode {
     use mdatron::output::{Families, Output, PipelineError, PipelineStatus};
 
@@ -573,7 +583,15 @@ fn cmd_verify(
         }
     }
 
-    ExitCode::from(output.derive_exit_code())
+    // #121: --deny-warnings escalates a warnings-only run (exit 0) to exit 1, so
+    // a hard gate need not parse the envelope. Errors (1) and pipeline failure
+    // (2) are unchanged; the escalation applies only to an otherwise-clean run
+    // that carries warnings.
+    let mut code = output.derive_exit_code();
+    if deny_warnings && code == 0 && output.summary.warning_count > 0 {
+        code = 1;
+    }
+    ExitCode::from(code)
 }
 
 fn print_finding(f: &Finding) {
