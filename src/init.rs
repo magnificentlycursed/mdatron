@@ -224,7 +224,7 @@ pub fn init(project_root: &Path) -> Result<InitOutcome, InitError> {
                     });
                 };
                 let p = dir.join(&entry.path);
-                std::fs::write(&p, content).map_err(|e| io_err(&p, &e))?;
+                crate::atomic::write(&p, content.as_bytes()).map_err(|e| io_err(&p, &e))?;
                 entry.sha256 = sha256_hex(content.as_bytes());
                 created.push(format!(".mdatron/{}", entry.path));
             }
@@ -238,7 +238,7 @@ pub fn init(project_root: &Path) -> Result<InitOutcome, InitError> {
         for (name, content) in SEED_FILES {
             let p = dir.join(name);
             if !p.exists() {
-                std::fs::write(&p, content).map_err(|e| io_err(&p, &e))?;
+                crate::atomic::write(&p, content.as_bytes()).map_err(|e| io_err(&p, &e))?;
                 created.push(format!(".mdatron/{name}"));
             }
         }
@@ -275,7 +275,7 @@ fn deploy(dir: &Path) -> Result<Vec<String>, InitError> {
     for (name, content) in SEED_FILES {
         let p = dir.join(name);
         if !p.exists() {
-            std::fs::write(&p, content).map_err(|e| io_err(&p, &e))?;
+            crate::atomic::write(&p, content.as_bytes()).map_err(|e| io_err(&p, &e))?;
             created.push(format!(".mdatron/{name}"));
         }
     }
@@ -307,7 +307,10 @@ fn write_manifest(dir: &Path, manifest: &Manifest) -> Result<(), InitError> {
         error: e.to_string(),
     })?;
     let body = format!("# mdatron managed-partition manifest — do not edit by hand.\n{yaml}");
-    std::fs::write(&manifest_path, body).map_err(|e| io_err(&manifest_path, &e))
+    // Atomic write (#126 DEF8): the manifest is rewritten in place on repair
+    // (tombstones, re-hashed redeploys); a torn write would corrupt the
+    // managed-partition record.
+    crate::atomic::write(&manifest_path, body.as_bytes()).map_err(|e| io_err(&manifest_path, &e))
 }
 
 fn ensure_dirs(dir: &Path) -> Result<(), InitError> {
