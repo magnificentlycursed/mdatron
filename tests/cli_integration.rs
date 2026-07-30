@@ -183,6 +183,34 @@ fn pipeline_failure_json_quiet_carries_structured_reason() {
     );
 }
 
+// #121 (requested by vsdd-cli): `--deny-warnings` escalates a warnings-only run
+// (exit 0) to a failing exit 1, so a hard-gate consumer need not parse the
+// envelope. Errors and pipeline failures are unaffected.
+#[test]
+fn deny_warnings_escalates_a_warnings_only_run() {
+    let proj = TempProject::new("deny-warn");
+    proj.seed_blog_schema();
+    // A dead `typo-dir/**/*.md` glob emits W0046 (a warning); doc.md is clean.
+    proj.write(
+        ".mdatron/config.yaml",
+        "file_globs:\n  - \"**/*.md\"\n  - \"typo-dir/**/*.md\"\n",
+    );
+    proj.write("doc.md", "# prose\n");
+    let out = run_verify(&proj, &[]);
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "warnings-only exits 0 by default: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let out = run_verify(&proj, &["--deny-warnings"]);
+    assert_eq!(
+        out.status.code(),
+        Some(1),
+        "warnings escalate to exit 1 under --deny-warnings"
+    );
+}
+
 // #127 (roast SHO10): `mdatron schema` prints the published envelope schema so a
 // binary-only consumer can pin/validate without a repo checkout.
 #[test]
