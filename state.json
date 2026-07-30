@@ -3601,11 +3601,12 @@
       "uuid": "b527a823-f4d3-4fb4-bfe8-de996e714488",
       "display_id": 131,
       "title": "design-questions from roast: abs-vs-rel diagnostic paths, routes/pins/vocab format-versioning, mdatron.dev $id ownership, aggregate token cap, cost-ledger single-family coverage (roast DEF2/4/5/6/7)",
-      "status": "open",
+      "status": "closed",
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-07-29T17:24:33.803049Z",
-      "updated_at": "2026-07-30T15:41:01.211956Z",
+      "updated_at": "2026-07-30T15:41:07.207136Z",
+      "closed_at": "2026-07-30T15:41:07.207125Z",
       "labels": [
         "question"
       ],
@@ -5585,8 +5586,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-30T15:41:01.211956Z",
+    "timestamp": "2026-07-30T15:41:07.207136Z",
     "agent_id": "79Ig",
-    "agent_seq": 562
+    "agent_seq": 563
   }
 }
