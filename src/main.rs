@@ -508,6 +508,13 @@ fn cmd_verify(
         }
     }
 
+    // DEF4 completion (#134, roast B1): relativize any absolute path the failure
+    // carries against the (canonicalized, as `run` does) root, so pipeline_error
+    // .message and the stderr note below do not leak the host layout — matching
+    // the relativized findings. A pre-canonicalization error keeps its path.
+    let canonical_root = root.canonicalize().unwrap_or_else(|_| root.clone());
+    let pipeline_err = pipeline_err.map(|e| e.relativize_paths(&canonical_root));
+
     // A failed pipeline carries its reason INTO the envelope (#112): the stderr
     // note is suppressed by --quiet, so a --json --quiet consumer needs the cause
     // in-band. `kind` disambiguates E0080's senses.

@@ -216,6 +216,43 @@ impl VerifyError {
             VerifyError::BoundExceeded { .. } => "bound_exceeded",
         }
     }
+
+    /// Rewrite any absolute filesystem path this error carries to be project-
+    /// root-relative (DEF4 completion, #134, roast B1). `pipeline_error.message`
+    /// is built from this error's `Display`, so an absolute path in a `{path}`
+    /// variant would leak the host layout into the JSON envelope on a failed
+    /// pipeline — the same leak the findings-relativization pass closed for
+    /// `findings[].location.file`. Applied once at the `pipeline_error`
+    /// construction site against the canonicalized root. A path not under `root`
+    /// (a pre-canonicalization error, or one already relative) is left as-is.
+    pub fn relativize_paths(self, root: &Path) -> Self {
+        fn rel(p: String, root: &Path) -> String {
+            match Path::new(&p).strip_prefix(root) {
+                Ok(r) if r.as_os_str().is_empty() => ".".into(),
+                Ok(r) => r.to_string_lossy().into_owned(),
+                Err(_) => p,
+            }
+        }
+        match self {
+            VerifyError::Io { path, error } => VerifyError::Io {
+                path: rel(path, root),
+                error,
+            },
+            VerifyError::SchemaLoad { path, error } => VerifyError::SchemaLoad {
+                path: rel(path, root),
+                error,
+            },
+            VerifyError::PatternLoad { path, error } => VerifyError::PatternLoad {
+                path: rel(path, root),
+                error,
+            },
+            VerifyError::Frontmatter { path, error } => VerifyError::Frontmatter {
+                path: rel(path, root),
+                error,
+            },
+            other => other,
+        }
+    }
 }
 
 /// A completed verification run: the findings plus which check families were
@@ -483,13 +520,23 @@ fn run(
                               governed tree"
                         .into(),
                     help: None,
+                    // DEF4 completion (#134, roast A1): anchor at the config that
+                    // declared the escaping glob, NOT at the escaping path itself —
+                    // that path is OUTSIDE the root (that is the violation), so it
+                    // cannot be relativized and would leak an absolute host path
+                    // into the envelope. The config anchor is under the root, so the
+                    // run-tail relativization pass makes it `.mdatron/config.yaml`.
+                    // The offending path rides as prefix-marked adopter content.
                     location: Location {
-                        file: abs.clone(),
+                        file: project_root.join(".mdatron").join("config.yaml"),
                         line: 1,
                         column: 0,
                     },
                     explain_ref: Some(code.into()),
-                    quoted: Vec::new(),
+                    quoted: vec![QuotedRegion {
+                        label: "escaping-path".into(),
+                        content: rel.to_string_lossy().into_owned(),
+                    }],
                 });
                 continue;
             }
@@ -1143,9 +1190,14 @@ fn verify_file(
     }
 
     // ── Layer 2: rule-based validation ─────────────────────────────────────
+    // DEF4 completion (#134, roast B2): the DSL `$file.path` is project-root-
+    // relative, matching the relativized `location.file` — an absolute path here
+    // would leak the host layout into any rule message that interpolates it (a
+    // `quoted[]` region) and diverge from the finding's own relative location.
+    let rel_path = path.strip_prefix(project_root).unwrap_or(path);
     let file_value = Value::Object(BTreeMap::from([(
         "path".to_string(),
-        Value::Str(path.to_string_lossy().into_owned()),
+        Value::Str(rel_path.to_string_lossy().into_owned()),
     )]));
     let project_value = Value::Null;
 
@@ -2208,6 +2260,113 @@ pattern:
             w0047.location.file,
             std::path::Path::new(".mdatron/schemas"),
             "the project-level finding carries the relative skeleton path"
+        );
+    }
+
+    // DEF4 completion (#134, roast A1): an absolute `file_globs` entry escapes the
+    // root; the E0010 finding anchors at the config (relative) with the escaping
+    // path as quoted content — it must NOT leak an absolute path in location.file
+    // (the escaping path is outside the root and cannot be relativized).
+    #[cfg(unix)]
+    #[test]
+    fn absolute_glob_escape_finding_is_root_relative() {
+        let outside = std::env::temp_dir().join(format!(
+            "mdatron-escape-{}.md",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::write(&outside, "x\n").unwrap();
+        let proj = TempProject::new("abs-glob");
+        proj.write(
+            ".mdatron/config.yaml",
+            &format!("file_globs:\n  - \"{}\"\n", outside.display()),
+        );
+        std::fs::create_dir_all(proj.0.join(".mdatron/patterns")).unwrap();
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        let esc = findings
+            .iter()
+            .find(|f| f.code == "MDATRON-E0010")
+            .expect("an absolute glob escapes the root -> E0010");
+        assert_eq!(
+            esc.location.file,
+            std::path::Path::new(".mdatron/config.yaml"),
+            "the escape finding anchors at the config, not the absolute path"
+        );
+        assert!(esc.location.file.is_relative());
+        let _ = std::fs::remove_file(&outside);
+    }
+
+    // DEF4 completion (#134, roast B1): a pipeline error's absolute path is
+    // relativized, so `pipeline_error.message` does not leak the host layout.
+    #[test]
+    fn verify_error_relativize_paths_strips_the_root() {
+        let root = std::path::Path::new("/tmp/proj");
+        let e = VerifyError::SchemaLoad {
+            path: "/tmp/proj/.mdatron/schemas/x.json".into(),
+            error: "bad json".into(),
+        };
+        assert_eq!(
+            e.relativize_paths(root).to_string(),
+            "schema load error at '.mdatron/schemas/x.json': bad json"
+        );
+        // a path not under root (a pre-canonicalization error) is left intact.
+        let e2 = VerifyError::Io {
+            path: "/elsewhere/x".into(),
+            error: "boom".into(),
+        };
+        assert!(e2
+            .relativize_paths(root)
+            .to_string()
+            .contains("/elsewhere/x"));
+        // the root itself relativizes to "." rather than an empty ''.
+        let e3 = VerifyError::Io {
+            path: "/tmp/proj".into(),
+            error: "boom".into(),
+        };
+        assert_eq!(
+            e3.relativize_paths(root).to_string(),
+            "io error at '.': boom"
+        );
+    }
+
+    // DEF4 completion (#134, roast B2): the DSL `$file.path` interpolated into a
+    // rule message rides as a quoted region with the project-root-relative path,
+    // not the absolute host path — matching the finding's relativized location.
+    #[test]
+    fn file_path_in_a_rule_message_is_project_root_relative() {
+        let proj = TempProject::new("file-path-rel");
+        proj.write(
+            ".mdatron/patterns/p.yaml",
+            r#"mdatron_dsl_version: 1
+pattern:
+  id: p
+  rules:
+    - id: always-fails
+      context: doc
+      assert: $self.schema_class == "never"
+      code: TEST-E0002
+      message: "checked {{$file.path}}"
+"#,
+        );
+        proj.write("sub/doc.md", "---\nschema_class: doc\n---\n");
+        let cfg = VerifyConfig::new(&proj.0);
+        let findings = verify(&cfg).unwrap();
+        let f = findings
+            .iter()
+            .find(|f| f.code == "TEST-E0002")
+            .expect("the rule fires");
+        let quoted: Vec<&str> = f.quoted.iter().map(|q| q.content.as_str()).collect();
+        assert!(
+            quoted.contains(&"sub/doc.md"),
+            "$file.path is project-root-relative; got {quoted:?}"
+        );
+        let abs = proj.0.to_string_lossy().into_owned();
+        assert!(
+            !quoted.iter().any(|c| c.contains(&abs)),
+            "no absolute host path in quoted content; got {quoted:?}"
         );
     }
 
