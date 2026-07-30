@@ -10,6 +10,12 @@ the TRON blockchain.
 
 ## [Unreleased]
 
+### Added
+- `mdatron verify --deny-warnings` (alias `--strict`) escalates a warnings-only run to a failing exit (#121, requested by vsdd-cli mdatron#1): an otherwise-clean run (exit `0`) that carries warnings now exits `1`, so a hard-gate consumer can fail on warnings without parsing the JSON envelope. Errors (`1`), pipeline failures (`2`), and a genuinely clean run (`0`) are unchanged; the escalation is purely `0 → 1` when `summary.warning_count > 0`.
+
+### Fixed
+- a declared `schema_class` that nothing serves is no longer silently clean under a **present-but-empty** `.mdatron/schemas/` directory (#111, answered by vsdd-cli mdatron#1): `MDATRON-W0045` (schema-class-unrouted) previously fired only when some validation infrastructure existed, so an init'd project whose `schemas/` and `patterns/` are both empty — a `schema_class` file whose `.json` was never added — exited `0` with no finding, the same silent-false-clean class W0045/W0047 exist to catch. W0045 now fires whenever the schemas directory is **present** (empty or not) and the declared class is unrouted; a **missing** directory remains the project-level `MDATRON-W0047`'s job, so the two never double-report the same file. Fresh-init-clean is preserved: a file with no `schema_class` declares no intent to be validated and stays silent. `verify_file` takes the dir-present signal; the `no_adopter_data_runs_with_all_families_inactive` invariant is updated (the declared-class file now warrants the warning, families still all inactive).
+
 ## [0.4.0] - 2026-07-29
 
 Ships the vsdd-cli v0.3.0 diagnostic-efficacy review (the "checked-N vs
@@ -24,6 +30,7 @@ release collapses them into the single honest major bump.) Accordingly the crate
 moves `0.3.0 → 0.4.0` (a breaking change bumps the `0.MINOR` position pre-1.0).
 
 ### Changed
+- verify: --strict/--deny-warnings to escalate warnings to a failing exit (gate-authors) (#121)
 - a pattern-rule message's interpolation placeholder now renders as `[see: <label>]` rather than `{$self.field}` (#116, vsdd-cli v0.3.0 diagnostic-efficacy review item 8 part 1): the old `{$self.status}` read as an *un-substituted template* (looked like a bug); `[see: status]` reads as a deliberate cross-reference to the labeled quoted block below. The value still rides out-of-line in the prefix-marked `quoted[]` block — never inline in the message (DESIGN §Output; the same forgeable-marking property `trusted:false` protects). The block label drops the `$self.` prefix so it reads as a field name; a collision or repeated reference is numbered (`status [2]`) so each pointer resolves to exactly one block. Per vsdd-cli's ruling relayed 2026-07-29.
 - `families` in the `verify --json` envelope is now a **tri-state plus a reason** (#107, vsdd-cli v0.3.0 diagnostic-efficacy review item 4 — "families was unfalsifiable"). Each of the five families reports `{ "state": "active" | "inert" | "inactive", "reason": "..." }`: `active` = data supplied and the check ran this pass; `inert` = configured but did no work (e.g. `vocabulary.yaml` present but `vocabulary_globs` matched no walked file); `inactive` = not configured. The `reason` documents precisely why — resolving the ambiguity where `active`/`inactive` conflated configured-vs-ran (e.g. `vocabulary_globs` set with no `vocabulary.yaml` now reads `inactive` with the clarifying reason). **This reshape (string → object) is the breaking change** that makes the envelope's `1.1.0 → 2.0.0` bump a MAJOR one.
 
