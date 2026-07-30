@@ -5021,11 +5021,12 @@
       "uuid": "f187546d-64e0-4da8-9b7c-6f1023106726",
       "display_id": 119,
       "title": "W4 polish: --compact prose truncation cuts mid-word; prefer a word boundary",
-      "status": "open",
+      "status": "closed",
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-07-29T12:45:42.194036Z",
-      "updated_at": "2026-07-30T12:21:22.877459Z",
+      "updated_at": "2026-07-30T12:21:29.056113Z",
+      "closed_at": "2026-07-30T12:21:29.056098Z",
       "labels": [
         "enhancement"
       ],
@@ -5520,8 +5521,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-30T12:21:22.877459Z",
+    "timestamp": "2026-07-30T12:21:29.056113Z",
     "agent_id": "79Ig",
-    "agent_seq": 546
+    "agent_seq": 547
   }
 }
