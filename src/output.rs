@@ -27,7 +27,11 @@ use crate::diagnostic::{Finding, Severity};
 /// both rejected by a 1.1.0-schema validator; `pipeline_error` is additive (#112).
 /// Development passed through 1.2.0–1.4.0 (never released); those minor bumps
 /// under-signalled the breaking reshape, so 0.4.0 corrects the released contract
-/// to a single honest major bump. Must move in lockstep with the published schema
+/// to a single honest major bump.
+/// 2.1.0 (#124, roast SHO1; unreleased): MINOR — additive `pipeline_error.kind`
+/// value `bound_exceeded` for the input-resource-bound enforcement (a new closed-
+/// enum member is additive under the versioned-contract SemVer rule).
+/// Must move in lockstep with the published schema
 /// (`schema/mdatron-output.schema.json`); the `envelope_version_matches_published_schema`
 /// tripwire enforces it.
 pub const OUTPUT_VERSION: &str = "2.1.0";
