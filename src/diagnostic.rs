@@ -293,7 +293,9 @@ impl Finding {
     /// lines are dropped from the tail and an engine-authored elision line
     /// closes the cut region — the cut lands only at a line boundary, never
     /// mid-line or mid-escape. An oversized head line is itself elided at a
-    /// char boundary (engine-authored text; no forgery surface).
+    /// char boundary (engine-authored text; no forgery surface). Message prose
+    /// truncated to fit the head budget breaks on a word boundary when possible
+    /// (#119) — mid-word only for a single token wider than the whole budget.
     pub fn format_compact(&self) -> String {
         use std::fmt::Write;
 
@@ -384,8 +386,28 @@ impl Finding {
                 while cut > 0 && !prose.is_char_boundary(cut) {
                     cut -= 1;
                 }
-                if cut > " — ".len() {
-                    head.push_str(&prose[..cut]);
+                // #119 (W4 polish): prefer a word boundary. If the cut lands mid
+                // token — the first dropped char is not whitespace — retreat to the
+                // last interior whitespace so the prose reads "the quick…" rather
+                // than "the quick bro…". A cut already at a word gap keeps its final
+                // word; a single token wider than the budget has no interior space
+                // to retreat to and takes the hard char cut. `sep_len` protects the
+                // " — " separator so we never retreat into it and emit a bare marker.
+                let sep_len = " — ".len();
+                let splits_word = prose[cut..]
+                    .chars()
+                    .next()
+                    .is_some_and(|c| !c.is_whitespace());
+                if splits_word {
+                    if let Some(ws) = prose[..cut].rfind(char::is_whitespace) {
+                        if ws > sep_len {
+                            cut = ws;
+                        }
+                    }
+                }
+                let piece = prose[..cut].trim_end();
+                if piece.len() > sep_len {
+                    head.push_str(piece);
                     head.push('…');
                 }
             }
@@ -550,6 +572,77 @@ mod tests {
         assert!(
             out.contains("DRAFTVALUE"),
             "the quoted value must survive ahead of the message prose; got:\n{out}"
+        );
+    }
+
+    // #119 (W4 polish): when the message prose is truncated to fit the compact
+    // cap, it breaks on a word boundary rather than mid-word — "… — the quick…"
+    // not "… — the quick bro…". Built from fixed-width distinct words so a
+    // partial word is detectable: after the fix every whitespace-delimited token
+    // in the surviving prose is a full 4-byte `wNNN`, never a prefix.
+    #[test]
+    fn compact_prose_truncates_on_a_word_boundary() {
+        let words: Vec<String> = (0..300).map(|i| format!("w{i:03}")).collect();
+        let finding = Finding {
+            code: "MDATRON-E0050".into(),
+            severity: Severity::Error,
+            summary: "schema-violation".into(),
+            message: words.join(" "),
+            help: None,
+            location: Location {
+                file: "doc.md".into(),
+                line: 1,
+                column: 0,
+            },
+            explain_ref: None,
+            quoted: Vec::new(),
+        };
+        let out = finding.format_compact();
+        assert!(out.len() <= COMPACT_FINDING_LIMIT, "cap holds: {out:?}");
+        let (before, _) = out
+            .rsplit_once('…')
+            .expect("the long message forces a truncation ellipsis");
+        let prose = before
+            .split_once(" — ")
+            .expect("the prose separator is present")
+            .1;
+        for tok in prose.split_whitespace() {
+            assert_eq!(
+                tok.len(),
+                4,
+                "token {tok:?} is a partial word — truncation cut mid-word in {out:?}"
+            );
+        }
+    }
+
+    // #119 fallback: a single token wider than the whole budget has no interior
+    // whitespace to retreat to, so it still takes the hard char cut rather than
+    // being dropped entirely (word-boundary is a preference, not a requirement).
+    #[test]
+    fn compact_prose_hard_cuts_a_single_over_long_token() {
+        let finding = Finding {
+            code: "MDATRON-E0050".into(),
+            severity: Severity::Error,
+            summary: "schema-violation".into(),
+            message: "x".repeat(800), // one whitespace-free token > 512
+            help: None,
+            location: Location {
+                file: "doc.md".into(),
+                line: 1,
+                column: 0,
+            },
+            explain_ref: None,
+            quoted: Vec::new(),
+        };
+        let out = finding.format_compact();
+        assert!(
+            out.len() <= COMPACT_FINDING_LIMIT,
+            "cap holds: {}",
+            out.len()
+        );
+        assert!(
+            out.contains(" — x") && out.ends_with('…'),
+            "the over-long token is hard-cut and kept, not dropped; got {out:?}"
         );
     }
 
