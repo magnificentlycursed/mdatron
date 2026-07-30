@@ -1,6 +1,6 @@
 {
   "next_display_id": 132,
-  "next_comment_id": 338,
+  "next_comment_id": 339,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "0943c25f-129e-492b-a326-fff0d809c6c0": 121,
@@ -5025,13 +5025,24 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-07-29T12:45:42.194036Z",
-      "updated_at": "2026-07-29T12:45:57.932065Z",
+      "updated_at": "2026-07-30T12:21:22.877459Z",
       "labels": [
         "enhancement"
       ],
       "related": [
         "18545077-3dbb-4401-847d-c6b4bdbe7d78"
-      ]
+      ],
+      "comments": {
+        "efe64038-e295-401c-ab6c-c4020f1bd50a": {
+          "display_id": 338,
+          "author": "79Ig",
+          "content": "Shipped via PR #6 (merge 357de8a): --compact prose truncation now retreats to a word boundary (last interior whitespace), trims trailing ws before the ellipsis; single over-long token still hard-cut. Red gate compact_prose_truncates_on_a_word_boundary + fallback test. 512-byte cap and #115 quoted-value priority unchanged. Gauntlet green.",
+          "created_at": "2026-07-30T12:21:22.863486Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAyxjWmZVOWeHY33KwAKbUsr/8Yt/WsZyS2rak5EZjDRVLL6JzKIuIbd3WGv4KOEx3kKbIuFsrS/E5ygxuuZ5XDA=="
+        }
+      }
     },
     "f46bbe99-0826-4d9b-910d-557d5c3277a7": {
       "uuid": "f46bbe99-0826-4d9b-910d-557d5c3277a7",
@@ -5509,8 +5520,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-30T11:43:59.045105Z",
+    "timestamp": "2026-07-30T12:21:22.877459Z",
     "agent_id": "79Ig",
-    "agent_seq": 545
+    "agent_seq": 546
   }
 }
