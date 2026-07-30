@@ -660,6 +660,7 @@ fn run(
             &schemas,
             &patterns,
             &registry,
+            schemas_dir_missing,
             &mut findings,
         )?;
         // A validated file (#105): the audit signal counts files the per-file
@@ -979,6 +980,7 @@ fn verify_file(
     schemas: &BTreeMap<String, Schema>,
     patterns: &[PatternFile],
     registry: &IndexRegistry,
+    schemas_dir_missing: bool,
     findings: &mut Vec<Finding>,
 ) -> Result<bool, VerifyError> {
     // Content comes from the immutable snapshot (#103): every governed file is
@@ -1156,20 +1158,23 @@ fn verify_file(
     // which matches no schema AND no rule context was silently unvalidated —
     // flag it, so a typo'd or unregistered class on an unchecked file is loud,
     // not a false-clean. A class validated by a schema OR any matching rule is
-    // routed and stays silent. Only when validation infrastructure exists (some
-    // schema or pattern): a project doing no class-validation at all is not
-    // nagged, preserving the "no adopter data -> clean" property.
-    let has_validation_infra = !schemas.is_empty() || !patterns.is_empty();
-    // A declared schema_class matched by neither a schema nor a rule context is
-    // unrouted — nothing validated it. W0045 reports this per file, but only when
-    // some validation infrastructure exists (preserving no-adopter-data-clean).
-    // The raw signal (ungated) is returned so `run` can raise the project-level
-    // W0047 (#110) when the schemas dir is missing entirely — the has-infra gap
-    // W0045 deliberately leaves.
+    // routed and stays silent.
+    //
+    // #111 (design Q, answered by vsdd-cli mdatron#1): the declaration itself is
+    // the adopter data — a file asking for a type nothing serves is the same
+    // silent-false-clean class whether or not any *other* schema exists. So W0045
+    // no longer gates on has-validation-infra; it fires whenever the schemas dir
+    // is PRESENT (empty or not) and the declared class is unrouted. Fresh-init-
+    // clean is preserved because a file with no schema_class is not unrouted. A
+    // MISSING schemas dir is deliberately left to the project-level W0047 (#110)
+    // instead (see `run`) so the two never double-report the same file.
+    //
+    // The raw (dir-independent) signal is returned so `run` can raise W0047 when
+    // the schemas dir is missing entirely.
     let unrouted_schema_class =
         schema_class_opt.is_some() && !schema_matched && !any_context_matched;
     if let Some(schema_class) = &schema_class_opt {
-        if has_validation_infra && unrouted_schema_class {
+        if !schemas_dir_missing && unrouted_schema_class {
             findings.push(Finding {
                 code: "MDATRON-W0045".into(),
                 severity: Severity::Warning,
@@ -2074,13 +2079,14 @@ mod tests {
             1,
             "an absent schemas dir with an unserved schema_class must be loud; got {findings:?}"
         );
-        // W0047 fills exactly the has-infra gap W0045 leaves: with both dirs empty
-        // there is no validation infrastructure, so W0045 stays silent — only the
-        // project-level W0047 catches this false-clean.
+        // W0045 and W0047 never double-report the same file: W0045 is the
+        // present-dir per-file signal (#111), W0047 the missing-dir project-level
+        // one (#110). Here the schemas dir is MISSING, so W0045 stays its hand and
+        // W0047 is the sole signal.
         assert_eq!(
             codes_of(&findings, "MDATRON-W0045"),
             0,
-            "W0045 is gated on has-infra; here W0047 is the sole signal; got {findings:?}"
+            "schemas dir missing -> W0045 defers to W0047 as the sole signal; got {findings:?}"
         );
     }
 
@@ -2529,6 +2535,51 @@ pattern:
             codes_of(&verify(&cfg).unwrap(), "MDATRON-W0045"),
             0,
             "a class with a schema is routed, not flagged"
+        );
+    }
+
+    // #111 (design Q, answered by vsdd-cli mdatron#1): a declared schema_class that
+    // nothing serves is unrouted even with NO validation infrastructure at all —
+    // the present-but-empty schemas dir `mdatron init` leaves, plus a schema_class
+    // whose `.json` was never added. The old has-infra gate suppressed W0045 here
+    // and the present dir suppressed W0047, so it exited silently clean. Now W0045
+    // fires whenever the schemas dir is PRESENT (empty or not); a MISSING dir stays
+    // W0047's project-level job (missing_schemas_dir_is_loud), and a file with no
+    // schema_class stays clean (fresh-init-clean preserved).
+    #[test]
+    fn declared_class_with_present_empty_schemas_dir_is_flagged() {
+        let proj = TempProject::new("empty-schemas-declared");
+        // schemas + patterns dirs present but EMPTY: no validation infrastructure.
+        std::fs::create_dir_all(proj.0.join(".mdatron/schemas")).unwrap();
+        std::fs::create_dir_all(proj.0.join(".mdatron/patterns")).unwrap();
+        proj.write(".mdatron/config.yaml", "file_globs:\n  - \"**/*.md\"\n");
+        proj.write("doc.md", "---\nschema_class: anything\n---\nbody\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert_eq!(
+            codes_of(&findings, "MDATRON-W0045"),
+            1,
+            "an unserved schema_class under an empty (present) schemas dir is flagged; got {findings:?}"
+        );
+        // The dir is present, so the MISSING-dir signal (W0047) must stay quiet.
+        assert_eq!(
+            codes_of(&findings, "MDATRON-W0047"),
+            0,
+            "schemas dir present (empty) -> W0047 (missing-dir) does not fire; got {findings:?}"
+        );
+
+        // Fresh-init-clean preserved: an init'd project with NO declared
+        // schema_class stays clean (present-empty schemas + patterns, prose only).
+        let fresh = TempProject::new("empty-schemas-fresh");
+        std::fs::create_dir_all(fresh.0.join(".mdatron/schemas")).unwrap();
+        std::fs::create_dir_all(fresh.0.join(".mdatron/patterns")).unwrap();
+        fresh.write(".mdatron/config.yaml", "file_globs:\n  - \"**/*.md\"\n");
+        fresh.write("prose.md", "---\ntitle: just prose\n---\nbody\n");
+        let cfg = VerifyConfig::from_project(&fresh.0).unwrap();
+        assert_eq!(
+            codes_of(&verify(&cfg).unwrap(), "MDATRON-W0045"),
+            0,
+            "a project with no declared schema_class stays clean; got findings"
         );
     }
 

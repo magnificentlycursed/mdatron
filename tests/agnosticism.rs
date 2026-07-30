@@ -123,9 +123,13 @@ fn every_dependency_has_an_investigation_record() {
 
 // ── 3. No-adopter-data run: families inactive and reported ───────────────────
 //
-// With `.mdatron/` present but no family data, verify runs to completion, emits
-// no findings, and the envelope reports every family inactive (not a panic, not
-// a silent no-op).
+// With `.mdatron/` present but no family data, verify runs to completion and the
+// envelope reports every family inactive (not a panic, not a silent no-op). A
+// file that DECLARES a schema_class no schema serves is the one exception: since
+// #111 (answered by vsdd-cli) that declaration warrants a W0045 warning even with
+// empty infrastructure — the families still all read inactive (nothing validated
+// it), but the unserved declaration is no longer a silent false-clean. A file
+// with no schema_class at all stays fully clean (fresh-init-clean preserved).
 #[test]
 fn no_adopter_data_runs_with_all_families_inactive() {
     use mdatron::output::FamilyActivity;
@@ -154,13 +158,38 @@ fn no_adopter_data_runs_with_all_families_inactive() {
 
     let cfg = VerifyConfig::from_project(&root).unwrap();
     let report = verify_report(&cfg).expect("verify runs with no adopter data");
-    assert!(report.findings.is_empty(), "no data -> no findings");
+    // #111: the declared-but-unserved schema_class now warrants exactly one W0045.
+    assert_eq!(
+        report
+            .findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-W0045")
+            .count(),
+        1,
+        "a declared schema_class that no schema serves is flagged, not silently clean; got {:?}",
+        report.findings
+    );
+    // The families still all read inactive — nothing actually validated the file;
+    // W0045 is the meta-signal that the file asked for validation no active family
+    // could provide.
     let f = report.families;
     assert!(matches!(f.schema, FamilyActivity::Inactive { .. }));
     assert!(matches!(f.route, FamilyActivity::Inactive { .. }));
     assert!(matches!(f.pin, FamilyActivity::Inactive { .. }));
     assert!(matches!(f.vocabulary, FamilyActivity::Inactive { .. }));
     assert!(matches!(f.citation, FamilyActivity::Inactive { .. }));
+
+    // Fresh-init-clean: swap the declared-class file for a schema_class-less one —
+    // no declaration, no warning, genuinely empty findings.
+    fs::remove_file(root.join("doc.md")).unwrap();
+    fs::write(root.join("prose.md"), "---\ntitle: prose\n---\nbody\n").unwrap();
+    let cfg = VerifyConfig::from_project(&root).unwrap();
+    let report = verify_report(&cfg).expect("verify runs with no adopter data");
+    assert!(
+        report.findings.is_empty(),
+        "a file with no declared schema_class stays clean; got {:?}",
+        report.findings
+    );
 
     let _ = fs::remove_dir_all(&root);
 }

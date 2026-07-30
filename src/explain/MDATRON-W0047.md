@@ -20,11 +20,18 @@ request, the missing directory is the structural root cause, reported here at th
 project level.
 
 This is the project-level companion to `MDATRON-W0045` (a per-file unrouted
-`schema_class`). W0045 stays its hand when there is no validation infrastructure
-at all — an empty `schemas/` **and** empty `patterns/` — to preserve the
-"no adopter data → clean" property. W0047 covers exactly that gap for the case
-that is *not* no-adopter-data: a file that declared a class and expected to be
-validated, in a project whose schemas directory is entirely gone.
+`schema_class`), and the two divide the work by whether `.mdatron/schemas/`
+exists so they never double-report the same file:
+
+- The directory is **present** (empty or populated) and a file declares a class
+  nothing serves → **W0045**, per file (since #111 this fires even when the
+  directory — and `patterns/` — is empty; the declaration is itself the request
+  that went unserved).
+- The directory is **missing** entirely → **W0047**, once at the project level,
+  because the missing skeleton directory is the structural root cause.
+
+Either way the "no adopter data → clean" property holds: a file with no
+`schema_class` declares no intent to be validated, so neither warning fires.
 
 Deliberately quiet cases:
 
@@ -33,7 +40,9 @@ Deliberately quiet cases:
   false-clean and does not warn.
 - A file with **no `schema_class`** requests no Layer 1 validation, so a missing
   `schemas/` is nothing to it.
-- A directory that is **present but empty** is a deliberate opt-out, not drift.
+- A **present but empty** `schemas/` does not trip *this* warning — a missing
+  directory is what W0047 reports. (A declared-but-unserved class under a
+  present-empty directory is reported per file by W0045 instead.)
 - When **both** `schemas/` and `patterns/` are absent the run fails outright with
   a pipeline error rather than this warning — there is nothing to validate with.
 
