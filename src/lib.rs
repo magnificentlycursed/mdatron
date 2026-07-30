@@ -23,6 +23,7 @@
 //! and rustc-shaped + JSON output. See CHANGELOG.md for the surface shipped per
 //! release (this crate is versioned in `Cargo.toml`, not pinned in this header).
 
+pub(crate) mod atomic;
 pub mod cite;
 pub mod codes;
 pub mod config;

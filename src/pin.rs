@@ -285,7 +285,10 @@ pub fn update(project_root: &Path, dry_run: bool) -> Result<Vec<(String, String,
          # Recompute with `mdatron pin --update`. This file cannot pin itself; its\n\
          # integrity anchor is commit review (DESIGN § Governance data is governed).\n{yaml}"
     );
-    std::fs::write(&path, body).map_err(|e| Error::Config(format!("cannot write pins: {e}")))?;
+    // Atomic write (#126 DEF8): pins.yaml is rewritten in place on every
+    // `pin --update`; a torn write would corrupt the pin set.
+    crate::atomic::write(&path, body.as_bytes())
+        .map_err(|e| Error::Config(format!("cannot write pins: {e}")))?;
     Ok(changed)
 }
 
