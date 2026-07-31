@@ -87,11 +87,9 @@ impl VerifyConfig {
                 // this free-form message leaks the host layout into
                 // pipeline_error.message — the DEF4 leak `relativize_paths` cannot
                 // reach in prose (this is the most common pipeline failure).
-                "no jurisdiction declared: '{}' is missing — run `mdatron init` \
-                 to seed it, or pass explicit --files globs for an ad-hoc run",
-                Path::new(".mdatron")
-                    .join(crate::config::CONFIG_NAME)
-                    .display()
+                "no jurisdiction declared: '.mdatron/{}' is missing — run `mdatron \
+                 init` to seed it, or pass explicit --files globs for an ad-hoc run",
+                crate::config::CONFIG_NAME
             )));
         };
         // A present config that declares NO file_globs must refuse, not silently
@@ -103,12 +101,10 @@ impl VerifyConfig {
         if pc.file_globs.is_empty() {
             return Err(crate::Error::Config(format!(
                 // Project-root-relative path (roast A1, #140) — see above.
-                "'{}' declares no `file_globs`: jurisdiction must be explicit (#80-D1). \
-                 Add a `file_globs` list (check for a typo'd key), or pass explicit \
-                 `--files` globs for an ad-hoc run.",
-                Path::new(".mdatron")
-                    .join(crate::config::CONFIG_NAME)
-                    .display()
+                "'.mdatron/{}' declares no `file_globs`: jurisdiction must be \
+                 explicit (#80-D1). Add a `file_globs` list (check for a typo'd \
+                 key), or pass explicit `--files` globs for an ad-hoc run.",
+                crate::config::CONFIG_NAME
             )));
         }
         cfg.file_globs = pc.file_globs;
@@ -1211,7 +1207,9 @@ fn verify_file(
     let rel_path = path.strip_prefix(project_root).unwrap_or(path);
     let file_value = Value::Object(BTreeMap::from([(
         "path".to_string(),
-        Value::Str(rel_path.to_string_lossy().into_owned()),
+        // Forward-slash separators (#136) so a rule interpolating `$file.path`
+        // yields the same envelope on Unix and Windows.
+        Value::Str(crate::diagnostic::to_forward_slash(rel_path)),
     )]));
     let project_value = Value::Null;
 
