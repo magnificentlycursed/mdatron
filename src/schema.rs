@@ -206,7 +206,14 @@ fn at_pointer(pointer: &str) -> String {
     }
     let mut out = String::from(" at ");
     for ch in pointer.chars() {
-        if ch.is_control() {
+        // Match the ratified rendering partition (roast B1, #140): a JSON pointer
+        // carries adopter-chosen KEY names, and this pointer is interpolated inline
+        // into an engine-authored message — so it must escape every code point a
+        // consumer may treat as a line break, i.e. the Cc controls AND the Zl/Zp
+        // separators U+2028/U+2029, exactly as `diagnostic.rs::safe_display` /
+        // `escape_label` do (#125 SHO5). Escaping only `is_control()` let a raw
+        // U+2028 in a frontmatter key forge an unprefixed line in the E0050 message.
+        if ch.is_control() || matches!(ch, '\u{2028}' | '\u{2029}') {
             use std::fmt::Write;
             let _ = write!(out, "\\x{:02X}", ch as u32);
         } else {
@@ -340,10 +347,15 @@ mod tests {
         );
     }
 
-    // Proof 2: a classic catastrophic-backtracking pattern uses no fancy features,
-    // so it is accepted and matches in LINEAR time — the adversarial input returns
-    // a normal non-match error promptly rather than hanging the verify gate. On a
-    // backtracking engine this would not terminate within the test timeout.
+    // A classic catastrophic-backtracking pattern uses no fancy features, so it is
+    // accepted and returns promptly rather than hanging the verify gate. Honest
+    // scope (roast B2): this is a SMOKE test, not a linear-vs-backtracking
+    // discriminator — even the default fancy-regex would terminate here via its
+    // built-in ~1M-step backtrack limit. The load-bearing linearity guarantee is
+    // the fancy-feature rejection in the test above (a backreference the linear
+    // `regex` crate cannot express is refused at compile), plus the engine choice
+    // itself (`PatternOptions::regex()`); this test only asserts the adversarial
+    // input does not stall and yields the expected non-match.
     #[test]
     fn catastrophic_pattern_matches_in_linear_time() {
         let schema = Schema::compile(&json!({
@@ -358,6 +370,39 @@ mod tests {
             errors.len(),
             1,
             "the adversarial value does not match -> exactly one pattern error"
+        );
+    }
+
+    // roast B1 (#140): a frontmatter KEY carrying a Zl/Zp separator (U+2028) must
+    // render escaped in the engine-authored message's inline JSON pointer, not as
+    // a raw line break — matching the diagnostic.rs partition (#125 SHO5).
+    #[test]
+    fn instance_pointer_escapes_line_separators() {
+        let schema = Schema::compile(&json!({
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+        }))
+        .unwrap();
+        // A key with an embedded U+2028; its value 123 is not a string, so the Type
+        // error's instance_path (the key) is interpolated inline into the message.
+        // Built directly (a YAML source scanner would itself treat U+2028 as a line
+        // break — the very reason the rendered pointer must escape it).
+        let mut m = serde_yaml_ng::Mapping::new();
+        m.insert("evil\u{2028}key".into(), 123.into());
+        let fm = YamlValue::Mapping(m);
+        let errors = schema.validate(&fm);
+        assert!(
+            !errors.is_empty(),
+            "the non-string value violates the schema"
+        );
+        let msg = &errors[0].message;
+        assert!(
+            !msg.contains('\u{2028}'),
+            "no raw line separator survives inline; got {msg:?}"
+        );
+        assert!(
+            msg.contains("\\x2028"),
+            "the separator is escaped to \\x2028; got {msg:?}"
         );
     }
 

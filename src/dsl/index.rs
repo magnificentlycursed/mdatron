@@ -167,7 +167,11 @@ fn build_index(project_root: &Path, decl: &KeyDecl) -> Result<Index, IndexError>
     let mut sources: BTreeSet<PathBuf> = BTreeSet::new();
 
     for rel in resolve_source(project_root, source)? {
-        let display = project_root.join(rel.as_path());
+        // Project-root-RELATIVE display path (roast A2, #140): this value feeds
+        // only the IndexError message `path` fields (the file itself opens via the
+        // confined `rel` below), so an absolute `project_root.join(...)` here would
+        // leak the host layout into the IndexBuild pipeline_error.message.
+        let display = rel.as_path().to_path_buf();
         let file = confine::open_confined(project_root, &rel).map_err(|v| match v {
             confine::OpenViolation::Symlink { component } => IndexError::SymlinkRefused {
                 path: escape_path_text(&display.to_string_lossy()),
