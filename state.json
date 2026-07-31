@@ -4746,11 +4746,12 @@
       "uuid": "ce6b2f18-6264-4777-9e10-b5d3454ffc62",
       "display_id": 141,
       "title": "roast-r2: doc fix expr-depth kind (D1/D2) + pin cargo-deny tool version (C1)",
-      "status": "open",
+      "status": "closed",
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-07-31T02:30:50.394331Z",
-      "updated_at": "2026-07-31T02:37:53.588912Z",
+      "updated_at": "2026-07-31T02:38:06.975272Z",
+      "closed_at": "2026-07-31T02:38:06.975241Z",
       "labels": [
         "documentation"
       ],
@@ -5785,8 +5786,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-31T02:37:53.588912Z",
+    "timestamp": "2026-07-31T02:38:06.975272Z",
     "agent_id": "79Ig",
-    "agent_seq": 607
+    "agent_seq": 608
   }
 }
