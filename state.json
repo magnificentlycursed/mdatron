@@ -1,5 +1,5 @@
 {
-  "next_display_id": 139,
+  "next_display_id": 140,
   "next_comment_id": 347,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -107,6 +107,7 @@
     "bec6b353-b08d-42fd-a2ed-b2fdad239134": 2,
     "c07826cb-7293-4bec-9f53-3c530fe1decf": 13,
     "c0c1830e-4e87-4ae9-b8fe-0a7d8701f1be": 7,
+    "c1771947-9855-4b6e-aca7-b6e8d5d3000a": 139,
     "c19c5caa-1166-4cad-be76-506a2166d22c": 98,
     "c5dc858e-4a6e-4662-9360-2aac4b0c176d": 18,
     "c80e0096-9ce9-4085-a622-b46b6b0ed8e6": 71,
@@ -4349,6 +4350,16 @@
         }
       }
     },
+    "c1771947-9855-4b6e-aca7-b6e8d5d3000a": {
+      "uuid": "c1771947-9855-4b6e-aca7-b6e8d5d3000a",
+      "display_id": 139,
+      "title": "Lane7/roast-r1: add cargo-deny (license/bans/sources) CI gate over the transitive tree (C4)",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-07-31T01:59:00.080533Z",
+      "updated_at": "2026-07-31T01:59:00.080533Z"
+    },
     "c19c5caa-1166-4cad-be76-506a2166d22c": {
       "uuid": "c19c5caa-1166-4cad-be76-506a2166d22c",
       "display_id": 98,
@@ -5704,8 +5715,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-31T01:53:50.172631Z",
+    "timestamp": "2026-07-31T01:59:00.080533Z",
     "agent_id": "79Ig",
-    "agent_seq": 591
+    "agent_seq": 592
   }
 }
