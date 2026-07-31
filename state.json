@@ -1,6 +1,6 @@
 {
   "next_display_id": 139,
-  "next_comment_id": 346,
+  "next_comment_id": 347,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -5057,10 +5057,21 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-07-31T01:50:28.059775Z",
-      "updated_at": "2026-07-31T01:50:32.786995Z",
+      "updated_at": "2026-07-31T01:53:39.299430Z",
       "labels": [
         "bug"
-      ]
+      ],
+      "comments": {
+        "4661ba75-4598-4ffe-8700-92ee13a69bfc": {
+          "display_id": 346,
+          "author": "79Ig",
+          "content": "Shipped via PR #13 (merge 82dcf57): atomic O_EXCL+retry (A3), doc softening for Windows sharing-violation (B3) + crash-leftover (A2); compact empty-message gate (A4); label control-escape (B4). Red gates compact_drops_a_content_free_message + label_control_chars_are_escaped.",
+          "created_at": "2026-07-31T01:53:39.286736Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA12oXGqO92lL8czkcKrIJhq9nIyI2iiGNmG6nnpjyMzNx2k7MLfL1pp0ARhk16n/FaJ/eOu/DHUEOt19axQ5/Bg=="
+        }
+      }
     },
     "ed48043d-4d35-4ce5-af15-81f01cbbbdd7": {
       "uuid": "ed48043d-4d35-4ce5-af15-81f01cbbbdd7",
@@ -5696,8 +5707,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-31T01:50:40.138071Z",
+    "timestamp": "2026-07-31T01:53:39.299430Z",
     "agent_id": "79Ig",
-    "agent_seq": 588
+    "agent_seq": 589
   }
 }
