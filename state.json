@@ -1,5 +1,5 @@
 {
-  "next_display_id": 140,
+  "next_display_id": 141,
   "next_comment_id": 348,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -10,6 +10,7 @@
     "15d7981a-008d-4805-8a69-f3e4f414caf0": 75,
     "18184292-e0ea-4575-b33b-ff82e1ed6c2d": 128,
     "18545077-3dbb-4401-847d-c6b4bdbe7d78": 104,
+    "18b49293-d407-4ef5-8252-144a072cf9e7": 140,
     "1a48e540-17b6-4a8f-9681-62cffd446bc3": 14,
     "1b58cd40-d953-4626-b2c8-be53d696aee3": 19,
     "1ba1bc71-1b50-4f6c-b672-1524a61a3096": 116,
@@ -485,6 +486,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA7otLnaBb1P3TuSzmC+MO3IeT4U72Ntvx0CblHZx6YvLtwBWljiDJcOIIbheiGWkY7SiTghFtmCN/0mm9QId3CQ=="
         }
       }
+    },
+    "18b49293-d407-4ef5-8252-144a072cf9e7": {
+      "uuid": "18b49293-d407-4ef5-8252-144a072cf9e7",
+      "display_id": 140,
+      "title": "roast-r2: at_pointer Zl/Zp escape (B1 HIGH) + pipeline_error Config/IndexBuild/Glob leak (A1/A2) + ReDoS test discrimination (B2)",
+      "status": "open",
+      "priority": "high",
+      "created_by": "79Ig",
+      "created_at": "2026-07-31T02:18:54.377680Z",
+      "updated_at": "2026-07-31T02:18:54.377680Z"
     },
     "1a48e540-17b6-4a8f-9681-62cffd446bc3": {
       "uuid": "1a48e540-17b6-4a8f-9681-62cffd446bc3",
@@ -5730,8 +5741,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-31T02:07:04.419838Z",
+    "timestamp": "2026-07-31T02:18:54.377680Z",
     "agent_id": "79Ig",
-    "agent_seq": 597
+    "agent_seq": 598
   }
 }
