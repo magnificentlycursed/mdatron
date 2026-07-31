@@ -99,7 +99,12 @@ jobs:
       # MSRV (they track a newer toolchain). Both only read Cargo.lock/metadata.
       - uses: taiki-e/install-action@065d6a08a14e61e89fb0a4c10eecdbdef39c7d8e # v2
         with:
-          tool: cargo-audit,cargo-deny
+          # cargo-deny is version-pinned (roast C1, #141): its closed license
+          # allow-list must not float to a future release that tightens SPDX
+          # evaluation or deprecates a deny.toml field and red the gate with no
+          # repo change. cargo-audit stays unpinned — its advisory DB updates
+          # independently of the binary, so advisory freshness is unaffected.
+          tool: cargo-audit,cargo-deny@0.20.2
 
       - name: Audit dependencies (RustSec advisories)
         run: cargo audit --deny warnings
