@@ -3499,11 +3499,12 @@
       "uuid": "a7662de4-2bc7-4dcb-aeae-8e5fd5557c25",
       "display_id": 136,
       "title": "DEF4 follow-up: normalize envelope path separators to '/' for cross-platform reproducibility (Windows emits backslash)",
-      "status": "open",
+      "status": "closed",
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-30T21:03:31.612800Z",
-      "updated_at": "2026-07-31T16:15:32.331671Z",
+      "updated_at": "2026-07-31T16:15:38.889572Z",
+      "closed_at": "2026-07-31T16:15:38.889557Z",
       "labels": [
         "bug"
       ],
@@ -5819,8 +5820,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-31T16:15:32.331671Z",
+    "timestamp": "2026-07-31T16:15:38.889572Z",
     "agent_id": "79Ig",
-    "agent_seq": 616
+    "agent_seq": 617
   }
 }
