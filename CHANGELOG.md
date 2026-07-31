@@ -10,6 +10,22 @@ the TRON blockchain.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-07-31
+
+First crates.io release (#48) — an early-0.x public debut (per the DEF1 ruling).
+Ships everything accumulated since the `v0.4.0` tag, hardened by a full pre-publish
+adversarial roast: **26 findings across 3 iterative rounds, all fixed** — three
+HIGH among them (a JSON-Schema `pattern` **ReDoS**, and two diagnostic
+**injection** surfaces). Headline changes: the `jsonschema` `0.18 → 0.49` upgrade
+to a **linear-time** regex engine; DEF4 project-root-relative **and**
+forward-slashed envelope paths (byte-identical across Unix and Windows); the
+`--deny-warnings`/`--strict` hard-gate flag; enforced input resource bounds; a
+`cargo-deny` supply-chain gate; and the published-schema `$id` moved off an
+unowned domain to the project's GitHub namespace. **Envelope:**
+`mdatron_output_version` moves **2.0.0 → 2.1.0** — a MINOR bump (the additive
+`pipeline_error.kind: "bound_exceeded"`). Accordingly the crate moves `0.4.0 →
+0.5.0` (new features + the additive envelope; a pre-1.0 minor per SemVer).
+
 ### Added
 - input resource bounds are enforced with a loud diagnostic, and the `verify --json` envelope's `mdatron_output_version` moves **2.0.0 → 2.1.0** to carry the new failure kind (#124, roast SHO1): a per-file byte cap (`MAX_FILE_BYTES`, 8 MiB), an aggregate-snapshot byte cap (`MAX_AGGREGATE_BYTES`, 64 MiB), and a structural-nesting cap (`MAX_STRUCTURAL_NESTING`, 256) each exceedance a `pipeline_error` with the new `kind: "bound_exceeded"`; the DSL expression-nesting cap (`MAX_EXPR_DEPTH`, 256) surfaces as `kind: "expr_parse"` (a bounded `ParseError`, not the stack-overflow abort it prevents). Together these replace silent degradation, unbounded memory, and an uncatchable parser abort. The `bound_exceeded` value is **additive** to the closed `pipeline_error.kind` enum, so the envelope moves by a **MINOR** (`2.0.0 → 2.1.0`) per the versioned-contract SemVer rule (§ Diagnostics are a versioned contract); the published schema, `OUTPUT_VERSION`, and `E0080`'s explain page are updated in lockstep. (This entry documents a contract change that shipped after the 0.4.0 tag but was previously unrecorded — a gap the pre-publish re-roast caught, D1; the expr-depth `kind` was itself corrected in round 2.)
 - `mdatron verify --deny-warnings` (alias `--strict`) escalates a warnings-only run to a failing exit (#121, requested by vsdd-cli mdatron#1): an otherwise-clean run (exit `0`) that carries warnings now exits `1`, so a hard-gate consumer can fail on warnings without parsing the JSON envelope. Errors (`1`), pipeline failures (`2`), and a genuinely clean run (`0`) are unchanged; the escalation is purely `0 → 1` when `summary.warning_count > 0`.

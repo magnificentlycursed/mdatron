@@ -29,8 +29,8 @@ output for machine consumers.
 
 mdatron ships as an early **0.x** crate — usable now, with the CLI and the
 `--json` diagnostic contract still evolving under SemVer (pre-1.0, a breaking
-change moves the `0.MINOR` position, so `^0.4` will not silently pull a breaking
-`0.5`). Install from crates.io:
+change moves the `0.MINOR` position, so `^0.5` will not silently pull a breaking
+`0.6`). Install from crates.io:
 
 ```
 cargo install mdatron --locked
@@ -39,7 +39,7 @@ cargo install mdatron --locked
 Pin the minor to avoid an unintended breaking upgrade in CI:
 
 ```
-cargo install mdatron --locked --version "0.4"
+cargo install mdatron --locked --version "0.5"
 ```
 
 `--locked` pins transitive dependencies to the shipped `Cargo.lock`; recommended
