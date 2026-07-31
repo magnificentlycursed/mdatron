@@ -1,6 +1,6 @@
 {
   "next_display_id": 138,
-  "next_comment_id": 345,
+  "next_comment_id": 346,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -2111,10 +2111,21 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-30T21:10:50.470934Z",
-      "updated_at": "2026-07-30T21:10:55.294386Z",
+      "updated_at": "2026-07-31T01:43:57.275609Z",
       "labels": [
         "documentation"
-      ]
+      ],
+      "comments": {
+        "de6f5a99-5642-45ea-9d19-3cc17948ea0f": {
+          "display_id": 345,
+          "author": "79Ig",
+          "content": "Shipped via PR #12 (merge 86d4595): D1 (envelope 2.1.0/#124 documented in CHANGELOG), D2 (E0080 bound_exceeded kind), D3 (README --deny-warnings), D4 (output.rs 2.1.0 history), D5 ([0.2.0] dup header merged), C2 (DEF2 rationale corrected). Docs-only; self-verify clean.",
+          "created_at": "2026-07-31T01:43:57.257111Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAj+IGCvC1y2coihq2uXenx3kI/1GVcm40ZLituLOgfvlsUtRVvuusOrfJv74dDBPNIRZTiO69aFuwF20Vi0p/Bg=="
+        }
+      }
     },
     "700bbf38-a0db-46e2-90a8-36df989ecb06": {
       "uuid": "700bbf38-a0db-46e2-90a8-36df989ecb06",
@@ -5670,8 +5681,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-30T21:11:02.326839Z",
+    "timestamp": "2026-07-31T01:43:57.275609Z",
     "agent_id": "79Ig",
-    "agent_seq": 582
+    "agent_seq": 583
   }
 }
