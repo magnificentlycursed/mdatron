@@ -1,6 +1,6 @@
 {
   "next_display_id": 143,
-  "next_comment_id": 352,
+  "next_comment_id": 353,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -5676,7 +5676,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-19T20:53:20.240290Z",
-      "updated_at": "2026-07-29T18:16:18.757820Z",
+      "updated_at": "2026-07-31T19:21:30.102672Z",
       "labels": [
         "feature",
         "v1.0"
@@ -5712,6 +5712,15 @@
           "kind": "decision",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAytWfFBMhTZaPDl5Y5fw+V1wtFavHlnEu+QIOSPb/ckefWkS+5ZYIKGf8AcHIbeYMF/jNAJD8bW52Nn25ykItDg=="
+        },
+        "cd185b8b-c03d-4e03-9bea-629b3638036a": {
+          "display_id": 352,
+          "author": "79Ig",
+          "content": "PUBLISHED: mdatron 0.5.0 is live on crates.io (cargo install mdatron --locked). GitHub release v0.5.0 cut. First public release; hardened by a 3-round pre-publish adversarial roast (26 findings fixed, 3 HIGH). Envelope mdatron_output_version 2.1.0. Follow-ups open: #132 (DEF5 format-versioning), #133 (DEF7 cost-ledger relay).",
+          "created_at": "2026-07-31T19:21:30.087684Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA9eiWOR+SZFTk0LUW4ViAPh/jxDoLPfhs8RXKBNKFfE606727Y4nd9KXWAH73j4ILMv4Fa6GPfks7yNaO8J/MCQ=="
         },
         "cda9baf8-669a-4094-96b2-57221b79c4c7": {
           "display_id": 247,
@@ -5820,8 +5829,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-31T18:31:31.049324Z",
+    "timestamp": "2026-07-31T19:21:30.102672Z",
     "agent_id": "79Ig",
-    "agent_seq": 619
+    "agent_seq": 620
   }
 }
