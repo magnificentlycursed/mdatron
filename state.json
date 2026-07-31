@@ -1,6 +1,6 @@
 {
   "next_display_id": 143,
-  "next_comment_id": 351,
+  "next_comment_id": 352,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -3503,10 +3503,21 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-30T21:03:31.612800Z",
-      "updated_at": "2026-07-30T21:03:36.334400Z",
+      "updated_at": "2026-07-31T16:15:32.331671Z",
       "labels": [
         "bug"
-      ]
+      ],
+      "comments": {
+        "e09a5d2f-cfd4-4418-a29c-30a04e3614d1": {
+          "display_id": 351,
+          "author": "79Ig",
+          "content": "Shipped via PR #18: envelope paths now forward-slashed cross-platform (diagnostic::to_forward_slash on Location serialize + $file.path + config-path messages); TTY/compact keep native separators. Red gate location_serializes_with_forward_slashes; windows CI green. Last DEF4 gap closed.",
+          "created_at": "2026-07-31T16:15:32.313422Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAXMuDvmT2vhrB/5IqjZlyM+qcv4OkDRy2cyzNPRRqALYZisDThK+/YtWcB+uzx7L5zs+xioUCsQvj+9Mh6JUiDg=="
+        }
+      }
     },
     "a89629bc-8e2a-4193-adaa-78efe28381e3": {
       "uuid": "a89629bc-8e2a-4193-adaa-78efe28381e3",
@@ -5808,8 +5819,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-31T14:37:22.306710Z",
+    "timestamp": "2026-07-31T16:15:32.331671Z",
     "agent_id": "79Ig",
-    "agent_seq": 615
+    "agent_seq": 616
   }
 }
