@@ -1787,11 +1787,12 @@
       "uuid": "57311af8-98a9-4083-9f80-586f713d0089",
       "display_id": 142,
       "title": "roast-r3: pipeline_error message chokepoint relativization (A) + escape inline schema pattern (B)",
-      "status": "open",
+      "status": "closed",
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-31T14:32:57.573271Z",
-      "updated_at": "2026-07-31T14:37:09.422251Z",
+      "updated_at": "2026-07-31T14:37:15.198594Z",
+      "closed_at": "2026-07-31T14:37:15.198582Z",
       "labels": [
         "security"
       ],
@@ -5811,8 +5812,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-31T14:37:09.422251Z",
+    "timestamp": "2026-07-31T14:37:15.198594Z",
     "agent_id": "79Ig",
-    "agent_seq": 613
+    "agent_seq": 614
   }
 }
