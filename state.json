@@ -2333,11 +2333,12 @@
       "uuid": "73fb2a8c-e991-4bfe-b8d2-7c56f53ce417",
       "display_id": 143,
       "title": "post-release housekeeping (0.5.0): trim changelog cruft + memory",
-      "status": "open",
+      "status": "closed",
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-07-31T19:23:13.778507Z",
-      "updated_at": "2026-07-31T19:29:38.300769Z",
+      "updated_at": "2026-07-31T19:29:44.092325Z",
+      "closed_at": "2026-07-31T19:29:44.092314Z",
       "labels": [
         "chore"
       ],
@@ -5855,8 +5856,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-31T19:29:38.300769Z",
+    "timestamp": "2026-07-31T19:29:44.092325Z",
     "agent_id": "79Ig",
-    "agent_seq": 626
+    "agent_seq": 627
   }
 }
