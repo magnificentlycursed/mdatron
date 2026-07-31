@@ -82,10 +82,14 @@ impl VerifyConfig {
         let mut cfg = Self::new(project_root);
         let Some(pc) = crate::config::load(&cfg.project_root)? else {
             return Err(crate::Error::Config(format!(
+                // Project-root-RELATIVE path (roast A1, #140): the config always
+                // lives at this relative location, and an absolute path baked into
+                // this free-form message leaks the host layout into
+                // pipeline_error.message — the DEF4 leak `relativize_paths` cannot
+                // reach in prose (this is the most common pipeline failure).
                 "no jurisdiction declared: '{}' is missing — run `mdatron init` \
                  to seed it, or pass explicit --files globs for an ad-hoc run",
-                cfg.project_root
-                    .join(".mdatron")
+                Path::new(".mdatron")
                     .join(crate::config::CONFIG_NAME)
                     .display()
             )));
@@ -98,11 +102,11 @@ impl VerifyConfig {
         // default is reserved for the explicit `--files`/`new` ad-hoc path.
         if pc.file_globs.is_empty() {
             return Err(crate::Error::Config(format!(
+                // Project-root-relative path (roast A1, #140) — see above.
                 "'{}' declares no `file_globs`: jurisdiction must be explicit (#80-D1). \
                  Add a `file_globs` list (check for a typo'd key), or pass explicit \
                  `--files` globs for an ad-hoc run.",
-                cfg.project_root
-                    .join(".mdatron")
+                Path::new(".mdatron")
                     .join(crate::config::CONFIG_NAME)
                     .display()
             )));
@@ -468,7 +472,17 @@ fn run(
             .map_err(|e| VerifyError::Glob(format!("'{glob_pattern}': {e}")))?;
         let mut matched = false;
         for entry in paths {
-            let path = entry.map_err(|e| VerifyError::Glob(format!("'{glob_pattern}': {e}")))?;
+            // A per-entry read error's `Display` embeds the ABSOLUTE path it
+            // failed on (roast A2, #140) — relativize it against the root so the
+            // Glob pipeline_error.message does not leak the host layout.
+            let path = entry.map_err(|e| {
+                let rel = e.path().strip_prefix(&project_root).unwrap_or(e.path());
+                VerifyError::Glob(format!(
+                    "'{glob_pattern}': cannot read '{}': {}",
+                    rel.display(),
+                    e.error()
+                ))
+            })?;
             let rel = path
                 .strip_prefix(&project_root)
                 .unwrap_or(&path)
@@ -2209,6 +2223,30 @@ pattern:
         assert!(
             msg.contains("no `file_globs`") || msg.contains("jurisdiction must be explicit"),
             "a globless config must refuse, not default to whole-tree; got: {msg}"
+        );
+        // roast A1 (#140): the refusal names the config RELATIVELY (this message
+        // becomes pipeline_error.message), so it must not leak the absolute root.
+        assert!(
+            msg.contains("config.yaml") && !msg.contains(&*proj.0.to_string_lossy()),
+            "the refusal carries a relative config path, not an absolute one; got: {msg}"
+        );
+    }
+
+    // roast A1 (#140): the most common pipeline failure — a missing config — names
+    // the config RELATIVELY in its message (which becomes pipeline_error.message),
+    // so it does not leak the host filesystem layout into the JSON envelope.
+    #[test]
+    fn missing_config_error_path_is_relative() {
+        let proj = TempProject::new("no-config-at-all");
+        let err = VerifyConfig::from_project(&proj.0).unwrap_err();
+        let msg = format!("{err}");
+        assert!(
+            msg.contains("no jurisdiction declared"),
+            "the missing-config refusal fires; got: {msg}"
+        );
+        assert!(
+            msg.contains("config.yaml") && !msg.contains(&*proj.0.to_string_lossy()),
+            "no absolute host path in the missing-config message; got: {msg}"
         );
     }
 
