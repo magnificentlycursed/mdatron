@@ -141,6 +141,26 @@ pub fn render_quoted(content: &str, prefix: &str) -> String {
     out
 }
 
+/// Escape line-break-capable code points in an engine-authored label to inert
+/// `\xNN` (roast B4). A quoted region's `label` is engine text except where
+/// `interpolate_message` derives it from a pattern's `{{expr}}` template, so a
+/// control char (or the Zl/Zp separators) in that expression could forge an
+/// unprefixed line on the `= <label>:` intro line — the one rendered field that
+/// does not already pass through `render_quoted`/`safe_display`. Matches the
+/// `safe_display` predicate (Cc ∪ {U+2028, U+2029}) so a label cannot break a line.
+fn escape_label(label: &str) -> String {
+    let mut out = String::with_capacity(label.len());
+    for ch in label.chars() {
+        if ch.is_control() || matches!(ch, '\u{2028}' | '\u{2029}') {
+            use std::fmt::Write;
+            let _ = write!(out, "\\x{:02X}", ch as u32);
+        } else {
+            out.push(ch);
+        }
+    }
+    out
+}
+
 /// A region of adopter-derived text carried alongside a finding's engine-authored
 /// `message`. Kept structurally separate (per `DESIGN.md` § Output) so it is a
 /// distinct field in the JSON envelope and a prefix-marked block in the TTY /
@@ -260,7 +280,7 @@ impl Finding {
         // engine-authored `= <label>:` line introduces each, then the adopter
         // content flows through the partition renderer with every line prefixed.
         for region in &self.quoted {
-            let _ = write!(output, "\n   = {}:", region.label);
+            let _ = write!(output, "\n   = {}:", escape_label(&region.label));
             let _ = write!(
                 output,
                 "\n{}",
@@ -348,7 +368,7 @@ impl Finding {
         let mut quoted_out = String::new();
         if essential.len() + reserve <= COMPACT_FINDING_LIMIT {
             'regions: for region in &self.quoted {
-                let label_line = format!("={}:", region.label);
+                let label_line = format!("={}:", escape_label(&region.label));
                 let body = render_quoted(&region.content, COMPACT_QUOTE_PREFIX);
                 for line in std::iter::once(label_line.as_str()).chain(body.split('\n')) {
                     if essential.len() + quoted_out.len() + 1 + line.len()
@@ -375,8 +395,16 @@ impl Finding {
             let avail = COMPACT_FINDING_LIMIT
                 .saturating_sub(head.len())
                 .saturating_sub(quoted_out.len());
+            let sep_len = " — ".len();
             if prose.len() <= avail {
-                head.push_str(&prose);
+                // #119 (roast A4): gate the fits-branch exactly like the truncation
+                // branch — a content-free message (empty or all-whitespace, yet
+                // != summary) must not emit a dangling " — " with no text. Both
+                // paths now drop prose whose only content is the separator.
+                let piece = prose.trim_end();
+                if piece.len() > sep_len {
+                    head.push_str(piece);
+                }
             } else {
                 // Truncate at a char boundary, leaving room for the ellipsis; drop
                 // the prose entirely if there is not even room for a separator +
@@ -391,9 +419,8 @@ impl Finding {
                 // last interior whitespace so the prose reads "the quick…" rather
                 // than "the quick bro…". A cut already at a word gap keeps its final
                 // word; a single token wider than the budget has no interior space
-                // to retreat to and takes the hard char cut. `sep_len` protects the
-                // " — " separator so we never retreat into it and emit a bare marker.
-                let sep_len = " — ".len();
+                // to retreat to and takes the hard char cut. `sep_len` (hoisted
+                // above) protects the " — " separator so we never retreat into it.
                 let splits_word = prose[cut..]
                     .chars()
                     .next()
@@ -644,6 +671,57 @@ mod tests {
             out.contains(" — x") && out.ends_with('…'),
             "the over-long token is hard-cut and kept, not dropped; got {out:?}"
         );
+    }
+
+    // roast A4: a content-free message that merely differs from the summary emits
+    // no dangling " — " — the fits-branch is gated like the truncation branch.
+    #[test]
+    fn compact_drops_a_content_free_message() {
+        let finding = Finding {
+            code: "MDATRON-E0050".into(),
+            severity: Severity::Error,
+            summary: "s".into(),
+            message: "   ".into(), // whitespace-only, but != summary
+            help: None,
+            location: Location::whole_file("doc.md"),
+            explain_ref: None,
+            quoted: Vec::new(),
+        };
+        let out = finding.format_compact();
+        assert!(
+            !out.contains('—'),
+            "a content-free message leaves no dangling separator; got {out:?}"
+        );
+    }
+
+    // roast B4: a control char (or Zl/Zp) in an engine label renders as an inert
+    // \xNN escape on the `= <label>:` intro line, in BOTH the TTY and compact
+    // forms — a pattern-derived label cannot forge an unprefixed line.
+    #[test]
+    fn label_control_chars_are_escaped() {
+        let finding = Finding {
+            code: "TEST-E0001".into(),
+            severity: Severity::Error,
+            summary: "sum".into(),
+            message: "m".into(),
+            help: None,
+            location: Location::whole_file("doc.md"),
+            explain_ref: None,
+            quoted: vec![QuotedRegion {
+                label: "a\nb".into(),
+                content: "v".into(),
+            }],
+        };
+        for rendered in [finding.format_tty(), finding.format_compact()] {
+            assert!(
+                rendered.contains("a\\x0Ab"),
+                "the label newline is escaped; got {rendered:?}"
+            );
+            assert!(
+                !rendered.contains("a\nb"),
+                "no raw newline survives inside the label; got {rendered:?}"
+            );
+        }
     }
 
     // #114 (vsdd item 9): every quoted region is adopter-derived, untrusted
