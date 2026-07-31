@@ -1,6 +1,6 @@
 {
   "next_display_id": 143,
-  "next_comment_id": 350,
+  "next_comment_id": 351,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -1791,10 +1791,21 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-31T14:32:57.573271Z",
-      "updated_at": "2026-07-31T14:33:02.882475Z",
+      "updated_at": "2026-07-31T14:37:09.422251Z",
       "labels": [
         "security"
-      ]
+      ],
+      "comments": {
+        "0651193b-3bee-4857-be78-98527b6d8517": {
+          "display_id": 350,
+          "author": "79Ig",
+          "content": "Shipped via PR #17 (merge 3d5d1ac): A pipeline_error.message chokepoint relativization in cmd_verify (all load-path parse errors, red gate pipeline_error_message_relativizes_a_parse_error_path); B escape_inline shared helper, K::Pattern + at_pointer escaped (red gate pattern_line_separators_escaped_in_message). Round 3 (final): C+D MVR, A+B fixed.",
+          "created_at": "2026-07-31T14:37:09.407879Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAudMwz/ymbeYO8eB7/Ufm7CiT2WiiZEjOHjkO+MGSgz2WD3WTZtK9qkEETl7fIEmXBmspROFInvHCx8ghMc1BDA=="
+        }
+      }
     },
     "588a808f-de8c-4824-8347-2ed0a5891594": {
       "uuid": "588a808f-de8c-4824-8347-2ed0a5891594",
@@ -5800,8 +5811,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-31T14:33:10.259184Z",
+    "timestamp": "2026-07-31T14:37:09.422251Z",
     "agent_id": "79Ig",
-    "agent_seq": 612
+    "agent_seq": 613
   }
 }
