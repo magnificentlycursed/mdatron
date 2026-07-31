@@ -1,0 +1,42 @@
+# cargo-deny configuration (roast C4, #139): a license/bans/sources gate over the
+# full transitive dependency tree, complementing the RustSec advisory check that
+# `cargo audit` already runs. For an MIT public crate that vendors a large tree
+# (jsonschema 0.49 alone brings ~18 crates, #135), this is the automated proof
+# that every dependency's license is compatible with mdatron's MIT and that no
+# dependency is pulled from an untrusted source. CI runs
+# `cargo deny check bans licenses sources` (advisories stay with cargo-audit).
+
+[graph]
+all-features = true
+
+[licenses]
+version = 2
+# The permissive set actually present in the tree (calibrated from `cargo
+# metadata`). SPDX expressions are evaluated: an `OR` passes if ANY listed
+# license is allowed; an `AND` needs ALL parts allowed — hence BSD-3-Clause
+# (encoding_rs) and Unicode-3.0 (the icu_*/unicode-ident crates) are explicit.
+allow = [
+    "MIT",
+    "MIT-0",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "Unicode-3.0",
+    "BSL-1.0",
+    "Unlicense",
+    "Zlib",
+]
+confidence-threshold = 0.9
+
+[bans]
+# Duplicate transitive versions are common and not a defect; surface, don't fail.
+multiple-versions = "warn"
+# A `version = "*"` dependency would defeat the reproducible-build discipline.
+wildcards = "deny"
+
+[sources]
+# Only crates.io; an unknown registry or a git dependency is a supply-chain
+# surface that must be an explicit, reviewed decision, not a silent addition.
+unknown-registry = "deny"
+unknown-git = "deny"
