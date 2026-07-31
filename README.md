@@ -154,7 +154,9 @@ mdatron verify
 ```
 
 `mdatron verify` exits `0` when clean, `1` on findings, and `2` on a pipeline
-failure (see First run). The wrapper above blocks on all three of a missing
+failure (see First run). Add `--deny-warnings` (alias `--strict`) to also fail a
+warnings-only run (exit `0 → 1`) — the switch a hard CI gate wants when warnings
+must block. The wrapper above blocks on all three of a missing
 binary, findings, and pipeline failure. Reserve `git commit --no-verify` for a
 deliberate, visible bypass rather than letting a missing checker pass unseen.
 

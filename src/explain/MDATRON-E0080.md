@@ -21,7 +21,9 @@ sense so a machine consumer need not parse prose (#112):
 
 `kind` is one of: `config` (jurisdiction/config load), `io` (a read failed),
 `schema_load`, `pattern_load`, `glob` (a bad `file_globs` pattern),
-`frontmatter`, `index_build`, `expr_parse`, `eval` (a rule expression). The
+`frontmatter`, `index_build`, `expr_parse`, `eval` (a rule expression), and
+`bound_exceeded` (a declared input resource bound — per-file or aggregate byte
+size, structural or expression nesting depth — was exceeded, #124). The
 object is present only when `pipeline_status` is `failed`, and — unlike the
 stderr `= note:` — it survives `--quiet`, so `--json --quiet` (the CI mode)
 receives the reason in-band.
