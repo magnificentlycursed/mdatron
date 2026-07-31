@@ -41,19 +41,32 @@ pub struct Location {
     pub column: u32,
 }
 
-/// Serialize `file` LOSSILY (#125, roast SHO4). serde's default `PathBuf`
-/// serialization errors on a non-UTF8 path, and because the whole envelope
-/// serializes as one value, a SINGLE governed file with a non-UTF8 name aborted
-/// the entire `verify --json` output (empty stdout, exit 2) — a report-
-/// suppression surface on the primary agent consumer, reachable on Unix by
-/// adding one `*.md`. `to_string_lossy` always yields valid UTF-8, so one bad
-/// path can no longer poison the array; the lossy replacement is visible in the
-/// finding's location. TTY/compact already render the path through `safe_display`.
+/// Render a path for the machine envelope with `/` separators, cross-platform
+/// (#136): the `verify --json` output must be byte-identical for the same repo on
+/// Unix and Windows (the DEF4 reproducibility contract), but a `PathBuf` renders
+/// with the OS separator — `.mdatron\schemas` on Windows. Replacing only
+/// `MAIN_SEPARATOR` normalizes Windows `\` to `/` while leaving a literal
+/// backslash in a Unix filename intact (on Unix `MAIN_SEPARATOR` is `/`, so the
+/// replace is a no-op). `to_string_lossy` keeps the non-UTF8 safety below.
+pub(crate) fn to_forward_slash(p: &std::path::Path) -> String {
+    p.to_string_lossy().replace(std::path::MAIN_SEPARATOR, "/")
+}
+
+/// Serialize `file` LOSSILY (#125, roast SHO4) and with `/` separators (#136).
+/// serde's default `PathBuf` serialization errors on a non-UTF8 path, and because
+/// the whole envelope serializes as one value, a SINGLE governed file with a
+/// non-UTF8 name aborted the entire `verify --json` output (empty stdout, exit 2)
+/// — a report-suppression surface on the primary agent consumer, reachable on
+/// Unix by adding one `*.md`. `to_string_lossy` always yields valid UTF-8, so one
+/// bad path can no longer poison the array; the lossy replacement is visible in
+/// the finding's location. The path is emitted with forward slashes so the
+/// envelope is identical across Unix and Windows. TTY/compact render the path
+/// through `safe_display` (which keeps native separators — a human, local view).
 impl Serialize for Location {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         use serde::ser::SerializeStruct;
         let mut st = serializer.serialize_struct("Location", 3)?;
-        st.serialize_field("file", &self.file.to_string_lossy())?;
+        st.serialize_field("file", &to_forward_slash(&self.file))?;
         st.serialize_field("line", &self.line)?;
         st.serialize_field("column", &self.column)?;
         st.end()
@@ -730,6 +743,25 @@ mod tests {
     // convention (the TTY-only `> ` prefix). The marking is a constant of the
     // type: it cannot be omitted or set to `trusted:true` at any construction
     // site, so no code path can emit adopter content marked trusted.
+    // #136: the JSON envelope path uses `/` separators regardless of OS, so the
+    // same repo produces a byte-identical envelope on Unix and Windows (the DEF4
+    // reproducibility contract). The path is built from components with the OS
+    // separator; the serialized form must always be forward-slashed.
+    #[test]
+    fn location_serializes_with_forward_slashes() {
+        let file: std::path::PathBuf = ["sub", "dir", "doc.md"].iter().collect();
+        let loc = Location {
+            file,
+            line: 1,
+            column: 0,
+        };
+        let v = serde_json::to_value(&loc).unwrap();
+        assert_eq!(
+            v["file"], "sub/dir/doc.md",
+            "envelope path is forward-slashed cross-platform; got {v}"
+        );
+    }
+
     // #125 (roast SHO4): a non-UTF8 governed filename must not abort the whole
     // `--json` envelope. Location serializes its path lossily.
     #[cfg(unix)]
