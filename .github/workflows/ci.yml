@@ -84,7 +84,7 @@ jobs:
         run: cargo test --workspace --locked --verbose
 
   audit:
-    name: Security audit (cargo-audit)
+    name: Security audit (cargo-audit + cargo-deny)
     needs: lint
     runs-on: ubuntu-latest
     steps:
@@ -95,14 +95,20 @@ jobs:
         with:
           toolchain: "1.88"
 
-      # Prebuilt binary — avoids building cargo-audit itself under the pinned
-      # MSRV (it tracks a newer toolchain). The audit only reads Cargo.lock.
+      # Prebuilt binaries — avoid building the tools themselves under the pinned
+      # MSRV (they track a newer toolchain). Both only read Cargo.lock/metadata.
       - uses: taiki-e/install-action@065d6a08a14e61e89fb0a4c10eecdbdef39c7d8e # v2
         with:
-          tool: cargo-audit
+          tool: cargo-audit,cargo-deny
 
       - name: Audit dependencies (RustSec advisories)
         run: cargo audit --deny warnings
+
+      # Roast C4 (#139): license/bans/sources gate over the full tree, so an
+      # incompatible license or an untrusted source in a transitive dep fails CI.
+      # Advisories stay with cargo-audit above (no double-check divergence).
+      - name: Deny check (licenses + bans + sources)
+        run: cargo deny check bans licenses sources
 
   self-validate:
     # The self-hosting gate (#46): mdatron verifies its OWN typed-markdown
