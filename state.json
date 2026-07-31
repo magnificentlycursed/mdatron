@@ -5672,11 +5672,12 @@
       "display_id": 48,
       "title": "v1.0: publish",
       "description": "Goal: \n\nAcceptance criteria:\n- \n\ncargo install mdatron from crates.io on Linux and macOS (x64/arm64); Cargo.lock committed. (v1.0 milestone; converted from V1-SHIP-CRITERIA at the design ratification 2026-07-19; governing contract: DESIGN.md)",
-      "status": "open",
+      "status": "closed",
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-19T20:53:20.240290Z",
-      "updated_at": "2026-07-31T19:21:30.102672Z",
+      "updated_at": "2026-07-31T19:21:37.404533Z",
+      "closed_at": "2026-07-31T19:21:37.404521Z",
       "labels": [
         "feature",
         "v1.0"
@@ -5829,8 +5830,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-31T19:21:30.102672Z",
+    "timestamp": "2026-07-31T19:21:37.404533Z",
     "agent_id": "79Ig",
-    "agent_seq": 620
+    "agent_seq": 621
   }
 }
