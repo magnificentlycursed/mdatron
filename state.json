@@ -1,5 +1,5 @@
 {
-  "next_display_id": 143,
+  "next_display_id": 144,
   "next_comment_id": 353,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -61,6 +61,7 @@
     "700bbf38-a0db-46e2-90a8-36df989ecb06": 53,
     "72e27489-2e30-4b01-9833-62299f42c542": 111,
     "730c7a15-f81f-449a-8323-8d09d5206454": 87,
+    "73fb2a8c-e991-4bfe-b8d2-7c56f53ce417": 143,
     "74744f3a-fbb8-424a-897e-d4f2b2ed77ff": 40,
     "7515ecfd-31f2-4e53-bbb7-0e50c7cce064": 6,
     "7d222949-0302-4dc4-9859-143cf7da11fb": 80,
@@ -2323,6 +2324,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAM7+tEjU+IbCzU7+rtu5dDObia941sExhYtgoNQSwCMAxLKDqYYCTpiF5EU8OsO1abtiq2D/csgn8ukNWNrV0Aw=="
         }
       }
+    },
+    "73fb2a8c-e991-4bfe-b8d2-7c56f53ce417": {
+      "uuid": "73fb2a8c-e991-4bfe-b8d2-7c56f53ce417",
+      "display_id": 143,
+      "title": "post-release housekeeping (0.5.0): trim changelog cruft + memory",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-07-31T19:23:13.778507Z",
+      "updated_at": "2026-07-31T19:23:13.778507Z"
     },
     "74744f3a-fbb8-424a-897e-d4f2b2ed77ff": {
       "uuid": "74744f3a-fbb8-424a-897e-d4f2b2ed77ff",
@@ -5826,8 +5837,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-31T19:21:44.410117Z",
+    "timestamp": "2026-07-31T19:23:13.778507Z",
     "agent_id": "79Ig",
-    "agent_seq": 622
+    "agent_seq": 623
   }
 }
