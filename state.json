@@ -1,6 +1,6 @@
 {
   "next_display_id": 141,
-  "next_comment_id": 348,
+  "next_comment_id": 349,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -499,10 +499,21 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-31T02:18:54.377680Z",
-      "updated_at": "2026-07-31T02:18:59.142407Z",
+      "updated_at": "2026-07-31T02:30:33.505805Z",
       "labels": [
         "security"
-      ]
+      ],
+      "comments": {
+        "09344d3c-c620-4d67-9aac-b98e5d6e13e0": {
+          "display_id": 348,
+          "author": "79Ig",
+          "content": "Shipped via PR #15 (merge 0cfdb0b): B1 at_pointer now escapes Cc∪{U+2028,U+2029} (red gate instance_pointer_escapes_line_separators); A1/A2 pipeline_error free-form messages (missing/globless config, glob read error, index-build) now carry relative paths; B2 test docstring corrected. Gauntlet green.",
+          "created_at": "2026-07-31T02:30:33.491995Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAa+6yVdK2ckj/ud+OnPRb2TkPST5l4iYDSgGrByRi5oVgf119RXuZqxyq42UOO5zmGxFkImg3+8RR3tD0H7DkDw=="
+        }
+      }
     },
     "1a48e540-17b6-4a8f-9681-62cffd446bc3": {
       "uuid": "1a48e540-17b6-4a8f-9681-62cffd446bc3",
@@ -5748,8 +5759,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-31T02:19:06.163384Z",
+    "timestamp": "2026-07-31T02:30:33.505805Z",
     "agent_id": "79Ig",
-    "agent_seq": 600
+    "agent_seq": 601
   }
 }
