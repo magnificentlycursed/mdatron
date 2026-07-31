@@ -1,6 +1,6 @@
 {
   "next_display_id": 144,
-  "next_comment_id": 353,
+  "next_comment_id": 354,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -2337,10 +2337,21 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-07-31T19:23:13.778507Z",
-      "updated_at": "2026-07-31T19:23:18.875782Z",
+      "updated_at": "2026-07-31T19:29:38.300769Z",
       "labels": [
         "chore"
-      ]
+      ],
+      "comments": {
+        "b4dfcca2-e3ec-4223-8262-6f70393f6010": {
+          "display_id": 353,
+          "author": "79Ig",
+          "content": "No-op: the close-hook's terse [0.5.0] line was only an uncommitted working-tree artifact — the committed main CHANGELOG and the published crates.io 0.5.0 were already clean. Work-state memory updated for the 0.5.0 milestone.",
+          "created_at": "2026-07-31T19:29:38.286070Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAQBKPK3csibY2YjUM9XaJ5fqkEa4yT09t30hrVN/POXCC5UIK/2oCfMvmF3fTjXaXDBtX7ccOnUdYHE3dM5xPAQ=="
+        }
+      }
     },
     "74744f3a-fbb8-424a-897e-d4f2b2ed77ff": {
       "uuid": "74744f3a-fbb8-424a-897e-d4f2b2ed77ff",
@@ -5844,8 +5855,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-31T19:23:26.991444Z",
+    "timestamp": "2026-07-31T19:29:38.300769Z",
     "agent_id": "79Ig",
-    "agent_seq": 625
+    "agent_seq": 626
   }
 }
