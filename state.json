@@ -495,11 +495,12 @@
       "uuid": "18b49293-d407-4ef5-8252-144a072cf9e7",
       "display_id": 140,
       "title": "roast-r2: at_pointer Zl/Zp escape (B1 HIGH) + pipeline_error Config/IndexBuild/Glob leak (A1/A2) + ReDoS test discrimination (B2)",
-      "status": "open",
+      "status": "closed",
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-31T02:18:54.377680Z",
-      "updated_at": "2026-07-31T02:30:33.505805Z",
+      "updated_at": "2026-07-31T02:30:39.533184Z",
+      "closed_at": "2026-07-31T02:30:39.533174Z",
       "labels": [
         "security"
       ],
@@ -5759,8 +5760,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-31T02:30:33.505805Z",
+    "timestamp": "2026-07-31T02:30:39.533184Z",
     "agent_id": "79Ig",
-    "agent_seq": 601
+    "agent_seq": 602
   }
 }
