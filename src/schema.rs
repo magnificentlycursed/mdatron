@@ -153,7 +153,14 @@ fn describe(e: &jsonschema::ValidationError) -> (String, Vec<QuotedRegion>) {
             found(),
         ),
         K::Pattern { pattern } => (
-            format!("value{at} does not match the schema's required pattern /{pattern}/"),
+            // The schema `pattern` is adopter config interpolated inline; escape
+            // its control/separator code points (roast round-3 B) so a pattern
+            // carrying a raw break cannot forge an unprefixed line — the same
+            // partition discipline `at_pointer`/`diagnostic.rs` apply.
+            format!(
+                "value{at} does not match the schema's required pattern /{}/",
+                escape_inline(pattern)
+            ),
             found(),
         ),
         K::Required { property } => (
@@ -204,15 +211,18 @@ fn at_pointer(pointer: &str) -> String {
     if pointer.is_empty() {
         return String::new();
     }
-    let mut out = String::from(" at ");
-    for ch in pointer.chars() {
-        // Match the ratified rendering partition (roast B1, #140): a JSON pointer
-        // carries adopter-chosen KEY names, and this pointer is interpolated inline
-        // into an engine-authored message — so it must escape every code point a
-        // consumer may treat as a line break, i.e. the Cc controls AND the Zl/Zp
-        // separators U+2028/U+2029, exactly as `diagnostic.rs::safe_display` /
-        // `escape_label` do (#125 SHO5). Escaping only `is_control()` let a raw
-        // U+2028 in a frontmatter key forge an unprefixed line in the E0050 message.
+    format!(" at {}", escape_inline(pointer))
+}
+
+/// Escape the line-break-capable code points — the Cc controls AND the Zl/Zp
+/// separators U+2028/U+2029 — in adopter-derived text interpolated INLINE into an
+/// engine-authored message, so it cannot forge an unprefixed line (roast B1 for
+/// the JSON pointer / instance keys, round-3 B for the schema `pattern`). Matches
+/// the ratified rendering partition (`diagnostic.rs::safe_display`/`escape_label`,
+/// #125 SHO5); escaping only `is_control()` left a raw U+2028 through.
+fn escape_inline(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for ch in s.chars() {
         if ch.is_control() || matches!(ch, '\u{2028}' | '\u{2029}') {
             use std::fmt::Write;
             let _ = write!(out, "\\x{:02X}", ch as u32);
@@ -403,6 +413,32 @@ mod tests {
         assert!(
             msg.contains("\\x2028"),
             "the separator is escaped to \\x2028; got {msg:?}"
+        );
+    }
+
+    // roast round-3 B: a schema `pattern` carrying a raw line separator renders
+    // escaped in the inline E0050 message, not as a forged break (partition parity
+    // with the instance-pointer and label escaping).
+    #[test]
+    fn pattern_line_separators_escaped_in_message() {
+        let schema = Schema::compile(&json!({
+            "type": "object",
+            "properties": { "x": { "type": "string", "pattern": "a\u{2028}b" } }
+        }))
+        .unwrap();
+        let errors = schema.validate(&yaml("x: nope"));
+        assert!(
+            !errors.is_empty(),
+            "the non-matching value violates the pattern"
+        );
+        let msg = &errors[0].message;
+        assert!(
+            !msg.contains('\u{2028}'),
+            "the pattern's separator is escaped inline; got {msg:?}"
+        );
+        assert!(
+            msg.contains("\\x2028"),
+            "the escaped form is present; got {msg:?}"
         );
     }
 

@@ -183,6 +183,38 @@ fn pipeline_failure_json_quiet_carries_structured_reason() {
     );
 }
 
+// roast round-3 A: a load-path PARSE error (malformed config) bakes an absolute
+// path into a free-form Config message that `relativize_paths` cannot reach; the
+// cmd_verify chokepoint strips the root so `pipeline_error.message` stays host-
+// layout-free — the DEF4 envelope-reproducibility contract, end to end.
+#[test]
+fn pipeline_error_message_relativizes_a_parse_error_path() {
+    let proj = TempProject::new("bad-config");
+    // malformed YAML (unclosed flow sequence) -> a config-load parse error
+    proj.write(".mdatron/config.yaml", "file_globs: [unclosed\n");
+    proj.write("doc.md", "# prose\n");
+
+    let out = Command::new(mdatron_bin())
+        .args(["verify", "--project-root"])
+        .arg(proj.path())
+        .args(["--json", "-q"])
+        .output()
+        .expect("mdatron binary executes");
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let env: serde_json::Value = serde_json::from_str(stdout.trim())
+        .unwrap_or_else(|e| panic!("stdout is a JSON envelope: {e}; got {stdout:?}"));
+    let msg = env["pipeline_error"]["message"].as_str().unwrap_or("");
+    let abs = proj.path().to_string_lossy().into_owned();
+    assert!(
+        !msg.contains(&abs),
+        "no absolute host path in pipeline_error.message; got {msg:?}"
+    );
+    assert!(
+        msg.contains("config.yaml"),
+        "still names the config file (relatively); got {msg:?}"
+    );
+}
+
 // #121 (requested by vsdd-cli): `--deny-warnings` escalates a warnings-only run
 // (exit 0) to a failing exit 1, so a hard-gate consumer need not parse the
 // envelope. Errors and pipeline failures are unaffected.

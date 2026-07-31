@@ -518,10 +518,27 @@ fn cmd_verify(
     // A failed pipeline carries its reason INTO the envelope (#112): the stderr
     // note is suppressed by --quiet, so a --json --quiet consumer needs the cause
     // in-band. `kind` disambiguates E0080's senses.
+    //
+    // Chokepoint relativization (roast round-3 A): `relativize_paths` covers the
+    // structured `{path}` variants, but several load-path errors bake an absolute
+    // path into a FREE-FORM `Config` message (a malformed config/pin/vocab/route
+    // file: `cannot parse '<abs>'`). Strip any root prefix from the final message
+    // as a catch-all so no `pipeline_error.message` leaks the host layout — a
+    // completeness guarantee no per-source fix can promise for future messages.
+    // Uses a trailing-separator match, so it relativizes `<root>/x` to `x` without
+    // mangling an unrelated path. Both the original and canonicalized roots are
+    // stripped (pre-canonicalization errors carry the former).
+    let relativize_message = |mut msg: String| -> String {
+        for r in [&root, &canonical_root] {
+            let pref = format!("{}{}", r.to_string_lossy(), std::path::MAIN_SEPARATOR);
+            msg = msg.replace(&pref, "");
+        }
+        msg
+    };
     let pipeline_error = pipeline_err.as_ref().map(|e| PipelineError {
         code: "MDATRON-E0080".into(),
         kind: e.kind().into(),
-        message: e.to_string(),
+        message: relativize_message(e.to_string()),
     });
 
     // files_checked (#105) is the true count of files this run VALIDATED,
