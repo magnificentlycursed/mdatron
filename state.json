@@ -1,6 +1,6 @@
 {
   "next_display_id": 152,
-  "next_comment_id": 359,
+  "next_comment_id": 360,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -1417,7 +1417,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-19T22:24:47.589479Z",
-      "updated_at": "2026-07-27T18:14:55.744701Z",
+      "updated_at": "2026-08-02T00:59:35.599716Z",
       "labels": [
         "methodology",
         "process"
@@ -1442,6 +1442,15 @@
           "kind": "handoff",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA5Tm7WDjGXdPjDcVmM0weT/R6sYKQOd1DajInAIKBUuGjQ8EfCd80Q4d2Xh1R6dAChi+wAU100xh6MhY5lHlVBw=="
+        },
+        "b6c4e31b-9384-414f-a143-dac5a464b8d4": {
+          "display_id": 359,
+          "author": "79Ig",
+          "content": "RESOLVED. The deviation record stands (permanent in issue history); the retroactive verification debt for 0b21986 was paid via #52 (red gate + SE/security domain reviews of the confine module, per the git trail 0baa6b8). The proposed routing rule — issue+layer linkage, phase-2a red-gate-first, label-mandated domain reviews, language supplemental, no pre-v1 bypass — is now STANDING PRACTICE: it was operationalized as the fix-lane discipline and absorbed into the #96 methodology adoption, and every code lane this session (through the 0.5.0 publish + the 3-round roast) ran it. Purpose fulfilled; closing. Reopen if a separate formal-ruling doc is wanted.",
+          "created_at": "2026-08-02T00:59:35.575515Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAqzLARJrKqAUfA5FMAHQITFtaqQH6yIBJAjrixcVhzxacik3bESRJeNgI6vF+zX6fURd/Wx31DIxy7i2i+/SmCg=="
         },
         "d131e2d3-59f5-41e6-8d79-d61362124051": {
           "author": "79Ig",
@@ -6034,8 +6043,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T00:59:28.253347Z",
+    "timestamp": "2026-08-02T00:59:35.599716Z",
     "agent_id": "79Ig",
-    "agent_seq": 666
+    "agent_seq": 667
   }
 }
