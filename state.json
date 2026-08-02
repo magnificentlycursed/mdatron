@@ -1,6 +1,6 @@
 {
   "next_display_id": 154,
-  "next_comment_id": 367,
+  "next_comment_id": 368,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -4443,10 +4443,21 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-02T00:33:48.462219Z",
-      "updated_at": "2026-08-02T00:33:53.225832Z",
+      "updated_at": "2026-08-02T03:16:52.995761Z",
       "labels": [
         "enhancement"
-      ]
+      ],
+      "comments": {
+        "d8c423c6-c78b-434a-aaad-85b73fa0df72": {
+          "display_id": 367,
+          "author": "79Ig",
+          "content": "Phase 2c landed (f3dc006): extracted shared reference-scan primitives into pub(crate) src/markup.rs (slugify, heading_slugs, fence_marker, atx_heading_text, non_fenced_lines); link.rs repointed. Behavior-preserving, 426 tests green, fmt+clippy clean. This is the rule-of-three down payment from the Schematron audit (cite/link/marker-ref = one abstract pattern). Next: build the marker family on this core.",
+          "created_at": "2026-08-02T03:16:52.977113Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA7tg0a3Q8oc8DKw2EF0nNkB6tdssCDUTLy6xw4scOblq3iNH91aFqAGR8ssyhjdpmtWtLAJ1HCTTPtfvKay7jDQ=="
+        }
+      }
     },
     "bb1578a3-5e79-4e29-a2fb-4c6e1c88eb7f": {
       "uuid": "bb1578a3-5e79-4e29-a2fb-4c6e1c88eb7f",
@@ -6143,8 +6154,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T02:56:38.821516Z",
+    "timestamp": "2026-08-02T03:16:52.995761Z",
     "agent_id": "79Ig",
-    "agent_seq": 690
+    "agent_seq": 691
   }
 }
