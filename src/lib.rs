@@ -35,6 +35,7 @@ pub mod error;
 pub mod frontmatter;
 pub mod init;
 pub mod link;
+pub(crate) mod markup;
 pub mod output;
 pub mod pin;
 pub mod route;

@@ -39,6 +39,7 @@ use std::path::{Component, Path, PathBuf};
 
 use crate::confine::{confine_lexically, open_confined, OpenViolation};
 use crate::diagnostic::{Finding, Location, QuotedRegion, Severity};
+use crate::markup::{heading_slugs, non_fenced_lines, slugify};
 
 /// Scan one opted-in file's body for inline links and resolve each against the
 /// working tree. `content` is the whole file; `body_offset` is where the prose
@@ -69,35 +70,11 @@ pub fn check_file(
     // target linked from several places.
     let mut target_slugs: HashMap<PathBuf, Option<HashSet<String>>> = HashMap::new();
 
-    // Line-oriented scan so fenced code blocks (link EXAMPLES, not live links)
-    // are skipped and each finding gets an accurate line. `split_inclusive`
-    // keeps the newline so the running byte cursor stays exact.
-    let mut fence: Option<(char, usize)> = None;
-    let mut cursor = 0usize; // byte offset of the current line within `body`
-    for raw_line in body.split_inclusive('\n') {
-        let line = raw_line.trim_end_matches(['\n', '\r']);
-        let line_start = cursor;
-        cursor += raw_line.len();
-
-        // Fenced code toggles: a line whose leading run is >= 3 of ` or ~.
-        if let Some(marker) = fence_marker(line) {
-            match fence {
-                None => fence = Some(marker),
-                Some((fc, flen)) => {
-                    if marker.0 == fc && marker.1 >= flen {
-                        fence = None;
-                    }
-                }
-            }
-            continue;
-        }
-        if fence.is_some() {
-            continue;
-        }
-
+    // Scan the live (non-code-fence) lines: a link EXAMPLE inside a ``` block is
+    // not a live link. `non_fenced_lines` carries each line's byte offset within
+    // `body` so a finding still lands on the right line (matches cite's convention).
+    for (line_start, line) in non_fenced_lines(body) {
         for link in inline_links(line) {
-            // `at` is the absolute byte offset of the link in `content`, used
-            // for the 1-based line number (matches cite's convention).
             let at = body_offset + line_start + link.start;
             resolve_link(
                 project_root,
@@ -398,78 +375,6 @@ fn markdown_body(content: &str) -> &str {
     }
 }
 
-/// The set of GitHub heading-slugs of `body`, skipping fenced code blocks so a
-/// `#`-comment in a shell example is not read as a heading. ATX headings only
-/// (setext deferred).
-fn heading_slugs(body: &str) -> HashSet<String> {
-    let mut slugs = HashSet::new();
-    let mut fence: Option<(char, usize)> = None;
-    for line in body.lines() {
-        let trimmed = line.trim_start();
-        if let Some(marker) = fence_marker(trimmed) {
-            match fence {
-                None => fence = Some(marker),
-                Some((fc, flen)) => {
-                    if marker.0 == fc && marker.1 >= flen {
-                        fence = None;
-                    }
-                }
-            }
-            continue;
-        }
-        if fence.is_some() {
-            continue;
-        }
-        if let Some(text) = atx_heading_text(trimmed) {
-            slugs.insert(slugify(text));
-        }
-    }
-    slugs
-}
-
-/// If `line` opens or closes a fenced code block, return its `(fence char, run
-/// length)`. A fence is a leading run of at least three backticks or tildes.
-fn fence_marker(line: &str) -> Option<(char, usize)> {
-    let first = line.chars().next()?;
-    if first != '`' && first != '~' {
-        return None;
-    }
-    let run = line.chars().take_while(|&c| c == first).count();
-    (run >= 3).then_some((first, run))
-}
-
-/// The text of an ATX heading (`#`…`######` followed by a space or end of
-/// line), with any closing `#` sequence trimmed, or `None` if `line` is not one.
-/// `#foo` (no space) is a paragraph, not a heading.
-fn atx_heading_text(line: &str) -> Option<&str> {
-    let hashes = line.chars().take_while(|&c| c == '#').count();
-    if hashes == 0 || hashes > 6 {
-        return None;
-    }
-    let rest = &line[hashes..];
-    if !rest.is_empty() && !rest.starts_with([' ', '\t']) {
-        return None;
-    }
-    // Trim a closing `#` sequence (`## Foo ##` -> `Foo`); slugify would drop
-    // the `#`s anyway, but trimming keeps the surrounding hyphen from leaking.
-    Some(rest.trim().trim_end_matches('#').trim_end())
-}
-
-/// GitHub's heading-to-anchor slug: lowercase, drop every character that is not
-/// alphanumeric / `_` / `-`, and turn each space into a hyphen. (Duplicate
-/// headings' `-1`/`-2` disambiguation is deferred.)
-fn slugify(heading: &str) -> String {
-    let mut out = String::with_capacity(heading.len());
-    for ch in heading.chars().flat_map(char::to_lowercase) {
-        if ch.is_alphanumeric() || ch == '_' || ch == '-' {
-            out.push(ch);
-        } else if ch == ' ' {
-            out.push('-');
-        }
-    }
-    out
-}
-
 fn link_finding(
     path: &Path,
     content: &str,
@@ -502,33 +407,6 @@ fn link_finding(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn slugify_matches_github_shape() {
-        assert_eq!(slugify("Five check families"), "five-check-families");
-        assert_eq!(slugify("Section 1.2"), "section-12");
-        assert_eq!(slugify("Foo & Bar"), "foo--bar");
-        assert_eq!(slugify("snake_case-kept"), "snake_case-kept");
-        assert_eq!(slugify("v0.6.0 release"), "v060-release");
-    }
-
-    #[test]
-    fn atx_heading_requires_space() {
-        assert_eq!(atx_heading_text("## Real Heading"), Some("Real Heading"));
-        assert_eq!(atx_heading_text("### Foo ###"), Some("Foo"));
-        assert_eq!(atx_heading_text("#hashtag"), None);
-        assert_eq!(atx_heading_text("####### too deep"), None);
-        assert_eq!(atx_heading_text("not a heading"), None);
-    }
-
-    #[test]
-    fn fenced_headings_are_not_collected() {
-        let body = "# Real\n\n```sh\n# not a heading\n```\n\n## Also Real\n";
-        let slugs = heading_slugs(body);
-        assert!(slugs.contains("real"));
-        assert!(slugs.contains("also-real"));
-        assert!(!slugs.contains("not-a-heading"));
-    }
 
     #[test]
     fn is_external_classifies_schemes() {
