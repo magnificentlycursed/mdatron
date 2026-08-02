@@ -2588,11 +2588,12 @@
       "display_id": 49,
       "title": "v1.0: documentation",
       "description": "Goal: \n\nAcceptance criteria:\n- \n\nREADME at the implemented surface; DSL reference for the construct inventory; adopter onboarding for the init-and-hook path; verified by operator read and one external cold reader. (v1.0 milestone; converted from V1-SHIP-CRITERIA at the design ratification 2026-07-19; governing contract: DESIGN.md)",
-      "status": "open",
+      "status": "closed",
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-19T20:53:21.686201Z",
-      "updated_at": "2026-08-02T00:57:49.174887Z",
+      "updated_at": "2026-08-02T00:57:57.505079Z",
+      "closed_at": "2026-08-02T00:57:57.505069Z",
       "labels": [
         "feature",
         "v1.0"
@@ -6027,8 +6028,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T00:57:49.174887Z",
+    "timestamp": "2026-08-02T00:57:57.505079Z",
     "agent_id": "79Ig",
-    "agent_seq": 662
+    "agent_seq": 663
   }
 }
