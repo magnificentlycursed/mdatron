@@ -20,6 +20,23 @@ use serde_yaml_ng::Value as YamlValue;
 /// `Validator` type so adopters never need to depend on it directly.
 pub struct Schema {
     compiled: jsonschema::Validator,
+    /// The raw schema JSON, retained for `$self.<path>` field-reference
+    /// validation (#156) — walked as a property tree, never re-validated.
+    raw: JsonValue,
+}
+
+/// The status of a `$self.<path>` field reference against a schema (#156).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FieldPathStatus {
+    /// The path resolves to a declared property.
+    Declared,
+    /// A segment is absent from a level's `properties` AND that level is an
+    /// explicitly closed object (`additionalProperties: false`) — a likely typo.
+    UndeclaredClosed,
+    /// The walk could not decide — an open object (the JSON-Schema default), a
+    /// non-object level (array/primitive), a level with no `properties`, or a
+    /// `$ref`/combinator. Never flagged (no false positive).
+    Unknown,
 }
 
 /// A single validation failure: the JSONPath where the failure occurred + a human-readable
@@ -57,7 +74,37 @@ impl Schema {
             .with_pattern_options(jsonschema::PatternOptions::regex())
             .build(schema_json)
             .map_err(|e| Error::Config(format!("schema compile failed: {e}")))?;
-        Ok(Self { compiled })
+        Ok(Self {
+            compiled,
+            raw: schema_json.clone(),
+        })
+    }
+
+    /// Classify a `$self.<path>` field reference against this schema (#156),
+    /// walking the property tree. **Deliberately conservative** — a path is
+    /// `UndeclaredClosed` only when a segment is absent from a level's
+    /// `properties` AND that level is an explicitly closed object
+    /// (`additionalProperties: false`); anything the walk cannot decide (open
+    /// object, non-object level, missing `properties`, `$ref`/combinator) is
+    /// `Unknown` and never flagged, so the hard-gating check cannot false-positive.
+    pub fn field_path_status(&self, path: &[String]) -> FieldPathStatus {
+        let mut cur = &self.raw;
+        for seg in path {
+            let Some(props) = cur.get("properties").and_then(|p| p.as_object()) else {
+                return FieldPathStatus::Unknown;
+            };
+            match props.get(seg) {
+                Some(sub) => cur = sub,
+                None => {
+                    return if cur.get("additionalProperties") == Some(&JsonValue::Bool(false)) {
+                        FieldPathStatus::UndeclaredClosed
+                    } else {
+                        FieldPathStatus::Unknown
+                    };
+                }
+            }
+        }
+        FieldPathStatus::Declared
     }
 
     /// Validate a YAML frontmatter value against this schema.
@@ -479,6 +526,82 @@ mod tests {
             errors.len() >= 3,
             "multiple violations should produce multiple errors; got {} ({errors:?})",
             errors.len()
+        );
+    }
+
+    // ── field_path_status: the conservative `$self.<path>` classifier (#156) ────
+
+    fn path(segs: &[&str]) -> Vec<String> {
+        segs.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn field_path_status_is_conservative() {
+        use FieldPathStatus::*;
+        let schema = Schema::compile(&json!({
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "title": { "type": "string" },
+                "meta": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": { "owner": { "type": "string" } }
+                },
+                "tags": { "type": "array", "items": { "type": "string" } },
+                "open": {
+                    "type": "object",
+                    "properties": { "x": { "type": "string" } }
+                }
+            }
+        }))
+        .unwrap();
+        let st = |segs: &[&str]| schema.field_path_status(&path(segs));
+
+        // Bare `$self` and declared paths resolve.
+        assert_eq!(st(&[]), Declared, "bare $self");
+        assert_eq!(st(&["title"]), Declared);
+        assert_eq!(st(&["meta", "owner"]), Declared, "nested declared");
+
+        // Undeclared under a CLOSED object at either level → the only flag.
+        assert_eq!(st(&["nope"]), UndeclaredClosed, "root is closed");
+        assert_eq!(
+            st(&["meta", "ownr"]),
+            UndeclaredClosed,
+            "nested closed typo"
+        );
+
+        // Everything undecidable is Unknown — never a false positive.
+        assert_eq!(
+            st(&["open", "whatever"]),
+            Unknown,
+            "open object (additionalProperties absent) tolerates unknown keys"
+        );
+        assert_eq!(
+            st(&["tags", "anything"]),
+            Unknown,
+            "array subschema has no `properties` — cannot validate deeper"
+        );
+        assert_eq!(
+            st(&["title", "sub"]),
+            Unknown,
+            "descending past a primitive (string) is undecidable"
+        );
+    }
+
+    #[test]
+    fn field_path_status_root_without_properties_is_unknown() {
+        // A schema that isn't a plain property-bearing object (here a combinator)
+        // yields Unknown for any path — the walk refuses to reason about `$ref`/
+        // `allOf`/`anyOf` shapes.
+        let schema = Schema::compile(&json!({
+            "allOf": [ { "type": "object", "properties": { "a": {} } } ]
+        }))
+        .unwrap();
+        assert_eq!(
+            schema.field_path_status(&path(&["a"])),
+            FieldPathStatus::Unknown,
+            "no top-level `properties` on a combinator schema"
         );
     }
 }
