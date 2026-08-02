@@ -1,6 +1,6 @@
 {
   "next_display_id": 153,
-  "next_comment_id": 364,
+  "next_comment_id": 365,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -3737,10 +3737,21 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-08-02T00:33:08.586690Z",
-      "updated_at": "2026-08-02T00:33:13.170836Z",
+      "updated_at": "2026-08-02T01:56:37.354242Z",
       "labels": [
         "enhancement"
-      ]
+      ],
+      "comments": {
+        "159cb2d1-d0e3-4191-b13a-c3ada600574b": {
+          "display_id": 364,
+          "author": "79Ig",
+          "content": "SCOPE RATIFIED (operator, SO): body-link/anchor resolution as a NEW 6th check family (the 'link' family). Cut: inline [text](target), [text](target#anchor), same-doc [text](#anchor); dead-target E0110 (relative path missing on disk within confined tree), dead-anchor E0111 (target exists, no GitHub-slug heading match). Activation: new per-route 'links: true' flag (mirrors citations). Confinement: targets held to E0010/E0011/E0012. Defer: reference-style + external links. Anchor slug: GitHub-flavored fixed. VERSION RULING (option A): ONE deliberate major bump — envelope mdatron_output_version 2.1.0 -> 3.0.0 (new required families member under the closed object) + crate 0.5.0 -> 0.6.0, AND make 'families' forward-extensible (additionalProperties = FamilyActivity shape) so future families (#147/#148/...) are additive/minor. New reserved code range E0110-E0119.",
+          "created_at": "2026-08-02T01:56:37.332067Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAAeL9FeEnfeebTn6pnJSKwyznJIg2VHu5Q8KYUY7H7dvHqRivChM7OBLGHcZTsrVUPS8cubjO56n8egXgqAZeCA=="
+        }
+      }
     },
     "a89629bc-8e2a-4193-adaa-78efe28381e3": {
       "uuid": "a89629bc-8e2a-4193-adaa-78efe28381e3",
@@ -6097,8 +6108,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T01:10:38.290275Z",
+    "timestamp": "2026-08-02T01:56:37.354242Z",
     "agent_id": "79Ig",
-    "agent_seq": 682
+    "agent_seq": 683
   }
 }
