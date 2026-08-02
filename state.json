@@ -1,6 +1,6 @@
 {
   "next_display_id": 160,
-  "next_comment_id": 383,
+  "next_comment_id": 384,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -4979,10 +4979,21 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-02T05:38:49.843362Z",
-      "updated_at": "2026-08-02T05:38:55.368436Z",
+      "updated_at": "2026-08-02T08:40:05.989783Z",
       "labels": [
         "enhancement"
-      ]
+      ],
+      "comments": {
+        "d192984b-52e1-4fca-87a1-39c4e26cceab": {
+          "display_id": 383,
+          "author": "79Ig",
+          "content": "Committed: feat(#156) hard-gate undeclared $self field references (E0021) | Files: 9 changed, 595 insertions(+), 6 deletions(-). Load-time conservative field-reference validation; 7 red-gate + 2 schema unit tests; explain page + catalog + dsl-reference in lockstep. fmt clean, 0 clippy, 468 tests green.",
+          "created_at": "2026-08-02T08:39:55.323356Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAi9ove4cb0hWYkJb5cvVo3CdLPGFlp7LFwlFPNFxSfybhpmpAlnUDhFJjlCnucbmz6icRLuPNFrW9x3dOXTPeBw=="
+        }
+      }
     },
     "ca04fb0c-6c95-4f52-ab78-d7a1c0b05bf9": {
       "uuid": "ca04fb0c-6c95-4f52-ab78-d7a1c0b05bf9",
@@ -6383,8 +6394,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T08:04:13.903997Z",
+    "timestamp": "2026-08-02T08:40:05.989783Z",
     "agent_id": "79Ig",
-    "agent_seq": 738
+    "agent_seq": 739
   }
 }
