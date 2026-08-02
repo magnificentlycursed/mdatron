@@ -4,6 +4,7 @@
   "MDATRON-E0010": "key-source-absolute-path",
   "MDATRON-E0011": "key-source-parent-traversal",
   "MDATRON-E0012": "symlinked-component-refused",
+  "MDATRON-E0021": "undeclared-field-reference",
   "MDATRON-E0030": "unrouted-file",
   "MDATRON-E0031": "governing-document-absent",
   "MDATRON-E0032": "route-conflict",

@@ -82,8 +82,10 @@ struct RawNumericClaim {
 /// The compiled registry.
 pub struct LoadedVocab {
     terms: Vec<(String, TermStatus)>,
-    /// `Some` when the `label_schemes` section was supplied (empty allowlist
-    /// means every cluster is invented); `None` disables the cluster scan.
+    /// The active cluster allowlist: `Some` when a non-empty `label_schemes.allow`
+    /// opts the scan in — the engine's [`DEFAULT_REF_ID_SCHEMES`] unioned with the
+    /// consumer's patterns (#159). `None` (an absent/empty allowlist) leaves the
+    /// cluster scan disabled.
     label_allow: Option<Vec<regex_lite::Regex>>,
     anti: Vec<(regex_lite::Regex, String)>,
     numeric: Vec<String>,
@@ -92,6 +94,26 @@ pub struct LoadedVocab {
     /// draft (the permissive status); each names a `MDATRON-W0044` warning.
     draft_conflicts: Vec<String>,
 }
+
+/// Structured reference-ID schemes exempt from the `E0091` invented-label-scheme
+/// check by default (#159, vsdd GH#28 Gap 1). These are decades-old, widely
+/// standardized spec conventions — IEEE/ISO requirement IDs, architecture
+/// decision records, RFCs — whose IDs *reference* numbered items rather than coin
+/// a label scheme, so flagging them as invented is a false positive (327 of 336
+/// E0091 findings on the first consumer's spec corpus were this class). Unioned
+/// into every active cluster allowlist (see [`load`]) so spec corpora validate
+/// out of the box; a consumer extends the set for local schemes via
+/// `label_schemes.allow` (e.g. `^C\d+$`). Deliberately conservative — multi-
+/// character, well-known prefixes only; ambiguous single-letter forms (`C8`,
+/// `T3`) stay consumer-opt-in to avoid masking a genuine coinage. Each is
+/// full-anchored (`^…$`) against the whole extracted cluster token.
+const DEFAULT_REF_ID_SCHEMES: &[&str] = &[
+    r"^REQ-\d+$", // requirements (IEEE/ISO)
+    r"^AC-\d+$",  // acceptance criteria
+    r"^ADR-\d+$", // architecture decision records
+    r"^RFC-\d+$", // RFCs
+    r"^Q-?\d+$",  // design questions (Q1 or Q-1)
+];
 
 /// Load `.mdatron/vocabulary.yaml`. `Ok(None)` when absent (family inactive);
 /// `Err` when unreadable, structurally malformed, or carrying a pattern that
@@ -116,16 +138,23 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedVocab>, Error> {
             .map_err(|e| Error::Config(format!("vocabulary {what} '{p}' does not compile: {e}")))
     };
 
+    // The cluster scan activates only on a non-empty consumer allowlist (an
+    // absent/empty one leaves it off — unchanged, so the defaults never
+    // newly-activate the scan on anyone). When active, the engine's default
+    // reference-ID schemes are UNIONED with the consumer's patterns (#159), so a
+    // spec's REQ-N/AC-N/… IDs are exempt out of the box and a consumer supplies
+    // only its local schemes.
     let label_allow = if raw.label_schemes.allow.is_empty() {
         None
     } else {
-        Some(
-            raw.label_schemes
-                .allow
-                .iter()
-                .map(|p| compile(p, "label_schemes allow"))
-                .collect::<Result<Vec<_>, _>>()?,
-        )
+        let mut compiled: Vec<regex_lite::Regex> = DEFAULT_REF_ID_SCHEMES
+            .iter()
+            .map(|p| regex_lite::Regex::new(p).expect("engine default ref-id scheme compiles"))
+            .collect();
+        for p in &raw.label_schemes.allow {
+            compiled.push(compile(p, "label_schemes allow")?);
+        }
+        Some(compiled)
     };
     let anti = raw
         .anti_patterns
@@ -477,5 +506,123 @@ fn prose_finding(
             label: label.into(),
             content: quoted.into(),
         }],
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    /// A temp project holding one `.mdatron/vocabulary.yaml`, removed on drop.
+    struct TempProj(std::path::PathBuf);
+
+    impl TempProj {
+        fn new(label: &str, vocab_yaml: &str) -> Self {
+            let nanos = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos();
+            let root = std::env::temp_dir().join(format!("mdatron-vocab-{label}-{nanos}"));
+            std::fs::create_dir_all(root.join(".mdatron")).unwrap();
+            std::fs::write(root.join(".mdatron").join(VOCAB_NAME), vocab_yaml).unwrap();
+            Self(root)
+        }
+    }
+
+    impl Drop for TempProj {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    /// The `E0091` clusters flagged in `body` under `vocab_yaml`, sorted.
+    fn e0091_clusters(vocab_yaml: &str, body: &str, label: &str) -> Vec<String> {
+        let proj = TempProj::new(label, vocab_yaml);
+        let vocab = load(&proj.0).expect("vocab loads").expect("vocab present");
+        let mut findings = Vec::new();
+        check_file(&vocab, Path::new("doc.md"), body, 0, None, &mut findings);
+        let mut out: Vec<String> = findings
+            .into_iter()
+            .filter(|f| f.code == "MDATRON-E0091")
+            .flat_map(|f| {
+                f.quoted
+                    .into_iter()
+                    .filter(|q| q.label == "cluster")
+                    .map(|q| q.content)
+            })
+            .collect();
+        out.sort();
+        out
+    }
+
+    // ── #159: structured reference-ID default exemption (vsdd GH#28 Gap 1) ──────
+
+    #[test]
+    fn default_ref_id_schemes_all_compile() {
+        // Guards the `.expect()` in `load`: the engine defaults are static and
+        // must always compile.
+        for p in DEFAULT_REF_ID_SCHEMES {
+            regex_lite::Regex::new(p)
+                .unwrap_or_else(|e| panic!("default scheme {p} must compile: {e}"));
+        }
+    }
+
+    #[test]
+    fn structured_ref_ids_exempt_by_default() {
+        // A non-empty consumer allowlist activates the scan; the engine defaults
+        // union in. Standard ref-ids (REQ/AC/ADR/RFC/Q) + the consumer's own FOO
+        // are exempt out of the box; a coinage (W0070) and an out-of-default
+        // single-letter id (C8) still flag.
+        let vocab = "label_schemes:\n  allow:\n    - '^FOO-\\d+$'\n";
+        let body = "See REQ-10, AC-4, ADR-7, RFC-2119, Q1, Q-1, and FOO-99. \
+                    But W0070 and C8 are unknown schemes.";
+        assert_eq!(
+            e0091_clusters(vocab, body, "default-exempt"),
+            vec!["C8".to_string(), "W0070".to_string()],
+            "only the coinage + out-of-default id flag; standard ref-ids + FOO exempt"
+        );
+    }
+
+    #[test]
+    fn consumer_pattern_extends_the_default_set() {
+        // Adding `^C\d+$` exempts the local C-id scheme; a coinage still flags —
+        // the documented extension path for schemes outside the conservative
+        // default set.
+        let vocab = "label_schemes:\n  allow:\n    - '^C\\d+$'\n";
+        let body = "C8 and C12 are constraints; W0070 is a coinage.";
+        assert_eq!(
+            e0091_clusters(vocab, body, "extend"),
+            vec!["W0070".to_string()],
+            "consumer pattern exempts C-ids; coinage still flagged"
+        );
+    }
+
+    #[test]
+    fn defaults_do_not_activate_scan_without_a_consumer_allowlist() {
+        // No `label_schemes` → scan OFF, unchanged. REQ-10 AND W0070 both pass:
+        // the engine defaults must never newly-activate the scan on a consumer
+        // who did not opt in (that would surface brand-new E0091 findings).
+        let vocab = "terms:\n  - term: Widget\n    status: registered\n    sense: a thing\n";
+        let proj = TempProj::new("scan-off", vocab);
+        let vocab = load(&proj.0).expect("loads").expect("present");
+        let mut findings = Vec::new();
+        check_file(
+            &vocab,
+            Path::new("doc.md"),
+            "REQ-10 and W0070 appear here.",
+            0,
+            None,
+            &mut findings,
+        );
+        assert_eq!(
+            findings
+                .iter()
+                .filter(|f| f.code == "MDATRON-E0091")
+                .count(),
+            0,
+            "cluster scan stays off without a consumer allowlist"
+        );
     }
 }
