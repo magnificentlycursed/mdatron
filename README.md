@@ -250,6 +250,7 @@ routes:
   governed_by: DESIGN.md
   naming: "^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9-]+\\.md$"   # optional
   citations: true                                        # optional, see below
+  links: true                                            # optional, see below
 ```
 
 With routes supplied: an unclaimed walked file blocks (`E0030`), a route
@@ -290,6 +291,18 @@ files' `path:line` / `path:start-end` references are verified against the
 working tree (uncommitted content counts; no git subprocess): a dead citation
 blocks (`E0100`), one past the target's end blocks (`E0101`). Historical
 corpora simply don't opt in.
+
+**Links** — data-less; opt a route in with `links: true` and its files' inline
+markdown links (`[text](target)`, `[text](target#anchor)`, same-document
+`[text](#anchor)`) are resolved against the working tree. A link to a relative
+path that isn't there blocks (`E0110`); an existing markdown target — or the
+same document — whose `#fragment` matches no heading blocks (`E0111`, fragments
+resolved with GitHub's heading-slug rules). Targets resolve **document-relative**
+(as GitHub renders them): `[api](api.md)` from `docs/guide.md` is `docs/api.md`,
+and a one-level `../README.md` that stays in-tree is fine — only a target that
+escapes the governed tree is refused (`E0010`/`E0011`/`E0012`). External links
+(any URL scheme) are left alone; reference-style and image links are not yet
+resolved.
 
 Every family code has an explain page: `mdatron explain MDATRON-E0061`.
 

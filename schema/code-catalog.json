@@ -20,6 +20,8 @@
   "MDATRON-E0094": "numeric-claim-drift",
   "MDATRON-E0100": "dead-citation",
   "MDATRON-E0101": "citation-line-out-of-range",
+  "MDATRON-E0110": "dead-link-target",
+  "MDATRON-E0111": "dead-anchor",
   "MDATRON-L0001": "governance-weakening-standing",
   "MDATRON-W0040": "governed-file-has-no-frontmatter",
   "MDATRON-W0041": "name-underivable",

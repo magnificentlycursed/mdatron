@@ -28,13 +28,18 @@ use crate::diagnostic::{Finding, Severity};
 /// Development passed through 1.2.0–1.4.0 (never released); those minor bumps
 /// under-signalled the breaking reshape, so 0.4.0 corrects the released contract
 /// to a single honest major bump.
-/// 2.1.0 (#124, roast SHO1; unreleased): MINOR — additive `pipeline_error.kind`
-/// value `bound_exceeded` for the input-resource-bound enforcement (a new closed-
-/// enum member is additive under the versioned-contract SemVer rule).
+/// 2.1.0 (#124, roast SHO1; released in 0.5.0): MINOR — additive
+/// `pipeline_error.kind` value `bound_exceeded` for the input-resource-bound
+/// enforcement (a new closed-enum member is additive under the SemVer rule).
+/// 3.0.0 (#145, 0.6.0): MAJOR — the `families` object gains a sixth REQUIRED
+/// member `link` (body-link/anchor resolution) under a closed object, which is a
+/// breaking change; the same bump makes `families` forward-extensible (additional
+/// members of the `FamilyActivity` shape are allowed) so future families are
+/// additive/minor. This is the last families-driven major.
 /// Must move in lockstep with the published schema
 /// (`schema/mdatron-output.schema.json`); the `envelope_version_matches_published_schema`
 /// tripwire enforces it.
-pub const OUTPUT_VERSION: &str = "2.1.0";
+pub const OUTPUT_VERSION: &str = "3.0.0";
 
 /// The published output-envelope JSON Schema, embedded so `mdatron schema` can
 /// print it to stdout for a binary-only (`cargo install`) consumer that has no
@@ -95,6 +100,11 @@ pub struct Families {
     pub pin: FamilyActivity,
     pub vocabulary: FamilyActivity,
     pub citation: FamilyActivity,
+    /// The link family (#145): body-link/anchor resolution. The sixth family;
+    /// the published schema's `families` object became forward-extensible in the
+    /// same 3.0.0 bump (additional members of the `FamilyActivity` shape are
+    /// allowed), so families added after this one are additive/minor.
+    pub link: FamilyActivity,
 }
 
 impl Families {
@@ -108,6 +118,7 @@ impl Families {
             pin: reason(),
             vocabulary: reason(),
             citation: reason(),
+            link: reason(),
         }
     }
 }
@@ -420,6 +431,7 @@ mod tests {
                 pin: FamilyActivity::inactive("no pins.yaml"),
                 vocabulary: FamilyActivity::inactive("no vocabulary.yaml"),
                 citation: FamilyActivity::inactive("no citations route"),
+                link: FamilyActivity::inactive("no links route"),
             },
             "0.3.0",
         )

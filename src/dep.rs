@@ -266,6 +266,7 @@ mod tests {
             governed_by: governed_by.to_string(),
             naming: None,
             citations: false,
+            links: false,
         }
     }
 

@@ -173,13 +173,13 @@ fn absent_family_data_reports_inactive_and_version_bumped() {
     let env = parse_output(&run_verify_json(&proj));
     let fam = env.get("families").and_then(|v| v.as_object()).unwrap();
     assert_eq!(fam["schema"]["state"], "active");
-    for k in ["route", "pin", "vocabulary", "citation"] {
+    for k in ["route", "pin", "vocabulary", "citation", "link"] {
         assert_eq!(fam[k]["state"], "inactive", "{k} has no data supplied");
     }
     assert_eq!(
         env.get("mdatron_output_version").and_then(|v| v.as_str()),
-        Some("2.1.0"),
-        "envelope 2.0.0 for 0.4.0: a major bump from the last-released 1.1.0 (breaking families reshape + required quoted marking)"
+        Some("3.0.0"),
+        "envelope 3.0.0 for 0.6.0: MAJOR — the sixth family (link, required, closed member) plus the forward-extensibility reshape of `families` (#145)"
     );
 }
 

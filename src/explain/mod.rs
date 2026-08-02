@@ -1,7 +1,7 @@
 //! Embedded `mdatron explain CODE` catalog.
 //!
 //! v0.1.x catalog: MDATRON-E0001, E0002, E0010, E0011, E0012, E0050, E0060, E0070,
-//! E0080, W0040; route family E0030, E0031, E0032, W0041; pin family E0061, E0062, W0042, L0001; vocabulary family E0090-E0094; citation family E0100, E0101. The catalog grows by one entry per newly-emitted code per the
+//! E0080, W0040; route family E0030, E0031, E0032, W0041; pin family E0061, E0062, W0042, L0001; vocabulary family E0090-E0094; citation family E0100, E0101; link family E0110, E0111. The catalog grows by one entry per newly-emitted code per the
 //! Phase 0 DESIGN open question #2 SO disposition (2026-06-02); the
 //! path-confinement trio (E0010/E0011/E0012) landed with the confinement
 //! rework (the path-confinement defect issue in this tracker).
@@ -52,6 +52,8 @@ const E0093: &str = include_str!("MDATRON-E0093.md");
 const E0094: &str = include_str!("MDATRON-E0094.md");
 const E0100: &str = include_str!("MDATRON-E0100.md");
 const E0101: &str = include_str!("MDATRON-E0101.md");
+const E0110: &str = include_str!("MDATRON-E0110.md");
+const E0111: &str = include_str!("MDATRON-E0111.md");
 
 /// Structured shape of an explain page. Surfaces the required fields named
 /// in the Phase 1a behavioral spec. Used by `mdatron explain --json <code>`.
@@ -105,6 +107,8 @@ pub fn lookup(code: &str) -> Option<&'static str> {
         "MDATRON-E0094" => Some(E0094),
         "MDATRON-E0100" => Some(E0100),
         "MDATRON-E0101" => Some(E0101),
+        "MDATRON-E0110" => Some(E0110),
+        "MDATRON-E0111" => Some(E0111),
         _ => None,
     }
 }
@@ -271,6 +275,8 @@ mod tests {
         "MDATRON-E0094",
         "MDATRON-E0100",
         "MDATRON-E0101",
+        "MDATRON-E0110",
+        "MDATRON-E0111",
     ];
 
     use std::path::{Path, PathBuf};
