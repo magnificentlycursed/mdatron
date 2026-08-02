@@ -1,6 +1,6 @@
 {
   "next_display_id": 152,
-  "next_comment_id": 361,
+  "next_comment_id": 362,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -4864,7 +4864,7 @@
       "priority": "high",
       "created_by": "IMWa",
       "created_at": "2026-07-20T19:55:26.424365Z",
-      "updated_at": "2026-07-20T19:55:28.212947Z",
+      "updated_at": "2026-08-02T01:03:04.019979Z",
       "labels": [
         "process"
       ],
@@ -4932,6 +4932,15 @@
           "kind": "decision",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA8vVSSRDOakUqM1mncvk8xg9sTCCnFp1Y4N+JcrONFZQbn0a1FnPptCHGiB4kxg+w9ib4wdi7aI4J54re/O7RBw=="
+        },
+        "a5c1cb88-06f8-4901-aa63-588f0b7370ed": {
+          "display_id": 361,
+          "author": "79Ig",
+          "content": "SUPERSEDED / abandoned. The kickoff-agent container-image approach (feature/59-kickoff-agent-image @ 353c5c0, built + fixture-verified 2026-07-20 but never merged) is superseded by in-flight work on magnificentlycursed/crosslink that resolves the underlying kickoff-pipeline defects (toolchain-less image, unreachable gitdir, kickoff.env parsing) at the harness level rather than via a per-repo derived image. Closing as won't-merge; the branch is abandoned (work recoverable from 353c5c0 if ever needed).",
+          "created_at": "2026-08-02T01:03:04.004604Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAaA7PvYiilUQerf5oKDA+ju4VycXX2Cqy/78ci2dgH8FEx731v8ISEB/v3hxiG1Ettyjp2KEX+ZwKsyDvHIe1DQ=="
         },
         "a76198f2-ddc2-4c4a-ba1d-7835ac03a9d9": {
           "author": "79Ig",
@@ -6056,8 +6065,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T01:02:55.444552Z",
+    "timestamp": "2026-08-02T01:03:04.019979Z",
     "agent_id": "79Ig",
-    "agent_seq": 672
+    "agent_seq": 673
   }
 }
