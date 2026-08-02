@@ -417,6 +417,10 @@ fn run(
         Ok(v) => v,
         Err(e) => return Err(VerifyError::Config(e.to_string())),
     };
+    let catalogs = match crate::codecat::load(&project_root) {
+        Ok(c) => c,
+        Err(e) => return Err(VerifyError::Config(e.to_string())),
+    };
 
     // Capture data-presence per family BEFORE the Options are consumed (#90);
     // the tri-state families object (#107) is built after the walk, since
@@ -426,6 +430,7 @@ fn run(
     let route_supplied = routes.is_some();
     let pin_supplied = pin_data.is_some();
     let vocab_supplied = vocab.is_some();
+    let code_catalog_supplied = catalogs.is_some();
     let citation_supplied = routes
         .as_ref()
         .map(|r| r.routes.iter().any(|x| x.citations))
@@ -453,6 +458,13 @@ fn run(
         Some(mut loaded) => {
             findings.append(&mut loaded.findings);
             Some(loaded.routes)
+        }
+        None => None,
+    };
+    let catalogs = match catalogs {
+        Some(mut loaded) => {
+            findings.append(&mut loaded.findings);
+            Some(loaded.catalogs)
         }
         None => None,
     };
@@ -727,6 +739,7 @@ fn run(
             cite_enabled,
             link_enabled,
             &marker_rules,
+            catalogs.as_deref().unwrap_or(&[]),
             vocab.as_ref().filter(|_| vocab_enabled),
             &schemas,
             &patterns,
@@ -926,6 +939,11 @@ fn run(
         } else {
             FamilyActivity::inactive("no route supplies marker_rules")
         },
+        code_catalog: if code_catalog_supplied {
+            FamilyActivity::active(".mdatron/code-catalogs.yaml supplied")
+        } else {
+            FamilyActivity::inactive("no .mdatron/code-catalogs.yaml")
+        },
     };
 
     // DEF4 (#131 SO ruling): every diagnostic path is project-root-relative, so
@@ -1072,6 +1090,7 @@ fn verify_file(
     cite_enabled: bool,
     link_enabled: bool,
     marker_rules: &[&crate::route::MarkerRule],
+    code_catalogs: &[crate::codecat::CodeCatalog],
     vocab: Option<&crate::vocab::LoadedVocab>,
     schemas: &BTreeMap<String, Schema>,
     patterns: &[PatternFile],
@@ -1126,6 +1145,7 @@ fn verify_file(
                 crate::link::check_file(project_root, path, content, 0, findings);
             }
             crate::marker::check_file(project_root, path, content, 0, marker_rules, findings);
+            crate::codecat::check_file(code_catalogs, path, content, 0, findings);
             let rel = path.strip_prefix(project_root).unwrap_or(path);
             if require_frontmatter.iter().any(|p| p.matches_path(rel)) {
                 findings.push(Finding {
@@ -1187,6 +1207,7 @@ fn verify_file(
             marker_rules,
             findings,
         );
+        crate::codecat::check_file(code_catalogs, path, content, body_offset, findings);
     }
 
     let frontmatter_internal = crate::dsl::index::yaml_to_value(&frontmatter_value);
@@ -3554,6 +3575,97 @@ pattern:
             "routes:\n- files: \"docs/**/*.md\"\n  governed_by: GOVERNING.md\n",
         );
         assert!(!marker_families(&opted_out).marker.is_active());
+    }
+
+    // ── adopter code-catalog family (#148, vsdd GH#20 P4) ───────────────────
+    // Spine tests (token grammar / severity pending vsdd-cli#27): a cited
+    // adopter code resolves against a declared comprehensive catalog, or blocks
+    // as E0113. The core scan/resolve logic is unit-tested in codecat.rs; these
+    // exercise the load + per-file wiring + family activity end to end.
+
+    // vsdd's live shape (vsdd-cli#27): classes E/W, four digits, the declared
+    // legal set. W0070 is deliberately OMITTED so a citation of it orphans —
+    // the real `.claude/commands/vsdd-domain-red-team.md` case.
+    const CODE_CATALOG_COMPREHENSIVE: &str = r#"catalogs:
+  - namespace: "VSDD-"
+    comprehensive: true
+    codes: ["E0010", "E0016", "E0018", "E0050", "W0010", "W0030", "W0080", "W0180"]
+"#;
+
+    fn code_catalog_project(label: &str, body: &str, catalogs_yaml: &str) -> TempProject {
+        let proj = TempProject::new(label);
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write(".mdatron/code-catalogs.yaml", catalogs_yaml);
+        proj.write("docs/doc.md", body);
+        proj
+    }
+
+    fn code_catalog_families(proj: &TempProject) -> crate::output::Families {
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let (_f, fam, _v, _n) = run(&cfg, None, None).unwrap();
+        fam
+    }
+
+    #[test]
+    fn orphaned_adopter_code_is_e0113() {
+        // The real red-team.md case: prose fires `VSDD-W0070`, not in the catalog.
+        let proj = code_catalog_project(
+            "codecat-orphan",
+            "namespaced-wrong bypass (fires `VSDD-W0070`).\n",
+            CODE_CATALOG_COMPREHENSIVE,
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        let f = findings
+            .iter()
+            .find(|f| f.code == "MDATRON-E0113")
+            .unwrap_or_else(|| panic!("expected E0113; got {findings:?}"));
+        // Built at runtime so the source carries no literal VSDD-W code (the
+        // cross-repo namespace-separation lint, tests/output_format.rs).
+        assert!(f
+            .quoted
+            .iter()
+            .any(|q| q.content == format!("VSDD-{}", "W0070")));
+    }
+
+    #[test]
+    fn declared_adopter_code_is_clean() {
+        let proj = code_catalog_project(
+            "codecat-ok",
+            "Cites VSDD-E0010 and VSDD-W0180, both declared.\n",
+            CODE_CATALOG_COMPREHENSIVE,
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert!(
+            findings.iter().all(|f| f.code != "MDATRON-E0113"),
+            "declared codes resolve clean; got {findings:?}"
+        );
+    }
+
+    #[test]
+    fn code_catalog_family_activity_tracks_data() {
+        let with = code_catalog_project("codecat-active", "prose\n", CODE_CATALOG_COMPREHENSIVE);
+        assert!(code_catalog_families(&with).code_catalog.is_active());
+        // No code-catalogs.yaml -> inactive.
+        let without = TempProject::new("codecat-inactive");
+        without.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        without.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        without.write("docs/doc.md", "prose\n");
+        assert!(!code_catalog_families(&without).code_catalog.is_active());
     }
 
     // #88 (#47 cold-run finding): an ARRAY selection fans out to one index

@@ -334,6 +334,25 @@ name-equality, a trailing `.` on the target tolerated (not slug-based). A
 reference that resolves to nothing blocks (`E0112`); the `target_doc` is
 project-root-relative and confined (`E0010`/`E0011`/`E0012`).
 
+**Code catalogs** (`code-catalogs.yaml`) — the adopter-side twin of mdatron's
+own every-code-resolves-in-explain: declare your code namespace and every code
+token cited in the corpus must resolve to it.
+
+```yaml
+catalogs:
+  - namespace: "ADOPTER-"     # the ownership prefix
+    comprehensive: true       # this catalog is the sole authority for the prefix
+    codes: ["E0010", "W0180"] # the declared legal set (class letter + digits)
+```
+
+Under a `comprehensive` catalog, a cited token that isn't declared blocks
+(`E0113`, orphaned-adopter-code) — the fix for codes left dangling after a
+defining doc is sunset. The detector is intentionally broader than the legal
+grammar (prefix + a digit-bearing tail), so a mistyped or unknown class is
+caught rather than silently skipped; the `codes:` list, not the detector, is
+the closed legal set. Set `comprehensive: false` if codes for the prefix may
+legitimately live outside the catalog.
+
 Every family code has an explain page: `mdatron explain MDATRON-E0061`.
 
 ## Onboarding: the init-and-hook path
