@@ -1,6 +1,6 @@
 {
   "next_display_id": 160,
-  "next_comment_id": 379,
+  "next_comment_id": 380,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -2630,10 +2630,21 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-08-02T06:17:38.064506Z",
-      "updated_at": "2026-08-02T06:17:43.621373Z",
+      "updated_at": "2026-08-02T06:43:57.101303Z",
       "labels": [
         "enhancement"
-      ]
+      ],
+      "comments": {
+        "f4c79c9b-b989-4076-9136-0519c1f7d407": {
+          "display_id": 379,
+          "author": "79Ig",
+          "content": "Committed 1eee0c0 + PR opened. vocab E0091/E0093 skip inline code spans via markup::body_inline_code_ranges (reuses #154). Deliberately opposite codecat (backticked codes stay citations). Red gate + unit test, 426 green.",
+          "created_at": "2026-08-02T06:43:57.064378Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAlEkfMGXnP59d4Br6RS9kZnysh4ghmo4WkkM+qkIuogJ+DNSsRPsRCwYPDp3vFUhMNWLXm2+YG8x8ZIfmu096Ag=="
+        }
+      }
     },
     "7d222949-0302-4dc4-9859-143cf7da11fb": {
       "uuid": "7d222949-0302-4dc4-9859-143cf7da11fb",
@@ -6343,8 +6354,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T06:32:19.951464Z",
+    "timestamp": "2026-08-02T06:43:57.101303Z",
     "agent_id": "79Ig",
-    "agent_seq": 728
+    "agent_seq": 729
   }
 }
