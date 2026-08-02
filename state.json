@@ -1,6 +1,6 @@
 {
   "next_display_id": 160,
-  "next_comment_id": 378,
+  "next_comment_id": 379,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -3402,11 +3402,20 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-08-02T05:31:45.348277Z",
-      "updated_at": "2026-08-02T06:02:20.588469Z",
+      "updated_at": "2026-08-02T06:31:33.221283Z",
       "labels": [
         "bug"
       ],
       "comments": {
+        "030bbbb9-dea3-420b-a385-e46d08da49be": {
+          "display_id": 378,
+          "author": "79Ig",
+          "content": "MERGED (PR #27). Link family no longer resolves links inside inline code spans; shared markup::inline_code_ranges applied in link.rs, deliberately link-scoped (codecat backticked tokens are real citations, marker line-anchored). Found by the lychee reference-arch review.",
+          "created_at": "2026-08-02T06:31:33.191925Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAgcd9vdJv88uW1gMdzlVmYrQ24OP/sqq8DW6Mo83IwGz+6Y+6OQT03yiz+DnoK6WZZnSb9A+2Go2FUeToMT8cDA=="
+        },
         "2b1cdb4e-fa41-42d8-bfd8-97469b388075": {
           "display_id": 375,
           "author": "79Ig",
@@ -6333,8 +6342,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T06:17:56.000821Z",
+    "timestamp": "2026-08-02T06:31:33.221283Z",
     "agent_id": "79Ig",
-    "agent_seq": 724
+    "agent_seq": 725
   }
 }
