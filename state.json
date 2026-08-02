@@ -1,6 +1,6 @@
 {
   "next_display_id": 154,
-  "next_comment_id": 372,
+  "next_comment_id": 373,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -775,11 +775,20 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-02T00:33:28.756774Z",
-      "updated_at": "2026-08-02T04:44:11.847014Z",
+      "updated_at": "2026-08-02T04:52:00.071641Z",
       "labels": [
         "enhancement"
       ],
       "comments": {
+        "c8efb02f-b2f2-467e-a351-178c9bb0afbe": {
+          "display_id": 372,
+          "author": "79Ig",
+          "content": "MERGED to main (PR #24). Section-scoped content pins: optional pins.yaml 'section' hashes a heading-delimited span; edit-outside=clean, inside=E0061, missing heading=E0063; pin --update handles spans. Additive/folded into unpublished 0.6.0. Delivered vsdd GH#20 P2. Adds shared markup::section_span (cite/link/marker/pin now share one core).",
+          "created_at": "2026-08-02T04:52:00.046566Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABACbacvIVsxmPhDCZMqhRMKn4hDrEqEbmuBUDKscouHE4y43YM5Fuq0x0i76TGTgOQ03ZeN2rBW1qJ8pgkS8t9Bw=="
+        },
         "e7f7dc0e-8252-47ad-bd1c-a2c622c8bf95": {
           "display_id": 371,
           "author": "79Ig",
@@ -6186,8 +6195,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T04:44:11.847014Z",
+    "timestamp": "2026-08-02T04:52:00.071641Z",
     "agent_id": "79Ig",
-    "agent_seq": 699
+    "agent_seq": 700
   }
 }
