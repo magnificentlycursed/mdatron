@@ -57,6 +57,13 @@ glob = "0.3"
 # DESIGN L17 requires linear-time engines for adopter-supplied patterns. See
 # docs/dependencies/regex-lite.md.
 regex-lite = "0.1"
+# pulldown-cmark: CommonMark pull parser for the link-check family (#155). Markdown
+# is a declared trust boundary (DESIGN "Surfaces: untrusted-markdown (parsers are a
+# trust boundary)"); a hardened, forbid(unsafe_code) CommonMark parser replaces
+# hand-rolled link scanning (the silent-false-negative source). default-features =
+# false drops the getopts (example-binary) + html features we don't build, trimming
+# the tree to pulldown-cmark + unicase. See docs/dependencies/pulldown-cmark.md.
+pulldown-cmark = { version = "0.13.4", default-features = false }
 
 [target.'cfg(unix)'.dependencies]
 # std exposes no openat surface; needed for the per-component no-follow open

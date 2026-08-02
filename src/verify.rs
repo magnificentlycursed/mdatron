@@ -3419,6 +3419,127 @@ pattern:
         assert!(!link_families(&opted_out).link.is_active());
     }
 
+    // ── link family gap closures (#155, the pulldown-cmark migration) ───────
+    //
+    // Reference-style links, image links, setext headings, HTML anchors, and
+    // GitHub duplicate-heading `-N` disambiguation — all deferred in the #145
+    // first cut, all closed by the CommonMark parse.
+
+    // RED GATE (#155 gap 1): GitHub gives a repeated heading the suffixes
+    // `-1`/`-2`. A link to the disambiguated `#dup-1` resolves; only a truly
+    // absent anchor (`#dup-2`, no third heading) flags.
+    #[test]
+    fn duplicate_heading_disambiguation_resolves() {
+        let proj = link_project(
+            "link-dup-heading",
+            "## Dup\n\ntext\n\n## Dup\n\nSecond [x](#dup-1) and absent [y](#dup-2).\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        let anchors: Vec<_> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0111")
+            .collect();
+        assert_eq!(
+            anchors.len(),
+            1,
+            "#dup-1 resolves to the 2nd heading; only #dup-2 flags; got {findings:?}"
+        );
+        assert!(anchors[0]
+            .quoted
+            .iter()
+            .any(|q| q.content.contains("#dup-2")));
+    }
+
+    // RED GATE (#155 gap 2): reference-style `[t][ref]` links are now resolved.
+    // A definition pointing at a missing file is E0110; one pointing at a real
+    // file is clean (was a silent false negative).
+    #[test]
+    fn reference_style_link_resolves() {
+        let proj = link_project(
+            "link-refstyle",
+            "Broken [a][bad] and good [b][ok].\n\n[bad]: no-such.md\n[ok]: target.md\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        let dead: Vec<_> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0110")
+            .collect();
+        assert_eq!(
+            dead.len(),
+            1,
+            "only the missing reference target flags; got {findings:?}"
+        );
+        assert!(dead[0]
+            .quoted
+            .iter()
+            .any(|q| q.content.contains("no-such.md")));
+    }
+
+    // RED GATE (#155 gap 2): image links `![alt](src)` are now resolved for
+    // existence — a broken image is E0110 (was a silent false negative).
+    #[test]
+    fn image_link_to_missing_is_e0110() {
+        let proj = link_project(
+            "link-image",
+            "![diagram](no-image.png) then a present target ![ok](target.md).\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        let dead: Vec<_> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0110")
+            .collect();
+        assert_eq!(dead.len(), 1, "the missing image flags; got {findings:?}");
+        assert!(dead[0]
+            .quoted
+            .iter()
+            .any(|q| q.content.contains("no-image.png")));
+    }
+
+    // RED GATE (#155 gap 3): a setext heading (underlined) is a heading, so its
+    // slug resolves a same-document anchor.
+    #[test]
+    fn setext_heading_anchor_resolves() {
+        let proj = link_project(
+            "link-setext",
+            "Setext Title\n============\n\nJump [here](#setext-title) and [gone](#nope).\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        let anchors: Vec<_> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0111")
+            .collect();
+        assert_eq!(
+            anchors.len(),
+            1,
+            "the setext slug resolves; only #nope flags; got {findings:?}"
+        );
+    }
+
+    // RED GATE (#155 gap 3): an explicit HTML anchor `<a name=...>` is a valid
+    // `#fragment` target.
+    #[test]
+    fn html_anchor_resolves() {
+        let proj = link_project(
+            "link-html-anchor",
+            "<a name=\"manual-spot\"></a>\n\nJump [here](#manual-spot) not [x](#absent).\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        let anchors: Vec<_> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0111")
+            .collect();
+        assert_eq!(
+            anchors.len(),
+            1,
+            "the HTML anchor resolves #manual-spot; only #absent flags; got {findings:?}"
+        );
+    }
+
     // ── marker-line reference family (#147, vsdd GH#20 P3 / GH#22) ──────────
     //
     // A body line matching a declared pattern names a reference whose captured
