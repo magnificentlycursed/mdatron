@@ -1,6 +1,6 @@
 {
   "next_display_id": 160,
-  "next_comment_id": 380,
+  "next_comment_id": 381,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -5439,11 +5439,20 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-02T05:46:29.324902Z",
-      "updated_at": "2026-08-02T06:03:15.529217Z",
+      "updated_at": "2026-08-02T07:50:14.485943Z",
       "labels": [
         "enhancement"
       ],
       "comments": {
+        "85ee3d4a-2748-4b93-a3aa-2ad429282dc8": {
+          "display_id": 380,
+          "author": "79Ig",
+          "content": "Committed 863ace8 + PR opened. Section-structural family (E0120 count / E0121 disjoint) over body sections; .mdatron/section-rules.yaml. Built to vsdd-cli#29 (count >= 1, structural open-detection, element-scoped id extraction avoiding the Phase-2-body false-overlap trap). New section families member folded into unpublished 3.0.0 (codes E0120-E0129). 429 green, gauntlet clean. Delivers vsdd GH#20 P5 body-content leg (frontmatter half was #149).",
+          "created_at": "2026-08-02T07:50:14.438898Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAMK6FdXClejAODNd47pM+g1kPIj2X+gnTPsKiHP/JecwuST04+BlfUdwhdH+0PX/RaLyIq46ha8M7gPUqSygvCA=="
+        },
         "d50d5a51-3a7f-4023-8572-0efb2176c936": {
           "display_id": 376,
           "author": "79Ig",
@@ -6358,8 +6367,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T06:46:12.351440Z",
+    "timestamp": "2026-08-02T07:50:14.485943Z",
     "agent_id": "79Ig",
-    "agent_seq": 730
+    "agent_seq": 731
   }
 }
