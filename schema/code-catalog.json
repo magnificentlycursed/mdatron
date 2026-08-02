@@ -24,6 +24,7 @@
   "MDATRON-E0110": "dead-link-target",
   "MDATRON-E0111": "dead-anchor",
   "MDATRON-E0112": "dead-marker-reference",
+  "MDATRON-E0113": "orphaned-adopter-code",
   "MDATRON-L0001": "governance-weakening-standing",
   "MDATRON-W0040": "governed-file-has-no-frontmatter",
   "MDATRON-W0041": "name-underivable",

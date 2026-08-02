@@ -33,7 +33,8 @@
 /// - `MDATRON-E0090` — `E0099` Vocabulary family (registry violations)
 /// - `MDATRON-E0100` — `E0109` Citation family (citation conformance)
 /// - `MDATRON-E0110` — `E0119` Reference families: body links/anchors (link, #145);
-///   marker-line references (marker, `E0112`, #147)
+///   marker-line references (marker, `E0112`, #147); adopter code-catalog
+///   integrity (code_catalog, `E0113`, #148)
 /// - `MDATRON-W0040` — `W0099` Configuration, governance, and family warnings
 /// - `MDATRON-L0001` — `L0099` Engine-level lints
 ///

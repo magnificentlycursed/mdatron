@@ -110,6 +110,11 @@ pub struct Families {
     /// The second reference family present in 3.0.0; families added *after*
     /// publish are additive/minor thanks to the forward-extensible `families`.
     pub marker: FamilyActivity,
+    /// The adopter code-catalog family (#148, vsdd GH#20 P4): every adopter code
+    /// token cited in the corpus resolves to a declared entry. An additive
+    /// member of the forward-extensible `families` (a MINOR, folded into the
+    /// unpublished 3.0.0 alongside the other reference families).
+    pub code_catalog: FamilyActivity,
 }
 
 impl Families {
@@ -125,6 +130,7 @@ impl Families {
             citation: reason(),
             link: reason(),
             marker: reason(),
+            code_catalog: reason(),
         }
     }
 }
@@ -439,6 +445,7 @@ mod tests {
                 citation: FamilyActivity::inactive("no citations route"),
                 link: FamilyActivity::inactive("no links route"),
                 marker: FamilyActivity::inactive("no marker_rules route"),
+                code_catalog: FamilyActivity::inactive("no code-catalogs.yaml"),
             },
             "0.3.0",
         )

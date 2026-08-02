@@ -25,6 +25,7 @@
 
 pub(crate) mod atomic;
 pub mod cite;
+pub mod codecat;
 pub mod codes;
 pub mod config;
 pub mod confine;
