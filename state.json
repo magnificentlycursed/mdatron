@@ -1860,11 +1860,12 @@
       "uuid": "4dd99e1d-a2be-43b8-b748-53449ce44113",
       "display_id": 152,
       "title": "adopt twice-daily cross-estate github digest routine (vsdd-cli pattern) + record in memory",
-      "status": "open",
+      "status": "closed",
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-08-02T01:09:24.515944Z",
-      "updated_at": "2026-08-02T01:10:26.320359Z",
+      "updated_at": "2026-08-02T01:10:32.383907Z",
+      "closed_at": "2026-08-02T01:10:32.383900Z",
       "labels": [
         "ops"
       ],
@@ -6100,8 +6101,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T01:10:26.320359Z",
+    "timestamp": "2026-08-02T01:10:32.383907Z",
     "agent_id": "79Ig",
-    "agent_seq": 680
+    "agent_seq": 681
   }
 }
