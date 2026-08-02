@@ -434,6 +434,10 @@ fn run(
         .as_ref()
         .map(|r| r.routes.iter().any(|x| x.links))
         .unwrap_or(false);
+    let marker_supplied = routes
+        .as_ref()
+        .map(|r| r.routes.iter().any(|x| !x.marker_rules.is_empty()))
+        .unwrap_or(false);
 
     let mut findings: Vec<Finding> = Vec::new();
     // Keep the pins for after the scope filter: a pin finding locates at
@@ -696,10 +700,12 @@ fn run(
         }
         let mut cite_enabled = false;
         let mut link_enabled = false;
+        let mut marker_rules: Vec<&crate::route::MarkerRule> = Vec::new();
         if let Some(routes) = &routes {
             crate::route::check_file(routes, rel, path, &mut findings);
             cite_enabled = crate::route::citations_enabled(routes, rel);
             link_enabled = crate::route::links_enabled(routes, rel);
+            marker_rules = crate::route::marker_rules_for(routes, rel);
         }
         // Vocabulary scope (#97): empty globs = every walked file.
         let vocab_enabled =
@@ -720,6 +726,7 @@ fn run(
             &require,
             cite_enabled,
             link_enabled,
+            &marker_rules,
             vocab.as_ref().filter(|_| vocab_enabled),
             &schemas,
             &patterns,
@@ -914,6 +921,11 @@ fn run(
         } else {
             FamilyActivity::inactive("no route opts in with links: true")
         },
+        marker: if marker_supplied {
+            FamilyActivity::active("a route supplies marker_rules")
+        } else {
+            FamilyActivity::inactive("no route supplies marker_rules")
+        },
     };
 
     // DEF4 (#131 SO ruling): every diagnostic path is project-root-relative, so
@@ -1059,6 +1071,7 @@ fn verify_file(
     require_frontmatter: &[glob::Pattern],
     cite_enabled: bool,
     link_enabled: bool,
+    marker_rules: &[&crate::route::MarkerRule],
     vocab: Option<&crate::vocab::LoadedVocab>,
     schemas: &BTreeMap<String, Schema>,
     patterns: &[PatternFile],
@@ -1112,6 +1125,7 @@ fn verify_file(
             if link_enabled {
                 crate::link::check_file(project_root, path, content, 0, findings);
             }
+            crate::marker::check_file(project_root, path, content, 0, marker_rules, findings);
             let rel = path.strip_prefix(project_root).unwrap_or(path);
             if require_frontmatter.iter().any(|p| p.matches_path(rel)) {
                 findings.push(Finding {
@@ -1162,6 +1176,17 @@ fn verify_file(
     if link_enabled {
         let body_offset = content.len() - body_len;
         crate::link::check_file(project_root, path, content, body_offset, findings);
+    }
+    {
+        let body_offset = content.len() - body_len;
+        crate::marker::check_file(
+            project_root,
+            path,
+            content,
+            body_offset,
+            marker_rules,
+            findings,
+        );
     }
 
     let frontmatter_internal = crate::dsl::index::yaml_to_value(&frontmatter_value);
@@ -3211,6 +3236,234 @@ pattern:
             "routes:\n- files: \"docs/**/*.md\"\n  governed_by: GOVERNING.md\n",
         );
         assert!(!link_families(&opted_out).link.is_active());
+    }
+
+    // ── marker-line reference family (#147, vsdd GH#20 P3 / GH#22) ──────────
+    //
+    // A body line matching a declared pattern names a reference whose captured
+    // `<name>` must resolve to an element in a rule-config-named target doc.
+    // Fixtures mirror vsdd's live shape: a build-plan's `Provenance:` lines
+    // resolving to a contract's `- **bold name**` list items (name-equality,
+    // trailing `.` tolerated), optionally scoped to a target section.
+
+    // The resolution target doc (rule-config-named, project-root-relative, and
+    // deliberately OUTSIDE the walked `docs/**` set — a pure resolution target).
+    const MARKER_TARGET: &str = r#"# Contract
+
+## Decomposition (phase 1c)
+
+- **Slice 1 — Live self-governance: the tracker join.** first slice detail
+- **Slice 2 — First guardrail.** second slice detail
+
+## Other Section
+
+- **Elsewhere item.** unrelated
+"#;
+
+    // A route opting its files into a list-item-bold-name marker rule.
+    const MARKER_ROUTE_OPTIN: &str = r#"routes:
+- files: "docs/**/*.md"
+  governed_by: GOVERNING.md
+  marker_rules:
+    - pattern: "^Provenance: (.+)$"
+      element: list-item-bold-name
+      target_doc: refs/contract.md
+"#;
+
+    fn marker_project(label: &str, plan_body: &str, routes_yaml: &str) -> TempProject {
+        let proj = TempProject::new(label);
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write("GOVERNING.md", "# gov\n");
+        proj.write(".mdatron/routes.yaml", routes_yaml);
+        // Resolution target, outside the walked set (so it is never E0030-unrouted).
+        proj.write("refs/contract.md", MARKER_TARGET);
+        // The governed marker file (vsdd's build-plan analog).
+        proj.write("docs/build-plan.md", plan_body);
+        proj
+    }
+
+    fn marker_families(proj: &TempProject) -> crate::output::Families {
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let (_f, fam, _v, _n) = run(&cfg, None, None).unwrap();
+        fam
+    }
+
+    // RED GATE (#147): a Provenance line naming a member that is not in the
+    // target doc is E0112, and quotes the captured name.
+    #[test]
+    fn dead_marker_reference_rejected() {
+        let proj = marker_project(
+            "marker-dead",
+            "Provenance: No Such Slice\n",
+            MARKER_ROUTE_OPTIN,
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        let f = findings
+            .iter()
+            .find(|f| f.code == "MDATRON-E0112")
+            .unwrap_or_else(|| panic!("expected E0112; got {findings:?}"));
+        assert!(f.quoted.iter().any(|q| q.content.contains("No Such Slice")));
+    }
+
+    // RED GATE (#147): a Provenance line whose name matches a `- **bold**` list
+    // item resolves clean — the target carries a trailing `.` the marker omits
+    // (tolerated), and the name is an em-dashed descriptive phrase, not an id.
+    #[test]
+    fn resolved_marker_reference_is_clean() {
+        let proj = marker_project(
+            "marker-ok",
+            "Provenance: Slice 1 — Live self-governance: the tracker join\n",
+            MARKER_ROUTE_OPTIN,
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert!(
+            findings.iter().all(|f| f.code != "MDATRON-E0112"),
+            "a resolved marker reference is clean; got {findings:?}"
+        );
+    }
+
+    // RED GATE (#147): target_section scopes resolution to that heading's span —
+    // a name present in the doc but OUTSIDE the section does not resolve; a name
+    // INSIDE it does.
+    #[test]
+    fn marker_target_section_scopes_resolution() {
+        let routes = r###"routes:
+- files: "docs/**/*.md"
+  governed_by: GOVERNING.md
+  marker_rules:
+    - pattern: "^Provenance: (.+)$"
+      element: list-item-bold-name
+      target_doc: refs/contract.md
+      target_section: "## Decomposition (phase 1c)"
+"###;
+        // 'Elsewhere item' lives under '## Other Section', outside the scope.
+        let out = marker_project("marker-section-out", "Provenance: Elsewhere item\n", routes);
+        let out_f = verify(&VerifyConfig::from_project(&out.0).unwrap()).unwrap();
+        assert!(
+            out_f.iter().any(|f| f.code == "MDATRON-E0112"),
+            "a name outside the scoped section does not resolve; got {out_f:?}"
+        );
+        // 'Slice 2' lives inside the scoped section.
+        let inside = marker_project(
+            "marker-section-in",
+            "Provenance: Slice 2 — First guardrail\n",
+            routes,
+        );
+        let in_f = verify(&VerifyConfig::from_project(&inside.0).unwrap()).unwrap();
+        assert!(
+            in_f.iter().all(|f| f.code != "MDATRON-E0112"),
+            "an in-section name resolves; got {in_f:?}"
+        );
+    }
+
+    // RED GATE (#147): the `heading` element class resolves the name against the
+    // target doc's headings (name-equality).
+    #[test]
+    fn marker_heading_element_class() {
+        let routes = r#"routes:
+- files: "docs/**/*.md"
+  governed_by: GOVERNING.md
+  marker_rules:
+    - pattern: "^See: (.+)$"
+      element: heading
+      target_doc: refs/contract.md
+"#;
+        let good = marker_project("marker-head-ok", "See: Other Section\n", routes);
+        assert!(verify(&VerifyConfig::from_project(&good.0).unwrap())
+            .unwrap()
+            .iter()
+            .all(|f| f.code != "MDATRON-E0112"));
+        let bad = marker_project("marker-head-bad", "See: Nonexistent Heading\n", routes);
+        assert!(verify(&VerifyConfig::from_project(&bad.0).unwrap())
+            .unwrap()
+            .iter()
+            .any(|f| f.code == "MDATRON-E0112"));
+    }
+
+    // RED GATE (#147): the target_doc obeys the confinement contract (it is a
+    // rule-config path, held categorically like a citation path): a parent-escape
+    // is E0011, an absolute path is E0010.
+    #[test]
+    fn marker_target_doc_confinement() {
+        let parent = r#"routes:
+- files: "docs/**/*.md"
+  governed_by: GOVERNING.md
+  marker_rules:
+    - pattern: "^Provenance: (.+)$"
+      element: list-item-bold-name
+      target_doc: ../../outside.md
+"#;
+        let p = marker_project("marker-escape", "Provenance: Anything\n", parent);
+        let pf = verify(&VerifyConfig::from_project(&p.0).unwrap()).unwrap();
+        assert!(
+            pf.iter().any(|f| f.code == "MDATRON-E0011"),
+            "parent-escape target_doc refused; got {pf:?}"
+        );
+        let abs = r#"routes:
+- files: "docs/**/*.md"
+  governed_by: GOVERNING.md
+  marker_rules:
+    - pattern: "^Provenance: (.+)$"
+      element: list-item-bold-name
+      target_doc: /etc/passwd.txt
+"#;
+        let a = marker_project("marker-abs", "Provenance: Anything\n", abs);
+        let af = verify(&VerifyConfig::from_project(&a.0).unwrap()).unwrap();
+        assert!(
+            af.iter().any(|f| f.code == "MDATRON-E0010"),
+            "absolute target_doc refused; got {af:?}"
+        );
+    }
+
+    // RED GATE (#147): a marker line inside a fenced code block is an example,
+    // not a live reference — not resolved.
+    #[test]
+    fn marker_lines_in_code_fences_are_ignored() {
+        let plan = "```\nProvenance: No Such Slice\n```\n\nProvenance: Slice 2 — First guardrail\n";
+        let proj = marker_project("marker-fence", plan, MARKER_ROUTE_OPTIN);
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        assert!(
+            findings.iter().all(|f| f.code != "MDATRON-E0112"),
+            "a marker line inside a code fence is not resolved; got {findings:?}"
+        );
+    }
+
+    // RED GATE (#147): opt-in — a route WITHOUT marker_rules gets no marker findings.
+    #[test]
+    fn markers_are_per_route_opt_in() {
+        let proj = marker_project(
+            "marker-optout",
+            "Provenance: No Such Slice\n",
+            "routes:\n- files: \"docs/**/*.md\"\n  governed_by: GOVERNING.md\n",
+        );
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        assert!(
+            findings.iter().all(|f| f.code != "MDATRON-E0112"),
+            "no marker_rules, no marker findings; got {findings:?}"
+        );
+    }
+
+    // RED GATE (#147): the marker family reports active exactly when a route
+    // supplies marker_rules (falsifiable audit signal).
+    #[test]
+    fn marker_family_activity_tracks_opt_in() {
+        let opted_in = marker_project("marker-active", "prose\n", MARKER_ROUTE_OPTIN);
+        assert!(marker_families(&opted_in).marker.is_active());
+        let opted_out = marker_project(
+            "marker-inactive",
+            "prose\n",
+            "routes:\n- files: \"docs/**/*.md\"\n  governed_by: GOVERNING.md\n",
+        );
+        assert!(!marker_families(&opted_out).marker.is_active());
     }
 
     // #88 (#47 cold-run finding): an ARRAY selection fans out to one index

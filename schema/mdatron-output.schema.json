@@ -54,15 +54,16 @@
     "families": {
       "type": "object",
       "additionalProperties": { "$ref": "#/$defs/activity" },
-      "description": "Per-verify activity of the check families as a tri-state plus a reason: active = data supplied and the check ran this pass; inert = configured but did no work (e.g. scoped to no file); inactive = not configured. The reason makes the audit signal falsifiable. Forward-extensible (3.0.0, #145): the named families below are always present; new families appear over time as additional members of the same shape, so a consumer must tolerate unknown family keys.",
-      "required": ["schema", "route", "pin", "vocabulary", "citation", "link"],
+      "description": "Per-verify activity of the check families as a tri-state plus a reason: active = data supplied and the check ran this pass; inert = configured but did no work (e.g. scoped to no file); inactive = not configured. The reason makes the audit signal falsifiable. Forward-extensible (3.0.0, #145/#147): the named families below are always present; new families appear over time as additional members of the same shape, so a consumer must tolerate unknown family keys.",
+      "required": ["schema", "route", "pin", "vocabulary", "citation", "link", "marker"],
       "properties": {
         "schema": { "$ref": "#/$defs/activity" },
         "route": { "$ref": "#/$defs/activity" },
         "pin": { "$ref": "#/$defs/activity" },
         "vocabulary": { "$ref": "#/$defs/activity" },
         "citation": { "$ref": "#/$defs/activity" },
-        "link": { "$ref": "#/$defs/activity" }
+        "link": { "$ref": "#/$defs/activity" },
+        "marker": { "$ref": "#/$defs/activity" }
       }
     },
     "findings": {

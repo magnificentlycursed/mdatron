@@ -55,6 +55,44 @@ struct RawEntry {
     /// heading. Default off, so link-checking is an explicit choice.
     #[serde(default)]
     links: bool,
+    /// Marker-line reference rules (#147, vsdd GH#20 P3): a body line matching
+    /// `pattern` names a reference whose captured `<name>` must resolve to an
+    /// existing element in a named target doc. Empty by default, so marker
+    /// checking is an explicit choice (sibling of `citations`/`links`).
+    #[serde(default)]
+    marker_rules: Vec<RawMarkerRule>,
+}
+
+/// One marker-line reference rule as declared in `routes.yaml` (#147).
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RawMarkerRule {
+    /// Regex matched against each body line; its FIRST capture group is the
+    /// referenced `<name>`. Linear-time (`regex_lite`) per `DESIGN.md` L17.
+    pattern: String,
+    /// The element class the captured name must resolve to in the target doc.
+    element: ElementClass,
+    /// The document the reference resolves INTO (relative, confined). Named in
+    /// the rule config — not derived from `governed_by`, not carried per marker
+    /// line (vsdd GH#22 Q1).
+    target_doc: String,
+    /// Optional heading whose section scopes resolution to its span (until the
+    /// next heading of the same or higher level). Absent = the whole target doc.
+    #[serde(default)]
+    target_section: Option<String>,
+}
+
+/// The element class a marker reference resolves against (#147). Configurable
+/// per vsdd GH#22's "generic cut"; `frontmatter-key` is reserved for a later
+/// cut.
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum ElementClass {
+    /// A markdown heading, resolved by its text (name-equality).
+    Heading,
+    /// The leading `**bold**` name of a `- ` list item (vsdd's live shape:
+    /// `- **Slice 1 — …** …`, referenced by that leading name).
+    ListItemBoldName,
 }
 
 /// The loaded route table: the active entries plus the per-entry findings
@@ -71,6 +109,16 @@ pub struct Route {
     pub naming: Option<regex_lite::Regex>,
     pub citations: bool,
     pub links: bool,
+    pub marker_rules: Vec<MarkerRule>,
+}
+
+/// A compiled marker-line reference rule (#147).
+pub struct MarkerRule {
+    /// Compiled line matcher; its first capture group is the `<name>`.
+    pub pattern: regex_lite::Regex,
+    pub element: ElementClass,
+    pub target_doc: String,
+    pub target_section: Option<String>,
 }
 
 /// Load, validate, and compile `.mdatron/routes.yaml`.
@@ -190,12 +238,32 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
             },
         };
 
+        let mut marker_rules = Vec::with_capacity(entry.marker_rules.len());
+        for rule in entry.marker_rules {
+            let pattern = match regex_lite::Regex::new(&rule.pattern) {
+                Ok(r) => r,
+                Err(e) => {
+                    return Err(Error::Config(format!(
+                        "route marker_rules pattern '{}' does not compile: {e}",
+                        rule.pattern
+                    )))
+                }
+            };
+            marker_rules.push(MarkerRule {
+                pattern,
+                element: rule.element,
+                target_doc: rule.target_doc,
+                target_section: rule.target_section,
+            });
+        }
+
         routes.push(Route {
             files,
             governed_by: entry.governed_by,
             naming,
             citations: entry.citations,
             links: entry.links,
+            marker_rules,
         });
     }
     Ok(Some(LoadedRoutes { routes, findings }))
@@ -291,6 +359,16 @@ pub fn citations_enabled(routes: &[Route], rel: &Path) -> bool {
 /// True when any route claiming `rel` opts it into body-link verification (#145).
 pub fn links_enabled(routes: &[Route], rel: &Path) -> bool {
     routes.iter().any(|r| r.links && r.files.matches_path(rel))
+}
+
+/// The marker-line reference rules active for `rel` — every rule on every route
+/// claiming it (#147). Empty means the marker family does no work on this file.
+pub fn marker_rules_for<'a>(routes: &'a [Route], rel: &Path) -> Vec<&'a MarkerRule> {
+    routes
+        .iter()
+        .filter(|r| r.files.matches_path(rel))
+        .flat_map(|r| r.marker_rules.iter())
+        .collect()
 }
 
 fn confinement_finding(

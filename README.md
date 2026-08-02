@@ -304,6 +304,29 @@ escapes the governed tree is refused (`E0010`/`E0011`/`E0012`). External links
 (any URL scheme) are left alone; reference-style and image links are not yet
 resolved.
 
+**Markers** — data-less; give a route one or more `marker_rules` and each body
+line matching a rule's `pattern` names a reference whose captured `<name>` must
+resolve to an existing element in a rule-named target doc — the name-anchor
+sibling of citations. A rule is `{ pattern, element, target_doc, target_section? }`:
+
+```yaml
+routes:
+- files: "plan/**/*.md"
+  governed_by: contract.md
+  marker_rules:
+    - pattern: "^Provenance: (.+)$"       # first capture = the referenced name
+      element: list-item-bold-name        # or: heading
+      target_doc: contract.md
+      target_section: "## Decomposition"  # optional: scope to this heading's span
+```
+
+`element: list-item-bold-name` resolves the name against the leading `**bold**`
+of a `- ` list item (`- **Slice 1 — …the guardrail.**` ← `Provenance: Slice 1 —
+…the guardrail`); `heading` resolves against heading text. Resolution is
+name-equality, a trailing `.` on the target tolerated (not slug-based). A
+reference that resolves to nothing blocks (`E0112`); the `target_doc` is
+project-root-relative and confined (`E0010`/`E0011`/`E0012`).
+
 Every family code has an explain page: `mdatron explain MDATRON-E0061`.
 
 ## Onboarding: the init-and-hook path

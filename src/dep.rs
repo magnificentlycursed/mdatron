@@ -267,6 +267,7 @@ mod tests {
             naming: None,
             citations: false,
             links: false,
+            marker_rules: Vec::new(),
         }
     }
 

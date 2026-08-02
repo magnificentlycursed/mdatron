@@ -22,6 +22,7 @@
   "MDATRON-E0101": "citation-line-out-of-range",
   "MDATRON-E0110": "dead-link-target",
   "MDATRON-E0111": "dead-anchor",
+  "MDATRON-E0112": "dead-marker-reference",
   "MDATRON-L0001": "governance-weakening-standing",
   "MDATRON-W0040": "governed-file-has-no-frontmatter",
   "MDATRON-W0041": "name-underivable",
