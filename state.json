@@ -1,6 +1,6 @@
 {
   "next_display_id": 154,
-  "next_comment_id": 366,
+  "next_comment_id": 367,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -2139,10 +2139,21 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-08-02T02:43:17.567177Z",
-      "updated_at": "2026-08-02T02:43:22.433003Z",
+      "updated_at": "2026-08-02T02:56:25.599053Z",
       "labels": [
         "research"
-      ]
+      ],
+      "comments": {
+        "d3665604-0fa7-4f93-babc-9fb5613096ae": {
+          "display_id": 366,
+          "author": "79Ig",
+          "content": "Registered knowledge page 'schematron-lineage-audit' (tags: schematron/architecture/reference/mdatron/lineage; 6 sources). Findings: faithful carries = validation thesis, diagnostic/message decoupling (explain-page-by-code == Schematron @diagnostics-by-id), let:, and SVRL active-pattern/fired-rule == our families tri-state (independent rediscovery). Justified divergences: loud E0032 vs silent rule-shadowing, fixed narrow DSL vs pluggable query binding (bounded-eval), direct Rust vs compile-to-XSLT. Dropped-worth-reconsidering: report polarity, abstract/parameterized rule templates, named phases. Headline: cite/link/marker-ref(#147)/adopter-code(#148) are 4 instances of ONE Schematron abstract pattern -> build #147/#148 on a shared reference-resolution spine.",
+          "created_at": "2026-08-02T02:56:25.582266Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAXEuFNxSl4dHtaE3FbRrDYF21q7xuBIMBDWzN/pfwwBoFofTTcj2HRGBK0o1fN7wb0wm8ClQ2WOJ6HRSWcK99DA=="
+        }
+      }
     },
     "6778c47f-8706-4a31-9cbe-2d60f8fdf19c": {
       "uuid": "6778c47f-8706-4a31-9cbe-2d60f8fdf19c",
@@ -6135,8 +6146,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T02:43:31.048260Z",
+    "timestamp": "2026-08-02T02:56:25.599053Z",
     "agent_id": "79Ig",
-    "agent_seq": 687
+    "agent_seq": 688
   }
 }
