@@ -2630,11 +2630,12 @@
       "display_id": 158,
       "title": "enhancement(vocab): E0091/E0093 exempt inline code spans (reuse markup::inline_code_ranges) — vsdd GH#28 Gap 2",
       "description": "vsdd GH#28 Gap 2. vocab.rs runs pattern.find_iter over the whole body (E0093 anti-pattern loop ~vocab.rs:284, E0091 coinage) with NO code-span filtering, while the link check already respects markup::inline_code_ranges. A deprecated term QUOTED in a code span (a historical commit subject, or naming a term as `chassis` to REFERENCE not USE it) false-positives E0093. Fix: vocab prose matching (E0091/E0093) skips inline code spans, reusing markup::inline_code_ranges (built in #154). SEMANTIC (from #154): for vocab/link a backticked token is example/reference -> MASK (don't flag); this is OPPOSITE codecat where a backticked code is a real formatted citation -> still flag. Small, high-value, reuses the shared primitive.",
-      "status": "open",
+      "status": "closed",
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-08-02T06:17:38.064506Z",
-      "updated_at": "2026-08-02T08:02:39.158303Z",
+      "updated_at": "2026-08-02T08:02:47.266460Z",
+      "closed_at": "2026-08-02T08:02:47.266450Z",
       "labels": [
         "enhancement"
       ],
@@ -6376,8 +6377,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T08:02:39.158303Z",
+    "timestamp": "2026-08-02T08:02:47.266460Z",
     "agent_id": "79Ig",
-    "agent_seq": 732
+    "agent_seq": 733
   }
 }
