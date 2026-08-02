@@ -100,11 +100,16 @@ pub struct Families {
     pub pin: FamilyActivity,
     pub vocabulary: FamilyActivity,
     pub citation: FamilyActivity,
-    /// The link family (#145): body-link/anchor resolution. The sixth family;
-    /// the published schema's `families` object became forward-extensible in the
-    /// same 3.0.0 bump (additional members of the `FamilyActivity` shape are
-    /// allowed), so families added after this one are additive/minor.
+    /// The link family (#145): body-link/anchor resolution. One of the two
+    /// reference families the 3.0.0 envelope ships with (the `families` object
+    /// became forward-extensible in the same bump — additional members of the
+    /// `FamilyActivity` shape are allowed).
     pub link: FamilyActivity,
+    /// The marker-line reference family (#147, vsdd GH#20 P3): a declared-pattern
+    /// body line whose captured name must resolve to an element in a named doc.
+    /// The second reference family present in 3.0.0; families added *after*
+    /// publish are additive/minor thanks to the forward-extensible `families`.
+    pub marker: FamilyActivity,
 }
 
 impl Families {
@@ -119,6 +124,7 @@ impl Families {
             vocabulary: reason(),
             citation: reason(),
             link: reason(),
+            marker: reason(),
         }
     }
 }
@@ -432,6 +438,7 @@ mod tests {
                 vocabulary: FamilyActivity::inactive("no vocabulary.yaml"),
                 citation: FamilyActivity::inactive("no citations route"),
                 link: FamilyActivity::inactive("no links route"),
+                marker: FamilyActivity::inactive("no marker_rules route"),
             },
             "0.3.0",
         )
