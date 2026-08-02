@@ -115,6 +115,10 @@ pub struct Families {
     /// member of the forward-extensible `families` (a MINOR, folded into the
     /// unpublished 3.0.0 alongside the other reference families).
     pub code_catalog: FamilyActivity,
+    /// The section-structural family (#157, vsdd GH#20 P5): count/disjointness
+    /// assertions over markdown body sections. Additive member of the
+    /// forward-extensible `families` (folded into the unpublished 3.0.0).
+    pub section: FamilyActivity,
 }
 
 impl Families {
@@ -131,6 +135,7 @@ impl Families {
             link: reason(),
             marker: reason(),
             code_catalog: reason(),
+            section: reason(),
         }
     }
 }
@@ -446,6 +451,7 @@ mod tests {
                 link: FamilyActivity::inactive("no links route"),
                 marker: FamilyActivity::inactive("no marker_rules route"),
                 code_catalog: FamilyActivity::inactive("no code-catalogs.yaml"),
+                section: FamilyActivity::inactive("no section-rules.yaml"),
             },
             "0.3.0",
         )

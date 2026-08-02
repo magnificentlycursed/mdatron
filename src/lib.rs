@@ -42,6 +42,7 @@ pub mod output;
 pub mod pin;
 pub mod route;
 pub mod schema;
+pub mod section;
 pub mod verify;
 pub mod vocab;
 

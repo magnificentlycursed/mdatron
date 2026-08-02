@@ -25,6 +25,8 @@
   "MDATRON-E0111": "dead-anchor",
   "MDATRON-E0112": "dead-marker-reference",
   "MDATRON-E0113": "orphaned-adopter-code",
+  "MDATRON-E0120": "section-count-violation",
+  "MDATRON-E0121": "section-ids-not-disjoint",
   "MDATRON-L0001": "governance-weakening-standing",
   "MDATRON-W0040": "governed-file-has-no-frontmatter",
   "MDATRON-W0041": "name-underivable",

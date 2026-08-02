@@ -35,6 +35,8 @@
 /// - `MDATRON-E0110` — `E0119` Reference families: body links/anchors (link, #145);
 ///   marker-line references (marker, `E0112`, #147); adopter code-catalog
 ///   integrity (code_catalog, `E0113`, #148)
+/// - `MDATRON-E0120` — `E0129` Section-structural family (count/disjointness over
+///   body sections: `E0120` section-count-violation, `E0121` section-ids-not-disjoint, #157)
 /// - `MDATRON-W0040` — `W0099` Configuration, governance, and family warnings
 /// - `MDATRON-L0001` — `L0099` Engine-level lints
 ///
@@ -65,10 +67,11 @@ pub fn is_reserved_mdatron_code(code: &str) -> bool {
         // catalog, #50): E0001-9 frontmatter-parse, E0010-19 path-confinement,
         // E0020-29 DSL, E0030-39 route, E0040-49 schema-load, E0050-59
         // schema-validation, E0060-69 pin, E0070-79 IO, E0080-89 pipeline,
-        // E0090-99 vocabulary, E0100-109 citation, E0110-119 link (#145)
-        // (contiguous E0001-E0119); W0040-99 config/governance/family warnings;
+        // E0090-99 vocabulary, E0100-109 citation, E0110-119 reference
+        // (link/marker/code, #145/#147/#148), E0120-129 section-structural (#157)
+        // (contiguous E0001-E0129); W0040-99 config/governance/family warnings;
         // L0001-99 engine lints.
-        'E' => matches!(n, 1..=119),
+        'E' => matches!(n, 1..=129),
         'W' => matches!(n, 40..=99),
         'L' => matches!(n, 1..=99),
         _ => false,
@@ -107,9 +110,9 @@ mod tests {
 
     #[test]
     fn unreserved_code_above_ranges_is_rejected() {
-        // Above the allocated families (contiguous E0001-E0119, link added #145):
+        // Above the allocated families (contiguous E0001-E0129, section added #157):
         // unreserved.
-        assert!(!is_reserved_mdatron_code("MDATRON-E0120"));
+        assert!(!is_reserved_mdatron_code("MDATRON-E0130"));
         assert!(!is_reserved_mdatron_code("MDATRON-E0200"));
     }
 
