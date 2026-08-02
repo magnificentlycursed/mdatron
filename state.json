@@ -1,5 +1,5 @@
 {
-  "next_display_id": 144,
+  "next_display_id": 145,
   "next_comment_id": 354,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -80,6 +80,7 @@
     "8d5c2bfc-5f17-4577-bbab-0434c455005d": 66,
     "8fc6916d-2d90-430e-af0d-fdebc0367dca": 81,
     "9149809f-422d-4870-8cca-53832d051a70": 115,
+    "91a6984a-f739-43b4-8e9c-6edeae81e88f": 144,
     "9242e6c2-32a3-45f1-8478-d1fec3a8ce8b": 76,
     "9a9d6a89-465b-47fe-bacb-e0589ebccf91": 89,
     "9bd3c0b2-d7fc-48ba-aa0f-bdc122f3eac6": 134,
@@ -3082,6 +3083,16 @@
         }
       }
     },
+    "91a6984a-f739-43b4-8e9c-6edeae81e88f": {
+      "uuid": "91a6984a-f739-43b4-8e9c-6edeae81e88f",
+      "display_id": 144,
+      "title": "review + close the loop on vsdd-cli github feedback (post-0.5.0)",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-08-02T00:30:46.085747Z",
+      "updated_at": "2026-08-02T00:30:46.085747Z"
+    },
     "9242e6c2-32a3-45f1-8478-d1fec3a8ce8b": {
       "uuid": "9242e6c2-32a3-45f1-8478-d1fec3a8ce8b",
       "display_id": 76,
@@ -5852,8 +5863,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-07-31T19:29:49.904311Z",
+    "timestamp": "2026-08-02T00:30:46.085747Z",
     "agent_id": "79Ig",
-    "agent_seq": 628
+    "agent_seq": 629
   }
 }
