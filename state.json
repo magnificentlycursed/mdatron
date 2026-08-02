@@ -1,6 +1,6 @@
 {
   "next_display_id": 158,
-  "next_comment_id": 375,
+  "next_comment_id": 376,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -3364,10 +3364,21 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-08-02T05:31:45.348277Z",
-      "updated_at": "2026-08-02T05:31:51.305910Z",
+      "updated_at": "2026-08-02T06:02:20.588469Z",
       "labels": [
         "bug"
-      ]
+      ],
+      "comments": {
+        "2b1cdb4e-fa41-42d8-bfd8-97469b388075": {
+          "display_id": 375,
+          "author": "79Ig",
+          "content": "Committed b07ef1c: link family no longer resolves links inside inline code spans. Shared markup::inline_code_ranges (CommonMark backtick spans) applied in link.rs. Deliberately LINK-SCOPED — NOT applied to code-catalog (adopter codes are routinely backticked as real citations; vsdd's VSDD-W0070 orphan is backticked), marker is line-anchored/immune. Red gate + unit test. 426 green, gauntlet clean.",
+          "created_at": "2026-08-02T06:02:20.543347Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA7EB1yx+9UZLa2TB6MAIo4jJnqEkLjftD3psJvZcZk73Enm7Z4dRbaBlev/xZgrGou1fB2vWbASIZynPjsAC0BA=="
+        }
+      }
     },
     "9a9d6a89-465b-47fe-bacb-e0589ebccf91": {
       "uuid": "9a9d6a89-465b-47fe-bacb-e0589ebccf91",
@@ -6273,8 +6284,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T05:48:48.620513Z",
+    "timestamp": "2026-08-02T06:02:20.588469Z",
     "agent_id": "79Ig",
-    "agent_seq": 715
+    "agent_seq": 716
   }
 }
