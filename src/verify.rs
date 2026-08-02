@@ -4042,7 +4042,8 @@ pattern:
     // vsdd's live shape (vsdd-cli#27): classes E/W, four digits, the declared
     // legal set. W0070 is deliberately OMITTED so a citation of it orphans —
     // the real `.claude/commands/vsdd-domain-red-team.md` case.
-    const CODE_CATALOG_COMPREHENSIVE: &str = r#"catalogs:
+    const CODE_CATALOG_COMPREHENSIVE: &str = r#"mdatron_format_version: 1
+catalogs:
   - namespace: "VSDD-"
     comprehensive: true
     codes: ["E0010", "E0016", "E0018", "E0050", "W0010", "W0030", "W0080", "W0180"]
@@ -4127,6 +4128,25 @@ pattern:
         );
         without.write("docs/doc.md", "prose\n");
         assert!(!code_catalog_families(&without).code_catalog.is_active());
+    }
+
+    // RED GATE (DEF5, #131): code-catalogs.yaml is BORN VERSIONED in 0.6.0 — a
+    // file omitting `mdatron_format_version` is a loud config error end-to-end
+    // (the required-on-new-files leg; the two-pass probe surfaces it legibly
+    // before the strict parse).
+    #[test]
+    fn code_catalog_without_format_version_is_a_loud_error() {
+        let proj = code_catalog_project(
+            "codecat-noversion",
+            "prose\n",
+            "catalogs:\n  - namespace: \"VSDD-\"\n    codes: [\"E0001\"]\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let err = format!("{}", verify(&cfg).unwrap_err());
+        assert!(
+            err.contains("mdatron_format_version") && err.contains("must declare"),
+            "a versioned file must declare its format version; got {err}"
+        );
     }
 
     // ── section-structural family (#157, vsdd GH#20 P5 / GH#29) ─────────────

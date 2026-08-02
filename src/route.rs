@@ -31,6 +31,12 @@ pub const ROUTES_NAME: &str = "routes.yaml";
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct RawTable {
+    /// Input-format version (DEF5, #131). Optional; absent = v1 (legacy
+    /// baseline). Read by the format-version probe; declared here only so
+    /// `deny_unknown_fields` accepts the field.
+    #[serde(default)]
+    #[allow(dead_code)]
+    mdatron_format_version: Option<u32>,
     routes: Vec<RawEntry>,
 }
 
@@ -152,6 +158,7 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
             )))
         }
     };
+    crate::format_version::check_input_format_version(&content, ROUTES_NAME, false)?;
     let raw: RawTable = serde_yaml_ng::from_str(&content)
         .map_err(|e| Error::Config(format!("cannot parse '{}': {e}", path.display())))?;
 

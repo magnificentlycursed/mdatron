@@ -33,6 +33,7 @@ pub mod dep;
 pub mod diagnostic;
 pub mod dsl;
 pub mod error;
+pub(crate) mod format_version;
 pub mod frontmatter;
 pub mod init;
 pub mod link;
