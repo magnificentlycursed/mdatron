@@ -1,6 +1,6 @@
 {
   "next_display_id": 150,
-  "next_comment_id": 354,
+  "next_comment_id": 355,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -3146,10 +3146,21 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-02T00:30:46.085747Z",
-      "updated_at": "2026-08-02T00:30:51.879768Z",
+      "updated_at": "2026-08-02T00:36:38.319912Z",
       "labels": [
         "feedback"
-      ]
+      ],
+      "comments": {
+        "0d3d3f79-610a-42f3-bf67-b16606d1f541": {
+          "display_id": 354,
+          "author": "79Ig",
+          "content": "Loop closed on vsdd-cli GitHub feedback: #20 (post-0.5.0 roadmap) triaged into #145-#149 + dispositioned + closed; #1 (0.4.0 adoption report) closed as fulfilled by the 0.5.0 publish. No open GitHub feedback issues remain. Relay memory updated (channel consolidated onto mdatron GitHub issues).",
+          "created_at": "2026-08-02T00:36:38.301871Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA9yTiNejnuwZu7ahIgX6u+IJ0jsbyrdw/WCX4r3cH9HBpje0oCggaXlsevPmFjzGXCRiJ8ByMWuY+EWskZdovBg=="
+        }
+      }
     },
     "9242e6c2-32a3-45f1-8478-d1fec3a8ce8b": {
       "uuid": "9242e6c2-32a3-45f1-8478-d1fec3a8ce8b",
@@ -5960,8 +5971,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T00:34:39.107834Z",
+    "timestamp": "2026-08-02T00:36:38.319912Z",
     "agent_id": "79Ig",
-    "agent_seq": 646
+    "agent_seq": 647
   }
 }
