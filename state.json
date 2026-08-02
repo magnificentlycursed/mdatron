@@ -1,5 +1,5 @@
 {
-  "next_display_id": 158,
+  "next_display_id": 159,
   "next_comment_id": 378,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -71,6 +71,7 @@
     "73fb2a8c-e991-4bfe-b8d2-7c56f53ce417": 143,
     "74744f3a-fbb8-424a-897e-d4f2b2ed77ff": 40,
     "7515ecfd-31f2-4e53-bbb7-0e50c7cce064": 6,
+    "77c6f57d-8b51-4b19-b179-8d083cb0e5a4": 158,
     "7d222949-0302-4dc4-9859-143cf7da11fb": 80,
     "7d3f3244-2166-4727-a6f5-233882cd4457": 49,
     "7f91651e-0b4e-4a0d-aa3e-567f6ebaea4a": 24,
@@ -2618,6 +2619,17 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA01CPT4if6XGZ/6YD6r8Ko5aYUq0d7XiAqcP+dsgljHPg08g12LUmQL8c2LKCYbkLsAqBLI0MBRsDGojyoyx/Dg=="
         }
       }
+    },
+    "77c6f57d-8b51-4b19-b179-8d083cb0e5a4": {
+      "uuid": "77c6f57d-8b51-4b19-b179-8d083cb0e5a4",
+      "display_id": 158,
+      "title": "enhancement(vocab): E0091/E0093 exempt inline code spans (reuse markup::inline_code_ranges) — vsdd GH#28 Gap 2",
+      "description": "vsdd GH#28 Gap 2. vocab.rs runs pattern.find_iter over the whole body (E0093 anti-pattern loop ~vocab.rs:284, E0091 coinage) with NO code-span filtering, while the link check already respects markup::inline_code_ranges. A deprecated term QUOTED in a code span (a historical commit subject, or naming a term as `chassis` to REFERENCE not USE it) false-positives E0093. Fix: vocab prose matching (E0091/E0093) skips inline code spans, reusing markup::inline_code_ranges (built in #154). SEMANTIC (from #154): for vocab/link a backticked token is example/reference -> MASK (don't flag); this is OPPOSITE codecat where a backticked code is a real formatted citation -> still flag. Small, high-value, reuses the shared primitive.",
+      "status": "open",
+      "priority": "high",
+      "created_by": "79Ig",
+      "created_at": "2026-08-02T06:17:38.064506Z",
+      "updated_at": "2026-08-02T06:17:38.064506Z"
     },
     "7d222949-0302-4dc4-9859-143cf7da11fb": {
       "uuid": "7d222949-0302-4dc4-9859-143cf7da11fb",
@@ -6303,8 +6315,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T06:13:27.805881Z",
+    "timestamp": "2026-08-02T06:17:38.064506Z",
     "agent_id": "79Ig",
-    "agent_seq": 720
+    "agent_seq": 721
   }
 }
