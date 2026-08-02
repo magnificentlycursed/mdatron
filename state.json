@@ -1,6 +1,6 @@
 {
   "next_display_id": 160,
-  "next_comment_id": 385,
+  "next_comment_id": 386,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -3122,10 +3122,21 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-02T06:17:50.667788Z",
-      "updated_at": "2026-08-02T06:17:56.000821Z",
+      "updated_at": "2026-08-02T10:05:10.570057Z",
       "labels": [
         "enhancement"
-      ]
+      ],
+      "comments": {
+        "20a4f976-96f6-462b-99eb-411b72baf199": {
+          "display_id": 385,
+          "author": "79Ig",
+          "content": "Committed: feat(#159) exempt structured reference-IDs from E0091 by default | Files: 5 changed, 166 insertions(+), 12 deletions(-). Default allow-set (REQ/AC/ADR/RFC/Q) unioned with consumer's label_schemes.allow when scan active; conservative membership; non-activating; 4 red-gate tests. Operator ratified default-allow-set-plus-template. fmt clean, 0 clippy, 376 lib tests green, self-validation exit 0.",
+          "created_at": "2026-08-02T10:05:10.547695Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA/q0J/M8KwJDztaQS52Yge9fOFbc2QKIH8eMzmDcoD1Z8p7uZeXsW6YVItcJJZy/UUAXwkMx5KXVUwgfo3OJkDw=="
+        }
+      }
     },
     "8ac50e86-5777-4068-8ce0-3d628ff48d30": {
       "uuid": "8ac50e86-5777-4068-8ce0-3d628ff48d30",
@@ -6407,8 +6418,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T09:53:32.025189Z",
+    "timestamp": "2026-08-02T10:05:10.570057Z",
     "agent_id": "79Ig",
-    "agent_seq": 741
+    "agent_seq": 742
   }
 }
