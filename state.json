@@ -1,6 +1,6 @@
 {
   "next_display_id": 152,
-  "next_comment_id": 360,
+  "next_comment_id": 361,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -1595,10 +1595,21 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-08-02T00:56:01.363702Z",
-      "updated_at": "2026-08-02T00:56:06.678734Z",
+      "updated_at": "2026-08-02T01:00:12.331064Z",
       "labels": [
         "chore"
-      ]
+      ],
+      "comments": {
+        "f9c71d97-c1d3-4544-a449-38608ea6896e": {
+          "display_id": 360,
+          "author": "79Ig",
+          "content": "Cleanup pass done: closed #122 (roast complete+published), #49 (docs shipped+cold-read, v1.0 framing retired), #79 (E0094 shipped, working in field), #51 (deviation debt paid via #52, routing rule now standing). #96 kept open (standing directive). #59 (kickoff-image, unmerged branch) flagged for operator decision. Forward backlog = vsdd roadmap #145-149 + design-Q #132/#133 + incremental #103/#92/#118 + platform #64.",
+          "created_at": "2026-08-02T01:00:12.308293Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAIK+9gTwwQUDWIapGdAN2BkrtgfQ/fkHk8IxDWYvbzuVPu5znK96XA+0dJCIloa1UJDDD1p3nWGMCWP3a5WYYAw=="
+        }
+      }
     },
     "3bf8a891-a8c6-44cc-9698-1b69f2a3b3c1": {
       "uuid": "3bf8a891-a8c6-44cc-9698-1b69f2a3b3c1",
@@ -6044,8 +6055,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T00:59:43.749945Z",
+    "timestamp": "2026-08-02T01:00:12.331064Z",
     "agent_id": "79Ig",
-    "agent_seq": 668
+    "agent_seq": 669
   }
 }
