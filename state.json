@@ -1,6 +1,6 @@
 {
   "next_display_id": 160,
-  "next_comment_id": 384,
+  "next_comment_id": 385,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -4979,11 +4979,20 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-02T05:38:49.843362Z",
-      "updated_at": "2026-08-02T08:40:05.989783Z",
+      "updated_at": "2026-08-02T08:49:47.619235Z",
       "labels": [
         "enhancement"
       ],
       "comments": {
+        "1a7ec646-ee15-4db8-ad23-6f424158398a": {
+          "display_id": 384,
+          "author": "79Ig",
+          "content": "PR #31 CI GREEN, mergeState CLEAN (operator-gated merge). Live run all 7 jobs pass incl. required Self-validation. One follow-up in-branch: E0061 pin-stale on src/codes.rs (its DESIGN.md pin) — re-pinned after reviewing the governing DESIGN.md (which gained the DSL field-validation bullet + E0021 reserved-range note). Concurrency-cancel dance handled (reran cancelled push run after live PR run settled).",
+          "created_at": "2026-08-02T08:49:44.076002Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAkvSrC3DYf0ILnnwjJO4fZV9RP0OhrXhpxxW+ko9XLdXoLJfC09v35uo5KdYEtVxwzfFxoQaJ6g8xm4TzpUFAAw=="
+        },
         "d192984b-52e1-4fca-87a1-39c4e26cceab": {
           "display_id": 383,
           "author": "79Ig",
@@ -6394,8 +6403,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T08:40:05.989783Z",
+    "timestamp": "2026-08-02T08:49:47.619235Z",
     "agent_id": "79Ig",
-    "agent_seq": 739
+    "agent_seq": 740
   }
 }
