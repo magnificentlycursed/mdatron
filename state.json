@@ -1,5 +1,5 @@
 {
-  "next_display_id": 146,
+  "next_display_id": 147,
   "next_comment_id": 354,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -16,6 +16,7 @@
     "1ba1bc71-1b50-4f6c-b672-1524a61a3096": 116,
     "1cafa0f3-dcdd-491b-b455-52af79c6c85d": 122,
     "1da67425-f44d-40d6-8ba1-2d2ed768de38": 97,
+    "1f89fa15-980c-4d2d-ac43-108f45c87c2e": 146,
     "1ff675c3-889e-4de4-84da-352debc4b1f7": 5,
     "224e7d50-2f87-4c2e-abf7-317c23ccbada": 46,
     "238317fa-9b8f-4ff1-9774-90c8dffb9a2e": 125,
@@ -714,6 +715,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAhz7vBxtSi4vYiC4LBR64ebNoHG6Oo4A1FYkicKqlD/jK9QJ0G6Tj7C0HOrCxz5XFYbg9vntlIi1omB3NfAknCA=="
         }
       }
+    },
+    "1f89fa15-980c-4d2d-ac43-108f45c87c2e": {
+      "uuid": "1f89fa15-980c-4d2d-ac43-108f45c87c2e",
+      "display_id": 146,
+      "title": "roadmap (vsdd#20 P2): section-scoped content pins — extend 'mdatron pin' from whole-file to heading-delimited spans (live: vsdd build-plan pins one section's hash)",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-08-02T00:33:28.756774Z",
+      "updated_at": "2026-08-02T00:33:28.756774Z"
     },
     "1ff675c3-889e-4de4-84da-352debc4b1f7": {
       "uuid": "1ff675c3-889e-4de4-84da-352debc4b1f7",
@@ -5888,8 +5899,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T00:33:21.121088Z",
+    "timestamp": "2026-08-02T00:33:28.756774Z",
     "agent_id": "79Ig",
-    "agent_seq": 634
+    "agent_seq": 635
   }
 }
