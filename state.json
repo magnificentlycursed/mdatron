@@ -3755,11 +3755,12 @@
       "uuid": "a7b5521e-a543-40c5-9328-967014fea95a",
       "display_id": 145,
       "title": "roadmap (vsdd#20 P1, top ask): dangling body-link/anchor resolution over the governed corpus — relative link target exists + heading/anchor exists (frontmatter-slug check covers slugs only, not body links)",
-      "status": "open",
+      "status": "closed",
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-08-02T00:33:08.586690Z",
-      "updated_at": "2026-08-02T04:14:29.806647Z",
+      "updated_at": "2026-08-02T04:14:36.719312Z",
+      "closed_at": "2026-08-02T04:14:36.719306Z",
       "labels": [
         "enhancement"
       ],
@@ -6178,8 +6179,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T04:14:29.806647Z",
+    "timestamp": "2026-08-02T04:14:36.719312Z",
     "agent_id": "79Ig",
-    "agent_seq": 696
+    "agent_seq": 697
   }
 }
