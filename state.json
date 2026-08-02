@@ -1,6 +1,6 @@
 {
   "next_display_id": 152,
-  "next_comment_id": 358,
+  "next_comment_id": 359,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -1636,7 +1636,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-22T17:10:29.912761Z",
-      "updated_at": "2026-07-29T00:31:19.644894Z",
+      "updated_at": "2026-08-02T00:59:14.596206Z",
       "labels": [
         "enhancement"
       ],
@@ -1674,6 +1674,15 @@
           "kind": "result",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA0zTHJA9vlw5NoCCLIbo8TKehCWJaZNplBQ257NZcEG8DM+efewRC0UQWrMKEpncTWjWzo1JNUGjxdsvl3xeaAg=="
+        },
+        "fd339877-9a18-459f-ba25-ffdf024d0c01": {
+          "display_id": 358,
+          "author": "79Ig",
+          "content": "COMPLETE. E0094 numeric-claim-drift shipped in the #85 vocabulary lane at the ruled conservative cut (configured field references, digits + word-numbers); the falsifiability leg rode #47 (100% one-pass). vsdd-cli's recent roadmap feedback (mdatron GitHub #20) confirms E0091/E0093 armed + catching real drift and did NOT re-raise numeric-claims — so the check is working in the field. The only residual was vsdd optionally contributing their 3 historical drift cases verbatim, which is consumer-discretion and unrequested. Closing.",
+          "created_at": "2026-08-02T00:59:14.575732Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAJpBZ4b1+xvqPDR+gylrPqSDMY4g73szBbEHXyNWBzZi0KnmXvdWJHYUAAUtmTMgC7Lh2c1YEVmE44qmeoAyqAw=="
         }
       }
     },
@@ -6028,8 +6037,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T00:57:57.505079Z",
+    "timestamp": "2026-08-02T00:59:14.596206Z",
     "agent_id": "79Ig",
-    "agent_seq": 663
+    "agent_seq": 664
   }
 }
