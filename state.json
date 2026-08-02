@@ -1,5 +1,5 @@
 {
-  "next_display_id": 154,
+  "next_display_id": 155,
   "next_comment_id": 374,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -88,6 +88,7 @@
     "9149809f-422d-4870-8cca-53832d051a70": 115,
     "91a6984a-f739-43b4-8e9c-6edeae81e88f": 144,
     "9242e6c2-32a3-45f1-8478-d1fec3a8ce8b": 76,
+    "986583e5-b23b-4c73-9613-4b4abe579a54": 154,
     "9a9d6a89-465b-47fe-bacb-e0589ebccf91": 89,
     "9bd3c0b2-d7fc-48ba-aa0f-bdc122f3eac6": 134,
     "9e14b0dd-b125-4e1c-a9eb-0c15086a3f1e": 10,
@@ -3337,6 +3338,17 @@
         }
       }
     },
+    "986583e5-b23b-4c73-9613-4b4abe579a54": {
+      "uuid": "986583e5-b23b-4c73-9613-4b4abe579a54",
+      "display_id": 154,
+      "title": "bug(#145): link family resolves links inside inline code spans (false positive) — lychee review",
+      "description": "The lychee/markdownlint reference-arch review (knowledge page lychee-link-family-audit) found a correctness defect in the shipped link family: markup::non_fenced_lines skips FENCED code blocks but not inline code spans (nor 4-space indented code). A line like 'use `[x](y)`' has [x](y) matched and resolved -> false-positive E0110/E0111. The module doc lists inline-code-span links as 'deferred' but the code actively mis-resolves them. Fix: track inline code spans in the scanner, or adopt pulldown-cmark. lychee excludes these via pulldown Event::Code.",
+      "status": "open",
+      "priority": "high",
+      "created_by": "79Ig",
+      "created_at": "2026-08-02T05:31:45.348277Z",
+      "updated_at": "2026-08-02T05:31:45.348277Z"
+    },
     "9a9d6a89-465b-47fe-bacb-e0589ebccf91": {
       "uuid": "9a9d6a89-465b-47fe-bacb-e0589ebccf91",
       "display_id": 89,
@@ -6203,8 +6215,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T05:26:42.682845Z",
+    "timestamp": "2026-08-02T05:31:45.348277Z",
     "agent_id": "79Ig",
-    "agent_seq": 703
+    "agent_seq": 704
   }
 }
