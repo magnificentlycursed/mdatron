@@ -1,6 +1,6 @@
 {
   "next_display_id": 160,
-  "next_comment_id": 387,
+  "next_comment_id": 388,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -1969,10 +1969,21 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-02T05:31:57.642692Z",
-      "updated_at": "2026-08-02T05:32:02.863171Z",
+      "updated_at": "2026-08-02T10:37:25.017877Z",
       "labels": [
         "enhancement"
-      ]
+      ],
+      "comments": {
+        "f35dcd62-d044-447a-ac62-e7ab9d0ee634": {
+          "display_id": 387,
+          "author": "79Ig",
+          "content": "Committed: feat(#155) migrate link discovery to CommonMark parse (pulldown-cmark) | 11 files, 446 insertions(+), 145 deletions(-). Closes gaps 1-3 (dup-heading -N, reference-style + image links, setext + HTML anchors); #154 inline-code now structural. New dep pulldown-cmark 0.13 (default-features=false, only unicase new, 0 unsafe, audit+deny clean) with docs/dependencies record + VSDD-E0100 co-authorship. 9 existing + 5 new gap red-gate + 4 markup unit tests. fmt/0-clippy/380 lib green, self-validation exit 0. Gap 4 (root: mode) deferred as follow-up.",
+          "created_at": "2026-08-02T10:37:24.996756Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAuy1kBvknyaSqhkhgkoDvP64CPLqCimRWrh4MmOFubEvrXTdOaz9Slcwd+C7cY9rtMwhZarRox+AruF8luzyWCg=="
+        }
+      }
     },
     "57311af8-98a9-4083-9f80-586f713d0089": {
       "uuid": "57311af8-98a9-4083-9f80-586f713d0089",
@@ -6431,8 +6442,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T10:13:59.677969Z",
+    "timestamp": "2026-08-02T10:37:25.017877Z",
     "agent_id": "79Ig",
-    "agent_seq": 744
+    "agent_seq": 745
   }
 }
