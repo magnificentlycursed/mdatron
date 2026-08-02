@@ -282,7 +282,10 @@ informational lint (`L0001`); an unjustified one warns (`W0042`).
 
 **Vocabulary** (`vocabulary.yaml`) — registry-driven prose scan: unregistered
 bold-introduced coinages (`E0090`, draft-status exempt), letter-plus-number
-label clusters outside your allowlist (`E0091`), reserved-word use (`E0092`),
+label clusters outside your allowlist (`E0091` — structured reference-IDs
+`REQ-<n>`/`AC-<n>`/`ADR-<n>`/`RFC-<n>`/`Q<n>` are exempt by default and unioned
+with your allowlist, so specs validate out of the box; add local schemes like
+`^C\d+$` to `label_schemes.allow`), reserved-word use (`E0092`),
 listed register anti-patterns (`E0093`), and numeric claims — a prose numeral
 restating a configured frontmatter field's count and drifting from it
 (`E0094`). By default the scan covers every walked file; set `vocabulary_globs`
