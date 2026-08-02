@@ -86,7 +86,7 @@ holds for at least one (false over an empty array). `filter` returns the
 **sub-array** of elements for which the predicate holds. A `Null` collection is
 treated as empty (empty array for `filter`).
 
-`filter` composes with `count`/`len` for arity rules — exactly-N, at-least-N —
+`filter` composes with `count`/`len` for **arity rules** — exactly-N, at-least-N —
 that the boolean quantifiers cannot express directly:
 
 ```yaml
@@ -96,6 +96,24 @@ assert: count(filter(m in $self.members, $m.kind == "lane")) == 1
 assert: count(filter(m in $self.members, $m.kind == "lane")) != 1
         and some(m in $self.members, $m.kind == "lane")
 ```
+
+`count` over `intersect`/`difference` expresses **disjointness and subset rules**
+between two frontmatter collections:
+
+```yaml
+# the phase ids of two sections are disjoint (share no element)
+assert: count(intersect($self.phases_a, $self.phases_b)) == 0
+# every id in `required` also appears in `declared` (required is a subset)
+assert: count(difference($self.required, $self.declared)) == 0
+```
+
+Together, arity-with-predicate (`count(filter(...))`) and disjointness
+(`count(intersect(...))`) are the frontmatter form of the "exactly one X" and
+"ids disjoint between two sections" acceptance checks (tracker #149). They apply
+to collections declared **in frontmatter**; the same shapes over *body-content*
+structure (e.g. counting H3 headings inside a `##` section) are excluded from the
+DSL pending the body-content falsifiability gate (see `DESIGN.md`
+§ Cross-file semantics stay narrowed) and are tracked separately.
 
 ## Functions
 
