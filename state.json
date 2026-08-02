@@ -1,10 +1,11 @@
 {
-  "next_display_id": 149,
+  "next_display_id": 150,
   "next_comment_id": 354,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
     "0943c25f-129e-492b-a326-fff0d809c6c0": 121,
+    "0ce9e2f6-cb02-409d-aba5-6b1942abc74c": 149,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
     "12afc5cc-5cb5-4494-8835-3d16d53616f6": 93,
     "15d7981a-008d-4805-8a69-f3e4f414caf0": 75,
@@ -307,6 +308,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABArqQjNE4IepZJtr86uKnDEax2KVdQUiqtnKidrkpWpXDh07BoN27QLPWFvXYN2IfKPCvC2k43NcuneJRE5JGCAg=="
         }
       }
+    },
+    "0ce9e2f6-cb02-409d-aba5-6b1942abc74c": {
+      "uuid": "0ce9e2f6-cb02-409d-aba5-6b1942abc74c",
+      "display_id": 149,
+      "title": "roadmap (vsdd#20 P5 / standing D1): DSL filter/count-with-predicate — 'exactly one open-phase H3 in ## Requirements', 'phase ids disjoint between two sections'",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-08-02T00:34:26.767119Z",
+      "updated_at": "2026-08-02T00:34:26.767119Z"
     },
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": {
       "uuid": "1198bf2d-1428-40e0-8e18-cbf40d2df45d",
@@ -5942,8 +5953,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T00:34:19.637825Z",
+    "timestamp": "2026-08-02T00:34:26.767119Z",
     "agent_id": "79Ig",
-    "agent_seq": 643
+    "agent_seq": 644
   }
 }
