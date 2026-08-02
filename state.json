@@ -1,5 +1,5 @@
 {
-  "next_display_id": 155,
+  "next_display_id": 156,
   "next_comment_id": 374,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -52,6 +52,7 @@
     "4dd99e1d-a2be-43b8-b748-53449ce44113": 152,
     "4fe1ca8e-6b24-4d43-86c1-7a29b108f3ac": 126,
     "52ecc683-68d9-47ce-934f-0d9b43c371f4": 70,
+    "571fe228-1e58-4ec0-8edf-6ebced31ecd8": 155,
     "57311af8-98a9-4083-9f80-586f713d0089": 142,
     "588a808f-de8c-4824-8347-2ed0a5891594": 44,
     "59693794-3a00-4af8-a42f-477ed3766f24": 105,
@@ -1938,6 +1939,17 @@
       "labels": [
         "enhancement"
       ]
+    },
+    "571fe228-1e58-4ec0-8edf-6ebced31ecd8": {
+      "uuid": "571fe228-1e58-4ec0-8edf-6ebced31ecd8",
+      "display_id": 155,
+      "title": "enhancement(#145): link family slug + coverage gaps (lychee review) — dup-heading -N, reference-style, images, setext, root mode",
+      "description": "From lychee-link-family-audit; the link family got the headline decisions right (document-relative, GitHub-slug, defer-external, skip-fenced, +confinement beyond the mature tools). Ranked gaps: (1) duplicate-heading -N disambiguation deferred -> false-positive E0111 on #foo-1 (cheap, highest value); (2) reference-style [t][ref] + image links are silent false NEGATIVES (lychee catches both) -> the pulldown-cmark case, which also fixes the inline-code-span bug; (3) setext + HTML anchors not in the slug set; (4) optional root: mode so /docs/x.md resolves in-tree instead of hard-refusing E0010. pulldown-cmark adoption is the strategic decision.",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-08-02T05:31:57.642692Z",
+      "updated_at": "2026-08-02T05:31:57.642692Z"
     },
     "57311af8-98a9-4083-9f80-586f713d0089": {
       "uuid": "57311af8-98a9-4083-9f80-586f713d0089",
@@ -6218,8 +6230,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T05:31:51.305910Z",
+    "timestamp": "2026-08-02T05:31:57.642692Z",
     "agent_id": "79Ig",
-    "agent_seq": 705
+    "agent_seq": 706
   }
 }
