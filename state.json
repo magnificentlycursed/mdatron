@@ -771,11 +771,12 @@
       "uuid": "1f89fa15-980c-4d2d-ac43-108f45c87c2e",
       "display_id": 146,
       "title": "roadmap (vsdd#20 P2): section-scoped content pins — extend 'mdatron pin' from whole-file to heading-delimited spans (live: vsdd build-plan pins one section's hash)",
-      "status": "open",
+      "status": "closed",
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-02T00:33:28.756774Z",
-      "updated_at": "2026-08-02T04:52:00.071641Z",
+      "updated_at": "2026-08-02T04:52:07.528991Z",
+      "closed_at": "2026-08-02T04:52:07.528984Z",
       "labels": [
         "enhancement"
       ],
@@ -6195,8 +6196,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T04:52:00.071641Z",
+    "timestamp": "2026-08-02T04:52:07.528991Z",
     "agent_id": "79Ig",
-    "agent_seq": 700
+    "agent_seq": 701
   }
 }
