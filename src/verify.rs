@@ -372,28 +372,15 @@ fn run(
     let registry = IndexRegistry::build(&project_root, &all_keys)?;
 
     // Opt-in frontmatter requirement (#80 D2): compile the globs once; a
-    // malformed pattern is a config error, not a silent no-op.
-    let require: Vec<glob::Pattern> = config
-        .require_frontmatter
-        .iter()
-        .map(|g| {
-            glob::Pattern::new(g)
-                .map_err(|e| VerifyError::Config(format!("require_frontmatter '{g}': {e}")))
-        })
-        .collect::<Result<_, _>>()?;
+    // malformed OR tree-escaping pattern is a loud config error, not a silent
+    // no-op (the confinement gap, SA F4 — see `confine_and_compile_globs`).
+    let require = confine_and_compile_globs(&config.require_frontmatter, "require_frontmatter")?;
 
     // Vocabulary scope (#97): the naming register applies only to these globs
     // when supplied; empty falls back to every walked file (prior behavior).
     // Kept separate from file_globs so a historical archive stays walked +
     // routed without its retired handle scheme tripping the register.
-    let vocab_globs: Vec<glob::Pattern> = config
-        .vocabulary_globs
-        .iter()
-        .map(|g| {
-            glob::Pattern::new(g)
-                .map_err(|e| VerifyError::Config(format!("vocabulary_globs '{g}': {e}")))
-        })
-        .collect::<Result<_, _>>()?;
+    let vocab_globs = confine_and_compile_globs(&config.vocabulary_globs, "vocabulary_globs")?;
 
     // Route family (#83): load + compile the allowlist; absent file = family
     // inactive. Per-entry defects arrive as findings (confinement escapes drop
@@ -1020,6 +1007,39 @@ fn read_schema_class(content: &str) -> Option<String> {
         .and_then(|o| o.get("schema_class"))
         .and_then(|v| v.as_str())
         .map(|s| s.to_string())
+}
+
+/// Confine + compile a list of adopter **scope globs** (`require_frontmatter`,
+/// `vocabulary_globs`) against the governed tree. A glob whose text escapes the
+/// tree — an absolute path, or one climbing above the root with `..` — is a loud
+/// config error, closing the confinement gap the Solution Architect review found
+/// (SA F4): such a glob compiles fine but, matched root-relative, silently
+/// matches nothing — a no-op where the engine promises loud refusal. `field`
+/// names the config key for the message. Scope globs are pure `matches_path`
+/// predicates over the already-confined walk, so this only makes an escaping
+/// glob *legible*; it never widens the file set (Security's scope-∩-confinement).
+fn confine_and_compile_globs(
+    globs: &[String],
+    field: &str,
+) -> Result<Vec<glob::Pattern>, VerifyError> {
+    globs
+        .iter()
+        .map(|g| {
+            crate::confine::confine_lexically(Path::new(g)).map_err(|v| {
+                let why = match v {
+                    crate::confine::LexicalViolation::Absolute => "is an absolute path",
+                    crate::confine::LexicalViolation::ParentSegment => {
+                        "climbs above the project root with `..`"
+                    }
+                };
+                VerifyError::Config(format!(
+                    "{field} glob '{g}' {why}; a scope glob must stay within the governed tree"
+                ))
+            })?;
+            glob::Pattern::new(g)
+                .map_err(|e| VerifyError::Config(format!("{field} glob '{g}': {e}")))
+        })
+        .collect()
 }
 
 // ── Schema + pattern loading ───────────────────────────────────────────────────
@@ -3298,6 +3318,27 @@ pattern:
                 .iter()
                 .any(|f| f.code == "ADOPTER-E0001"),
             "a path-glob context resolves root-relative and fires on docs/a.md"
+        );
+    }
+
+    // RED GATE (SA F4, scoping-consistency pass): a scope glob that escapes the
+    // governed tree is a LOUD config error, not a silent no-op. `../secret/*.md`
+    // used to compile and match nothing (silently disabling the scope); now it is
+    // refused at load — the confinement contract applied to config scope globs.
+    #[test]
+    fn escaping_scope_glob_is_a_loud_config_error() {
+        let proj = TempProject::new("scope-escape");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\nvocabulary_globs:\n  - \"../secret/*.md\"\n",
+        );
+        proj.write("docs/a.md", "prose\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let err = format!("{}", verify(&cfg).unwrap_err());
+        assert!(
+            err.contains("vocabulary_globs") && err.contains(".."),
+            "an escaping vocabulary_globs glob is refused loudly; got {err}"
         );
     }
 
