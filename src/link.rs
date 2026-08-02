@@ -27,9 +27,16 @@
 //! `#fragment` matches no heading is `MDATRON-E0111` (dead-anchor). Anchors are
 //! matched with the GitHub heading-slug algorithm.
 //!
-//! Deferred (first cut): reference-style links (`[text][ref]`), autolinks,
-//! image links (`![alt](src)`), setext headings, inline-code-span links,
-//! percent-decoding, and duplicate-heading `-N` disambiguation. External links
+//! Link discovery is a single **CommonMark parse** (`markup::body_links`, #155):
+//! inline `[t](d)`, **reference-style** `[t][ref]`, and **image** `![alt](src)`
+//! links are all resolved, and a destination inside an inline code span or a
+//! fenced/indented code block is not a link event, so a syntax example is
+//! excluded structurally (retiring the hand-rolled scanner and its #154 defect).
+//! Heading anchors cover ATX **and setext** headings, GitHub duplicate-heading
+//! `-N` disambiguation, and explicit HTML anchors (`markup::heading_slugs`).
+//!
+//! Deferred: percent-decoding of destinations, and an optional root-relative
+//! `root:` resolution mode (`/docs/x.md`, tracked separately). External links
 //! (any URL scheme, or protocol-relative `//host`) are out of scope by design —
 //! the engine does not reach the network.
 
@@ -39,12 +46,14 @@ use std::path::{Component, Path, PathBuf};
 
 use crate::confine::{confine_lexically, open_confined, OpenViolation};
 use crate::diagnostic::{Finding, Location, QuotedRegion, Severity};
-use crate::markup::{heading_slugs, non_fenced_lines, slugify};
+use crate::markup::{body_links, heading_slugs, slugify};
 
-/// Scan one opted-in file's body for inline links and resolve each against the
+/// Scan one opted-in file's body for links + images and resolve each against the
 /// working tree. `content` is the whole file; `body_offset` is where the prose
 /// body begins (frontmatter is not link-scanned). Signature mirrors
-/// [`crate::cite::check_file`].
+/// [`crate::cite::check_file`]. Link discovery is a single CommonMark parse
+/// ([`body_links`]) covering inline, reference-style, and image links, so a
+/// destination inside a code span or fence is excluded structurally.
 pub fn check_file(
     project_root: &Path,
     path: &Path,
@@ -70,72 +79,24 @@ pub fn check_file(
     // target linked from several places.
     let mut target_slugs: HashMap<PathBuf, Option<HashSet<String>>> = HashMap::new();
 
-    // Scan the live (non-code-fence) lines: a link EXAMPLE inside a ``` block is
-    // not a live link. `non_fenced_lines` carries each line's byte offset within
-    // `body` so a finding still lands on the right line (matches cite's convention).
-    for (line_start, line) in non_fenced_lines(body) {
-        for link in inline_links(line) {
-            let at = body_offset + line_start + link.start;
-            resolve_link(
-                project_root,
-                path,
-                content,
-                at,
-                base_dir,
-                link.dest,
-                &own_slugs,
-                &mut target_slugs,
-                findings,
-            );
-        }
+    // One CommonMark parse yields every inline / reference-style / image link's
+    // destination with its byte offset. Destinations inside a code span or a
+    // fenced/indented code block are not link events, so a syntax example is
+    // never resolved — the masking is structural (#155), not a line heuristic.
+    for link in body_links(body) {
+        let at = body_offset + link.offset;
+        resolve_link(
+            project_root,
+            path,
+            content,
+            at,
+            base_dir,
+            &link.dest,
+            &own_slugs,
+            &mut target_slugs,
+            findings,
+        );
     }
-}
-
-/// One inline link found on a line: its destination text (fragment included)
-/// and the byte offset at which the `[` sits within the line.
-struct InlineLink<'a> {
-    dest: &'a str,
-    start: usize,
-}
-
-/// Extract inline `[text](dest)` links from a single line. Image links
-/// (`![alt](src)`) are skipped. Reference-style and shortcut links do not match
-/// (no `](` … `)` run) and are thereby deferred. Conservative: link text and
-/// destination do not span the `]`/`)` that close them, so a destination
-/// containing `)` truncates — rare for file paths, and never a false escape.
-fn inline_links(line: &str) -> Vec<InlineLink<'_>> {
-    let detector = regex_lite::Regex::new(r"\[[^\]\n]*\]\(([^)\n]*)\)")
-        .expect("engine inline-link detector compiles");
-    // A link inside an inline code span is an EXAMPLE, not a live link (#154).
-    let code_ranges = crate::markup::inline_code_ranges(line);
-    let mut out = Vec::new();
-    for caps in detector.captures_iter(line) {
-        let whole = caps.get(0).expect("match exists");
-        if crate::markup::in_code_span(&code_ranges, whole.start()) {
-            continue;
-        }
-        // Image link: the `[` is immediately preceded by `!`.
-        if line[..whole.start()].ends_with('!') {
-            continue;
-        }
-        let inner = caps.get(1).expect("dest group").as_str().trim();
-        // Angle-bracket destination `<url>` (may hold spaces); otherwise the
-        // destination is the text up to the first whitespace (a trailing
-        // `"title"` is dropped).
-        let dest = if inner.len() >= 2 && inner.starts_with('<') && inner.ends_with('>') {
-            inner[1..inner.len() - 1].trim()
-        } else {
-            inner.split_whitespace().next().unwrap_or("")
-        };
-        if dest.is_empty() {
-            continue;
-        }
-        out.push(InlineLink {
-            dest,
-            start: whole.start(),
-        });
-    }
-    out
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -430,13 +391,6 @@ mod tests {
         assert_eq!(split_fragment("#sec"), ("", Some("sec")));
         assert_eq!(split_fragment("a.md"), ("a.md", None));
         assert_eq!(split_fragment("a.md#"), ("a.md", Some("")));
-    }
-
-    #[test]
-    fn inline_links_skip_images_and_capture_dest() {
-        let links = inline_links("see [a](x.md) not ![img](y.png) and [b](z.md#f)");
-        let dests: Vec<_> = links.iter().map(|l| l.dest).collect();
-        assert_eq!(dests, vec!["x.md", "z.md#f"]);
     }
 
     #[test]

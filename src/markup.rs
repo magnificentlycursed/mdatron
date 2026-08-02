@@ -10,19 +10,25 @@
 //! - [`non_fenced_lines`] — the body's live (non-code-fence) lines with byte
 //!   offsets, so a token inside a ``` block is an example, not a live reference.
 //! - [`fence_marker`] — recognize a fenced-code toggle line.
-//! - [`atx_heading`] / [`atx_heading_text`] — parse an ATX heading's level+text.
+//! - [`atx_heading`] — parse an ATX heading's level+text.
 //! - [`section_span`] — the byte span of one heading-delimited section (pin #146).
-//! - [`heading_slugs`] / [`slugify`] — a body's heading anchors, and the GitHub
-//!   heading-to-anchor slug algorithm, for resolving `#fragment` / by-name refs.
+//! - [`heading_slugs`] / [`slugify`] — a body's heading anchors (ATX + setext,
+//!   with GitHub `-N` disambiguation and explicit HTML anchors, via a CommonMark
+//!   parse, #155), and the GitHub heading-to-anchor slug algorithm, for resolving
+//!   `#fragment` / by-name refs.
+//! - [`body_links`] — every link + image destination (inline, reference-style,
+//!   image) via a CommonMark parse (#155); code-span/fence masking is structural
+//!   (a destination inside `` `code` `` or a ``` fence is never a link event).
 //! - [`inline_code_ranges`] / [`body_inline_code_ranges`] / [`in_code_span`] —
-//!   mask inline `` `code` `` spans so a link (#154) or a vocabulary term (#158)
-//!   shown in backticks is not treated as a live use. (A code-catalog citation
-//!   is the deliberate exception — a backticked code stays a real reference.)
+//!   mask inline `` `code` `` spans so a vocabulary term (#158) shown in backticks
+//!   is not treated as a live use. (A code-catalog citation is the deliberate
+//!   exception — a backticked code stays a real reference. The link family no
+//!   longer needs this: `body_links` masks code structurally, #155.)
 //!
 //! `pub(crate)`: engine-internal, shared across families, never a consumer
 //! contract (mdatron is binary-first; the lib carries no API-stability promise).
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 /// Iterate the lines of `body` that are **not** inside a fenced code block,
 /// yielding each line's byte offset within `body` and its content (trailing
@@ -57,33 +63,128 @@ pub(crate) fn non_fenced_lines(body: &str) -> Vec<(usize, &str)> {
     out
 }
 
-/// The set of GitHub heading-slugs of `body`, skipping fenced code blocks so a
-/// `#`-comment in a shell example is not read as a heading. ATX headings only
-/// (setext deferred).
+/// The set of GitHub heading-anchor slugs of `body`, via a CommonMark parse
+/// (#155). Covers ATX **and setext** headings (both are heading events), applies
+/// GitHub's duplicate-heading `-N` disambiguation (the first "Foo" is `foo`, the
+/// second `foo-1`, the third `foo-2`), and adds explicit HTML anchors
+/// (`<a name>`/`id=`). A `#`-comment inside a fenced or indented code block is not
+/// a heading, so it never enters the set — the parser models code structurally
+/// rather than the old fence-line heuristic. Adding an anchor only ever REMOVES a
+/// dead-anchor false positive, so the set is deliberately generous.
 pub(crate) fn heading_slugs(body: &str) -> HashSet<String> {
+    use pulldown_cmark::{Event, Parser, Tag, TagEnd};
     let mut slugs = HashSet::new();
-    let mut fence: Option<(char, usize)> = None;
-    for line in body.lines() {
-        let trimmed = line.trim_start();
-        if let Some(marker) = fence_marker(trimmed) {
-            match fence {
-                None => fence = Some(marker),
-                Some((fc, flen)) => {
-                    if marker.0 == fc && marker.1 >= flen {
-                        fence = None;
-                    }
+    let mut counts: HashMap<String, u32> = HashMap::new();
+    let mut in_heading = false;
+    let mut text = String::new();
+    for event in Parser::new(body) {
+        match event {
+            Event::Start(Tag::Heading { .. }) => {
+                in_heading = true;
+                text.clear();
+            }
+            Event::End(TagEnd::Heading(_)) => {
+                in_heading = false;
+                let base = slugify(&text);
+                if !base.is_empty() {
+                    // GitHub gives the first occurrence the bare slug and appends
+                    // `-1`, `-2`, … to each subsequent repeat of the same slug.
+                    let n = counts.entry(base.clone()).or_insert(0);
+                    let slug = if *n == 0 {
+                        base.clone()
+                    } else {
+                        format!("{base}-{n}")
+                    };
+                    *n += 1;
+                    slugs.insert(slug);
                 }
             }
-            continue;
-        }
-        if fence.is_some() {
-            continue;
-        }
-        if let Some(text) = atx_heading_text(trimmed) {
-            slugs.insert(slugify(text));
+            // Heading text and inline `code` within it both contribute to the slug.
+            Event::Text(t) | Event::Code(t) if in_heading => text.push_str(&t),
+            // Explicit HTML anchors are valid targets wherever they appear.
+            Event::Html(h) | Event::InlineHtml(h) => insert_html_anchors(&h, &mut slugs),
+            _ => {}
         }
     }
     slugs
+}
+
+/// Insert explicit HTML anchor targets from an HTML fragment into `slugs` (#155
+/// gap 3): a `<a name="x">`, `<a id="x">`, or any element's `id="x"` is a valid
+/// `#x` target on GitHub. Both the raw id and its slugified form are added, so a
+/// non-slug-shaped id still resolves. The attribute scan is a linear-time regex
+/// over the engine-authored pattern (not an adopter-supplied one), so it carries
+/// no ReDoS surface (DESIGN L17).
+fn insert_html_anchors(html: &str, slugs: &mut HashSet<String>) {
+    // HTML comments are not rendered and carry no anchors — strip them first so
+    // an `id=`/`name=` inside `<!-- … -->` does not register a phantom target.
+    let scanned = strip_html_comments(html);
+    // A `name=`/`id=` attribute (boundary-anchored so `grid=` does not match)
+    // with a single- or double-quoted value.
+    let re = regex_lite::Regex::new(r#"(?:^|[\s"'])(?:name|id)\s*=\s*["']([^"']+)["']"#)
+        .expect("engine html-anchor detector compiles");
+    for caps in re.captures_iter(&scanned) {
+        let id = caps.get(1).expect("id group").as_str();
+        slugs.insert(id.to_string());
+        let slug = slugify(id);
+        if !slug.is_empty() {
+            slugs.insert(slug);
+        }
+    }
+}
+
+/// Remove `<!-- … -->` comment spans from an HTML fragment (linear scan). An
+/// unterminated comment drops the remainder, matching how a renderer treats it.
+fn strip_html_comments(html: &str) -> std::borrow::Cow<'_, str> {
+    if !html.contains("<!--") {
+        return std::borrow::Cow::Borrowed(html);
+    }
+    let mut out = String::with_capacity(html.len());
+    let mut rest = html;
+    while let Some(start) = rest.find("<!--") {
+        out.push_str(&rest[..start]);
+        match rest[start + 4..].find("-->") {
+            Some(end) => rest = &rest[start + 4 + end + 3..],
+            None => {
+                rest = "";
+                break;
+            }
+        }
+    }
+    out.push_str(rest);
+    std::borrow::Cow::Owned(out)
+}
+
+/// A link or image destination found by [`body_links`], with the byte offset of
+/// its opening delimiter within the body (for the finding location).
+pub(crate) struct BodyLink {
+    pub dest: String,
+    pub offset: usize,
+}
+
+/// Every resolvable link and image destination in `body`, via a CommonMark parse
+/// (#155). Covers inline `[t](d)`, reference `[t][r]` / collapsed / shortcut, and
+/// image `![alt](src)` links uniformly — pulldown-cmark pairs reference
+/// definitions and yields each destination once, with its byte offset. A
+/// destination inside an inline code span or a fenced/indented code block never
+/// surfaces as a link event, so code examples are excluded **structurally** —
+/// this retires the hand-rolled fence + inline-code masking and its #154 defect.
+/// Autolinks/emails carry a URL scheme; the caller's external filter drops them.
+pub(crate) fn body_links(body: &str) -> Vec<BodyLink> {
+    use pulldown_cmark::{Event, Parser, Tag};
+    let mut out = Vec::new();
+    for (event, range) in Parser::new(body).into_offset_iter() {
+        let dest = match event {
+            Event::Start(Tag::Link { dest_url, .. })
+            | Event::Start(Tag::Image { dest_url, .. }) => dest_url,
+            _ => continue,
+        };
+        out.push(BodyLink {
+            dest: dest.to_string(),
+            offset: range.start,
+        });
+    }
+    out
 }
 
 /// If `line` opens or closes a fenced code block, return its `(fence char, run
@@ -114,12 +215,6 @@ pub(crate) fn atx_heading(line: &str) -> Option<(usize, &str)> {
     // Trim a closing `#` sequence (`## Foo ##` -> `Foo`); slugify would drop the
     // `#`s anyway, but trimming keeps the surrounding hyphen from leaking.
     Some((level, rest.trim().trim_end_matches('#').trim_end()))
-}
-
-/// The text of an ATX heading, or `None` if `line` is not one. Level-agnostic
-/// wrapper over [`atx_heading`].
-pub(crate) fn atx_heading_text(line: &str) -> Option<&str> {
-    atx_heading(line).map(|(_, text)| text)
 }
 
 /// The leading `**bold**` name of a `- ` (or `*`/`+`) list item, or `None`.
@@ -240,9 +335,10 @@ pub(crate) fn body_inline_code_ranges(body: &str) -> Vec<(usize, usize)> {
     ranges
 }
 
-/// GitHub's heading-to-anchor slug: lowercase, drop every character that is not
-/// alphanumeric / `_` / `-`, and turn each space into a hyphen. (Duplicate
-/// headings' `-1`/`-2` disambiguation is deferred.)
+/// GitHub's heading-to-anchor slug for one heading's text: lowercase, drop every
+/// character that is not alphanumeric / `_` / `-`, and turn each space into a
+/// hyphen. Duplicate-heading `-1`/`-2` disambiguation is applied by
+/// [`heading_slugs`] across the whole document, not here.
 pub(crate) fn slugify(heading: &str) -> String {
     let mut out = String::with_capacity(heading.len());
     for ch in heading.chars().flat_map(char::to_lowercase) {
@@ -270,11 +366,12 @@ mod tests {
 
     #[test]
     fn atx_heading_requires_space() {
-        assert_eq!(atx_heading_text("## Real Heading"), Some("Real Heading"));
-        assert_eq!(atx_heading_text("### Foo ###"), Some("Foo"));
-        assert_eq!(atx_heading_text("#hashtag"), None);
-        assert_eq!(atx_heading_text("####### too deep"), None);
-        assert_eq!(atx_heading_text("not a heading"), None);
+        let text = |l| atx_heading(l).map(|(_, t)| t);
+        assert_eq!(text("## Real Heading"), Some("Real Heading"));
+        assert_eq!(text("### Foo ###"), Some("Foo"));
+        assert_eq!(text("#hashtag"), None);
+        assert_eq!(text("####### too deep"), None);
+        assert_eq!(text("not a heading"), None);
     }
 
     #[test]
@@ -386,5 +483,71 @@ mod tests {
         // The offsets point at each line's start within `body`.
         assert_eq!(&body[lines[0].0..lines[0].0 + 1], "a");
         assert_eq!(&body[lines[1].0..lines[1].0 + 1], "c");
+    }
+
+    // ── #155: CommonMark-backed heading anchors + link extraction ───────────
+
+    #[test]
+    fn heading_slugs_disambiguates_duplicate_headings() {
+        // GitHub: first "Foo" -> foo, second -> foo-1, third -> foo-2.
+        let slugs = heading_slugs("# Foo\n\n## Foo\n\n### Foo\n");
+        assert!(slugs.contains("foo"));
+        assert!(slugs.contains("foo-1"));
+        assert!(slugs.contains("foo-2"));
+        assert!(!slugs.contains("foo-3"));
+    }
+
+    #[test]
+    fn heading_slugs_covers_setext_and_html_anchor() {
+        // A setext heading is a heading; an explicit <a name> is an anchor.
+        let slugs = heading_slugs("Setext H1\n=========\n\n<a name=\"custom-spot\"></a>\n");
+        assert!(slugs.contains("setext-h1"), "setext underline is a heading");
+        assert!(slugs.contains("custom-spot"), "html anchor is a target");
+    }
+
+    #[test]
+    fn heading_slugs_ignores_ids_inside_html_comments() {
+        // A comment is not rendered, so an `id=` inside `<!-- … -->` is not an
+        // anchor (else a dead `#ghost` link would silently resolve).
+        let slugs = heading_slugs(
+            "# Real\n\n<!-- id=\"ghost\" name=\"phantom\" -->\n\n<a id=\"live\"></a>\n",
+        );
+        assert!(slugs.contains("real"));
+        assert!(slugs.contains("live"), "a real anchor still registers");
+        assert!(!slugs.contains("ghost"), "commented id is not an anchor");
+        assert!(
+            !slugs.contains("phantom"),
+            "commented name is not an anchor"
+        );
+    }
+
+    #[test]
+    fn heading_slugs_ignores_headings_inside_code_fences() {
+        // A `#`-comment inside a fenced block is not a heading (structural).
+        let slugs = heading_slugs("# Real\n\n```\n# Not A Heading\n```\n");
+        assert!(slugs.contains("real"));
+        assert!(!slugs.contains("not-a-heading"));
+    }
+
+    #[test]
+    fn body_links_covers_inline_reference_image_and_masks_code() {
+        // Inline, reference-style, and image destinations are all found; a link
+        // inside an inline code span or a fence is not a link event.
+        let body = "\
+[inline](a.md) and [ref][r] and ![img](c.png).\n\
+Not `[code](nope.md)` and\n\
+```\n[fenced](also-nope.md)\n```\n\n\
+[r]: b.md\n";
+        let dests: Vec<String> = body_links(body).into_iter().map(|l| l.dest).collect();
+        assert!(dests.contains(&"a.md".to_string()), "inline");
+        assert!(
+            dests.contains(&"b.md".to_string()),
+            "reference-style resolved"
+        );
+        assert!(dests.contains(&"c.png".to_string()), "image");
+        assert!(
+            !dests.iter().any(|d| d.contains("nope")),
+            "code-span and fenced links are excluded structurally; got {dests:?}"
+        );
     }
 }

@@ -303,16 +303,19 @@ blocks (`E0100`), one past the target's end blocks (`E0101`). Historical
 corpora simply don't opt in.
 
 **Links** — data-less; opt a route in with `links: true` and its files' inline
-markdown links (`[text](target)`, `[text](target#anchor)`, same-document
-`[text](#anchor)`) are resolved against the working tree. A link to a relative
-path that isn't there blocks (`E0110`); an existing markdown target — or the
-same document — whose `#fragment` matches no heading blocks (`E0111`, fragments
-resolved with GitHub's heading-slug rules). Targets resolve **document-relative**
-(as GitHub renders them): `[api](api.md)` from `docs/guide.md` is `docs/api.md`,
-and a one-level `../README.md` that stays in-tree is fine — only a target that
-escapes the governed tree is refused (`E0010`/`E0011`/`E0012`). External links
-(any URL scheme) are left alone; reference-style and image links are not yet
-resolved.
+markdown links are resolved against the working tree via a CommonMark parse
+(`pulldown-cmark`), so **inline** `[text](target)`, **reference-style**
+`[text][ref]`, and **image** `![alt](src)` links are all checked, while a link
+inside an inline `` `code` `` span or a fenced block is a syntax example and
+skipped. A link to a relative path that isn't there blocks (`E0110`); an existing
+markdown target — or the same document — whose `#fragment` matches no heading
+blocks (`E0111`, fragments resolved with GitHub's heading-slug rules, covering
+ATX + setext headings, duplicate-heading `-N` suffixes, and explicit HTML
+anchors). Targets resolve **document-relative** (as GitHub renders them):
+`[api](api.md)` from `docs/guide.md` is `docs/api.md`, and a one-level
+`../README.md` that stays in-tree is fine — only a target that escapes the
+governed tree is refused (`E0010`/`E0011`/`E0012`). External links (any URL
+scheme) are left alone.
 
 **Markers** — data-less; give a route one or more `marker_rules` and each body
 line matching a rule's `pattern` names a reference whose captured `<name>` must
