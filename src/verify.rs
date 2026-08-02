@@ -421,6 +421,10 @@ fn run(
         Ok(c) => c,
         Err(e) => return Err(VerifyError::Config(e.to_string())),
     };
+    let section_rules = match crate::section::load(&project_root) {
+        Ok(s) => s,
+        Err(e) => return Err(VerifyError::Config(e.to_string())),
+    };
 
     // Capture data-presence per family BEFORE the Options are consumed (#90);
     // the tri-state families object (#107) is built after the walk, since
@@ -431,6 +435,7 @@ fn run(
     let pin_supplied = pin_data.is_some();
     let vocab_supplied = vocab.is_some();
     let code_catalog_supplied = catalogs.is_some();
+    let section_supplied = section_rules.is_some();
     let citation_supplied = routes
         .as_ref()
         .map(|r| r.routes.iter().any(|x| x.citations))
@@ -468,6 +473,7 @@ fn run(
         }
         None => None,
     };
+    let section_rules = section_rules.map(|loaded| loaded.rules);
     // Collect the governed files once (absolute + root-relative paths). Two
     // `file_globs` can overlap on the same file; it is deduped by root-relative
     // path (#109) so the walk verifies each file exactly once — a doubled walk
@@ -740,6 +746,7 @@ fn run(
             link_enabled,
             &marker_rules,
             catalogs.as_deref().unwrap_or(&[]),
+            section_rules.as_deref().unwrap_or(&[]),
             vocab.as_ref().filter(|_| vocab_enabled),
             &schemas,
             &patterns,
@@ -944,6 +951,11 @@ fn run(
         } else {
             FamilyActivity::inactive("no .mdatron/code-catalogs.yaml")
         },
+        section: if section_supplied {
+            FamilyActivity::active(".mdatron/section-rules.yaml supplied")
+        } else {
+            FamilyActivity::inactive("no .mdatron/section-rules.yaml")
+        },
     };
 
     // DEF4 (#131 SO ruling): every diagnostic path is project-root-relative, so
@@ -1091,6 +1103,7 @@ fn verify_file(
     link_enabled: bool,
     marker_rules: &[&crate::route::MarkerRule],
     code_catalogs: &[crate::codecat::CodeCatalog],
+    section_rules: &[crate::section::Rule],
     vocab: Option<&crate::vocab::LoadedVocab>,
     schemas: &BTreeMap<String, Schema>,
     patterns: &[PatternFile],
@@ -1146,6 +1159,7 @@ fn verify_file(
             }
             crate::marker::check_file(project_root, path, content, 0, marker_rules, findings);
             crate::codecat::check_file(code_catalogs, path, content, 0, findings);
+            crate::section::check_file(section_rules, path, content, 0, findings);
             let rel = path.strip_prefix(project_root).unwrap_or(path);
             if require_frontmatter.iter().any(|p| p.matches_path(rel)) {
                 findings.push(Finding {
@@ -1208,6 +1222,7 @@ fn verify_file(
             findings,
         );
         crate::codecat::check_file(code_catalogs, path, content, body_offset, findings);
+        crate::section::check_file(section_rules, path, content, body_offset, findings);
     }
 
     let frontmatter_internal = crate::dsl::index::yaml_to_value(&frontmatter_value);
@@ -3726,6 +3741,88 @@ pattern:
         );
         without.write("docs/doc.md", "prose\n");
         assert!(!code_catalog_families(&without).code_catalog.is_active());
+    }
+
+    // ── section-structural family (#157, vsdd GH#20 P5 / GH#29) ─────────────
+    // Rules pinned to vsdd's live build-plan shape: count of open-phase H3s in
+    // `## Requirements` (>= 1, an empty section is the retire trigger) and slice
+    // ids disjoint between `## Requirements` (H3 headings) and `## Completed
+    // phases` (bullet leads). Core logic is unit-tested in section.rs.
+
+    const SECTION_RULES: &str = r###"rules:
+  - section: "## Requirements"
+    element: h3
+    match: '^### Phase \d+: .*\((parallel|sequential)\)$'
+    count: ">= 1"
+  - disjoint:
+      - section: "## Requirements"
+        id_from: h3-heading
+        id_pattern: 'Slice (\d+)'
+      - section: "## Completed phases"
+        id_from: bullet-lead
+        id_pattern: 'Slice (\d+)'
+"###;
+
+    fn section_project(label: &str, plan: &str) -> TempProject {
+        let proj = TempProject::new(label);
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"plan/**/*.md\"\n",
+        );
+        proj.write(".mdatron/section-rules.yaml", SECTION_RULES);
+        proj.write("plan/build-plan.md", plan);
+        proj
+    }
+
+    // The live clean case: 5 open phases (>= 1), open ids {2,4,5,6,7} disjoint
+    // from completed {1,3}. Phase 2's BODY mentions `Slice 3` — a full-span scan
+    // would false-overlap; heading-scoped extraction must not. This test is the
+    // trap regression guard.
+    const CLEAN_PLAN: &str = "# Build plan\n\n## Requirements\n\n### Phase 2: Slice 2 (sequential)\nProvenance: Slice 3 — Install\n### Phase 3: Slice 4 (sequential)\n### Phase 4: Slice 5 (sequential)\n### Phase 5: Slice 6 (sequential)\n### Phase 6: Slice 7 (sequential)\n\n## Completed phases\n\n- **Slice 1 tracker join (complete):** done\n- **Slice 3 static half (complete):** done\n- **The engine bullet:** no id\n";
+
+    #[test]
+    fn section_rules_clean_on_vsdd_build_plan_shape() {
+        let proj = section_project("section-clean", CLEAN_PLAN);
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        assert!(
+            findings
+                .iter()
+                .all(|f| f.code != "MDATRON-E0120" && f.code != "MDATRON-E0121"),
+            "5 open phases (>= 1) + disjoint ids (no false Slice 3 overlap) is clean; got {findings:?}"
+        );
+        assert!(section_families(&proj).section.is_active());
+    }
+
+    fn section_families(proj: &TempProject) -> crate::output::Families {
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let (_f, fam, _v, _n) = run(&cfg, None, None).unwrap();
+        fam
+    }
+
+    #[test]
+    fn empty_requirements_section_fires_e0120() {
+        let plan = "# Build plan\n\n## Requirements\n\nall done, nothing open.\n\n## Completed phases\n\n- **Slice 1 done (complete):** x\n";
+        let proj = section_project("section-empty", plan);
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        assert!(
+            findings.iter().any(|f| f.code == "MDATRON-E0120"),
+            "0 open-phase H3s violates count >= 1; got {findings:?}"
+        );
+    }
+
+    #[test]
+    fn slice_open_and_complete_fires_e0121() {
+        let plan = "# Build plan\n\n## Requirements\n\n### Phase 2: Slice 2 (sequential)\n\n## Completed phases\n\n- **Slice 2 also done (complete):** oops\n";
+        let proj = section_project("section-overlap", plan);
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        assert!(
+            findings.iter().any(|f| f.code == "MDATRON-E0121"),
+            "Slice 2 open AND complete is not disjoint; got {findings:?}"
+        );
     }
 
     // #88 (#47 cold-run finding): an ARRAY selection fans out to one index

@@ -122,6 +122,21 @@ pub(crate) fn atx_heading_text(line: &str) -> Option<&str> {
     atx_heading(line).map(|(_, text)| text)
 }
 
+/// The leading `**bold**` name of a `- ` (or `*`/`+`) list item, or `None`.
+/// Used by the marker family (#147) and the section-structural family (#157) to
+/// pull an id out of a bullet's bold lead.
+pub(crate) fn list_item_bold_name(line: &str) -> Option<&str> {
+    let t = line.trim_start();
+    let rest = t
+        .strip_prefix("- ")
+        .or_else(|| t.strip_prefix("* "))
+        .or_else(|| t.strip_prefix("+ "))?
+        .trim_start();
+    let after_open = rest.strip_prefix("**")?;
+    let end = after_open.find("**")?;
+    Some(&after_open[..end])
+}
+
 /// The heading-delimited span of `content` named by `heading_spec` (e.g.
 /// `"## Decomposition (phase 1c)"` — matched by level AND text): the byte slice
 /// from that heading's line through just before the next heading of the same or
@@ -269,6 +284,20 @@ mod tests {
         assert!(slugs.contains("real"));
         assert!(slugs.contains("also-real"));
         assert!(!slugs.contains("not-a-heading"));
+    }
+
+    #[test]
+    fn list_item_bold_name_extracts_leading_bold() {
+        assert_eq!(
+            list_item_bold_name("- **Slice 1 — self gov.** detail"),
+            Some("Slice 1 — self gov.")
+        );
+        assert_eq!(list_item_bold_name("- plain item"), None);
+        assert_eq!(list_item_bold_name("not a list item"), None);
+        assert_eq!(
+            list_item_bold_name("  * **Indented.** x"),
+            Some("Indented.")
+        );
     }
 
     #[test]

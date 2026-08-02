@@ -353,6 +353,36 @@ caught rather than silently skipped; the `codes:` list, not the detector, is
 the closed legal set. Set `comprehensive: false` if codes for the prefix may
 legitimately live outside the catalog.
 
+**Section rules** (`section-rules.yaml`) — declarative **count** and
+**disjointness** assertions over markdown body sections (the body-content
+counterpart of the DSL's frontmatter arity rules):
+
+```yaml
+rules:
+  # at least one open-phase H3 in ## Requirements
+  - section: "## Requirements"
+    element: h3
+    match: '^### Phase \d+: .*\((parallel|sequential)\)$'
+    count: ">= 1"
+  # a slice is open XOR complete — ids extracted per element, never a full-span scan
+  - disjoint:
+      - section: "## Requirements"
+        id_from: h3-heading          # id from the H3 heading text
+        id_pattern: 'Slice (\d+)'
+      - section: "## Completed phases"
+        id_from: bullet-lead         # id from the `- **bold**` lead
+        id_pattern: 'Slice (\d+)'
+```
+
+A count rule counts the `element`-level headings in the `section`'s span (until
+the next heading of the same or higher level) whose line matches `match`, and
+asserts the `count` predicate (`>= 1`, `== 1`, …); a violation is `E0120`. A
+`disjoint` rule extracts an id (the `id_pattern`'s first capture) from each
+section's declared element and asserts the two sets share none; an overlap is
+`E0121`. Ids come **only** from the declared element (H3 heading text, or a
+bullet's bold lead), never surrounding prose — so a body mention of an id
+doesn't cause a false overlap.
+
 Every family code has an explain page: `mdatron explain MDATRON-E0061`.
 
 ## Onboarding: the init-and-hook path

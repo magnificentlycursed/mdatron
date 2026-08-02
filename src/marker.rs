@@ -31,7 +31,7 @@ use std::path::Path;
 
 use crate::confine::{confine_lexically, open_confined, LexicalViolation, OpenViolation};
 use crate::diagnostic::{Finding, Location, QuotedRegion, Severity};
-use crate::markup::{atx_heading, non_fenced_lines};
+use crate::markup::{atx_heading, list_item_bold_name, non_fenced_lines};
 use crate::route::{ElementClass, MarkerRule};
 
 /// Scan one opted-in file's body for marker-line references and resolve each
@@ -201,19 +201,6 @@ fn extract_members(body: &str, element: ElementClass, section: Option<&str>) -> 
     members
 }
 
-/// The leading `**bold**` name of a `- ` (or `*`/`+`) list item, or `None`.
-fn list_item_bold_name(line: &str) -> Option<&str> {
-    let t = line.trim_start();
-    let rest = t
-        .strip_prefix("- ")
-        .or_else(|| t.strip_prefix("* "))
-        .or_else(|| t.strip_prefix("+ "))?
-        .trim_start();
-    let after_open = rest.strip_prefix("**")?;
-    let end = after_open.find("**")?;
-    Some(&after_open[..end])
-}
-
 /// Normalize a name for equality: trim surrounding whitespace and tolerate a
 /// trailing `.` on either side (the target's list-item bold names carry one; the
 /// marker line usually omits it — vsdd GH#22 Q2).
@@ -255,20 +242,6 @@ fn marker_finding(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn list_item_bold_name_extracts_leading_bold() {
-        assert_eq!(
-            list_item_bold_name("- **Slice 1 — self gov.** detail"),
-            Some("Slice 1 — self gov.")
-        );
-        assert_eq!(list_item_bold_name("- plain item"), None);
-        assert_eq!(list_item_bold_name("not a list item"), None);
-        assert_eq!(
-            list_item_bold_name("  * **Indented.** x"),
-            Some("Indented.")
-        );
-    }
 
     #[test]
     fn normalize_name_tolerates_trailing_period() {
