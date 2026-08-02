@@ -1,6 +1,6 @@
 {
   "next_display_id": 153,
-  "next_comment_id": 363,
+  "next_comment_id": 364,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -1864,10 +1864,21 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-08-02T01:09:24.515944Z",
-      "updated_at": "2026-08-02T01:09:30.100099Z",
+      "updated_at": "2026-08-02T01:10:26.320359Z",
       "labels": [
         "ops"
-      ]
+      ],
+      "comments": {
+        "0991edff-8bed-4413-a80f-7343a01bdc6e": {
+          "display_id": 363,
+          "author": "79Ig",
+          "content": "Finalized the twice-daily cross-estate digest routine prompt (original 2-repo spec + 3rd target dollspace-gay/crosslink for the tooling upstream, expanded NEEDS-ATTENTION incl. first-external-adopter/security/upstream-unblock, and rate-limit + PR-tagging hygiene). Recorded as a reference memory [[cross-estate-digest-routine]] + indexed. Routine is claude.ai cloud-side (operator sets up); this captures the finalized prompt + watch-list.",
+          "created_at": "2026-08-02T01:10:26.305946Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAQ6llIrAZiuqZJGIPbRDUFXrT7g2EAW8Z/inu9OlZamZdA/Qyd79WP7fc7saUbaJ5dZfGlyRUnItNKaLyHnRYDQ=="
+        }
+      }
     },
     "4fe1ca8e-6b24-4d43-86c1-7a29b108f3ac": {
       "uuid": "4fe1ca8e-6b24-4d43-86c1-7a29b108f3ac",
@@ -6089,8 +6100,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T01:09:38.237060Z",
+    "timestamp": "2026-08-02T01:10:26.320359Z",
     "agent_id": "79Ig",
-    "agent_seq": 679
+    "agent_seq": 680
   }
 }
