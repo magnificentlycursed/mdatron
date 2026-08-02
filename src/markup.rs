@@ -147,6 +147,62 @@ pub(crate) fn section_span<'a>(content: &'a str, heading_spec: &str) -> Option<&
     start.map(|s| &content[s..])
 }
 
+/// The byte ranges of `line` covered by inline code spans (backtick-delimited),
+/// including the delimiters. A code span opens with a run of N backticks and
+/// closes at the next run of **exactly** N backticks (CommonMark); an opener
+/// with no matching closer is literal text, not a span. Shared by the
+/// body-token scanners (link, marker, code-catalog) so a token shown inside
+/// `` `code` `` is an EXAMPLE, not a live reference (#154). Line-scoped: a code
+/// span spanning multiple lines is not tracked (the scanners are line-based).
+pub(crate) fn inline_code_ranges(line: &str) -> Vec<(usize, usize)> {
+    let bytes = line.as_bytes();
+    let mut ranges = Vec::new();
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] != b'`' {
+            i += 1;
+            continue;
+        }
+        // Opening backtick run of length n.
+        let open = i;
+        while i < bytes.len() && bytes[i] == b'`' {
+            i += 1;
+        }
+        let n = i - open;
+        // Find a closing run of exactly n backticks.
+        let mut j = i;
+        let mut closed = None;
+        while j < bytes.len() {
+            if bytes[j] != b'`' {
+                j += 1;
+                continue;
+            }
+            let run = j;
+            while j < bytes.len() && bytes[j] == b'`' {
+                j += 1;
+            }
+            if j - run == n {
+                closed = Some(j); // end (exclusive) of the whole span
+                break;
+            }
+        }
+        match closed {
+            Some(end) => {
+                ranges.push((open, end));
+                i = end;
+            }
+            // No closer: the run is literal; resume just past it.
+            None => i = open + n,
+        }
+    }
+    ranges
+}
+
+/// Whether byte offset `pos` falls inside any of `ranges` (an inline code span).
+pub(crate) fn in_code_span(ranges: &[(usize, usize)], pos: usize) -> bool {
+    ranges.iter().any(|&(s, e)| pos >= s && pos < e)
+}
+
 /// GitHub's heading-to-anchor slug: lowercase, drop every character that is not
 /// alphanumeric / `_` / `-`, and turn each space into a hyphen. (Duplicate
 /// headings' `-1`/`-2` disambiguation is deferred.)
@@ -219,6 +275,37 @@ mod tests {
         // The last section runs to end of document.
         let b = section_span(doc, "## B").unwrap();
         assert!(b.starts_with("## B") && b.contains("bee"));
+    }
+
+    #[test]
+    fn inline_code_ranges_covers_backtick_spans() {
+        // `[x](y)` sits inside a code span; the plain link does not.
+        let line = "see `[x](y)` and [real](z.md) here";
+        let ranges = inline_code_ranges(line);
+        let code_at = line.find("[x]").unwrap();
+        let real_at = line.find("[real]").unwrap();
+        assert!(
+            in_code_span(&ranges, code_at),
+            "the link in backticks is masked"
+        );
+        assert!(
+            !in_code_span(&ranges, real_at),
+            "the plain link is not masked"
+        );
+        // A lone backtick with no closer is literal (no span).
+        assert!(inline_code_ranges("a ` lone backtick").is_empty());
+        // A double-backtick span closes only on a matching double run, so an
+        // inner single backtick stays inside it.
+        let dbl = "``a ` b``c";
+        let r = inline_code_ranges(dbl);
+        assert!(
+            in_code_span(&r, 4),
+            "inner single backtick is inside the span"
+        );
+        assert!(
+            !in_code_span(&r, 9),
+            "the `c` after the closing run is outside"
+        );
     }
 
     #[test]

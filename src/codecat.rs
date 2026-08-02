@@ -131,6 +131,10 @@ pub fn check_file(
             if !cat.comprehensive {
                 continue;
             }
+            // NOTE (#154): inline code spans are NOT masked here — unlike links,
+            // an adopter code token is routinely FORMATTED as `code` and is a
+            // real citation (vsdd's live `VSDD-W0070` orphan is backticked). So a
+            // backticked code still resolves-or-orphans.
             for (at_in_line, token) in candidate_tokens(line, &cat.namespace) {
                 if !cat.tokens.contains(token) {
                     findings.push(orphan_finding(
