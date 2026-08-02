@@ -1,5 +1,5 @@
 {
-  "next_display_id": 159,
+  "next_display_id": 160,
   "next_comment_id": 378,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -82,6 +82,7 @@
     "87e35dbb-43b8-4ebb-a0f2-06777d8f956d": 109,
     "88be1f06-20a9-48da-8b35-4df657fbee27": 73,
     "8929a168-665b-4be1-8b8d-441e73f742c4": 90,
+    "8a1968b7-de28-47b6-b2a1-b4d80b3104cc": 159,
     "8ac50e86-5777-4068-8ce0-3d628ff48d30": 15,
     "8bbf0d1a-ce4a-4096-b3ad-ae3bc065a6e7": 69,
     "8c4eab12-ffd1-4077-9afa-29257925a0aa": 108,
@@ -3086,6 +3087,17 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAvoMTBo5mEON91q3k6LU7g1pC3Bg1Iuw2ciHKPjIBIGMGaaV4OszHBVHZuF0dFqydZznFhCojErGMJkaZG/6dAw=="
         }
       }
+    },
+    "8a1968b7-de28-47b6-b2a1-b4d80b3104cc": {
+      "uuid": "8a1968b7-de28-47b6-b2a1-b4d80b3104cc",
+      "display_id": 159,
+      "title": "enhancement(vocab): E0091 exempt structured reference-ids (REQ-N/AC-N/Q-N/ADR-N) from coinage detection — vsdd GH#28 Gap 1",
+      "description": "vsdd GH#28 Gap 1. E0091 (letter-plus-number clusters) flags structured reference-IDs (REQ-10, AC-4, Q1, C8, ADR-7) as coinages -- they are references to numbered sections, not coined terms. 327 of 336 findings on vsdd's .design/ are these (26x REQ-10, 20x REQ-1, ...). A broad long-standing convention (IEEE/ISO req ids, ADR, RFC-2119). DESIGN DECISION (vsdd defers to us): (1) default allow-set shipped in vocab (REQ-<n>, AC-<n>, Q<n>, ADR-<n>, ...) so specs work out of the box; (2) documented allowed-pattern template consumers extend (vsdd's interim: ^REQ-\\d+$ patterns); (3) recognize <UPPER>-<digits> as a distinct token class from coined letter-clusters in the detector. The raise: does this class deserve first-class/default treatment so every spec consumer doesn't re-derive it? Recommend (1)+(2). Needs a design proposal.",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-08-02T06:17:50.667788Z",
+      "updated_at": "2026-08-02T06:17:50.667788Z"
     },
     "8ac50e86-5777-4068-8ce0-3d628ff48d30": {
       "uuid": "8ac50e86-5777-4068-8ce0-3d628ff48d30",
@@ -6318,8 +6330,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T06:17:43.621373Z",
+    "timestamp": "2026-08-02T06:17:50.667788Z",
     "agent_id": "79Ig",
-    "agent_seq": 722
+    "agent_seq": 723
   }
 }
