@@ -1,6 +1,6 @@
 {
   "next_display_id": 154,
-  "next_comment_id": 369,
+  "next_comment_id": 370,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -4443,11 +4443,20 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-02T00:33:48.462219Z",
-      "updated_at": "2026-08-02T04:04:14.364150Z",
+      "updated_at": "2026-08-02T04:14:10.190417Z",
       "labels": [
         "enhancement"
       ],
       "comments": {
+        "b94b559e-986f-47ab-9dad-3592e1d35d22": {
+          "display_id": 369,
+          "author": "79Ig",
+          "content": "MERGED to main (PR #23). Marker-line reference family (E0112) shipped: per-route marker_rules, heading|list-item-bold-name element classes, name-equality resolution (trailing '.' tolerated), rule-config cross-doc target confined categorically, section scoping. Built on shared markup core. Folded into unpublished envelope 3.0.0 (7th required families member). Delivered to vsdd GH#20 P3 / GH#22 spec.",
+          "created_at": "2026-08-02T04:14:10.171932Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAJ9Nv4babWSQCEEPPTuJ1QarZE30jtXwktmbDJ5fzcSBNWp7K5XaTduTcYqcGpAKfE+5T3l66pshw+DRJCvxvAA=="
+        },
         "d8c423c6-c78b-434a-aaad-85b73fa0df72": {
           "display_id": 367,
           "author": "79Ig",
@@ -6163,8 +6172,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T04:04:14.364150Z",
+    "timestamp": "2026-08-02T04:14:10.190417Z",
     "agent_id": "79Ig",
-    "agent_seq": 692
+    "agent_seq": 693
   }
 }
