@@ -37,6 +37,12 @@ pub const CATALOGS_NAME: &str = "code-catalogs.yaml";
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct RawCatalogs {
+    /// Input-format version (DEF5, #131). Required — code-catalogs.yaml is new in
+    /// 0.6.0, so it is born versioned. Read by the format-version probe; declared
+    /// here only so `deny_unknown_fields` accepts the field.
+    #[serde(default)]
+    #[allow(dead_code)]
+    mdatron_format_version: Option<u32>,
     catalogs: Vec<RawCatalog>,
 }
 
@@ -84,6 +90,9 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedCatalogs>, Error> {
             )))
         }
     };
+    // DEF5 (#131): code-catalogs.yaml is new in 0.6.0 → born versioned (required).
+    // Probe the version leniently before the strict parse (a legible break).
+    crate::format_version::check_input_format_version(&content, CATALOGS_NAME, true)?;
     let raw: RawCatalogs = serde_yaml_ng::from_str(&content)
         .map_err(|e| Error::Config(format!("cannot parse '{}': {e}", path.display())))?;
 

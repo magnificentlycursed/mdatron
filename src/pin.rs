@@ -36,6 +36,11 @@ pub const PINS_NAME: &str = "pins.yaml";
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct RawPins {
+    /// Input-format version (DEF5, #131). Optional on read (absent = v1 legacy
+    /// baseline); `pin --update` stamps it going forward (manifest-style
+    /// migration), so a tool-rewritten pins.yaml is born versioned.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    mdatron_format_version: Option<u32>,
     #[serde(default)]
     pins: Vec<RawPin>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -100,6 +105,7 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedPins>, Error> {
             )))
         }
     };
+    crate::format_version::check_input_format_version(&content, PINS_NAME, false)?;
     let raw: RawPins = serde_yaml_ng::from_str(&content)
         .map_err(|e| Error::Config(format!("cannot parse '{}': {e}", path.display())))?;
 
@@ -313,6 +319,9 @@ pub fn update(project_root: &Path, dry_run: bool) -> Result<Vec<(String, String,
     if dry_run {
         return Ok(changed);
     }
+    // DEF5 (#131): stamp the current input-format version so a tool-rewritten
+    // pins.yaml is born versioned (manifest-style migration).
+    raw.mdatron_format_version = Some(crate::format_version::SUPPORTED_INPUT_FORMAT_VERSION);
     let yaml = serde_yaml_ng::to_string(&raw)
         .map_err(|e| Error::Config(format!("cannot serialize pins: {e}")))?;
     let body = format!(

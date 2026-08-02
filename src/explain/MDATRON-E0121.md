@@ -7,7 +7,7 @@
 ## What this means
 
 A section-structural **disjoint** rule found an id present in both of its two
-sections. A disjoint rule in `.mdatron/section-rules.yaml` names two sections,
+sections. A disjoint rule in a route's `section_rules:` block (#34) names two sections,
 each with an `id_from` (`h3-heading` — the id comes from H3 heading text; or
 `bullet-lead` — from the `**bold**` lead of a `- ` list item) and an
 `id_pattern` (a regex whose first capture is the id); the engine extracts an id

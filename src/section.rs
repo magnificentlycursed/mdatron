@@ -7,8 +7,11 @@
 //! `markup`/section spine rather than as an extension of the (body-content-gated)
 //! rule DSL.
 //!
-//! `.mdatron/section-rules.yaml` declares rules of two shapes (semantics pinned
-//! on vsdd-cli#29 against the live `.design/build-plan.md`):
+//! Rules are **route-attached** (#34, vsdd GH#34): a `section_rules:` block on a
+//! route (the sibling of `marker_rules:`), so each rule is scoped by that route's
+//! `files` glob and a file-specific structural invariant cannot misfire
+//! corpus-wide. Two rule shapes (semantics pinned on vsdd-cli#29 against the live
+//! `.design/build-plan.md`):
 //!
 //! - **Count** `{ section, element, match, count }` — count the headings of
 //!   `element` level inside `section` (its span until the next heading of the
@@ -39,18 +42,12 @@ use crate::diagnostic::{Finding, Location, QuotedRegion, Severity};
 use crate::markup::{atx_heading, list_item_bold_name, non_fenced_lines, section_span};
 use crate::Error;
 
-/// File name of the section-rules registry under `.mdatron/`.
-pub const SECTION_RULES_NAME: &str = "section-rules.yaml";
-
+/// One section-structural rule as declared under a route's `section_rules:`
+/// (#34, route-attached — sibling of `marker_rules`). A `disjoint` rule and a
+/// count rule are the two shapes; validated + compiled by [`compile_rule`].
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct RawRules {
-    rules: Vec<RawRule>,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct RawRule {
+pub(crate) struct RawRule {
     #[serde(default)]
     section: Option<String>,
     #[serde(default)]
@@ -65,7 +62,7 @@ struct RawRule {
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct RawOperand {
+pub(crate) struct RawOperand {
     section: String,
     id_from: IdSource,
     id_pattern: String,
@@ -180,99 +177,77 @@ fn parse_count_pred(s: &str) -> Option<CountPred> {
     Some(CountPred { op, n })
 }
 
-/// The loaded section-rules registry.
-pub struct LoadedRules {
-    pub rules: Vec<Rule>,
-}
-
-/// Load `.mdatron/section-rules.yaml`. `Ok(None)` when absent (family inactive);
-/// `Err` when unreadable, malformed, or carrying a rule that is neither a
-/// well-formed count rule nor a well-formed disjoint rule (loud, strict).
-pub fn load(project_root: &Path) -> Result<Option<LoadedRules>, Error> {
-    let path = project_root.join(".mdatron").join(SECTION_RULES_NAME);
-    let content = match std::fs::read_to_string(&path) {
-        Ok(c) => c,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
-        Err(e) => {
-            return Err(Error::Config(format!(
-                "cannot read '{}': {e}",
-                path.display()
-            )))
-        }
-    };
-    let raw: RawRules = serde_yaml_ng::from_str(&content)
-        .map_err(|e| Error::Config(format!("cannot parse '{}': {e}", path.display())))?;
-
+/// Validate + compile one route-attached raw section-rule (#34) into a [`Rule`].
+/// Loud on a malformed rule — one that is neither a well-formed count rule nor a
+/// well-formed disjoint rule (strict; a governance file never degrades silently).
+pub(crate) fn compile_rule(r: RawRule) -> Result<Rule, Error> {
     let compile = |p: &str| {
         regex_lite::Regex::new(p).map_err(|e| {
             Error::Config(format!("section-rules pattern '{p}' does not compile: {e}"))
         })
     };
-
-    let mut rules = Vec::with_capacity(raw.rules.len());
-    for r in raw.rules {
-        let rule =
-            match r.disjoint {
-                Some(ops) => {
-                    if r.section.is_some()
-                        || r.element.is_some()
-                        || r.match_pattern.is_some()
-                        || r.count.is_some()
-                    {
+    match r.disjoint {
+        Some(ops) => {
+            if r.section.is_some()
+                || r.element.is_some()
+                || r.match_pattern.is_some()
+                || r.count.is_some()
+            {
+                return Err(Error::Config(
+                    "a section-rule with `disjoint` must not also carry count-rule fields \
+                     (section/element/match/count)"
+                        .into(),
+                ));
+            }
+            let [a, b]: [RawOperand; 2] = ops.try_into().map_err(|_| {
+                Error::Config("a `disjoint` rule takes exactly two sections".into())
+            })?;
+            Ok(Rule::Disjoint {
+                a: Operand {
+                    id_pattern: compile(&a.id_pattern)?,
+                    section: a.section,
+                    id_source: a.id_from,
+                },
+                b: Operand {
+                    id_pattern: compile(&b.id_pattern)?,
+                    section: b.section,
+                    id_source: b.id_from,
+                },
+            })
+        }
+        None => {
+            let (section, element, pattern, count) =
+                match (r.section, r.element, r.match_pattern, r.count) {
+                    (Some(s), Some(e), Some(m), Some(c)) => (s, e, m, c),
+                    _ => {
                         return Err(Error::Config(
-                            "a section-rule with `disjoint` must not also carry count-rule fields \
-                         (section/element/match/count)"
+                            "a count section-rule requires section, element, match, and count \
+                         (or use `disjoint` for a disjointness rule)"
                                 .into(),
-                        ));
+                        ))
                     }
-                    let [a, b]: [RawOperand; 2] = ops.try_into().map_err(|_| {
-                        Error::Config("a `disjoint` rule takes exactly two sections".into())
-                    })?;
-                    Rule::Disjoint {
-                        a: Operand {
-                            id_pattern: compile(&a.id_pattern)?,
-                            section: a.section,
-                            id_source: a.id_from,
-                        },
-                        b: Operand {
-                            id_pattern: compile(&b.id_pattern)?,
-                            section: b.section,
-                            id_source: b.id_from,
-                        },
-                    }
-                }
-                None => {
-                    let (section, element, pattern, count) =
-                        match (r.section, r.element, r.match_pattern, r.count) {
-                            (Some(s), Some(e), Some(m), Some(c)) => (s, e, m, c),
-                            _ => return Err(Error::Config(
-                                "a count section-rule requires section, element, match, and count \
-                                 (or use `disjoint` for a disjointness rule)"
-                                    .into(),
-                            )),
-                        };
-                    let pred = parse_count_pred(&count).ok_or_else(|| {
-                        Error::Config(format!(
-                        "section-rule count predicate '{count}' is not `<op> <n>` (e.g. \">= 1\")"
-                    ))
-                    })?;
-                    Rule::Count {
-                        matcher: compile(&pattern)?,
-                        section,
-                        level: element.level(),
-                        pred,
-                    }
-                }
-            };
-        rules.push(rule);
+                };
+            let pred = parse_count_pred(&count).ok_or_else(|| {
+                Error::Config(format!(
+                    "section-rule count predicate '{count}' is not `<op> <n>` (e.g. \">= 1\")"
+                ))
+            })?;
+            Ok(Rule::Count {
+                matcher: compile(&pattern)?,
+                section,
+                level: element.level(),
+                pred,
+            })
+        }
     }
-    Ok(Some(LoadedRules { rules }))
 }
 
-/// Apply the section rules to one governed file. `content` is the whole file;
-/// `body_offset` is where the prose body begins.
+/// Apply the route-attached section rules for one governed file (#34). `rules`
+/// are the section rules of every route claiming this file (borrowed, like
+/// `marker::check_file`). `content` is the whole file; `body_offset` is where the
+/// prose body begins.
 pub fn check_file(
-    rules: &[Rule],
+    rules: &[&Rule],
     path: &Path,
     content: &str,
     body_offset: usize,
@@ -282,7 +257,7 @@ pub fn check_file(
         return;
     }
     let body = &content[body_offset..];
-    for rule in rules {
+    for &rule in rules {
         match rule {
             Rule::Count {
                 section,

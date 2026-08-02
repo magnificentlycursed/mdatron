@@ -372,28 +372,15 @@ fn run(
     let registry = IndexRegistry::build(&project_root, &all_keys)?;
 
     // Opt-in frontmatter requirement (#80 D2): compile the globs once; a
-    // malformed pattern is a config error, not a silent no-op.
-    let require: Vec<glob::Pattern> = config
-        .require_frontmatter
-        .iter()
-        .map(|g| {
-            glob::Pattern::new(g)
-                .map_err(|e| VerifyError::Config(format!("require_frontmatter '{g}': {e}")))
-        })
-        .collect::<Result<_, _>>()?;
+    // malformed OR tree-escaping pattern is a loud config error, not a silent
+    // no-op (the confinement gap, SA F4 — see `confine_and_compile_globs`).
+    let require = confine_and_compile_globs(&config.require_frontmatter, "require_frontmatter")?;
 
     // Vocabulary scope (#97): the naming register applies only to these globs
     // when supplied; empty falls back to every walked file (prior behavior).
     // Kept separate from file_globs so a historical archive stays walked +
     // routed without its retired handle scheme tripping the register.
-    let vocab_globs: Vec<glob::Pattern> = config
-        .vocabulary_globs
-        .iter()
-        .map(|g| {
-            glob::Pattern::new(g)
-                .map_err(|e| VerifyError::Config(format!("vocabulary_globs '{g}': {e}")))
-        })
-        .collect::<Result<_, _>>()?;
+    let vocab_globs = confine_and_compile_globs(&config.vocabulary_globs, "vocabulary_globs")?;
 
     // Route family (#83): load + compile the allowlist; absent file = family
     // inactive. Per-entry defects arrive as findings (confinement escapes drop
@@ -421,11 +408,6 @@ fn run(
         Ok(c) => c,
         Err(e) => return Err(VerifyError::Config(e.to_string())),
     };
-    let section_rules = match crate::section::load(&project_root) {
-        Ok(s) => s,
-        Err(e) => return Err(VerifyError::Config(e.to_string())),
-    };
-
     // Capture data-presence per family BEFORE the Options are consumed (#90);
     // the tri-state families object (#107) is built after the walk, since
     // vocabulary's `inert` state needs the scope-hit count.
@@ -435,7 +417,10 @@ fn run(
     let pin_supplied = pin_data.is_some();
     let vocab_supplied = vocab.is_some();
     let code_catalog_supplied = catalogs.is_some();
-    let section_supplied = section_rules.is_some();
+    let section_supplied = routes
+        .as_ref()
+        .map(|r| r.routes.iter().any(|x| !x.section_rules.is_empty()))
+        .unwrap_or(false);
     let citation_supplied = routes
         .as_ref()
         .map(|r| r.routes.iter().any(|x| x.citations))
@@ -482,7 +467,6 @@ fn run(
         }
         None => None,
     };
-    let section_rules = section_rules.map(|loaded| loaded.rules);
     // Collect the governed files once (absolute + root-relative paths). Two
     // `file_globs` can overlap on the same file; it is deduped by root-relative
     // path (#109) so the walk verifies each file exactly once — a doubled walk
@@ -728,11 +712,13 @@ fn run(
         let mut cite_enabled = false;
         let mut link_enabled = false;
         let mut marker_rules: Vec<&crate::route::MarkerRule> = Vec::new();
+        let mut section_rules: Vec<&crate::section::Rule> = Vec::new();
         if let Some(routes) = &routes {
             crate::route::check_file(routes, rel, path, &mut findings);
             cite_enabled = crate::route::citations_enabled(routes, rel);
             link_enabled = crate::route::links_enabled(routes, rel);
             marker_rules = crate::route::marker_rules_for(routes, rel);
+            section_rules = crate::route::section_rules_for(routes, rel);
         }
         // Vocabulary scope (#97): empty globs = every walked file.
         let vocab_enabled =
@@ -755,7 +741,7 @@ fn run(
             link_enabled,
             &marker_rules,
             catalogs.as_deref().unwrap_or(&[]),
-            section_rules.as_deref().unwrap_or(&[]),
+            &section_rules,
             vocab.as_ref().filter(|_| vocab_enabled),
             &schemas,
             &patterns,
@@ -961,9 +947,9 @@ fn run(
             FamilyActivity::inactive("no .mdatron/code-catalogs.yaml")
         },
         section: if section_supplied {
-            FamilyActivity::active(".mdatron/section-rules.yaml supplied")
+            FamilyActivity::active("a route supplies section_rules")
         } else {
-            FamilyActivity::inactive("no .mdatron/section-rules.yaml")
+            FamilyActivity::inactive("no route supplies section_rules")
         },
     };
 
@@ -1021,6 +1007,39 @@ fn read_schema_class(content: &str) -> Option<String> {
         .and_then(|o| o.get("schema_class"))
         .and_then(|v| v.as_str())
         .map(|s| s.to_string())
+}
+
+/// Confine + compile a list of adopter **scope globs** (`require_frontmatter`,
+/// `vocabulary_globs`) against the governed tree. A glob whose text escapes the
+/// tree — an absolute path, or one climbing above the root with `..` — is a loud
+/// config error, closing the confinement gap the Solution Architect review found
+/// (SA F4): such a glob compiles fine but, matched root-relative, silently
+/// matches nothing — a no-op where the engine promises loud refusal. `field`
+/// names the config key for the message. Scope globs are pure `matches_path`
+/// predicates over the already-confined walk, so this only makes an escaping
+/// glob *legible*; it never widens the file set (Security's scope-∩-confinement).
+fn confine_and_compile_globs(
+    globs: &[String],
+    field: &str,
+) -> Result<Vec<glob::Pattern>, VerifyError> {
+    globs
+        .iter()
+        .map(|g| {
+            crate::confine::confine_lexically(Path::new(g)).map_err(|v| {
+                let why = match v {
+                    crate::confine::LexicalViolation::Absolute => "is an absolute path",
+                    crate::confine::LexicalViolation::ParentSegment => {
+                        "climbs above the project root with `..`"
+                    }
+                };
+                VerifyError::Config(format!(
+                    "{field} glob '{g}' {why}; a scope glob must stay within the governed tree"
+                ))
+            })?;
+            glob::Pattern::new(g)
+                .map_err(|e| VerifyError::Config(format!("{field} glob '{g}': {e}")))
+        })
+        .collect()
 }
 
 // ── Schema + pattern loading ───────────────────────────────────────────────────
@@ -1293,7 +1312,7 @@ fn verify_file(
     link_enabled: bool,
     marker_rules: &[&crate::route::MarkerRule],
     code_catalogs: &[crate::codecat::CodeCatalog],
-    section_rules: &[crate::section::Rule],
+    section_rules: &[&crate::section::Rule],
     vocab: Option<&crate::vocab::LoadedVocab>,
     schemas: &BTreeMap<String, Schema>,
     patterns: &[PatternFile],
@@ -1494,7 +1513,7 @@ fn verify_file(
     let mut any_context_matched = false;
     for pf in patterns {
         for rule in &pf.pattern.rules {
-            if !context_matches(&rule.context, schema_class_opt.as_deref(), path) {
+            if !context_matches(&rule.context, schema_class_opt.as_deref(), rel_path) {
                 continue;
             }
             any_context_matched = true;
@@ -1656,14 +1675,19 @@ pub(crate) fn context_matches(
     }
 }
 
-/// Match a glob pattern against a path. Used for context-selector path matching
-/// (not for resolving glob sources, which use the glob crate's directory walker).
+/// Match a glob pattern against a **project-root-relative** path — the form both
+/// callers now pass (SA F1, the scoping-consistency pass). Uses `matches_path`,
+/// the same matcher and same root-relative basis as the route and vocabulary
+/// scopes, so a `context: "docs/**/*.md"` resolves identically everywhere.
+///
+/// (Previously this matched `to_string_lossy()` — a **string** match — and the
+/// checking pass passed the *absolute* path, so a path-glob context was compared
+/// against `/…/root/docs/x.md` and silently never fired; the dependency-graph
+/// pass meanwhile passed the relative path, so a rule could register a dependency
+/// edge yet never actually run.)
 fn glob_matches(pattern: &str, path: &Path) -> bool {
-    // Use globset-style matching via the glob crate's match helper, which only matches
-    // a single path against a pattern.
-    let path_str = path.to_string_lossy();
     match glob::Pattern::new(pattern) {
-        Ok(p) => p.matches(&path_str),
+        Ok(p) => p.matches_path(path),
         Err(_) => false,
     }
 }
@@ -3267,6 +3291,57 @@ pattern:
         assert_eq!(codes_of(&verify(&cfg).unwrap(), "MDATRON-W0045"), 0);
     }
 
+    // RED GATE (SA F1, scoping-consistency pass): a PATH-GLOB `context:` fires on
+    // a matching file. It now resolves against the project-root-relative path via
+    // `matches_path`; before the fix it matched the ABSOLUTE path via a string
+    // compare and silently never fired — a rule that could register a dependency
+    // edge yet never actually run.
+    #[test]
+    fn path_glob_context_fires_on_matching_file() {
+        let proj = TempProject::new("ctx-pathglob");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write(
+            ".mdatron/patterns/p.yaml",
+            "mdatron_dsl_version: 1\npattern:\n  id: p\n  rules:\n    - id: r\n      context: \"docs/**/*.md\"\n      assert: '$self.title != \"\"'\n      code: ADOPTER-E0001\n      message: m\n",
+        );
+        // title is empty → the assertion is FALSE → the rule fires, but ONLY if
+        // the path-glob context matched docs/a.md (root-relative) in the first place.
+        proj.write("docs/a.md", "---\ntitle: \"\"\n---\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        assert!(
+            verify(&cfg)
+                .unwrap()
+                .iter()
+                .any(|f| f.code == "ADOPTER-E0001"),
+            "a path-glob context resolves root-relative and fires on docs/a.md"
+        );
+    }
+
+    // RED GATE (SA F4, scoping-consistency pass): a scope glob that escapes the
+    // governed tree is a LOUD config error, not a silent no-op. `../secret/*.md`
+    // used to compile and match nothing (silently disabling the scope); now it is
+    // refused at load — the confinement contract applied to config scope globs.
+    #[test]
+    fn escaping_scope_glob_is_a_loud_config_error() {
+        let proj = TempProject::new("scope-escape");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\nvocabulary_globs:\n  - \"../secret/*.md\"\n",
+        );
+        proj.write("docs/a.md", "prose\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let err = format!("{}", verify(&cfg).unwrap_err());
+        assert!(
+            err.contains("vocabulary_globs") && err.contains(".."),
+            "an escaping vocabulary_globs glob is refused loudly; got {err}"
+        );
+    }
+
     // #85 inactivity: no vocabulary.yaml -> family inactive.
     #[test]
     fn absent_vocabulary_file_keeps_family_inactive() {
@@ -3967,7 +4042,8 @@ pattern:
     // vsdd's live shape (vsdd-cli#27): classes E/W, four digits, the declared
     // legal set. W0070 is deliberately OMITTED so a citation of it orphans —
     // the real `.claude/commands/vsdd-domain-red-team.md` case.
-    const CODE_CATALOG_COMPREHENSIVE: &str = r#"catalogs:
+    const CODE_CATALOG_COMPREHENSIVE: &str = r#"mdatron_format_version: 1
+catalogs:
   - namespace: "VSDD-"
     comprehensive: true
     codes: ["E0010", "E0016", "E0018", "E0050", "W0010", "W0030", "W0080", "W0180"]
@@ -4054,24 +4130,49 @@ pattern:
         assert!(!code_catalog_families(&without).code_catalog.is_active());
     }
 
+    // RED GATE (DEF5, #131): code-catalogs.yaml is BORN VERSIONED in 0.6.0 — a
+    // file omitting `mdatron_format_version` is a loud config error end-to-end
+    // (the required-on-new-files leg; the two-pass probe surfaces it legibly
+    // before the strict parse).
+    #[test]
+    fn code_catalog_without_format_version_is_a_loud_error() {
+        let proj = code_catalog_project(
+            "codecat-noversion",
+            "prose\n",
+            "catalogs:\n  - namespace: \"VSDD-\"\n    codes: [\"E0001\"]\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let err = format!("{}", verify(&cfg).unwrap_err());
+        assert!(
+            err.contains("mdatron_format_version") && err.contains("must declare"),
+            "a versioned file must declare its format version; got {err}"
+        );
+    }
+
     // ── section-structural family (#157, vsdd GH#20 P5 / GH#29) ─────────────
     // Rules pinned to vsdd's live build-plan shape: count of open-phase H3s in
     // `## Requirements` (>= 1, an empty section is the retire trigger) and slice
     // ids disjoint between `## Requirements` (H3 headings) and `## Completed
     // phases` (bullet leads). Core logic is unit-tested in section.rs.
 
-    const SECTION_RULES: &str = r###"rules:
-  - section: "## Requirements"
-    element: h3
-    match: '^### Phase \d+: .*\((parallel|sequential)\)$'
-    count: ">= 1"
-  - disjoint:
-      - section: "## Requirements"
-        id_from: h3-heading
-        id_pattern: 'Slice (\d+)'
-      - section: "## Completed phases"
-        id_from: bullet-lead
-        id_pattern: 'Slice (\d+)'
+    // Route-attached (#34): the section rules live on the route that claims
+    // `plan/**/*.md`, scoped by its `files` glob — not a standalone corpus-wide
+    // file. This is the vsdd GH#34 fix in situ.
+    const SECTION_ROUTES: &str = r###"routes:
+- files: "plan/**/*.md"
+  governed_by: GOVERNING.md
+  section_rules:
+    - section: "## Requirements"
+      element: h3
+      match: '^### Phase \d+: .*\((parallel|sequential)\)$'
+      count: ">= 1"
+    - disjoint:
+        - section: "## Requirements"
+          id_from: h3-heading
+          id_pattern: 'Slice (\d+)'
+        - section: "## Completed phases"
+          id_from: bullet-lead
+          id_pattern: 'Slice (\d+)'
 "###;
 
     fn section_project(label: &str, plan: &str) -> TempProject {
@@ -4084,7 +4185,8 @@ pattern:
             ".mdatron/config.yaml",
             "file_globs:\n  - \"plan/**/*.md\"\n",
         );
-        proj.write(".mdatron/section-rules.yaml", SECTION_RULES);
+        proj.write("GOVERNING.md", "# gov\n");
+        proj.write(".mdatron/routes.yaml", SECTION_ROUTES);
         proj.write("plan/build-plan.md", plan);
         proj
     }
@@ -4133,6 +4235,42 @@ pattern:
         assert!(
             findings.iter().any(|f| f.code == "MDATRON-E0121"),
             "Slice 2 open AND complete is not disjoint; got {findings:?}"
+        );
+    }
+
+    // RED GATE (#34): a section rule is scoped by ITS ROUTE'S `files` glob — it
+    // must NOT fire on a walked file a *different* route claims. This is the vsdd
+    // GH#34 repro: an unrelated `## Requirements` elsewhere in the corpus fired
+    // E0120 on 80 files under the old standalone (corpus-wide) form; route-
+    // attachment scopes the rule so it cannot.
+    #[test]
+    fn section_rules_do_not_fire_outside_their_route_scope() {
+        let proj = TempProject::new("section-scope");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(".mdatron/config.yaml", "file_globs:\n  - \"**/*.md\"\n");
+        proj.write("GOVERNING.md", "# gov\n");
+        // Route A claims plan/** and carries the section rules; route B claims
+        // notes/** with NONE — so a `## Requirements` under notes/ is out of scope.
+        proj.write(
+            ".mdatron/routes.yaml",
+            &format!("{SECTION_ROUTES}- files: \"notes/**/*.md\"\n  governed_by: GOVERNING.md\n"),
+        );
+        // An unrelated file with a `## Requirements` heading and zero open phases:
+        // corpus-wide it would fire E0120; scoped to plan/** it must stay silent.
+        proj.write(
+            "notes/other.md",
+            "# Notes\n\n## Requirements\n\nnothing open here.\n",
+        );
+        proj.write("plan/build-plan.md", CLEAN_PLAN);
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        assert!(
+            findings
+                .iter()
+                .all(|f| f.code != "MDATRON-E0120" && f.code != "MDATRON-E0121"),
+            "the section rule is scoped to plan/**; notes/other.md must not misfire; got {findings:?}"
         );
     }
 

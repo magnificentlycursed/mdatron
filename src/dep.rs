@@ -268,6 +268,7 @@ mod tests {
             citations: false,
             links: false,
             marker_rules: Vec::new(),
+            section_rules: Vec::new(),
         }
     }
 

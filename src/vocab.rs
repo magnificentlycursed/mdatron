@@ -32,6 +32,12 @@ pub const VOCAB_NAME: &str = "vocabulary.yaml";
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct RawVocab {
+    /// Input-format version (DEF5, #131). Optional; absent = v1 (legacy
+    /// baseline). Read by the format-version probe; declared here only so
+    /// `deny_unknown_fields` accepts the field.
+    #[serde(default)]
+    #[allow(dead_code)]
+    mdatron_format_version: Option<u32>,
     #[serde(default)]
     terms: Vec<RawTerm>,
     #[serde(default)]
@@ -130,6 +136,7 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedVocab>, Error> {
             )))
         }
     };
+    crate::format_version::check_input_format_version(&content, VOCAB_NAME, false)?;
     let raw: RawVocab = serde_yaml_ng::from_str(&content)
         .map_err(|e| Error::Config(format!("cannot parse '{}': {e}", path.display())))?;
 

@@ -451,7 +451,7 @@ mod tests {
                 link: FamilyActivity::inactive("no links route"),
                 marker: FamilyActivity::inactive("no marker_rules route"),
                 code_catalog: FamilyActivity::inactive("no code-catalogs.yaml"),
-                section: FamilyActivity::inactive("no section-rules.yaml"),
+                section: FamilyActivity::inactive("no route supplies section_rules"),
             },
             "0.3.0",
         )
