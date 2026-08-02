@@ -59,6 +59,32 @@ Field access is `.`-chained: `$self.meta.owner`. Accessing a missing field
 yields `Null`; field access **on** `Null` yields `Null` (no error) — pair with
 `defined()` to distinguish.
 
+### Field-reference validation (`MDATRON-E0021`)
+
+Because a missing field reads as `Null` rather than erroring, a **typo** in a
+`$self` path (`$self.ownr` for `$self.owner`) would silently make an assertion
+mis-fire or pass vacuously against every governed document. To catch this before
+it ships, mdatron validates `$self` field references against the frontmatter
+schema **at load** (adopting Cedar's validate-before-deploy posture) and
+hard-gates a bad reference as `MDATRON-E0021` (error, exit 1) — the run stops
+before any document is checked.
+
+The check is **deliberately conservative** — it flags only a provable typo:
+
+- Only rules whose `context` resolves to a **known `schema_class`** are examined.
+  A path-glob context (whose `$self` schema is not statically known) is skipped.
+- Only `$self`-rooted paths are walked. `let:` bindings, `$file`, `$project`, and
+  quantifier variables (`$m` in `every(m in …)`) are not `$self` and never flag —
+  but a `$self` path *inside* a quantifier collection or `let:` value is checked.
+- A path is flagged **only** when a segment is absent from a level's `properties`
+  **and** that level is a closed object (`additionalProperties: false`). Every
+  undecidable shape — an open object (the JSON-Schema default), an array, a
+  `$ref`, or a combinator (`allOf`/`anyOf`/…) — passes unflagged.
+
+To bring a field into scope, declare it under the schema's `properties` (or relax
+`additionalProperties` if the object is meant to carry open-ended keys). See
+`mdatron explain MDATRON-E0021`.
+
 ## Expressions
 
 Precedence, loosest first: `or`, `and`, `not`, `in`/`not_in`, `==`/`!=`,

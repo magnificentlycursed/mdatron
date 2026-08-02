@@ -4,7 +4,7 @@
 pins:
 - governing: DESIGN.md
   file: src/codes.rs
-  sha256: 71c55923b8927d9a2502b21ee0156faa8905679b84980ac0278ee40ed3a044ae
+  sha256: 3e9f49e199083a5fea0d7dd5ecd8bfd8dbc87abd33c55e5998f9ab358df3009a
 - governing: DESIGN.md
   file: .mdatron/manifest.yaml
   sha256: 9f45745aceabf232a245efb598b9b1c78e29b936e123a3eaaa503dd9cb4756f9

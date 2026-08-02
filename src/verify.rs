@@ -28,11 +28,11 @@ use thiserror::Error;
 
 use crate::diagnostic::{Finding, Location, QuotedRegion, Severity};
 use crate::dsl::{
-    evaluate, parse_expression, parse_pattern_file, ContextSelector, EvalContext, EvalError,
-    IndexError, IndexRegistry, PatternFile, Rule, Value,
+    evaluate, parse_expression, parse_pattern_file, ContextSelector, EvalContext, EvalError, Expr,
+    IndexError, IndexRegistry, PatternFile, Rule, Value, VarRef,
 };
 use crate::frontmatter;
-use crate::schema::Schema;
+use crate::schema::{FieldPathStatus, Schema};
 
 // ── Public surface ─────────────────────────────────────────────────────────────
 
@@ -450,6 +450,15 @@ fn run(
         .unwrap_or(false);
 
     let mut findings: Vec<Finding> = Vec::new();
+
+    // Rule field-reference validation (#156): a project-level pass, run once
+    // before any document is walked (Cedar's validate-before-deploy posture).
+    // Each rule's `$self.<field>` references are checked against the frontmatter
+    // schema its context binds; a path naming an undeclared property under a
+    // closed object hard-gates as E0021. Conservative by construction — see
+    // `validate_rule_field_refs`.
+    validate_rule_field_refs(&config.patterns_dir, &patterns, &schemas, &mut findings);
+
     // Keep the pins for after the scope filter: a pin finding locates at
     // pins.yaml but is ABOUT the pinned file, so incremental includes it by the
     // pinned file's scope membership, not by the finding's own location (#102).
@@ -1088,6 +1097,187 @@ fn load_patterns(dir: &Path) -> Result<Vec<PatternFile>, VerifyError> {
         out.push(pf);
     }
     Ok(out)
+}
+
+// ── Rule field-reference validation (#156) ──────────────────────────────────────
+
+/// Validate every rule's `$self.<field>` references against the frontmatter
+/// schema its context binds (#156, adopting Cedar's validate-before-deploy
+/// posture; [[cedar-opa-dsl-audit]]). A path that names an UNDECLARED property
+/// under a CLOSED object (`additionalProperties: false`) is a typo the run would
+/// otherwise absorb silently — the field reads as absent, so the assertion
+/// mis-fires or passes vacuously against every governed document. Surfaced as
+/// `MDATRON-E0021` (ERROR), hard-gating the run before any document is checked.
+///
+/// **Conservative by construction** — this is a hard gate, so a false positive
+/// breaks an adopter build. Three guards keep it sound:
+/// - only rules whose context resolves to a *loaded* schema_class are examined
+///   (a path-glob context, or an unknown class, is left unchecked);
+/// - only `$self`-rooted field chains are walked — bindings, `$file`,
+///   `$project`, and quantifier variables never enter;
+/// - only `FieldPathStatus::UndeclaredClosed` is flagged — every undecidable
+///   shape (open object, array, `$ref`, combinator, missing `properties`) passes.
+fn validate_rule_field_refs(
+    patterns_dir: &Path,
+    patterns: &[PatternFile],
+    schemas: &BTreeMap<String, Schema>,
+    findings: &mut Vec<Finding>,
+) {
+    for pf in patterns {
+        for rule in &pf.pattern.rules {
+            let Some(schema_class) = context_schema_class(&rule.context) else {
+                continue;
+            };
+            let Some(schema) = schemas.get(schema_class) else {
+                continue;
+            };
+            // Every expression the rule evaluates: each let-binding value in
+            // order, then the assertion itself.
+            let sources = rule
+                .let_bindings
+                .iter()
+                .map(|(_, v)| v.as_str())
+                .chain(std::iter::once(rule.assert.as_str()));
+            let mut paths: Vec<Vec<String>> = Vec::new();
+            for src in sources {
+                // A parse failure here is not a field typo; the same parse runs
+                // at eval time and surfaces as `ExprParse` against a matching
+                // document. Skip it rather than double-reporting.
+                if let Ok(expr) = parse_expression(src) {
+                    collect_self_paths(&expr, &mut paths);
+                }
+            }
+            paths.sort();
+            paths.dedup();
+            for path in paths {
+                if schema.field_path_status(&path) == FieldPathStatus::UndeclaredClosed {
+                    findings.push(field_ref_finding(
+                        patterns_dir,
+                        &pf.pattern.id,
+                        rule,
+                        schema_class,
+                        &path,
+                    ));
+                }
+            }
+        }
+    }
+}
+
+/// The schema_class a rule's context statically binds `$self` to: a bare
+/// non-glob string, or the `schema_class` of a combined selector. A path-glob
+/// context binds `$self` to whatever schema the matched files route to (not
+/// knowable at load), so it yields `None` and the rule is left unchecked.
+fn context_schema_class(ctx: &ContextSelector) -> Option<&str> {
+    match ctx {
+        ContextSelector::Bare(s) => {
+            if s.contains('*') || s.contains('?') || s.contains('/') {
+                None
+            } else {
+                Some(s.as_str())
+            }
+        }
+        ContextSelector::Combined { schema_class, .. } => schema_class.as_deref(),
+    }
+}
+
+/// The `$self`-rooted field path of `e`, if `e` is a `Field` chain bottoming out
+/// at `$self` (`$self.a.b` → `["a", "b"]`; bare `$self` → `[]`). `None` for
+/// anything else — a chain rooted at a binding, `$file`, `$project`, or a
+/// non-field expression.
+fn self_path(e: &Expr) -> Option<Vec<String>> {
+    match e {
+        Expr::Var(VarRef::SelfVar) => Some(Vec::new()),
+        Expr::Field(inner, name) => {
+            let mut p = self_path(inner)?;
+            p.push(name.clone());
+            Some(p)
+        }
+        _ => None,
+    }
+}
+
+/// Collect every `$self`-rooted field path reachable in `e`, recursing through
+/// all operand-bearing variants. A `$self` chain is captured whole (never
+/// descended past); everything else recurses so paths nested in operators,
+/// calls, and quantifier collections/predicates are found. A quantifier BINDING
+/// (`m` in `every(m in $self.xs, …)`) is a `VarRef::Binding`, so `$m.k` yields
+/// no self-path — only the collection's `$self.xs` is captured.
+fn collect_self_paths(e: &Expr, out: &mut Vec<Vec<String>>) {
+    if let Some(p) = self_path(e) {
+        if !p.is_empty() {
+            out.push(p);
+        }
+        return;
+    }
+    match e {
+        Expr::Field(inner, _) => collect_self_paths(inner, out),
+        Expr::Eq(a, b)
+        | Expr::Ne(a, b)
+        | Expr::And(a, b)
+        | Expr::Or(a, b)
+        | Expr::In(a, b)
+        | Expr::NotIn(a, b) => {
+            collect_self_paths(a, out);
+            collect_self_paths(b, out);
+        }
+        Expr::Not(a) => collect_self_paths(a, out),
+        Expr::Call(_, args) => {
+            for a in args {
+                collect_self_paths(a, out);
+            }
+        }
+        Expr::Every(_, coll, pred) | Expr::Some_(_, coll, pred) | Expr::Filter(_, coll, pred) => {
+            collect_self_paths(coll, out);
+            collect_self_paths(pred, out);
+        }
+        Expr::Lit(_) | Expr::Var(_) => {}
+    }
+}
+
+/// Build the `MDATRON-E0021` finding for an undeclared `$self` field reference.
+/// Anchored at the patterns directory (rules carry no per-file source span); the
+/// pattern id, rule id, and offending `$self.<path>` name the exact site.
+fn field_ref_finding(
+    patterns_dir: &Path,
+    pattern_id: &str,
+    rule: &Rule,
+    schema_class: &str,
+    path: &[String],
+) -> Finding {
+    let dotted = format!("$self.{}", path.join("."));
+    Finding {
+        code: "MDATRON-E0021".into(),
+        severity: Severity::Error,
+        summary: "undeclared-field-reference".into(),
+        message: format!(
+            "rule references `{dotted}`, but `{last}` is not a declared property \
+             of the closed schema `{schema_class}` — the reference would read as \
+             absent at evaluation. Correct the field name or declare it in the schema",
+            last = path.last().map(String::as_str).unwrap_or_default(),
+        ),
+        help: None,
+        location: Location {
+            file: patterns_dir.to_path_buf(),
+            line: 0,
+            column: 0,
+        },
+        explain_ref: Some("MDATRON-E0021".to_string()),
+        quoted: vec![
+            QuotedRegion {
+                label: "pattern".into(),
+                content: pattern_id.into(),
+            },
+            QuotedRegion {
+                label: "rule".into(),
+                content: rule.id.clone(),
+            },
+            QuotedRegion {
+                label: "reference".into(),
+                content: dotted,
+            },
+        ],
+    }
 }
 
 // ── Per-file processing ────────────────────────────────────────────────────────
@@ -4629,5 +4819,204 @@ pattern:
         let (message, quoted) = interpolate_message("no interpolation markers here", &ctx).unwrap();
         assert_eq!(message, "no interpolation markers here");
         assert!(quoted.is_empty());
+    }
+
+    // ── Rule field-reference validation red gate (#156) ─────────────────────────
+    //
+    // E0021 is a HARD GATE (error, exit 1): a false positive breaks an adopter's
+    // build. This gate is therefore weighted toward the negative cases — every
+    // undecidable shape (open object, binding, quantifier var, path-glob context)
+    // must pass — with true positives proving the typo IS caught in each of the
+    // three sites a `$self` path can appear (assert, let-binding, quantifier
+    // collection).
+
+    /// A closed frontmatter schema (`additionalProperties: false`) declaring a
+    /// fixed property set — the only shape under which E0021 fires.
+    const CLOSED_DOC_SCHEMA: &str = r#"{
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_class": { "type": "string" },
+        "title":  { "type": "string" },
+        "owner":  { "type": "string" },
+        "items":  { "type": "array" }
+      }
+    }"#;
+
+    fn e0021_count(findings: &[Finding]) -> usize {
+        findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0021")
+            .count()
+    }
+
+    /// Write a one-rule pattern whose `context` is `doc` (bound to the closed
+    /// schema), with the given `let:` block body and assertion, then run verify.
+    fn run_field_ref_gate(
+        label: &str,
+        schema: &str,
+        let_block: &str,
+        assert: &str,
+    ) -> Vec<Finding> {
+        let proj = TempProject::new(label);
+        proj.write(".mdatron/schemas/doc.json", schema);
+        proj.write(
+            ".mdatron/patterns/p.yaml",
+            &format!(
+                "mdatron_dsl_version: 1\n\
+                 pattern:\n  \
+                   id: p\n  \
+                   rules:\n    \
+                     - id: r\n      \
+                       context: doc\n\
+                 {let_block}      \
+                       assert: '{assert}'\n      \
+                       code: T-E0001\n      \
+                       message: \"m\"\n"
+            ),
+        );
+        let cfg = VerifyConfig::new(&proj.0);
+        verify(&cfg).expect("verify runs")
+    }
+
+    #[test]
+    fn rg_undeclared_field_in_assert_is_e0021() {
+        // TRUE POSITIVE: a typo'd `$self.ownr` (for `owner`) under a closed
+        // schema hard-gates.
+        let findings = run_field_ref_gate(
+            "e0021-assert-typo",
+            CLOSED_DOC_SCHEMA,
+            "",
+            r#"$self.ownr == "x""#,
+        );
+        let e0021: Vec<&Finding> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0021")
+            .collect();
+        assert_eq!(e0021.len(), 1, "one undeclared reference; got {findings:?}");
+        assert_eq!(e0021[0].severity, Severity::Error, "E0021 hard-gates");
+        assert!(
+            e0021[0]
+                .quoted
+                .iter()
+                .any(|q| q.label == "reference" && q.content == "$self.ownr"),
+            "names the offending path: {:?}",
+            e0021[0].quoted
+        );
+    }
+
+    #[test]
+    fn rg_valid_field_reference_under_closed_schema_is_clean() {
+        // NEGATIVE: a declared property is not flagged.
+        let findings = run_field_ref_gate(
+            "e0021-valid",
+            CLOSED_DOC_SCHEMA,
+            "",
+            r#"$self.owner == "x""#,
+        );
+        assert_eq!(
+            e0021_count(&findings),
+            0,
+            "declared field is clean: {findings:?}"
+        );
+    }
+
+    #[test]
+    fn rg_undeclared_field_under_open_schema_not_flagged() {
+        // NEGATIVE (the load-bearing guard): an OPEN object is the JSON-Schema
+        // default — an unknown field there is legal, never E0021.
+        let open = r#"{ "type": "object", "properties": { "title": { "type": "string" } } }"#;
+        let findings = run_field_ref_gate("e0021-open", open, "", r#"$self.anything_goes == "x""#);
+        assert_eq!(
+            e0021_count(&findings),
+            0,
+            "open object tolerates unknown fields: {findings:?}"
+        );
+    }
+
+    #[test]
+    fn rg_quantifier_and_binding_vars_not_flagged() {
+        // NEGATIVE: `$m` is a quantifier binding (not `$self`); only the
+        // collection `$self.items` (declared) is a self-path. No false positive
+        // on `$m.ownr`.
+        let findings = run_field_ref_gate(
+            "e0021-binding",
+            CLOSED_DOC_SCHEMA,
+            "",
+            r#"every(m in $self.items, $m.ownr == "x")"#,
+        );
+        assert_eq!(
+            e0021_count(&findings),
+            0,
+            "quantifier binding path is not a self-path: {findings:?}"
+        );
+    }
+
+    #[test]
+    fn rg_undeclared_field_inside_quantifier_collection_is_e0021() {
+        // TRUE POSITIVE: the walker descends into a quantifier's COLLECTION, so a
+        // typo'd `$self.itmes` (for `items`) there is still caught.
+        let findings = run_field_ref_gate(
+            "e0021-quant-coll",
+            CLOSED_DOC_SCHEMA,
+            "",
+            r#"every(m in $self.itmes, $m.x == 1)"#,
+        );
+        let e0021: Vec<&Finding> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0021")
+            .collect();
+        assert_eq!(e0021.len(), 1, "collection typo caught; got {findings:?}");
+        assert!(
+            e0021[0]
+                .quoted
+                .iter()
+                .any(|q| q.label == "reference" && q.content == "$self.itmes"),
+            "names the collection path: {:?}",
+            e0021[0].quoted
+        );
+    }
+
+    #[test]
+    fn rg_undeclared_field_in_let_binding_is_e0021() {
+        // TRUE POSITIVE: a let-binding VALUE is an expression too — a typo there
+        // hard-gates.
+        let findings = run_field_ref_gate(
+            "e0021-let",
+            CLOSED_DOC_SCHEMA,
+            "      let:\n        o: $self.ownr\n",
+            r#"$o == "x""#,
+        );
+        assert_eq!(
+            e0021_count(&findings),
+            1,
+            "let-binding typo caught: {findings:?}"
+        );
+    }
+
+    #[test]
+    fn rg_path_glob_context_is_not_checked() {
+        // NEGATIVE: a path-glob context binds `$self` to whatever schema the
+        // matched files route to — not statically known — so the rule is left
+        // unchecked (no schema to validate the reference against).
+        let proj = TempProject::new("e0021-pathglob");
+        proj.write(".mdatron/schemas/doc.json", CLOSED_DOC_SCHEMA);
+        proj.write(
+            ".mdatron/patterns/p.yaml",
+            "mdatron_dsl_version: 1\n\
+             pattern:\n  id: p\n  rules:\n    \
+               - id: r\n      \
+                 context: \"docs/*.md\"\n      \
+                 assert: '$self.ownr == \"x\"'\n      \
+                 code: T-E0001\n      \
+                 message: \"m\"\n",
+        );
+        let cfg = VerifyConfig::new(&proj.0);
+        let findings = verify(&cfg).expect("verify runs");
+        assert_eq!(
+            e0021_count(&findings),
+            0,
+            "path-glob context has no static schema: {findings:?}"
+        );
     }
 }

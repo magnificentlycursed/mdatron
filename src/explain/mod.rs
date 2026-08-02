@@ -1,7 +1,7 @@
 //! Embedded `mdatron explain CODE` catalog.
 //!
 //! v0.1.x catalog: MDATRON-E0001, E0002, E0010, E0011, E0012, E0050, E0060, E0070,
-//! E0080, W0040; route family E0030, E0031, E0032, W0041; pin family E0061, E0062, E0063, W0042, L0001; vocabulary family E0090-E0094; citation family E0100, E0101; link family E0110, E0111; marker family E0112; code-catalog family E0113; section-structural family E0120, E0121. The catalog grows by one entry per newly-emitted code per the
+//! E0080, W0040; route family E0030, E0031, E0032, W0041; pin family E0061, E0062, E0063, W0042, L0001; vocabulary family E0090-E0094; citation family E0100, E0101; link family E0110, E0111; marker family E0112; code-catalog family E0113; section-structural family E0120, E0121; DSL rule field-reference validation E0021. The catalog grows by one entry per newly-emitted code per the
 //! Phase 0 DESIGN open question #2 SO disposition (2026-06-02); the
 //! path-confinement trio (E0010/E0011/E0012) landed with the confinement
 //! rework (the path-confinement defect issue in this tracker).
@@ -57,6 +57,7 @@ const E0110: &str = include_str!("MDATRON-E0110.md");
 const E0111: &str = include_str!("MDATRON-E0111.md");
 const E0112: &str = include_str!("MDATRON-E0112.md");
 const E0113: &str = include_str!("MDATRON-E0113.md");
+const E0021: &str = include_str!("MDATRON-E0021.md");
 const E0120: &str = include_str!("MDATRON-E0120.md");
 const E0121: &str = include_str!("MDATRON-E0121.md");
 
@@ -111,6 +112,7 @@ pub fn lookup(code: &str) -> Option<&'static str> {
         "MDATRON-E0092" => Some(E0092),
         "MDATRON-E0093" => Some(E0093),
         "MDATRON-E0094" => Some(E0094),
+        "MDATRON-E0021" => Some(E0021),
         "MDATRON-E0100" => Some(E0100),
         "MDATRON-E0101" => Some(E0101),
         "MDATRON-E0110" => Some(E0110),
@@ -284,6 +286,7 @@ mod tests {
         "MDATRON-E0092",
         "MDATRON-E0093",
         "MDATRON-E0094",
+        "MDATRON-E0021",
         "MDATRON-E0100",
         "MDATRON-E0101",
         "MDATRON-E0110",
