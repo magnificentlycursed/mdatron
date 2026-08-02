@@ -1413,11 +1413,12 @@
       "display_id": 51,
       "title": "process: L2 confinement fix implemented outside phase discipline — deviation record + routing rule for ratification",
       "description": "Deviation record. Issue L2 (path-confinement defect, security-labeled) was fixed direct-to-main at 0b21986 as real engine implementation: a new confine module (unsafe openat walk, OwnedFd handling), the index.rs read-path rewiring, a newly emitted diagnostic code (E0012), a new dependency (libc), and its test suite. VSDD artifacts used: session work set, typed plan/result comments, commit evidence. VSDD artifacts NOT used: phase-2a red gate (tests were authored with the implementation, never demonstrated failing against the defect first), phase-2b/2c primers, software-engineer domain review, security domain review (despite the security label), rust supplemental skill, and backlog linkage (the work was picked up and implemented without first being tied to its owning layer issue and milestone). The fix was defensible as current-code maintenance — the defect predates the ratified design — but it also front-ran phase-2 decomposition of the ratified snapshot/confinement contracts (validated no-follow handles, component-wise resolution), i.e. increment implementation without increment gates. Why it matters: review config is 'thorough — the engine gates other projects' work; its defects propagate', and an unreviewed hotfix lane is the process form of silent degradation. Proposed routing rule (operator ratifies, then it becomes a standing ruling recorded per the document-lifecycle discipline): any code-touching work in this repo, defect fixes included, requires before implementation (1) a tracker issue linked to its owning layer issue and milestone; (2) phase-2a red gate — the failing test demonstrated against the defect before the fix lands; (3) the domain reviews the labels mandate (software-engineer minimum; security label adds the security domain); (4) the language supplemental skill for the implementation language. No emergency bypass lane: pre-v1, nothing is urgent enough to skip the gates; post-v1, a bypass must be its own loud, annotated ruling. Child issue carries the retroactive verification debt for 0b21986.",
-      "status": "open",
+      "status": "closed",
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-19T22:24:47.589479Z",
-      "updated_at": "2026-08-02T00:59:35.599716Z",
+      "updated_at": "2026-08-02T00:59:43.749945Z",
+      "closed_at": "2026-08-02T00:59:43.749935Z",
       "labels": [
         "methodology",
         "process"
@@ -6043,8 +6044,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T00:59:35.599716Z",
+    "timestamp": "2026-08-02T00:59:43.749945Z",
     "agent_id": "79Ig",
-    "agent_seq": 667
+    "agent_seq": 668
   }
 }
