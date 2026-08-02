@@ -1,6 +1,6 @@
 {
   "next_display_id": 158,
-  "next_comment_id": 377,
+  "next_comment_id": 378,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -330,10 +330,21 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-02T00:34:26.767119Z",
-      "updated_at": "2026-08-02T00:34:31.326003Z",
+      "updated_at": "2026-08-02T06:13:13.613230Z",
       "labels": [
         "enhancement"
-      ]
+      ],
+      "comments": {
+        "da53c0aa-00a1-4315-a386-fd93314f6d05": {
+          "display_id": 377,
+          "author": "79Ig",
+          "content": "MERGED (PR #26). Frontmatter arity + disjointness DSL rules documented (count(filter)==N, count(intersect)==0) — the primitive ships since #93/#73. Body-content leg split to #157 (now fully specced by vsdd-cli#29). vsdd GH#20 P5 frontmatter half delivered; Cedar/OPA review drove the split.",
+          "created_at": "2026-08-02T06:13:00.063708Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAYUJDt+NKKX7qTPIJgKXgYXJjRnh7qCJUqBzGiQhtF34vvrblvjwzTTRN4alf5a7W/RsSnLgIuzv87eMXi2wTCA=="
+        }
+      }
     },
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": {
       "uuid": "1198bf2d-1428-40e0-8e18-cbf40d2df45d",
@@ -6295,8 +6306,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T06:03:15.529217Z",
+    "timestamp": "2026-08-02T06:13:13.613230Z",
     "agent_id": "79Ig",
-    "agent_seq": 717
+    "agent_seq": 718
   }
 }
