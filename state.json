@@ -5853,11 +5853,12 @@
       "uuid": "f9c58211-2b09-49a8-be00-280b9ea98e4f",
       "display_id": 148,
       "title": "roadmap (vsdd#20 P4): adopter-namespace code-catalog integrity — every cited adopter code (e.g. VSDD-XNNNN) resolves to a declared entry (adopter-side twin of every-code-resolves-in-explain; vocabulary-family shape)",
-      "status": "open",
+      "status": "closed",
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-02T00:34:07.708523Z",
-      "updated_at": "2026-08-02T05:36:23.974204Z",
+      "updated_at": "2026-08-02T05:36:30.318758Z",
+      "closed_at": "2026-08-02T05:36:30.318748Z",
       "labels": [
         "enhancement"
       ],
@@ -6242,8 +6243,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T05:36:23.974204Z",
+    "timestamp": "2026-08-02T05:36:30.318758Z",
     "agent_id": "79Ig",
-    "agent_seq": 708
+    "agent_seq": 709
   }
 }
