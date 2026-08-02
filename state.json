@@ -1,5 +1,5 @@
 {
-  "next_display_id": 145,
+  "next_display_id": 146,
   "next_comment_id": 354,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -93,6 +93,7 @@
     "a446eaf1-18df-440b-9718-0442873be9d3": 60,
     "a67c98ab-e717-49f1-81d5-88c3dacd7c0a": 27,
     "a7662de4-2bc7-4dcb-aeae-8e5fd5557c25": 136,
+    "a7b5521e-a543-40c5-9328-967014fea95a": 145,
     "a89629bc-8e2a-4193-adaa-78efe28381e3": 95,
     "a8e5a57b-9652-4feb-9927-f4229585515c": 21,
     "a943580f-3634-4daa-a8f1-5d31c8af3f1b": 16,
@@ -3560,6 +3561,16 @@
         }
       }
     },
+    "a7b5521e-a543-40c5-9328-967014fea95a": {
+      "uuid": "a7b5521e-a543-40c5-9328-967014fea95a",
+      "display_id": 145,
+      "title": "roadmap (vsdd#20 P1, top ask): dangling body-link/anchor resolution over the governed corpus — relative link target exists + heading/anchor exists (frontmatter-slug check covers slugs only, not body links)",
+      "status": "open",
+      "priority": "high",
+      "created_by": "79Ig",
+      "created_at": "2026-08-02T00:33:08.586690Z",
+      "updated_at": "2026-08-02T00:33:08.586690Z"
+    },
     "a89629bc-8e2a-4193-adaa-78efe28381e3": {
       "uuid": "a89629bc-8e2a-4193-adaa-78efe28381e3",
       "display_id": 95,
@@ -5870,8 +5881,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T00:31:01.120309Z",
+    "timestamp": "2026-08-02T00:33:08.586690Z",
     "agent_id": "79Ig",
-    "agent_seq": 631
+    "agent_seq": 632
   }
 }
