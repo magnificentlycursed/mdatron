@@ -3318,6 +3318,23 @@ pattern:
         );
     }
 
+    // RED GATE (#154): a link inside an INLINE code span is an example, not a
+    // live link — the line-based scanner must mask inline `code`, not just
+    // fenced blocks (the lychee-review defect).
+    #[test]
+    fn links_in_inline_code_are_ignored() {
+        let proj = link_project(
+            "link-inline-code",
+            "Use the `[example](no-such.md)` form; real [ok](target.md).\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert!(
+            findings.iter().all(|f| f.code != "MDATRON-E0110"),
+            "a link inside an inline code span is not resolved; got {findings:?}"
+        );
+    }
+
     // RED GATE (#145): opt-in — a route WITHOUT links: true gets no link findings.
     #[test]
     fn links_are_per_route_opt_in() {
@@ -3649,6 +3666,11 @@ pattern:
             "declared codes resolve clean; got {findings:?}"
         );
     }
+
+    // #154 note: unlike links, a code token inside inline code is NOT masked —
+    // adopters routinely format a real citation as `VSDD-W0070` (vsdd's live
+    // orphan is backticked). The orphaned_adopter_code_is_e0113 fixture (which
+    // backticks its token) is the regression guard for that.
 
     #[test]
     fn code_catalog_family_activity_tracks_data() {

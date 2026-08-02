@@ -106,9 +106,14 @@ struct InlineLink<'a> {
 fn inline_links(line: &str) -> Vec<InlineLink<'_>> {
     let detector = regex_lite::Regex::new(r"\[[^\]\n]*\]\(([^)\n]*)\)")
         .expect("engine inline-link detector compiles");
+    // A link inside an inline code span is an EXAMPLE, not a live link (#154).
+    let code_ranges = crate::markup::inline_code_ranges(line);
     let mut out = Vec::new();
     for caps in detector.captures_iter(line) {
         let whole = caps.get(0).expect("match exists");
+        if crate::markup::in_code_span(&code_ranges, whole.start()) {
+            continue;
+        }
         // Image link: the `[` is immediately preceded by `!`.
         if line[..whole.start()].ends_with('!') {
             continue;
