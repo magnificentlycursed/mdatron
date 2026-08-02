@@ -265,13 +265,20 @@ pins:
 - governing: DESIGN.md
   file: src/codes.rs
   sha256: "…"
+- governing: contract.md            # optional: pin ONE section, not the whole file
+  file: plan/build-plan.md
+  section: "## Decomposition"       # the heading whose span is hashed
+  sha256: "…"
 ```
 
 A governed-file change with a stale pin fails (`E0061`) until you re-read the
 governing document and re-pin: `mdatron pin --update` (preview with
-`--dry-run`; bare `mdatron pin` checks). Un-pinning persists as a justified
-`unpinned:` tombstone that stays loud as an informational lint (`L0001`);
-an unjustified one warns (`W0042`).
+`--dry-run`; bare `mdatron pin` checks). Add `section:` to scope a pin to one
+**heading-delimited span** — the hash covers that heading through just before
+the next heading of the same or higher level, so an edit elsewhere in the file
+doesn't trip it; a `section:` whose heading can't be found is loud (`E0063`).
+Un-pinning persists as a justified `unpinned:` tombstone that stays loud as an
+informational lint (`L0001`); an unjustified one warns (`W0042`).
 
 **Vocabulary** (`vocabulary.yaml`) — registry-driven prose scan: unregistered
 bold-introduced coinages (`E0090`, draft-status exempt), letter-plus-number
