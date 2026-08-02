@@ -3142,11 +3142,12 @@
       "uuid": "91a6984a-f739-43b4-8e9c-6edeae81e88f",
       "display_id": 144,
       "title": "review + close the loop on vsdd-cli github feedback (post-0.5.0)",
-      "status": "open",
+      "status": "closed",
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-02T00:30:46.085747Z",
-      "updated_at": "2026-08-02T00:36:38.319912Z",
+      "updated_at": "2026-08-02T00:36:43.966606Z",
+      "closed_at": "2026-08-02T00:36:43.966599Z",
       "labels": [
         "feedback"
       ],
@@ -5971,8 +5972,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T00:36:38.319912Z",
+    "timestamp": "2026-08-02T00:36:43.966606Z",
     "agent_id": "79Ig",
-    "agent_seq": 647
+    "agent_seq": 648
   }
 }
