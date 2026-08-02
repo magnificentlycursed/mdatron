@@ -26,7 +26,8 @@
 /// - `MDATRON-E0030` — `E0039` Route family (was delegate protocol, retired)
 /// - `MDATRON-E0040` — `E0049` Schema load failures
 /// - `MDATRON-E0050` — `E0059` Frontmatter schema validation failures (v0.1.x)
-/// - `MDATRON-E0060` — `E0069` Pin family (content-hash pins + managed-manifest drift)
+/// - `MDATRON-E0060` — `E0069` Pin family (content-hash pins + managed-manifest
+///   drift; section-scoped pins E0063, #146)
 /// - `MDATRON-E0070` — `E0079` IO failures during verify (v0.1.x)
 /// - `MDATRON-E0080` — `E0089` Pipeline orchestration failures (v0.1.x)
 /// - `MDATRON-E0090` — `E0099` Vocabulary family (registry violations)

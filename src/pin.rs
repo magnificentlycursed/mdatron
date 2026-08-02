@@ -47,6 +47,12 @@ struct RawPins {
 struct RawPin {
     governing: String,
     file: String,
+    /// Optional heading (e.g. `"## Decomposition (phase 1c)"`) scoping the pin to
+    /// that section's span rather than the whole file (#146). Absent = whole-file
+    /// (unchanged); omitted from serialization so existing whole-file records
+    /// stay byte-identical.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    section: Option<String>,
     sha256: String,
 }
 
@@ -65,6 +71,8 @@ struct RawUnpinned {
 pub struct Pin {
     pub governing: String,
     pub file: String,
+    /// The section this pin scopes to (a heading spec), or `None` for whole-file.
+    pub section: Option<String>,
     pub sha256: String,
 }
 
@@ -112,6 +120,7 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedPins>, Error> {
         pins.push(Pin {
             governing: entry.governing,
             file: entry.file,
+            section: entry.section,
             sha256: entry.sha256,
         });
     }
@@ -186,7 +195,21 @@ pub fn check(project_root: &Path, pins: &[Pin], findings: &mut Vec<Finding>) {
                     findings.push(target_unopenable(&pins_path, pin));
                     continue;
                 }
-                let actual = sha256_hex(&bytes);
+                let actual = match &pin.section {
+                    None => sha256_hex(&bytes),
+                    // Section pin (#146): hash only the heading-delimited span. A
+                    // non-UTF8 file or a missing heading cannot be located → E0063.
+                    Some(section) => match std::str::from_utf8(&bytes)
+                        .ok()
+                        .and_then(|s| crate::markup::section_span(s, section))
+                    {
+                        Some(span) => sha256_hex(span.as_bytes()),
+                        None => {
+                            findings.push(section_not_found(&pins_path, pin, section));
+                            continue;
+                        }
+                    },
+                };
                 if actual != pin.sha256 {
                     findings.push(Finding {
                         code: "MDATRON-E0061".into(),
@@ -268,7 +291,19 @@ pub fn update(project_root: &Path, dry_run: bool) -> Result<Vec<(String, String,
         handle
             .read_to_end(&mut bytes)
             .map_err(|e| Error::Config(format!("cannot read '{}': {e}", entry.file)))?;
-        let actual = sha256_hex(&bytes);
+        let actual = match &entry.section {
+            None => sha256_hex(&bytes),
+            // Section pin (#146): recompute over the span only. A missing heading
+            // is left untouched (verify reports E0063) — recompute never invents
+            // a hash for a section it cannot locate.
+            Some(section) => match std::str::from_utf8(&bytes)
+                .ok()
+                .and_then(|s| crate::markup::section_span(s, section))
+            {
+                Some(span) => sha256_hex(span.as_bytes()),
+                None => continue,
+            },
+        };
         if actual != entry.sha256 {
             changed.push((entry.file.clone(), entry.sha256.clone(), actual.clone()));
             entry.sha256 = actual;
@@ -315,6 +350,38 @@ fn target_unopenable(pins_path: &Path, pin: &Pin) -> Finding {
             QuotedRegion {
                 label: "governing".into(),
                 content: pin.governing.clone(),
+            },
+        ],
+    }
+}
+
+/// A section pin whose named heading could not be located in the target (missing
+/// heading, or a non-text file) — `MDATRON-E0063` (#146).
+fn section_not_found(pins_path: &Path, pin: &Pin, section: &str) -> Finding {
+    Finding {
+        code: "MDATRON-E0063".into(),
+        severity: Severity::Error,
+        summary: "pin-section-not-found".into(),
+        message: "a section pin names a heading that is not present in its target \
+                  file (a section pinned over nothing cannot be verified); the \
+                  heading is matched by level and text, and a `#` inside a code \
+                  fence is not a heading"
+            .into(),
+        help: Some(
+            "correct the pin's `section` heading to match one in the file, or \
+             remove `section` to pin the whole file"
+                .into(),
+        ),
+        location: Location::whole_file(pins_path),
+        explain_ref: Some("MDATRON-E0063".into()),
+        quoted: vec![
+            QuotedRegion {
+                label: "file".into(),
+                content: pin.file.clone(),
+            },
+            QuotedRegion {
+                label: "section".into(),
+                content: section.to_string(),
             },
         ],
     }

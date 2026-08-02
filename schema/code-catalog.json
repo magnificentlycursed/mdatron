@@ -11,6 +11,7 @@
   "MDATRON-E0060": "managed-manifest-drift",
   "MDATRON-E0061": "pin-stale",
   "MDATRON-E0062": "pin-target-missing",
+  "MDATRON-E0063": "pin-section-not-found",
   "MDATRON-E0070": "project-root-unresolved",
   "MDATRON-E0080": "pipeline-orchestration-failure",
   "MDATRON-E0090": "unregistered-coinage",

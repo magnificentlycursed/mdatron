@@ -1865,6 +1865,96 @@ mod tests {
         assert!(verify(&cfg).unwrap().is_empty(), "re-pin restores clean");
     }
 
+    // A section pin's sha256 is computed over the heading-delimited span, so the
+    // fixture pins the section's own hash.
+    fn section_pinned_project(label: &str, content: &str, section: &str) -> TempProject {
+        let proj = TempProject::new(label);
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(".mdatron/config.yaml", "file_globs:\n  - \"**/*.md\"\n");
+        proj.write("GOVERNING.md", "# governing doc\n");
+        proj.write("governed.md", content);
+        let span = crate::markup::section_span(content, section).expect("test section exists");
+        let sha = crate::init::sha256_hex(span.as_bytes());
+        proj.write(
+            ".mdatron/pins.yaml",
+            &format!(
+                "pins:\n- governing: GOVERNING.md\n  file: governed.md\n  section: {section:?}\n  sha256: \"{sha}\"\n"
+            ),
+        );
+        proj
+    }
+
+    // RED GATE (#146, vsdd#20 P2): a section pin tracks only its heading-delimited
+    // span — an edit INSIDE the section is stale (E0061), an edit OUTSIDE it is
+    // clean (a whole-file pin would trip), and re-pin restores clean.
+    #[test]
+    fn section_pin_detects_in_section_change_only() {
+        let content = "# Governed\n\n## Alpha\n\nalpha content\n\n## Beta\n\nbeta content\n";
+        let proj = section_pinned_project("pin-section", content, "## Alpha");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        assert!(
+            verify(&cfg)
+                .unwrap()
+                .iter()
+                .all(|f| !f.code.starts_with("MDATRON-E006")),
+            "fresh section pin is clean"
+        );
+        // Edit OUTSIDE the pinned section (Beta): a section pin stays clean.
+        proj.write(
+            "governed.md",
+            "# Governed\n\n## Alpha\n\nalpha content\n\n## Beta\n\nbeta CHANGED\n",
+        );
+        assert!(
+            verify(&cfg)
+                .unwrap()
+                .iter()
+                .all(|f| f.code != "MDATRON-E0061"),
+            "an out-of-section edit does not trip a section pin"
+        );
+        // Edit INSIDE the pinned section (Alpha): stale.
+        proj.write(
+            "governed.md",
+            "# Governed\n\n## Alpha\n\nalpha CHANGED\n\n## Beta\n\nbeta CHANGED\n",
+        );
+        let findings = verify(&cfg).unwrap();
+        assert!(
+            findings.iter().any(|f| f.code == "MDATRON-E0061"),
+            "an in-section edit trips the section pin; got {findings:?}"
+        );
+        // Re-pin (the single-command recompute) restores clean over the span.
+        crate::pin::update(&proj.0, false).unwrap();
+        assert!(
+            verify(&cfg)
+                .unwrap()
+                .iter()
+                .all(|f| f.code != "MDATRON-E0061"),
+            "re-pin restores clean"
+        );
+    }
+
+    // RED GATE (#146): a section pin whose named heading is gone (renamed / mistyped)
+    // is E0063 — the pinned section cannot be located, loud rather than silent.
+    #[test]
+    fn section_pin_missing_heading_is_e0063() {
+        let content = "# Governed\n\n## Alpha\n\nalpha\n";
+        let proj = section_pinned_project("pin-section-missing", content, "## Alpha");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        assert!(verify(&cfg)
+            .unwrap()
+            .iter()
+            .all(|f| f.code != "MDATRON-E0063"));
+        // Rename the pinned heading: its section can no longer be located.
+        proj.write("governed.md", "# Governed\n\n## Renamed\n\nalpha\n");
+        let findings = verify(&cfg).unwrap();
+        assert!(
+            findings.iter().any(|f| f.code == "MDATRON-E0063"),
+            "a renamed/missing pinned heading is E0063; got {findings:?}"
+        );
+    }
+
     // RED GATE (#84): a pin whose target is gone is E0062, not silence.
     #[test]
     fn missing_pin_target_is_e0062() {

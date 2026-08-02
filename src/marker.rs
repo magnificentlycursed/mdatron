@@ -31,7 +31,7 @@ use std::path::Path;
 
 use crate::confine::{confine_lexically, open_confined, LexicalViolation, OpenViolation};
 use crate::diagnostic::{Finding, Location, QuotedRegion, Severity};
-use crate::markup::non_fenced_lines;
+use crate::markup::{atx_heading, non_fenced_lines};
 use crate::route::{ElementClass, MarkerRule};
 
 /// Scan one opted-in file's body for marker-line references and resolve each
@@ -201,21 +201,6 @@ fn extract_members(body: &str, element: ElementClass, section: Option<&str>) -> 
     members
 }
 
-/// An ATX heading's `(level, text)` — like [`crate::markup::atx_heading_text`]
-/// but also exposing the level, which marker section-gating needs.
-fn atx_heading(line: &str) -> Option<(usize, &str)> {
-    let t = line.trim_start();
-    let level = t.chars().take_while(|&c| c == '#').count();
-    if level == 0 || level > 6 {
-        return None;
-    }
-    let rest = &t[level..];
-    if !rest.is_empty() && !rest.starts_with([' ', '\t']) {
-        return None;
-    }
-    Some((level, rest.trim().trim_end_matches('#').trim_end()))
-}
-
 /// The leading `**bold**` name of a `- ` (or `*`/`+`) list item, or `None`.
 fn list_item_bold_name(line: &str) -> Option<&str> {
     let t = line.trim_start();
@@ -290,17 +275,6 @@ mod tests {
         assert_eq!(normalize_name("Slice 1 — self gov."), "Slice 1 — self gov");
         assert_eq!(normalize_name("Slice 1 — self gov"), "Slice 1 — self gov");
         assert_eq!(normalize_name("  Name.  "), "Name");
-    }
-
-    #[test]
-    fn atx_heading_reports_level_and_text() {
-        assert_eq!(
-            atx_heading("## Decomposition (phase 1c)"),
-            Some((2, "Decomposition (phase 1c)"))
-        );
-        assert_eq!(atx_heading("# Title"), Some((1, "Title")));
-        assert_eq!(atx_heading("- **not a heading**"), None);
-        assert_eq!(atx_heading("#nospace"), None);
     }
 
     #[test]
