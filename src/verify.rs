@@ -2138,6 +2138,44 @@ mod tests {
         assert_eq!(f.location.line, 7, "body line 2 = file line 7 (5 fm lines)");
     }
 
+    // RED GATE (#158, vsdd GH#28 Gap 2): a label cluster / register anti-pattern
+    // QUOTED in an inline code span is a citation, not a use — the vocab prose
+    // checks (E0091/E0093) skip inline code, like the link check. The bare token
+    // on the same line still fires, proving the mask is targeted.
+    #[test]
+    fn vocab_prose_checks_skip_inline_code_spans() {
+        let proj = vocab_project(
+            "vocab-inline-e0091",
+            "label_schemes:\n  allow:\n  - \"^MDATRON-[ELW][0-9]{4}$\"\n",
+            "Cited in code `SEC-F3` is fine; but a bare SEC-F4 is invented.\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        let e0091: Vec<_> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0091")
+            .collect();
+        assert_eq!(
+            e0091.len(),
+            1,
+            "only the bare cluster fires; got {findings:?}"
+        );
+        assert!(e0091[0].quoted.iter().any(|q| q.content == "SEC-F4"));
+
+        let proj2 = vocab_project(
+            "vocab-inline-e0093",
+            "anti_patterns:\n- pattern: \"very unique\"\n  register: hedged-absolute\n",
+            "Quoting `very unique` verbatim is a citation; saying very unique is not.\n",
+        );
+        let cfg2 = VerifyConfig::from_project(&proj2.0).unwrap();
+        let f2 = verify(&cfg2).unwrap();
+        assert_eq!(
+            codes_of(&f2, "MDATRON-E0093"),
+            1,
+            "only the bare anti-pattern fires; got {f2:?}"
+        );
+    }
+
     // #97: vocabulary_globs scopes the register. A cluster in an in-scope file
     // fires E0091; the same shape in a file that is walked but OUTSIDE
     // vocabulary_globs stays silent — the mechanism that keeps a historical

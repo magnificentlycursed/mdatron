@@ -1,19 +1,23 @@
-//! Shared markdown-scanning primitives for the body-reference check families.
+//! Shared markdown-scanning primitives for the body-scanning check families.
 //!
-//! The reference-resolution families — citation (#86), link (#145), and
-//! marker-line references (#147) — are instances of one pattern: scan a
-//! governed file's prose body for tokens of a declared shape and resolve each
-//! against an existing target. This module holds the mechanical primitives they
-//! share, so the fenced-code discipline and the GitHub heading-slug algorithm
-//! are defined once rather than copied per family:
+//! Several families scan a governed file's prose body for tokens of a declared
+//! shape — citation (#86), link (#145), marker-line references (#147), pin
+//! sections (#146), the code-catalog (#148), and the vocabulary register/coinage
+//! checks. This module holds the mechanical primitives they share, so the
+//! fenced-code discipline, the GitHub heading-slug algorithm, and the inline-code
+//! masking are defined once rather than copied per family:
 //!
-//! - [`non_fenced_lines`] — iterate the body's live (non-code-fence) lines with
-//!   their byte offsets, so a link/marker *example* inside a ``` block is never
-//!   resolved and each finding still lands on the right line.
-//! - [`heading_slugs`] — the set of a body's heading anchors, for resolving a
-//!   `#fragment` (link) or a `Provenance: <name>` reference (marker) against the
-//!   headings a document actually declares.
-//! - [`slugify`] — the GitHub heading-to-anchor slug algorithm.
+//! - [`non_fenced_lines`] — the body's live (non-code-fence) lines with byte
+//!   offsets, so a token inside a ``` block is an example, not a live reference.
+//! - [`fence_marker`] — recognize a fenced-code toggle line.
+//! - [`atx_heading`] / [`atx_heading_text`] — parse an ATX heading's level+text.
+//! - [`section_span`] — the byte span of one heading-delimited section (pin #146).
+//! - [`heading_slugs`] / [`slugify`] — a body's heading anchors, and the GitHub
+//!   heading-to-anchor slug algorithm, for resolving `#fragment` / by-name refs.
+//! - [`inline_code_ranges`] / [`body_inline_code_ranges`] / [`in_code_span`] —
+//!   mask inline `` `code` `` spans so a link (#154) or a vocabulary term (#158)
+//!   shown in backticks is not treated as a live use. (A code-catalog citation
+//!   is the deliberate exception — a backticked code stays a real reference.)
 //!
 //! `pub(crate)`: engine-internal, shared across families, never a consumer
 //! contract (mdatron is binary-first; the lib carries no API-stability promise).
@@ -218,6 +222,24 @@ pub(crate) fn in_code_span(ranges: &[(usize, usize)], pos: usize) -> bool {
     ranges.iter().any(|&(s, e)| pos >= s && pos < e)
 }
 
+/// Inline code span ranges across a whole multi-line `body`, in `body` byte
+/// coordinates — the body-wide companion to [`inline_code_ranges`], for a
+/// scanner that matches over the whole body at once (the vocabulary family's
+/// `find_iter`, #158) rather than line by line. A code span does not cross a
+/// line, so each line's spans are computed and shifted by its start offset.
+pub(crate) fn body_inline_code_ranges(body: &str) -> Vec<(usize, usize)> {
+    let mut ranges = Vec::new();
+    let mut cursor = 0usize;
+    for raw_line in body.split_inclusive('\n') {
+        let line = raw_line.trim_end_matches(['\n', '\r']);
+        for (s, e) in inline_code_ranges(line) {
+            ranges.push((cursor + s, cursor + e));
+        }
+        cursor += raw_line.len();
+    }
+    ranges
+}
+
 /// GitHub's heading-to-anchor slug: lowercase, drop every character that is not
 /// alphanumeric / `_` / `-`, and turn each space into a hyphen. (Duplicate
 /// headings' `-1`/`-2` disambiguation is deferred.)
@@ -334,6 +356,24 @@ mod tests {
         assert!(
             !in_code_span(&r, 9),
             "the `c` after the closing run is outside"
+        );
+    }
+
+    #[test]
+    fn body_inline_code_ranges_are_body_coordinates_across_lines() {
+        let body = "a `x` b\ncd `y` e\n";
+        let r = body_inline_code_ranges(body);
+        assert!(
+            in_code_span(&r, body.find("`x`").unwrap() + 1),
+            "inside `x` on line 1"
+        );
+        assert!(
+            in_code_span(&r, body.find("`y`").unwrap() + 1),
+            "inside `y` on line 2"
+        );
+        assert!(
+            !in_code_span(&r, body.find('b').unwrap()),
+            "plain `b` is outside"
         );
     }
 

@@ -259,9 +259,21 @@ pub fn check_file(
         }
     }
 
+    // A term backticked in prose is a CITATION, not a use (a historical commit
+    // subject, or naming a deprecated term as `chassis` to reference it) — the
+    // register/coinage prose checks skip inline code spans, reusing the same
+    // masking the link check applies (#158, vsdd GH#28 Gap 2). Computed once for
+    // both E0091 and E0093. (A code token in a code-catalog citation stays a real
+    // reference — see codecat's deliberate non-masking — but a vocabulary term
+    // in code is a reference, not a use, exactly like a link.)
+    let code_ranges = crate::markup::body_inline_code_ranges(body);
+
     // ── invented label schemes (label_schemes section supplied) ───────────
     if let Some(allow) = &vocab.label_allow {
         for m in vocab.cluster.find_iter(body) {
+            if crate::markup::in_code_span(&code_ranges, m.start()) {
+                continue;
+            }
             let cluster = m.as_str();
             if !allow.iter().any(|a| a.is_match(cluster)) {
                 findings.push(prose_finding(
@@ -283,6 +295,9 @@ pub fn check_file(
     // ── register anti-patterns ─────────────────────────────────────────────
     for (pattern, register) in &vocab.anti {
         for m in pattern.find_iter(body) {
+            if crate::markup::in_code_span(&code_ranges, m.start()) {
+                continue;
+            }
             findings.push(prose_finding(
                 path,
                 content,
