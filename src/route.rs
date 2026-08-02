@@ -61,6 +61,13 @@ struct RawEntry {
     /// checking is an explicit choice (sibling of `citations`/`links`).
     #[serde(default)]
     marker_rules: Vec<RawMarkerRule>,
+    /// Section-structural rules (#34, vsdd GH#34): `count`/`disjoint` assertions
+    /// over the claimed files' body sections, scoped by this route's `files`
+    /// glob. Empty by default (explicit opt-in, sibling of `marker_rules`). The
+    /// route-attached form of #157 — a file-specific structural invariant lives
+    /// on the route that claims those files, so it cannot misfire corpus-wide.
+    #[serde(default)]
+    section_rules: Vec<crate::section::RawRule>,
 }
 
 /// One marker-line reference rule as declared in `routes.yaml` (#147).
@@ -110,6 +117,7 @@ pub struct Route {
     pub citations: bool,
     pub links: bool,
     pub marker_rules: Vec<MarkerRule>,
+    pub section_rules: Vec<crate::section::Rule>,
 }
 
 /// A compiled marker-line reference rule (#147).
@@ -257,6 +265,14 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
             });
         }
 
+        // Section-structural rules (#34): validated + compiled here so they are
+        // scoped by this route's `files` glob (mandatory scope, inherited
+        // confinement) — the route-attached sibling of `marker_rules`.
+        let mut section_rules = Vec::with_capacity(entry.section_rules.len());
+        for rule in entry.section_rules {
+            section_rules.push(crate::section::compile_rule(rule)?);
+        }
+
         routes.push(Route {
             files,
             governed_by: entry.governed_by,
@@ -264,6 +280,7 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
             citations: entry.citations,
             links: entry.links,
             marker_rules,
+            section_rules,
         });
     }
     Ok(Some(LoadedRoutes { routes, findings }))
@@ -368,6 +385,17 @@ pub fn marker_rules_for<'a>(routes: &'a [Route], rel: &Path) -> Vec<&'a MarkerRu
         .iter()
         .filter(|r| r.files.matches_path(rel))
         .flat_map(|r| r.marker_rules.iter())
+        .collect()
+}
+
+/// The section-structural rules active for `rel` — every rule on every route
+/// claiming it (#34). Scope is the route's `files` glob, so a rule cannot fire
+/// on a file no route attaches it to. Empty means the family does no work here.
+pub fn section_rules_for<'a>(routes: &'a [Route], rel: &Path) -> Vec<&'a crate::section::Rule> {
+    routes
+        .iter()
+        .filter(|r| r.files.matches_path(rel))
+        .flat_map(|r| r.section_rules.iter())
         .collect()
 }
 

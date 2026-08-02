@@ -7,7 +7,7 @@
 ## What this means
 
 A section-structural rule's **count** predicate failed. A count rule in
-`.mdatron/section-rules.yaml` names a `section` (a heading), an `element`
+a route's `section_rules:` block (#34) names a `section` (a heading), an `element`
 (a heading level, e.g. `h3`), a `match` (a regex the heading line must match),
 and a `count` predicate (`>= 1`, `== 1`, `< 3`, …); the engine counts the
 `element`-level headings inside that section's span (from its heading through

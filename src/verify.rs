@@ -421,11 +421,6 @@ fn run(
         Ok(c) => c,
         Err(e) => return Err(VerifyError::Config(e.to_string())),
     };
-    let section_rules = match crate::section::load(&project_root) {
-        Ok(s) => s,
-        Err(e) => return Err(VerifyError::Config(e.to_string())),
-    };
-
     // Capture data-presence per family BEFORE the Options are consumed (#90);
     // the tri-state families object (#107) is built after the walk, since
     // vocabulary's `inert` state needs the scope-hit count.
@@ -435,7 +430,10 @@ fn run(
     let pin_supplied = pin_data.is_some();
     let vocab_supplied = vocab.is_some();
     let code_catalog_supplied = catalogs.is_some();
-    let section_supplied = section_rules.is_some();
+    let section_supplied = routes
+        .as_ref()
+        .map(|r| r.routes.iter().any(|x| !x.section_rules.is_empty()))
+        .unwrap_or(false);
     let citation_supplied = routes
         .as_ref()
         .map(|r| r.routes.iter().any(|x| x.citations))
@@ -482,7 +480,6 @@ fn run(
         }
         None => None,
     };
-    let section_rules = section_rules.map(|loaded| loaded.rules);
     // Collect the governed files once (absolute + root-relative paths). Two
     // `file_globs` can overlap on the same file; it is deduped by root-relative
     // path (#109) so the walk verifies each file exactly once — a doubled walk
@@ -728,11 +725,13 @@ fn run(
         let mut cite_enabled = false;
         let mut link_enabled = false;
         let mut marker_rules: Vec<&crate::route::MarkerRule> = Vec::new();
+        let mut section_rules: Vec<&crate::section::Rule> = Vec::new();
         if let Some(routes) = &routes {
             crate::route::check_file(routes, rel, path, &mut findings);
             cite_enabled = crate::route::citations_enabled(routes, rel);
             link_enabled = crate::route::links_enabled(routes, rel);
             marker_rules = crate::route::marker_rules_for(routes, rel);
+            section_rules = crate::route::section_rules_for(routes, rel);
         }
         // Vocabulary scope (#97): empty globs = every walked file.
         let vocab_enabled =
@@ -755,7 +754,7 @@ fn run(
             link_enabled,
             &marker_rules,
             catalogs.as_deref().unwrap_or(&[]),
-            section_rules.as_deref().unwrap_or(&[]),
+            &section_rules,
             vocab.as_ref().filter(|_| vocab_enabled),
             &schemas,
             &patterns,
@@ -961,9 +960,9 @@ fn run(
             FamilyActivity::inactive("no .mdatron/code-catalogs.yaml")
         },
         section: if section_supplied {
-            FamilyActivity::active(".mdatron/section-rules.yaml supplied")
+            FamilyActivity::active("a route supplies section_rules")
         } else {
-            FamilyActivity::inactive("no .mdatron/section-rules.yaml")
+            FamilyActivity::inactive("no route supplies section_rules")
         },
     };
 
@@ -1293,7 +1292,7 @@ fn verify_file(
     link_enabled: bool,
     marker_rules: &[&crate::route::MarkerRule],
     code_catalogs: &[crate::codecat::CodeCatalog],
-    section_rules: &[crate::section::Rule],
+    section_rules: &[&crate::section::Rule],
     vocab: Option<&crate::vocab::LoadedVocab>,
     schemas: &BTreeMap<String, Schema>,
     patterns: &[PatternFile],
@@ -4060,18 +4059,24 @@ pattern:
     // ids disjoint between `## Requirements` (H3 headings) and `## Completed
     // phases` (bullet leads). Core logic is unit-tested in section.rs.
 
-    const SECTION_RULES: &str = r###"rules:
-  - section: "## Requirements"
-    element: h3
-    match: '^### Phase \d+: .*\((parallel|sequential)\)$'
-    count: ">= 1"
-  - disjoint:
-      - section: "## Requirements"
-        id_from: h3-heading
-        id_pattern: 'Slice (\d+)'
-      - section: "## Completed phases"
-        id_from: bullet-lead
-        id_pattern: 'Slice (\d+)'
+    // Route-attached (#34): the section rules live on the route that claims
+    // `plan/**/*.md`, scoped by its `files` glob — not a standalone corpus-wide
+    // file. This is the vsdd GH#34 fix in situ.
+    const SECTION_ROUTES: &str = r###"routes:
+- files: "plan/**/*.md"
+  governed_by: GOVERNING.md
+  section_rules:
+    - section: "## Requirements"
+      element: h3
+      match: '^### Phase \d+: .*\((parallel|sequential)\)$'
+      count: ">= 1"
+    - disjoint:
+        - section: "## Requirements"
+          id_from: h3-heading
+          id_pattern: 'Slice (\d+)'
+        - section: "## Completed phases"
+          id_from: bullet-lead
+          id_pattern: 'Slice (\d+)'
 "###;
 
     fn section_project(label: &str, plan: &str) -> TempProject {
@@ -4084,7 +4089,8 @@ pattern:
             ".mdatron/config.yaml",
             "file_globs:\n  - \"plan/**/*.md\"\n",
         );
-        proj.write(".mdatron/section-rules.yaml", SECTION_RULES);
+        proj.write("GOVERNING.md", "# gov\n");
+        proj.write(".mdatron/routes.yaml", SECTION_ROUTES);
         proj.write("plan/build-plan.md", plan);
         proj
     }
@@ -4133,6 +4139,42 @@ pattern:
         assert!(
             findings.iter().any(|f| f.code == "MDATRON-E0121"),
             "Slice 2 open AND complete is not disjoint; got {findings:?}"
+        );
+    }
+
+    // RED GATE (#34): a section rule is scoped by ITS ROUTE'S `files` glob — it
+    // must NOT fire on a walked file a *different* route claims. This is the vsdd
+    // GH#34 repro: an unrelated `## Requirements` elsewhere in the corpus fired
+    // E0120 on 80 files under the old standalone (corpus-wide) form; route-
+    // attachment scopes the rule so it cannot.
+    #[test]
+    fn section_rules_do_not_fire_outside_their_route_scope() {
+        let proj = TempProject::new("section-scope");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(".mdatron/config.yaml", "file_globs:\n  - \"**/*.md\"\n");
+        proj.write("GOVERNING.md", "# gov\n");
+        // Route A claims plan/** and carries the section rules; route B claims
+        // notes/** with NONE — so a `## Requirements` under notes/ is out of scope.
+        proj.write(
+            ".mdatron/routes.yaml",
+            &format!("{SECTION_ROUTES}- files: \"notes/**/*.md\"\n  governed_by: GOVERNING.md\n"),
+        );
+        // An unrelated file with a `## Requirements` heading and zero open phases:
+        // corpus-wide it would fire E0120; scoped to plan/** it must stay silent.
+        proj.write(
+            "notes/other.md",
+            "# Notes\n\n## Requirements\n\nnothing open here.\n",
+        );
+        proj.write("plan/build-plan.md", CLEAN_PLAN);
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        assert!(
+            findings
+                .iter()
+                .all(|f| f.code != "MDATRON-E0120" && f.code != "MDATRON-E0121"),
+            "the section rule is scoped to plan/**; notes/other.md must not misfire; got {findings:?}"
         );
     }
 
