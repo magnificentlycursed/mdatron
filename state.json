@@ -4860,11 +4860,12 @@
       "uuid": "cd29ff68-de48-4a6e-98c3-a03b0a4a6dca",
       "display_id": 59,
       "title": "ops: kickoff container pipeline defects — toolchain-less image, unreachable gitdir, kickoff.env parsing",
-      "status": "open",
+      "status": "closed",
       "priority": "high",
       "created_by": "IMWa",
       "created_at": "2026-07-20T19:55:26.424365Z",
-      "updated_at": "2026-08-02T01:03:04.019979Z",
+      "updated_at": "2026-08-02T01:03:10.148480Z",
+      "closed_at": "2026-08-02T01:03:10.148473Z",
       "labels": [
         "process"
       ],
@@ -6065,8 +6066,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T01:03:04.019979Z",
+    "timestamp": "2026-08-02T01:03:10.148480Z",
     "agent_id": "79Ig",
-    "agent_seq": 673
+    "agent_seq": 674
   }
 }
