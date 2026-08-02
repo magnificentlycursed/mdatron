@@ -3398,11 +3398,12 @@
       "display_id": 154,
       "title": "bug(#145): link family resolves links inside inline code spans (false positive) — lychee review",
       "description": "The lychee/markdownlint reference-arch review (knowledge page lychee-link-family-audit) found a correctness defect in the shipped link family: markup::non_fenced_lines skips FENCED code blocks but not inline code spans (nor 4-space indented code). A line like 'use `[x](y)`' has [x](y) matched and resolved -> false-positive E0110/E0111. The module doc lists inline-code-span links as 'deferred' but the code actively mis-resolves them. Fix: track inline code spans in the scanner, or adopt pulldown-cmark. lychee excludes these via pulldown Event::Code.",
-      "status": "open",
+      "status": "closed",
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-08-02T05:31:45.348277Z",
-      "updated_at": "2026-08-02T06:31:33.221283Z",
+      "updated_at": "2026-08-02T06:31:42.285902Z",
+      "closed_at": "2026-08-02T06:31:42.285891Z",
       "labels": [
         "bug"
       ],
@@ -6342,8 +6343,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T06:31:33.221283Z",
+    "timestamp": "2026-08-02T06:31:42.285902Z",
     "agent_id": "79Ig",
-    "agent_seq": 725
+    "agent_seq": 726
   }
 }
