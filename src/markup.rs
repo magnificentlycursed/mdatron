@@ -116,11 +116,14 @@ pub(crate) fn heading_slugs(body: &str) -> HashSet<String> {
 /// over the engine-authored pattern (not an adopter-supplied one), so it carries
 /// no ReDoS surface (DESIGN L17).
 fn insert_html_anchors(html: &str, slugs: &mut HashSet<String>) {
+    // HTML comments are not rendered and carry no anchors — strip them first so
+    // an `id=`/`name=` inside `<!-- … -->` does not register a phantom target.
+    let scanned = strip_html_comments(html);
     // A `name=`/`id=` attribute (boundary-anchored so `grid=` does not match)
     // with a single- or double-quoted value.
     let re = regex_lite::Regex::new(r#"(?:^|[\s"'])(?:name|id)\s*=\s*["']([^"']+)["']"#)
         .expect("engine html-anchor detector compiles");
-    for caps in re.captures_iter(html) {
+    for caps in re.captures_iter(&scanned) {
         let id = caps.get(1).expect("id group").as_str();
         slugs.insert(id.to_string());
         let slug = slugify(id);
@@ -128,6 +131,28 @@ fn insert_html_anchors(html: &str, slugs: &mut HashSet<String>) {
             slugs.insert(slug);
         }
     }
+}
+
+/// Remove `<!-- … -->` comment spans from an HTML fragment (linear scan). An
+/// unterminated comment drops the remainder, matching how a renderer treats it.
+fn strip_html_comments(html: &str) -> std::borrow::Cow<'_, str> {
+    if !html.contains("<!--") {
+        return std::borrow::Cow::Borrowed(html);
+    }
+    let mut out = String::with_capacity(html.len());
+    let mut rest = html;
+    while let Some(start) = rest.find("<!--") {
+        out.push_str(&rest[..start]);
+        match rest[start + 4..].find("-->") {
+            Some(end) => rest = &rest[start + 4 + end + 3..],
+            None => {
+                rest = "";
+                break;
+            }
+        }
+    }
+    out.push_str(rest);
+    std::borrow::Cow::Owned(out)
 }
 
 /// A link or image destination found by [`body_links`], with the byte offset of
@@ -478,6 +503,22 @@ mod tests {
         let slugs = heading_slugs("Setext H1\n=========\n\n<a name=\"custom-spot\"></a>\n");
         assert!(slugs.contains("setext-h1"), "setext underline is a heading");
         assert!(slugs.contains("custom-spot"), "html anchor is a target");
+    }
+
+    #[test]
+    fn heading_slugs_ignores_ids_inside_html_comments() {
+        // A comment is not rendered, so an `id=` inside `<!-- … -->` is not an
+        // anchor (else a dead `#ghost` link would silently resolve).
+        let slugs = heading_slugs(
+            "# Real\n\n<!-- id=\"ghost\" name=\"phantom\" -->\n\n<a id=\"live\"></a>\n",
+        );
+        assert!(slugs.contains("real"));
+        assert!(slugs.contains("live"), "a real anchor still registers");
+        assert!(!slugs.contains("ghost"), "commented id is not an anchor");
+        assert!(
+            !slugs.contains("phantom"),
+            "commented name is not an anchor"
+        );
     }
 
     #[test]
