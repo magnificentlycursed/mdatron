@@ -1,6 +1,6 @@
 {
   "next_display_id": 160,
-  "next_comment_id": 382,
+  "next_comment_id": 383,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -5445,11 +5445,20 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-02T05:46:29.324902Z",
-      "updated_at": "2026-08-02T07:50:14.485943Z",
+      "updated_at": "2026-08-02T08:03:00.673949Z",
       "labels": [
         "enhancement"
       ],
       "comments": {
+        "3ffd6bf4-72c1-4aa0-992c-6217f840f202": {
+          "display_id": 382,
+          "author": "79Ig",
+          "content": "MERGED. Section-structural family (E0120/E0121) shipped per vsdd-cli#29; #149 body-content leg complete. Delivered vsdd GH#20 P5.",
+          "created_at": "2026-08-02T08:03:00.643361Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABApoR8LSrRqsIhkB1yLTsUL6+kJ79J8yIzPoumDBouxJzbB3eS2YHSbJAkswagREWEa8LsRqxYwDsxphkm9v6RBg=="
+        },
         "85ee3d4a-2748-4b93-a3aa-2ad429282dc8": {
           "display_id": 380,
           "author": "79Ig",
@@ -6373,8 +6382,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T08:02:53.812773Z",
+    "timestamp": "2026-08-02T08:03:00.673949Z",
     "agent_id": "79Ig",
-    "agent_seq": 734
+    "agent_seq": 735
   }
 }
