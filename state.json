@@ -1,6 +1,6 @@
 {
   "next_display_id": 154,
-  "next_comment_id": 373,
+  "next_comment_id": 374,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -5827,10 +5827,21 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-02T00:34:07.708523Z",
-      "updated_at": "2026-08-02T00:34:12.259295Z",
+      "updated_at": "2026-08-02T05:26:42.682845Z",
       "labels": [
         "enhancement"
-      ]
+      ],
+      "comments": {
+        "65939c3f-0f1f-42ce-af18-301698587a13": {
+          "display_id": 373,
+          "author": "79Ig",
+          "content": "Committed a72f3c3: adopter-namespace code-catalog integrity (E0113). .mdatron/code-catalogs.yaml {namespace, comprehensive, codes}; broad detector (prefix + digit-bearing run) so mistyped classes are caught not skipped; comprehensive catalog = hard gate. Confirmed by vsdd-cli#27 (SO-ratified: comprehensive + error). New code_catalog families member folded into unpublished 3.0.0. Built on shared markup spine (4th reference-resolution check). 426 tests green, gauntlet clean, dogfood on vsdd's real VSDD-W0070 orphan confirmed. | Files: 13 files changed, 483 insertions(+), 10 deletions(-)",
+          "created_at": "2026-08-02T05:26:42.657420Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAHViqgHnpGGPo5pcg38etOTz06p/GvPBkPfOUfbol1z5SUv62txQ+LuFmTtSXlRTrTpd9F5pqz8rUWGewIWDLCA=="
+        }
+      }
     },
     "fa076a04-5085-46c5-a300-eb89b8bb1015": {
       "uuid": "fa076a04-5085-46c5-a300-eb89b8bb1015",
@@ -6192,8 +6203,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T04:52:15.302403Z",
+    "timestamp": "2026-08-02T05:26:42.682845Z",
     "agent_id": "79Ig",
-    "agent_seq": 702
+    "agent_seq": 703
   }
 }
