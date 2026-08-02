@@ -49,6 +49,12 @@ struct RawEntry {
     /// Default off, so historical corpora stay archival.
     #[serde(default)]
     citations: bool,
+    /// Opt this route's files into body-link verification (#145): markdown
+    /// `[text](target#anchor)` links in their prose are resolved — the relative
+    /// target must exist within the confined tree, and any `#anchor` must match a
+    /// heading. Default off, so link-checking is an explicit choice.
+    #[serde(default)]
+    links: bool,
 }
 
 /// The loaded route table: the active entries plus the per-entry findings
@@ -64,6 +70,7 @@ pub struct Route {
     pub governed_by: String,
     pub naming: Option<regex_lite::Regex>,
     pub citations: bool,
+    pub links: bool,
 }
 
 /// Load, validate, and compile `.mdatron/routes.yaml`.
@@ -188,6 +195,7 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
             governed_by: entry.governed_by,
             naming,
             citations: entry.citations,
+            links: entry.links,
         });
     }
     Ok(Some(LoadedRoutes { routes, findings }))
@@ -278,6 +286,11 @@ pub fn citations_enabled(routes: &[Route], rel: &Path) -> bool {
     routes
         .iter()
         .any(|r| r.citations && r.files.matches_path(rel))
+}
+
+/// True when any route claiming `rel` opts it into body-link verification (#145).
+pub fn links_enabled(routes: &[Route], rel: &Path) -> bool {
+    routes.iter().any(|r| r.links && r.files.matches_path(rel))
 }
 
 fn confinement_finding(

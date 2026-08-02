@@ -430,6 +430,10 @@ fn run(
         .as_ref()
         .map(|r| r.routes.iter().any(|x| x.citations))
         .unwrap_or(false);
+    let link_supplied = routes
+        .as_ref()
+        .map(|r| r.routes.iter().any(|x| x.links))
+        .unwrap_or(false);
 
     let mut findings: Vec<Finding> = Vec::new();
     // Keep the pins for after the scope filter: a pin finding locates at
@@ -691,9 +695,11 @@ fn run(
             }
         }
         let mut cite_enabled = false;
+        let mut link_enabled = false;
         if let Some(routes) = &routes {
             crate::route::check_file(routes, rel, path, &mut findings);
             cite_enabled = crate::route::citations_enabled(routes, rel);
+            link_enabled = crate::route::links_enabled(routes, rel);
         }
         // Vocabulary scope (#97): empty globs = every walked file.
         let vocab_enabled =
@@ -713,6 +719,7 @@ fn run(
             &project_root,
             &require,
             cite_enabled,
+            link_enabled,
             vocab.as_ref().filter(|_| vocab_enabled),
             &schemas,
             &patterns,
@@ -902,6 +909,11 @@ fn run(
         } else {
             FamilyActivity::inactive("no route opts in with citations: true")
         },
+        link: if link_supplied {
+            FamilyActivity::active("a route opts in with links: true")
+        } else {
+            FamilyActivity::inactive("no route opts in with links: true")
+        },
     };
 
     // DEF4 (#131 SO ruling): every diagnostic path is project-root-relative, so
@@ -1046,6 +1058,7 @@ fn verify_file(
     project_root: &Path,
     require_frontmatter: &[glob::Pattern],
     cite_enabled: bool,
+    link_enabled: bool,
     vocab: Option<&crate::vocab::LoadedVocab>,
     schemas: &BTreeMap<String, Schema>,
     patterns: &[PatternFile],
@@ -1096,6 +1109,9 @@ fn verify_file(
             if cite_enabled {
                 crate::cite::check_file(project_root, path, content, 0, findings);
             }
+            if link_enabled {
+                crate::link::check_file(project_root, path, content, 0, findings);
+            }
             let rel = path.strip_prefix(project_root).unwrap_or(path);
             if require_frontmatter.iter().any(|p| p.matches_path(rel)) {
                 findings.push(Finding {
@@ -1142,6 +1158,10 @@ fn verify_file(
     if cite_enabled {
         let body_offset = content.len() - body_len;
         crate::cite::check_file(project_root, path, content, body_offset, findings);
+    }
+    if link_enabled {
+        let body_offset = content.len() - body_len;
+        crate::link::check_file(project_root, path, content, body_offset, findings);
     }
 
     let frontmatter_internal = crate::dsl::index::yaml_to_value(&frontmatter_value);
@@ -2992,6 +3012,205 @@ pattern:
             findings.iter().all(|f| !f.code.starts_with("MDATRON-E010")),
             "no opt-in, no citation findings; got {findings:?}"
         );
+    }
+
+    // ── link family (#145): body-link / anchor resolution ──────────────────
+    //
+    // Links resolve DOCUMENT-relative (CommonMark/GitHub semantics): a target
+    // is relative to the containing file's directory, not the project root. So
+    // a one-level `../` that stays inside the tree is legitimate, and only an
+    // escape ABOVE the root is refused — the divergence from the citation
+    // family's categorical `..`-refusal is deliberate (a link checker that
+    // flagged every `../README.md` would be unusable in `docs/**`).
+
+    fn link_project(label: &str, body: &str) -> TempProject {
+        let proj = TempProject::new(label);
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write("GOVERNING.md", "# gov\n");
+        proj.write(
+            ".mdatron/routes.yaml",
+            "routes:\n- files: \"docs/**/*.md\"\n  governed_by: GOVERNING.md\n  links: true\n",
+        );
+        // A sibling target carrying one heading -> slug "real-heading".
+        proj.write("docs/target.md", "# Real Heading\n\nbody\n");
+        proj.write(
+            "docs/2026-07-27-doc.md",
+            &format!("---\nschema_class: phase-primer\nphase: phase-1a\nrelevant_domains: [se]\n---\n{body}"),
+        );
+        proj
+    }
+
+    fn link_families(proj: &TempProject) -> crate::output::Families {
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let (_f, fam, _v, _n) = run(&cfg, None, None).unwrap();
+        fam
+    }
+
+    // RED GATE (#145): a body link to a missing in-tree file is E0110.
+    #[test]
+    fn dead_link_target_rejected() {
+        let proj = link_project("link-dead", "See [the missing doc](no-such.md).\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        let f = findings
+            .iter()
+            .find(|f| f.code == "MDATRON-E0110")
+            .unwrap_or_else(|| panic!("expected E0110; got {findings:?}"));
+        assert!(f.quoted.iter().any(|q| q.content.contains("no-such.md")));
+    }
+
+    // RED GATE (#145): a link to an existing file whose fragment matches no
+    // heading is E0111; the same file with a real heading fragment is clean.
+    #[test]
+    fn dead_anchor_rejected() {
+        let proj = link_project(
+            "link-anchor",
+            "Good: [x](target.md#real-heading). Bad: [y](target.md#ghost).\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert_eq!(
+            findings
+                .iter()
+                .filter(|f| f.code == "MDATRON-E0111")
+                .count(),
+            1,
+            "exactly the ghost anchor flags; got {findings:?}"
+        );
+        assert!(findings.iter().all(|f| f.code != "MDATRON-E0110"));
+    }
+
+    // RED GATE (#145): a same-document anchor resolves against this file's own
+    // headings; a missing one is E0111 and quotes the fragment.
+    #[test]
+    fn same_doc_anchor_resolves() {
+        let proj = link_project(
+            "link-samedoc",
+            "## Local Section\n\nJump [here](#local-section) and [nowhere](#gone).\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        let anchors: Vec<_> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0111")
+            .collect();
+        assert_eq!(
+            anchors.len(),
+            1,
+            "only the #gone anchor flags; got {findings:?}"
+        );
+        assert!(anchors[0]
+            .quoted
+            .iter()
+            .any(|q| q.content.contains("#gone")));
+    }
+
+    // RED GATE (#145): a valid relative link to an existing file is clean,
+    // including a document-relative one-level parent link that stays in-tree.
+    #[test]
+    fn valid_links_are_clean() {
+        let proj = link_project(
+            "link-clean",
+            "See [sibling](target.md) and [root gov](../GOVERNING.md).\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert!(
+            findings.iter().all(|f| !f.code.starts_with("MDATRON-E011")),
+            "in-tree links (incl. one-level-up parent) are clean; got {findings:?}"
+        );
+    }
+
+    // RED GATE (#145): external links are deferred — an http URL and a mailto
+    // are never resolved or flagged.
+    #[test]
+    fn external_links_are_deferred() {
+        let proj = link_project(
+            "link-external",
+            "See [site](https://example.com/a.md) and [mail](mailto:x@y.z).\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert!(
+            findings.iter().all(|f| !f.code.starts_with("MDATRON-E011")),
+            "external links are deferred; got {findings:?}"
+        );
+    }
+
+    // RED GATE (#145): a link target escaping the tree is refused under the
+    // confinement codes; document-relative resolution means the escape must
+    // climb ABOVE the root (a one-level parent that stays in-tree is clean).
+    #[test]
+    fn escaping_link_target_refused() {
+        let proj = link_project(
+            "link-escape",
+            "Bad: [up](../../outside.md) and [abs](/etc/passwd.txt).\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert!(
+            findings.iter().any(|f| f.code == "MDATRON-E0011"),
+            "parent-escape link refused; got {findings:?}"
+        );
+        assert!(
+            findings.iter().any(|f| f.code == "MDATRON-E0010"),
+            "absolute link refused; got {findings:?}"
+        );
+    }
+
+    // RED GATE (#145): links inside a fenced code block are examples, not live
+    // links — they must not be resolved (else a docs page showing link syntax
+    // false-positives).
+    #[test]
+    fn links_in_code_fences_are_ignored() {
+        let proj = link_project(
+            "link-fence",
+            "```\n[example](no-such-in-fence.md)\n```\n\nreal [ok](target.md)\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert!(
+            findings.iter().all(|f| f.code != "MDATRON-E0110"),
+            "a link inside a code fence is not resolved; got {findings:?}"
+        );
+    }
+
+    // RED GATE (#145): opt-in — a route WITHOUT links: true gets no link findings.
+    #[test]
+    fn links_are_per_route_opt_in() {
+        let proj = link_project("link-optout", "See [missing](no-such.md).\n");
+        proj.write(
+            ".mdatron/routes.yaml",
+            "routes:\n- files: \"docs/**/*.md\"\n  governed_by: GOVERNING.md\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert!(
+            findings.iter().all(|f| !f.code.starts_with("MDATRON-E011")),
+            "no opt-in, no link findings; got {findings:?}"
+        );
+    }
+
+    // RED GATE (#145): the link family reports active exactly when a route opts
+    // in with links: true, inactive otherwise (falsifiable audit signal).
+    #[test]
+    fn link_family_activity_tracks_opt_in() {
+        let opted_in = link_project("link-active", "prose\n");
+        assert!(link_families(&opted_in).link.is_active());
+
+        let opted_out = link_project("link-inactive", "prose\n");
+        opted_out.write(
+            ".mdatron/routes.yaml",
+            "routes:\n- files: \"docs/**/*.md\"\n  governed_by: GOVERNING.md\n",
+        );
+        assert!(!link_families(&opted_out).link.is_active());
     }
 
     // #88 (#47 cold-run finding): an ARRAY selection fans out to one index

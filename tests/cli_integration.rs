@@ -252,7 +252,7 @@ fn schema_subcommand_prints_the_published_envelope_schema() {
     let v: serde_json::Value =
         serde_json::from_slice(&out.stdout).expect("valid JSON Schema on stdout");
     assert_eq!(
-        v["properties"]["mdatron_output_version"]["const"], "2.1.0",
+        v["properties"]["mdatron_output_version"]["const"], "3.0.0",
         "schema is in lockstep with OUTPUT_VERSION"
     );
     assert!(v["$id"].as_str().unwrap().contains("mdatron-output"));
