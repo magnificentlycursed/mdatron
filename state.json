@@ -1,6 +1,6 @@
 {
   "next_display_id": 160,
-  "next_comment_id": 381,
+  "next_comment_id": 382,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -2634,11 +2634,20 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-08-02T06:17:38.064506Z",
-      "updated_at": "2026-08-02T06:43:57.101303Z",
+      "updated_at": "2026-08-02T08:02:39.158303Z",
       "labels": [
         "enhancement"
       ],
       "comments": {
+        "019c87ce-33aa-44a3-a169-c777a118bfea": {
+          "display_id": 381,
+          "author": "79Ig",
+          "content": "MERGED. vocab E0091/E0093 skip inline code spans (GH#28 Gap 2).",
+          "created_at": "2026-08-02T08:02:39.125775Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAL2sTT4KcPAxcGE9nh9Ig5j1Tap2/wZQiRKRO5e+mST3ZO3r0319p6HkS8BlSq9xkeVu4wACRt6cXkvL/RWO3Aw=="
+        },
         "f4c79c9b-b989-4076-9136-0519c1f7d407": {
           "display_id": 379,
           "author": "79Ig",
@@ -6367,8 +6376,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T07:50:14.485943Z",
+    "timestamp": "2026-08-02T08:02:39.158303Z",
     "agent_id": "79Ig",
-    "agent_seq": 731
+    "agent_seq": 732
   }
 }
