@@ -1,6 +1,6 @@
 {
   "next_display_id": 151,
-  "next_comment_id": 355,
+  "next_comment_id": 356,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -322,10 +322,21 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-02T00:42:31.109345Z",
-      "updated_at": "2026-08-02T00:42:36.238064Z",
+      "updated_at": "2026-08-02T00:49:52.923013Z",
       "labels": [
         "feedback"
-      ]
+      ],
+      "comments": {
+        "fd725d2f-2a89-462f-b3a8-20f47fad7bca": {
+          "display_id": 355,
+          "author": "79Ig",
+          "content": "Reviewed vsdd-cli's responses to mdatron-filed feedback (#11 agent-escape, #12 efficacy) — both dispositioned + closed on their side, folded into merged ratified design (#840 efficiency subsystem, #845 deviation registry). Posted the accepted fixture-seed (uncapped-fan-out shape + 2.27M/39-agent numbers + corrected declared-ceiling contrast) on vsdd-cli#11; flagged the round-3 infra-stall/agent-derail as a companion runtime-harness specimen; ack on #12. Loop fully closed both directions.",
+          "created_at": "2026-08-02T00:49:52.906006Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAX6o6Kw5WZzvsIL2C6k6vWQxm3DQ1ZWaedgFNJd7oByjum7ZZ7hHOZKnFfRfGRun9AzOjxyawYlabUvSz/oUXBg=="
+        }
+      }
     },
     "0ce9e2f6-cb02-409d-aba5-6b1942abc74c": {
       "uuid": "0ce9e2f6-cb02-409d-aba5-6b1942abc74c",
@@ -5986,8 +5997,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T00:42:44.295486Z",
+    "timestamp": "2026-08-02T00:49:52.923013Z",
     "agent_id": "79Ig",
-    "agent_seq": 652
+    "agent_seq": 653
   }
 }
