@@ -2135,11 +2135,12 @@
       "uuid": "62801e0e-b352-49b3-90f4-c6ef253fad34",
       "display_id": 153,
       "title": "reference-arch knowledge: Schematron lineage conformance+divergence audit",
-      "status": "open",
+      "status": "closed",
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-08-02T02:43:17.567177Z",
-      "updated_at": "2026-08-02T02:56:25.599053Z",
+      "updated_at": "2026-08-02T02:56:32.371060Z",
+      "closed_at": "2026-08-02T02:56:32.371039Z",
       "labels": [
         "research"
       ],
@@ -6146,8 +6147,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T02:56:25.599053Z",
+    "timestamp": "2026-08-02T02:56:32.371060Z",
     "agent_id": "79Ig",
-    "agent_seq": 688
+    "agent_seq": 689
   }
 }
