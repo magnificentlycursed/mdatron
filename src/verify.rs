@@ -1493,7 +1493,7 @@ fn verify_file(
     let mut any_context_matched = false;
     for pf in patterns {
         for rule in &pf.pattern.rules {
-            if !context_matches(&rule.context, schema_class_opt.as_deref(), path) {
+            if !context_matches(&rule.context, schema_class_opt.as_deref(), rel_path) {
                 continue;
             }
             any_context_matched = true;
@@ -1655,14 +1655,19 @@ pub(crate) fn context_matches(
     }
 }
 
-/// Match a glob pattern against a path. Used for context-selector path matching
-/// (not for resolving glob sources, which use the glob crate's directory walker).
+/// Match a glob pattern against a **project-root-relative** path — the form both
+/// callers now pass (SA F1, the scoping-consistency pass). Uses `matches_path`,
+/// the same matcher and same root-relative basis as the route and vocabulary
+/// scopes, so a `context: "docs/**/*.md"` resolves identically everywhere.
+///
+/// (Previously this matched `to_string_lossy()` — a **string** match — and the
+/// checking pass passed the *absolute* path, so a path-glob context was compared
+/// against `/…/root/docs/x.md` and silently never fired; the dependency-graph
+/// pass meanwhile passed the relative path, so a rule could register a dependency
+/// edge yet never actually run.)
 fn glob_matches(pattern: &str, path: &Path) -> bool {
-    // Use globset-style matching via the glob crate's match helper, which only matches
-    // a single path against a pattern.
-    let path_str = path.to_string_lossy();
     match glob::Pattern::new(pattern) {
-        Ok(p) => p.matches(&path_str),
+        Ok(p) => p.matches_path(path),
         Err(_) => false,
     }
 }
@@ -3264,6 +3269,36 @@ pattern:
         proj.write("docs/a.md", "---\ntitle: prose\n---\n# a\n");
         let cfg = VerifyConfig::from_project(&proj.0).unwrap();
         assert_eq!(codes_of(&verify(&cfg).unwrap(), "MDATRON-W0045"), 0);
+    }
+
+    // RED GATE (SA F1, scoping-consistency pass): a PATH-GLOB `context:` fires on
+    // a matching file. It now resolves against the project-root-relative path via
+    // `matches_path`; before the fix it matched the ABSOLUTE path via a string
+    // compare and silently never fired — a rule that could register a dependency
+    // edge yet never actually run.
+    #[test]
+    fn path_glob_context_fires_on_matching_file() {
+        let proj = TempProject::new("ctx-pathglob");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write(
+            ".mdatron/patterns/p.yaml",
+            "mdatron_dsl_version: 1\npattern:\n  id: p\n  rules:\n    - id: r\n      context: \"docs/**/*.md\"\n      assert: '$self.title != \"\"'\n      code: ADOPTER-E0001\n      message: m\n",
+        );
+        // title is empty → the assertion is FALSE → the rule fires, but ONLY if
+        // the path-glob context matched docs/a.md (root-relative) in the first place.
+        proj.write("docs/a.md", "---\ntitle: \"\"\n---\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        assert!(
+            verify(&cfg)
+                .unwrap()
+                .iter()
+                .any(|f| f.code == "ADOPTER-E0001"),
+            "a path-glob context resolves root-relative and fires on docs/a.md"
+        );
     }
 
     // #85 inactivity: no vocabulary.yaml -> family inactive.
