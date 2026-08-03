@@ -1,6 +1,6 @@
 {
   "next_display_id": 166,
-  "next_comment_id": 431,
+  "next_comment_id": 432,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -1380,10 +1380,21 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-03T23:24:17.460958Z",
-      "updated_at": "2026-08-03T23:24:23.458073Z",
+      "updated_at": "2026-08-03T23:24:43.481639Z",
       "labels": [
         "security"
-      ]
+      ],
+      "comments": {
+        "04b6eb42-7231-4af2-9956-c797b23eb9d0": {
+          "display_id": 431,
+          "author": "79Ig",
+          "content": "Surfaced by #162's phase-3 review (adjacency to F-1, which closed this class for W0049) and CONFIRMED against the code. Finding.message is rendered UNESCAPED in the TTY + compact agent-facing views (only quoted[] regions are escaped, via render_quoted — DESIGN § Agents are the first consumer; #125/SHO5). Three PRE-EXISTING constructors interpolate adopter-controlled text inline in message: (1) src/verify.rs:1643 E0001 frontmatter-parse-failed — message: e.to_string() on a serde_yaml_ng parse error, which can embed the offending GOVERNED-FILE frontmatter bytes = UNTRUSTED-markdown, the primary trust boundary -> HIGHEST severity of the three (untrusted governed content -> raw ANSI/splitter into agent context); (2) src/verify.rs:1577 E0021 undeclared-field-reference — inlines {dotted}/{last}/{schema_class} (adopter pattern + schema identifiers); (3) src/route.rs:338 W0041 name-underivable — inlines the naming grammar /{}/  (adopter regex). All three are the exact class the F-1 fix closed for W0049: move the adopter values into escaped quoted[] regions and keep message fully engine-authored (E0021 already HAS a name region for some values; E0001 needs the parse detail moved to a quoted region or escaped via escape_path_text). Pre-existing (shipped 0.5.0), not a regression — but a real agent-facing injection surface. Recommend a codebase-wide sweep for message: format!(... adopter ...) as part of the fix, plus a lint-style test asserting no finding message contains a raw control byte on a seeded-adopter-injection corpus (generalizing #162's w0049_message_never_carries_raw_adopter_bytes). Grounded in [[reference-architecture-audits]] marking-discipline lineage.",
+          "created_at": "2026-08-03T23:24:43.465846Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAROaMC5XrTuMXBHAaUR2Kxxx2WC9DVfJm9e4hY1FA0dBiXKOFMugYZ1ipcDYexLY09ajEYhvb/s8NKR+zWxD+AQ=="
+        }
+      }
     },
     "2e2fc00c-4730-4781-a765-f30420cdddd5": {
       "uuid": "2e2fc00c-4730-4781-a765-f30420cdddd5",
@@ -6902,8 +6913,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-03T23:24:23.458073Z",
+    "timestamp": "2026-08-03T23:24:43.481639Z",
     "agent_id": "79Ig",
-    "agent_seq": 828
+    "agent_seq": 829
   }
 }
