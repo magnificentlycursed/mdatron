@@ -1,6 +1,6 @@
 {
   "next_display_id": 162,
-  "next_comment_id": 396,
+  "next_comment_id": 397,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -234,11 +234,20 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-07-30T15:35:19.787585Z",
-      "updated_at": "2026-08-03T15:41:29.097036Z",
+      "updated_at": "2026-08-03T15:42:09.369549Z",
       "labels": [
         "question"
       ],
       "comments": {
+        "4cb2c1a5-329c-42f3-94fc-11058bad7c05": {
+          "display_id": 396,
+          "author": "79Ig",
+          "content": "Relayed as vsdd-cli GH #33 (https://github.com/magnificentlycursed/vsdd-cli/issues/33): the single-family coverage gap stated from the observable ledger (2 rows, both E0050/compact/0.1.0+), plus the three methodology questions — minimum coverage for the contract to count as evidenced, whether latency actuals share the ledger (their own 0.65s/178-files actual is the waiting data point), and staleness/refresh triggers. mdatron conforms once the methodology defines the shape.",
+          "created_at": "2026-08-03T15:42:09.356497Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAGtODM9wITFllFEvZbbtNabI2LJVNQPtdRNVGBhtV4DthU7iD4Md3EVN3/JVmei3m+tMoklXWyQ9KGtmj5FEiCg=="
+        },
         "4fc01ee8-0588-45e8-9786-62bb49585058": {
           "display_id": 395,
           "author": "79Ig",
@@ -6523,8 +6532,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-03T15:41:29.097036Z",
+    "timestamp": "2026-08-03T15:42:09.369549Z",
     "agent_id": "79Ig",
-    "agent_seq": 772
+    "agent_seq": 773
   }
 }
