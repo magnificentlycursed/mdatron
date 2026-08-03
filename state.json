@@ -1,6 +1,6 @@
 {
   "next_display_id": 164,
-  "next_comment_id": 418,
+  "next_comment_id": 419,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -5114,8 +5114,17 @@
       "parent_uuid": "a0e4b4b2-63f5-41c1-a62d-7713001a66d8",
       "created_by": "79Ig",
       "created_at": "2026-08-03T20:04:33.517754Z",
-      "updated_at": "2026-08-03T20:16:15.371885Z",
+      "updated_at": "2026-08-03T20:32:42.786715Z",
       "comments": {
+        "588cdc4f-2f4a-4ecb-adfe-574e2b48a206": {
+          "display_id": 418,
+          "author": "79Ig",
+          "content": "PHASE 3 ROUND 1 DISPOSITIONS + FIXES (commit b73f7ce). Reviewer certified: catalog single-source ✓, docs match SHIPPED exactly ✓, DESIGN honest ✓, N+1 mutation-tested (skipping acquisition fails the test) ✓, overlap tests genuinely interleave ✓, isolated build green ✓. Findings all confirmed: B-1 (should-fix, REPRODUCED — bare EACCES exit 2 on a non-writable slot dir) shared-/tmp slot pool -> uid-keyed 0700 ownership/symlink-verified dirs with naming refusals; per-user pools = documented residual (bounds per-user fan-out, not machine total). B-2 (nit) -> never-unlink invariant + lock-vs-file honesty now stated where load-bearing. B-3 (nit) -> DESIGN/comment/docs all say concurrent VERIFY invocations per user per root; pin outside the count. ALSO folded (operator direction: architecture references): the ruff-registry-audit drift tripwire — docs/limits.md rows must carry limits::SHIPPED values (hand-synced pair can no longer drift silently) + symlinked-slot-path refusal regression test. 528 tests, 0 clippy, self-validation exit 0. Round 2 launching (clean = MVR).",
+          "created_at": "2026-08-03T20:32:42.769898Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAXKuNr5CVqQfUXWDehGxPHJHY5hpvj+u9yDo61vrFLcxt1tON4N5407Gay/yZeEoAp954BsRgik0sq4k9F68/Dw=="
+        },
         "84fea081-24f8-4f53-8f3f-1739c2c67327": {
           "display_id": 414,
           "author": "79Ig",
@@ -6761,8 +6770,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-03T20:25:40.822413Z",
+    "timestamp": "2026-08-03T20:32:42.786715Z",
     "agent_id": "79Ig",
-    "agent_seq": 807
+    "agent_seq": 808
   }
 }
