@@ -1260,13 +1260,19 @@ fn index_source_degraded_finding(project_root: &Path, d: &crate::dsl::DegradedSo
         code: "MDATRON-W0049".into(),
         severity: Severity::Warning,
         summary: "index-source-unreadable".into(),
-        message: format!(
-            "a `keys:` source for index '{}' could not be read ({}), so it \
-             contributed nothing — the index is inert for that source. A rule \
-             that requires the key will surface its own finding; this warning \
-             makes the missing coverage observable rather than silent.",
-            d.key_name, d.reason
-        ),
+        // Message is FULLY engine-authored: the adopter-controlled index name,
+        // source path, and OS reason ride ONLY in the quoted regions below,
+        // which are escaped at render time. Interpolating any of them inline
+        // here would inject control bytes into the TTY/compact agent-facing
+        // views (the marking discipline, DESIGN § Agents are the first
+        // consumer; #125/SHO5, #162 phase-3 F-1).
+        message: "a `keys:` source could not be read, so it contributed \
+                  nothing to its index — the index is inert for that source \
+                  (the index name, source, and reason are quoted below). A \
+                  rule that requires the key will surface its own finding; \
+                  this warning makes the missing coverage observable rather \
+                  than silent."
+            .into(),
         help: Some(
             "restore or re-encode the source as a readable UTF-8 file, or \
              remove the `keys:` declaration if the index is no longer needed"
@@ -1286,6 +1292,10 @@ fn index_source_degraded_finding(project_root: &Path, d: &crate::dsl::DegradedSo
             QuotedRegion {
                 label: "source".into(),
                 content: d.source_display.clone(),
+            },
+            QuotedRegion {
+                label: "reason".into(),
+                content: d.reason.clone(),
             },
         ],
     }
@@ -5731,6 +5741,64 @@ pattern:
             "the finding names the key and the source; got {:?}",
             f.quoted
         );
+    }
+
+    // #162 phase-3 F-1: an adopter-controlled index NAME carrying control
+    // bytes must NOT reach the engine-authored message raw — it rides only in
+    // the (render-escaped) quoted regions. Pins the marking discipline against
+    // an ANSI/splitter injection into the TTY/compact agent-facing views.
+    #[test]
+    fn w0049_message_never_carries_raw_adopter_bytes() {
+        let proj = TempProject::new("index-inject");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        std::fs::write(proj.0.join("data.yaml"), [0xFF, 0xFE]).unwrap();
+        // The index name embeds an ESC + a newline.
+        proj.write(
+            ".mdatron/patterns/p.yaml",
+            "mdatron_dsl_version: 1\npattern:\n  id: inj\n  keys:\n    - name: \"boom\\u001b[31m\\nx\"\n      source: data.yaml\n      select: $\n      indexed_by: $key\n  rules:\n    - id: r\n      context: no-such-class\n      assert: \"true\"\n      code: T-E0001\n      message: never\n",
+        );
+        proj.write("docs/d.md", "# plain\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).expect("must not abort");
+        let f = findings
+            .iter()
+            .find(|f| f.code == "MDATRON-W0049")
+            .expect("W0049 present");
+        assert!(
+            !f.message.contains('\u{1b}') && !f.message.contains('\n'),
+            "no raw control byte may reach the engine-authored message: {:?}",
+            f.message
+        );
+        // The name IS carried — in a quoted region (escaped at render).
+        assert!(
+            f.quoted.iter().any(|q| q.label == "index"),
+            "the index name rides in a quoted region"
+        );
+    }
+
+    // #162 phase-3 coverage: a DIRECTORY as an index source is a distinct
+    // capture state (OpenedUnreadable, not OpenIo) — it degrades too.
+    #[test]
+    fn directory_index_source_degrades_to_w0049() {
+        let proj = TempProject::new("index-dir");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        std::fs::create_dir_all(proj.0.join("adir")).unwrap();
+        proj.write(
+            ".mdatron/patterns/p.yaml",
+            "mdatron_dsl_version: 1\npattern:\n  id: dir\n  keys:\n    - name: k\n      source: adir\n      select: $\n      indexed_by: $key\n  rules:\n    - id: r\n      context: no-such-class\n      assert: \"true\"\n      code: T-E0001\n      message: never\n",
+        );
+        proj.write("docs/d.md", "# plain\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).expect("a directory index source must not abort");
+        assert_eq!(codes_of(&findings, "MDATRON-W0049"), 1, "got {findings:?}");
     }
 
     // #162: a MISSING literal index source likewise degrades (was a hard Io
