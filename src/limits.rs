@@ -121,31 +121,55 @@ fn slot_dir(project_root: &Path) -> std::io::Result<std::path::PathBuf> {
         "mdatron-slots-{uid}-{}",
         root_digest_short(project_root)
     ));
-    std::fs::DirBuilder::new()
+    match std::fs::DirBuilder::new()
         .recursive(true)
         .mode(0o700)
-        .create(&dir)?;
+        .create(&dir)
+    {
+        Ok(()) => {}
+        // A regular FILE at the path lands here (EEXIST): fall through so the
+        // metadata checks below name what occupies the path (R2-4), instead
+        // of a bare "File exists".
+        Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {}
+        Err(e) => return Err(e),
+    }
     // Refuse a hostile pre-created path: a symlink, a non-directory, or a
     // directory owned by another uid at OUR uid-keyed name is an attack or a
-    // misconfiguration — name it, never proceed onto foreign state. (The
-    // sticky bit on /tmp prevents another user swapping our verified 0700
-    // directory afterwards.)
+    // misconfiguration — name it, never proceed onto foreign state.
+    //
+    // Residual (documented, R2-3): after these checks the slot files are
+    // opened BY PATH. On a sticky or per-user temp parent (Linux /tmp, the
+    // macOS and Windows per-user temp dirs) the verified directory cannot be
+    // swapped by another user; a SHARED, NON-STICKY custom TMPDIR retains a
+    // small check-to-open window — a platform-scoped tolerated posture in the
+    // same class as the confine fallback carve-out, with a blast radius of a
+    // 0-byte create/flock at an attacker-chosen path.
     let meta = std::fs::symlink_metadata(&dir)?;
     if meta.file_type().is_symlink() || !meta.is_dir() {
         return Err(std::io::Error::other(format!(
             "invocation-slot path '{}' exists but is not a real directory \
-             (symlink refused); remove it, or point TMPDIR at a private \
-             directory",
+             (symlink refused); point TMPDIR at a private directory, or remove \
+             the entry",
             dir.display()
         )));
     }
     if meta.uid() != uid {
         return Err(std::io::Error::other(format!(
             "invocation-slot directory '{}' is owned by uid {} (expected {uid}); \
-             remove it, or point TMPDIR at a private directory",
+             point TMPDIR at a private directory (removing another user's /tmp \
+             entry is usually not possible)",
             dir.display(),
             meta.uid()
         )));
+    }
+    // A same-uid directory pre-created with permissive modes (tooling,
+    // archive extraction, an old build) would let other users open and flock
+    // the slot files — flock needs no write bit — quietly re-opening the
+    // slot-holding denial lever (R2-2). We own it: repair to the declared
+    // 0700 posture instead of refusing.
+    if meta.mode() & 0o077 != 0 {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o700))?;
     }
     Ok(dir)
 }
@@ -281,6 +305,64 @@ mod tests {
         let _ = std::fs::remove_dir_all(&root);
     }
 
+    // R2-4: a regular FILE squatting the slot-dir path is refused BY NAME,
+    // not as a bare EEXIST.
+    #[cfg(unix)]
+    #[test]
+    fn regular_file_at_slot_dir_path_is_refused_by_name() {
+        let root = std::env::temp_dir().join(format!(
+            "mdatron-slot-file-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&root).unwrap();
+        let dir = slot_dir(&root).unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+        std::fs::write(&dir, b"squatter").unwrap();
+        let err = acquire_invocation_slot(&root, 2).unwrap_err();
+        assert!(
+            err.to_string().contains("not a real directory"),
+            "the refusal names the squatter; got: {err}"
+        );
+        let _ = std::fs::remove_file(&dir);
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    // R2-2: a same-uid slot dir pre-created with permissive modes is REPAIRED
+    // to 0700 (other users could otherwise flock the slots — flock needs no
+    // write bit), never accepted as-is.
+    #[cfg(unix)]
+    #[test]
+    fn permissive_same_uid_slot_dir_is_repaired_to_0700() {
+        use std::os::unix::fs::PermissionsExt;
+        let root = std::env::temp_dir().join(format!(
+            "mdatron-slot-mode-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&root).unwrap();
+        let dir = slot_dir(&root).unwrap();
+        std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let slot = acquire_invocation_slot(&root, 2).unwrap();
+        assert!(
+            slot.is_some(),
+            "a same-uid permissive dir is repaired, not refused"
+        );
+        let mode = std::fs::symlink_metadata(&dir)
+            .unwrap()
+            .permissions()
+            .mode()
+            & 0o7777;
+        assert_eq!(mode, 0o700, "the dir is repaired to the declared posture");
+        drop(slot);
+        let _ = std::fs::remove_dir_all(&root);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
     // Drift tripwire (reference: ruff-registry-audit — hand-synced peer
     // artifacts drift unless a check forces agreement): every SHIPPED value
     // must appear in its docs/limits.md table row, and SHIPPED itself must
@@ -295,10 +377,12 @@ mod tests {
                 .find(|l| l.starts_with('|') && l.contains(needle))
                 .unwrap_or_else(|| panic!("docs/limits.md lacks a table row for {needle}"))
         };
+        // Pipe-delimited cells (R2-1): a bare "8 MiB" substring would stay
+        // green under a doc-side bump to "128 MiB".
         assert_eq!(SHIPPED.per_file_bytes, 8 * 1024 * 1024);
-        assert!(row("max-input-size-per-file").contains("8 MiB"));
+        assert!(row("max-input-size-per-file").contains("| 8 MiB |"));
         assert_eq!(SHIPPED.aggregate_bytes, 64 * 1024 * 1024);
-        assert!(row("aggregate-snapshot-size").contains("64 MiB"));
+        assert!(row("aggregate-snapshot-size").contains("| 64 MiB |"));
         assert_eq!(SHIPPED.structural_nesting, 256);
         assert!(row("structural-nesting-depth").contains("| 256 |"));
         assert_eq!(SHIPPED.expr_depth, 256);
