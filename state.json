@@ -1,6 +1,6 @@
 {
   "next_display_id": 162,
-  "next_comment_id": 392,
+  "next_comment_id": 393,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -1951,11 +1951,20 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-02T05:31:57.642692Z",
-      "updated_at": "2026-08-02T10:37:25.017877Z",
+      "updated_at": "2026-08-03T15:32:26.633880Z",
       "labels": [
         "enhancement"
       ],
       "comments": {
+        "c38c7b38-85ce-4000-98ef-e18ac720644e": {
+          "display_id": 392,
+          "author": "79Ig",
+          "content": "Gaps 1-3 shipped in PR #33 (pulldown-cmark CommonMark migration, merged 29d4e36): dup-heading -N, reference-style + image links, setext + HTML anchors; #154 inline-code became structural. Gap 4 (root: mode) + percent-decoding deferred to GitHub issue #37. Closing during tracker hygiene (#161); close was omitted by the broken-hub session (#160).",
+          "created_at": "2026-08-03T15:32:26.618140Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAcTtVV+2olNdCN6CQ+RSbTOSQXdTZ7Qgy2TrBt/Ept//yhnkqeWjVrCIgReq0/tVRB3leTwVm2WJeGrxD7Z7GDQ=="
+        },
         "f35dcd62-d044-447a-ac62-e7ab9d0ee634": {
           "display_id": 387,
           "author": "79Ig",
@@ -6480,8 +6489,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-03T15:32:13.854227Z",
+    "timestamp": "2026-08-03T15:32:26.633880Z",
     "agent_id": "79Ig",
-    "agent_seq": 763
+    "agent_seq": 764
   }
 }
