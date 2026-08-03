@@ -1,6 +1,6 @@
 {
   "next_display_id": 162,
-  "next_comment_id": 400,
+  "next_comment_id": 401,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -5170,7 +5170,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T07:22:08.149420Z",
-      "updated_at": "2026-08-03T15:48:21.365974Z",
+      "updated_at": "2026-08-03T15:54:59.793461Z",
       "labels": [
         "feature"
       ],
@@ -5231,6 +5231,15 @@
           "kind": "observation",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAIMqmV95IlCDfXz+zpX2qsZjqlVyWmB/c4RaaPLEPkVJxGuOiJ7W/zDdotOs9wIxS6hkQ9YZs4Tg1tmrme5o0BA=="
+        },
+        "d6a650b5-b1af-47dd-b4db-e048cbbd9760": {
+          "display_id": 400,
+          "author": "79Ig",
+          "content": "2a RED GATE CONFIRMED: 8 tests authored, all red for the designed reasons, 402 existing green. pin/cite-range/cite-delete/link-anchor/marker mutation-at-seam tests fail (checks read live post-seam today); oversized index-source and cite-target run to Ok (unbounded reads confirmed as live DoS gaps); non-UTF8 governed body aborts whole run (VerifyError::Io). AMENDMENT to the posted gate: the aggregate-bound-counts-targets red test moves to the snapshot module's unit layer with injected budgets — a 64MB integration fixture is CI-hostile; the per-file bound is integration-tested (the two oversized tests). E0003 allocated for the non-UTF8 finding (E0001-9 input-parse class, free per codes.rs catalog).",
+          "created_at": "2026-08-03T15:54:59.761424Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAvGIJLyIO7mHuhPy7ArDMVdWQQ7cciKpI7drs0pMAqLjrmjmt9kDCBqzsAIv9rhENYpzJM9T/nmobrjiARv18Bw=="
         }
       }
     },
@@ -6560,8 +6569,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-03T15:48:21.365974Z",
+    "timestamp": "2026-08-03T15:54:59.793461Z",
     "agent_id": "79Ig",
-    "agent_seq": 779
+    "agent_seq": 780
   }
 }
