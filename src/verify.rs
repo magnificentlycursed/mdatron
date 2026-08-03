@@ -578,7 +578,7 @@ fn run(
                             bound: "structural-nesting-depth".into(),
                             detail: format!(
                                 "'{}' nests flow collections {nesting} deep (limit {MAX_STRUCTURAL_NESTING})",
-                                rel.display()
+                                crate::diagnostic::escape_path_text(&rel.to_string_lossy())
                             ),
                         });
                     }
@@ -750,7 +750,12 @@ fn run(
                 ts
             };
             for target in &prose_targets {
-                snapshot.capture(&project_root, target)?;
+                // Degrading capture (phase-3 R2S-1): a prose-named target that
+                // would breach the AGGREGATE budget records the unverifiable
+                // state instead of erroring — otherwise one authored citation
+                // line could tip a large corpus over the cap and deny the
+                // whole run.
+                snapshot.capture_degrading(&project_root, target)?;
             }
             for rule in crate::route::marker_rules_for(routes, rel) {
                 if let Ok(confined) = crate::confine::confine_lexically(Path::new(&rule.target_doc))
@@ -4943,11 +4948,11 @@ pattern:
     }
 
     // An oversized PROSE-scoped target (a citation) must NOT abort the run —
-    // a prose line is not a lever over the whole tree (#103 phase-3 A-1). The
-    // target's existence is verified; its ranges are unverifiable (the same
-    // posture as a non-UTF8 target), so neither E0100 nor E0101 fires.
+    // a prose line is not a lever over the whole tree (#103 phase-3 A-1) —
+    // and the skipped range check must be LOUD (W0048, phase-3 R2S-2), so an
+    // out-of-range citation into a big file cannot silently satisfy a gate.
     #[test]
-    fn oversized_cite_target_degrades_instead_of_aborting() {
+    fn oversized_cite_target_degrades_loudly_instead_of_aborting() {
         let proj = cite_project("cite-bound", "Per src-file.rs:1 this holds.\n");
         let mut big = String::new();
         while big.len() <= MAX_FILE_BYTES {
@@ -4959,7 +4964,12 @@ pattern:
         assert_eq!(
             codes_of(&findings, "MDATRON-E0100") + codes_of(&findings, "MDATRON-E0101"),
             0,
-            "existence verified, ranges unverifiable — no dead/range finding; got {findings:?}"
+            "existence verified, no dead/range finding fabricated; got {findings:?}"
+        );
+        assert_eq!(
+            codes_of(&findings, "MDATRON-W0048"),
+            1,
+            "the skipped range check is loud; got {findings:?}"
         );
     }
 
@@ -5060,22 +5070,44 @@ pattern:
         assert_eq!(codes_of(&findings, "MDATRON-E0100"), 0, "got {findings:?}");
     }
 
-    // Phase-3 I-1: a file whose frontmatter fails to parse gets E0001 and NO
-    // cross-file checks — so discovery must not capture its targets either; an
-    // oversized target named only there cannot abort the run.
-    #[test]
-    fn parse_failed_file_targets_are_not_captured() {
-        let proj = cite_project("parse-err-discovery", "unused\n");
-        // Malformed frontmatter + a citation naming the oversized target.
+    // Shared fixture for the discovery-gating pair: a route whose marker rule
+    // names an OVERSIZED target_doc (config-scoped: capturing it escalates to
+    // the whole-run bound abort), reachable only through docs/plan.md.
+    fn marker_big_target_project(label: &str, plan_frontmatter: &str) -> TempProject {
+        let proj = TempProject::new(label);
+        proj.write(".mdatron/schemas/.keep.json", "{}");
         proj.write(
-            "docs/broken.md",
-            "---\n: not: [valid yaml\n---\nPer big-file.rs:3 this holds.\n",
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write("GOVERNING.md", "# gov\n");
+        proj.write(
+            ".mdatron/routes.yaml",
+            "routes:\n- files: \"docs/**/*.md\"\n  governed_by: GOVERNING.md\n  marker_rules:\n    - pattern: \"^Provenance: (.+)$\"\n      element: list-item-bold-name\n      target_doc: refs/big.md\n",
         );
         let mut big = String::new();
         while big.len() <= MAX_FILE_BYTES {
-            big.push_str("padding line to grow the target past the per-file cap\n");
+            big.push_str("padding line to grow the marker target past the per-file cap\n");
         }
-        proj.write("big-file.rs", &big);
+        proj.write("refs/big.md", &big);
+        proj.write(
+            "docs/plan.md",
+            &format!("{plan_frontmatter}Provenance: Slice 1\n"),
+        );
+        proj
+    }
+
+    // Phase-3 I-1 (re-gated per round-2 R2I-2, red against a reverted
+    // `body_offset_of` Err arm): a file whose frontmatter fails to parse gets
+    // E0001 and NO cross-file checks — so discovery must not capture its
+    // targets either. The target here is CONFIG-scoped (a marker target_doc),
+    // so an ungated discovery would escalate its oversize to a whole-run
+    // abort — this test is red without the gating, unlike a prose target
+    // (whose degrade posture would mask the regression).
+    #[test]
+    fn parse_failed_file_targets_are_not_captured() {
+        let proj =
+            marker_big_target_project("parse-err-discovery", "---\n: not: [valid yaml\n---\n");
         let cfg = VerifyConfig::from_project(&proj.0).unwrap();
         let findings =
             verify(&cfg).expect("a target reachable only from a parse-failed file must not abort");
@@ -5084,6 +5116,106 @@ pattern:
             1,
             "the parse failure itself reports; got {findings:?}"
         );
+    }
+
+    // The complement pinning the CONFIG-scoped escalation itself (phase-3
+    // R2I-6): the same oversized marker target_doc, reached through a VALID
+    // file, is the loud declared-bounds abort.
+    #[test]
+    fn oversized_marker_target_trips_the_per_file_bound() {
+        let proj = marker_big_target_project("marker-bound", "");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let err = verify(&cfg).unwrap_err();
+        match err {
+            VerifyError::BoundExceeded { ref bound, .. } => {
+                assert_eq!(bound, "max-input-size-per-file", "got {err:?}")
+            }
+            other => {
+                panic!("an oversized marker target_doc must trip the per-file bound; got {other:?}")
+            }
+        }
+    }
+
+    // Phase-3 R2I-6: the link family's prose-scoped oversize posture — the
+    // run survives, the skipped anchor check is LOUD (W0048), and no dead
+    // link/anchor is fabricated.
+    #[test]
+    fn oversized_link_target_degrades_loudly() {
+        let proj = TempProject::new("link-bound");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write("GOVERNING.md", "# gov\n");
+        proj.write(
+            ".mdatron/routes.yaml",
+            "routes:\n- files: \"docs/**/*.md\"\n  governed_by: GOVERNING.md\n  links: true\n",
+        );
+        proj.write("docs/a.md", "See [t](../big.md#section-one).\n");
+        let mut big = String::new();
+        while big.len() <= MAX_FILE_BYTES {
+            big.push_str("padding line to grow the link target past the per-file cap\n");
+        }
+        proj.write("big.md", &big);
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).expect("a prose-named oversized link target must not abort");
+        assert_eq!(codes_of(&findings, "MDATRON-E0110"), 0, "{findings:?}");
+        assert_eq!(codes_of(&findings, "MDATRON-E0111"), 0, "{findings:?}");
+        assert_eq!(
+            codes_of(&findings, "MDATRON-W0048"),
+            1,
+            "the skipped anchor check is loud; got {findings:?}"
+        );
+    }
+
+    // Phase-3 R2I-6: the remaining snapshot-miss arms (link, marker, pin) all
+    // report the E0080 engine defect, never a family finding — probed like the
+    // cite arm, directly against an empty snapshot.
+    #[test]
+    fn snapshot_miss_probes_for_link_marker_pin() {
+        let empty = crate::snapshot::Snapshot::new(64, 4096);
+
+        let mut findings = Vec::new();
+        crate::link::check_file(
+            &empty,
+            Path::new("/no-root"),
+            Path::new("docs/a.md"),
+            "See [t](t2.md#a).\n",
+            0,
+            &mut findings,
+        );
+        assert_eq!(codes_of(&findings, "MDATRON-E0080"), 1, "{findings:?}");
+        assert_eq!(codes_of(&findings, "MDATRON-E0110"), 0, "{findings:?}");
+
+        let rule = crate::route::MarkerRule {
+            pattern: regex_lite::Regex::new("^Provenance: (.+)$").unwrap(),
+            element: crate::route::ElementClass::ListItemBoldName,
+            target_doc: "refs/contract.md".into(),
+            target_section: None,
+        };
+        let mut findings = Vec::new();
+        crate::marker::check_file(
+            &empty,
+            Path::new("docs/plan.md"),
+            "Provenance: Slice 1\n",
+            0,
+            &[&rule],
+            &mut findings,
+        );
+        assert_eq!(codes_of(&findings, "MDATRON-E0080"), 1, "{findings:?}");
+        assert_eq!(codes_of(&findings, "MDATRON-E0112"), 0, "{findings:?}");
+
+        let pin = crate::pin::Pin {
+            governing: "docs/gov.md".into(),
+            file: "docs/x.md".into(),
+            section: None,
+            sha256: "00".repeat(32),
+        };
+        let mut findings = Vec::new();
+        crate::pin::check(Path::new("/no-root"), &[pin], &empty, &mut findings);
+        assert_eq!(codes_of(&findings, "MDATRON-E0080"), 1, "{findings:?}");
+        assert_eq!(codes_of(&findings, "MDATRON-E0062"), 0, "{findings:?}");
     }
 
     // Phase-3 I-2: pipeline-level pinning of the capture-state -> IndexError
@@ -5153,11 +5285,15 @@ pattern:
         assert_eq!(codes_of(&findings, "MDATRON-E0100"), 0, "{findings:?}");
     }
 
-    // Read-once ACROSS ROLES, end to end: one file serving as governed body,
-    // index source, and citation target is captured once — deleting it at the
-    // seam changes nothing for any of the three consumers.
+    // Post-seam consumers read the snapshot ACROSS ROLES, end to end: one
+    // file serving as governed body, index source, and citation target —
+    // deleted at the seam — still verifies and still resolves for every
+    // consumer. (Read-MULTIPLICITY itself — one read, not three — is pinned
+    // at unit level by snapshot::tests::capture_is_idempotent_and_never_
+    // rereads; a seam-time deletion cannot distinguish the pre-seam reads,
+    // so this e2e fixture deliberately does not claim it — phase-3 R2I-3.)
     #[test]
-    fn body_index_source_and_cite_target_share_one_capture() {
+    fn post_seam_consumers_read_snapshot_across_roles() {
         let proj = TempProject::new("cross-role");
         proj.write(".mdatron/schemas/.keep.json", "{}");
         proj.write(

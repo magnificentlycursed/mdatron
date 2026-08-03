@@ -156,11 +156,32 @@ pub fn check_file(
                     ));
                 }
             }
-            // Opened but unreadable, or over the per-file size cap: the
-            // target EXISTS; existence is verified and the line range is not
-            // checkable — the same posture as a non-UTF8 target. A prose line
-            // must never be able to abort the run (#103 phase-3 A-1).
-            Some(Captured::OpenedUnreadable { .. }) | Some(Captured::TooLarge { .. }) => {}
+            // Opened but unreadable (non-UTF8, FIFO, directory): the target
+            // EXISTS; existence is verified and the line range is not
+            // checkable against bytes we cannot line-split — the pre-#103
+            // posture, unchanged and quiet by necessity.
+            Some(Captured::OpenedUnreadable { .. }) => {}
+            // Over the size budget: the target exists and COULD be verified —
+            // the check was skipped by budget, not necessity, so the
+            // degradation is loud (W0048): a fabricated or out-of-range
+            // citation into an oversized file must not silently satisfy a
+            // gate (#103 phase-3 R2S-2). Warning severity keeps the run
+            // alive; `--deny-warnings` gates can escalate it.
+            Some(Captured::TooLarge { .. }) => {
+                let mut f = cite_finding(
+                    path,
+                    content,
+                    at,
+                    "MDATRON-W0048",
+                    "reference-target-unverified",
+                    "this citation's target exceeds the input size budget, so \
+                     its line range was NOT verified — existence only; raise \
+                     attention on the reference or shrink the target",
+                    &token,
+                );
+                f.severity = Severity::Warning;
+                findings.push(f);
+            }
             Some(Captured::SymlinkRefused { .. }) => {
                 findings.push(cite_finding(
                     path,
@@ -173,6 +194,10 @@ pub fn check_file(
                     &token,
                 ));
             }
+            // Accepted residue (#103 phase-3 R2I-6): OpenIo conflates
+            // absent with open-refused (EACCES), so a permission-denied
+            // target reports as dead — matching the pre-#103 live-read
+            // behavior; splitting the state is future work.
             Some(Captured::OpenIo { .. }) => {
                 findings.push(cite_finding(
                     path,

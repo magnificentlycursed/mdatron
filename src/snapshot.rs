@@ -111,15 +111,36 @@ impl Snapshot {
     }
 
     /// Capture `rel` under `root` if it is not already captured, and return its
-    /// state. Idempotent: a second capture of the same path returns the stored
-    /// state without touching the filesystem — read-once across roles, for
-    /// refusals (`TooLarge`) as much as for content.
-    ///
-    /// Only the AGGREGATE budget is a hard error here (a global condition, not
-    /// a per-file state; nothing is stored or counted when it trips). The
-    /// per-file budget records a `TooLarge` state and lets the consumer choose
-    /// the posture — see [`Captured::TooLarge`].
+    /// state — the CONFIG-scoped posture: the aggregate budget is a hard error
+    /// (a global condition; nothing stored or counted when it trips).
+    /// Idempotent: a second capture of the same path returns the stored state
+    /// without touching the filesystem — read-once across roles, for refusals
+    /// (`TooLarge`) as much as for content. The per-file budget records a
+    /// `TooLarge` state and lets the consumer choose the posture — see
+    /// [`Captured::TooLarge`].
     pub fn capture(&mut self, root: &Path, rel: &ConfinedPath) -> Result<&Captured, VerifyError> {
+        self.capture_impl(root, rel, false)
+    }
+
+    /// Capture with the PROSE-scoped posture (#103 phase-3 R2S-1): a capture
+    /// that would breach the AGGREGATE budget stores a `TooLarge` state (bytes
+    /// dropped, not counted) instead of erroring — a prose-named target must
+    /// not be able to abort the run through the aggregate dimension any more
+    /// than through the per-file one. Config-scoped classes keep [`capture`].
+    pub fn capture_degrading(
+        &mut self,
+        root: &Path,
+        rel: &ConfinedPath,
+    ) -> Result<&Captured, VerifyError> {
+        self.capture_impl(root, rel, true)
+    }
+
+    fn capture_impl(
+        &mut self,
+        root: &Path,
+        rel: &ConfinedPath,
+        degrade_on_aggregate: bool,
+    ) -> Result<&Captured, VerifyError> {
         debug_assert!(!self.sealed, "capture after seal (engine defect)");
         if self.sealed {
             return Err(VerifyError::Io {
@@ -146,10 +167,17 @@ impl Snapshot {
                             Ok(_) if bytes.len() > max_file_bytes => Captured::TooLarge {
                                 limit: max_file_bytes,
                             },
-                            Ok(_) => {
-                                // Commit-then-count: the aggregate reflects
-                                // exactly the bytes the snapshot stores.
-                                if self.aggregate + bytes.len() > self.max_aggregate_bytes {
+                            Ok(_) if self.aggregate + bytes.len() > self.max_aggregate_bytes => {
+                                if degrade_on_aggregate {
+                                    // Prose posture: store the refusal (bytes
+                                    // dropped, not counted) — read-once holds,
+                                    // and the check reports the degradation.
+                                    Captured::TooLarge {
+                                        limit: self.max_aggregate_bytes,
+                                    }
+                                } else {
+                                    // Config posture: a global hard stop;
+                                    // nothing is stored or counted.
                                     return Err(VerifyError::BoundExceeded {
                                         bound: "aggregate-snapshot-size".into(),
                                         detail: format!(
@@ -158,6 +186,10 @@ impl Snapshot {
                                         ),
                                     });
                                 }
+                            }
+                            Ok(_) => {
+                                // Commit-then-count: the aggregate reflects
+                                // exactly the bytes the snapshot stores.
                                 self.aggregate += bytes.len();
                                 match String::from_utf8(bytes) {
                                     Ok(s) => Captured::Content(Content::Utf8(s)),
@@ -169,9 +201,12 @@ impl Snapshot {
                     Err(OpenViolation::Symlink { component }) => {
                         Captured::SymlinkRefused { component }
                     }
-                    // A FIFO/socket/device/directory: it EXISTS but carries no
+                    // A FIFO/device/directory: it EXISTS but carries no
                     // verifiable content (and a FIFO read would block forever)
                     // — the same consumer posture as opened-but-unreadable.
+                    // (A unix SOCKET does not reach here: open(2) refuses it
+                    // with ENXIO/EOPNOTSUPP before any fstat, so it lands in
+                    // `OpenIo` and reports as absent — pre-#103 behavior.)
                     Err(OpenViolation::NotRegular) => Captured::OpenedUnreadable {
                         error: "not a regular file".into(),
                     },
@@ -289,6 +324,37 @@ mod tests {
         std::fs::remove_file(temp.0.join("big.md")).unwrap();
         assert!(matches!(
             snap.capture(&temp.0, &confined("big.md")).unwrap(),
+            Captured::TooLarge { .. }
+        ));
+    }
+
+    // The prose posture (capture_degrading, phase-3 R2S-1): an aggregate-
+    // breaching capture stores a TooLarge state — bytes dropped, not counted,
+    // memoized — while the config posture (capture) errors on the same input.
+    #[test]
+    fn degrading_capture_stores_state_on_aggregate_breach() {
+        let temp = TempDir::new("degrade");
+        std::fs::write(temp.0.join("a.md"), "aaaaaa").unwrap();
+        std::fs::write(temp.0.join("b.md"), "bbbbbb").unwrap();
+        std::fs::write(temp.0.join("c.md"), "cc").unwrap();
+        let mut snap = Snapshot::new(64, 10);
+        snap.capture(&temp.0, &confined("a.md")).unwrap();
+        // Config posture: hard error, nothing stored.
+        assert!(snap.capture(&temp.0, &confined("b.md")).is_err());
+        // Prose posture: the SAME breach is a stored refusal…
+        assert!(matches!(
+            snap.capture_degrading(&temp.0, &confined("b.md")).unwrap(),
+            Captured::TooLarge { .. }
+        ));
+        // …whose dropped bytes did not consume the budget (4 bytes still fit)…
+        match snap.capture(&temp.0, &confined("c.md")).unwrap() {
+            Captured::Content(c) => assert_eq!(c.text(), Some("cc")),
+            other => panic!("expected content; got {other:?}"),
+        }
+        // …and the refusal is memoized like any capture.
+        std::fs::remove_file(temp.0.join("b.md")).unwrap();
+        assert!(matches!(
+            snap.capture_degrading(&temp.0, &confined("b.md")).unwrap(),
             Captured::TooLarge { .. }
         ));
     }

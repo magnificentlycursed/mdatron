@@ -63,12 +63,14 @@ pub enum OpenViolation {
     /// whatever its target — inside or outside the governed tree.
     /// MDATRON-E0012 territory.
     Symlink { component: PathBuf },
-    /// The leaf exists and opened, but is not a regular file — a FIFO, socket,
-    /// device, or directory. Refused before any read: a FIFO with no writer
-    /// would otherwise park the process in a blocking `open`/`read` forever
-    /// (a one-file denial of verification), and none of these carry content
-    /// the engine can verify. The path EXISTS — consumers that only test
-    /// existence treat this as present-but-unverifiable.
+    /// The leaf exists and opened, but is not a regular file — a FIFO, device,
+    /// or directory. Refused before any read: a FIFO with no writer would
+    /// otherwise park the process in a blocking `open`/`read` forever (a
+    /// one-file denial of verification), and none of these carry content the
+    /// engine can verify. The path EXISTS — consumers that only test existence
+    /// treat this as present-but-unverifiable. (A unix SOCKET never reaches
+    /// this variant: `open(2)` refuses sockets with ENXIO/EOPNOTSUPP before
+    /// the fstat, so it surfaces as `Io` and reports as absent.)
     NotRegular,
     /// Ordinary IO failure (not found, permission, not-a-directory).
     Io(io::Error),

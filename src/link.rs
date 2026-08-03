@@ -235,11 +235,29 @@ fn resolve_link(
                 }
             }
         }
-        // Opened but unreadable, or over the per-file size cap: the target
-        // exists; its fragment (if any) is not resolved — same posture as a
-        // non-markdown target. A prose link must never be able to abort the
-        // run (#103 phase-3 A-1).
-        Some(Captured::OpenedUnreadable { .. }) | Some(Captured::TooLarge { .. }) => {}
+        // Opened but unreadable (non-UTF8, FIFO, directory): the target
+        // exists; its fragment (if any) is not resolved — the pre-#103
+        // posture, unchanged and quiet by necessity.
+        Some(Captured::OpenedUnreadable { .. }) => {}
+        // Over the size budget: the target exists and COULD be verified — the
+        // anchor check was skipped by budget, not necessity, so the
+        // degradation is loud (W0048; #103 phase-3 R2S-2). Warning severity
+        // keeps the run alive; `--deny-warnings` gates can escalate it.
+        Some(Captured::TooLarge { .. }) => {
+            let mut f = link_finding(
+                path,
+                content,
+                at,
+                "MDATRON-W0048",
+                "reference-target-unverified",
+                "this link's target exceeds the input size budget, so its \
+                 fragment was NOT resolved — existence only; raise attention \
+                 on the link or shrink the target",
+                dest,
+            );
+            f.severity = Severity::Warning;
+            findings.push(f);
+        }
         Some(Captured::SymlinkRefused { .. }) => {
             findings.push(link_finding(
                 path,
