@@ -1,6 +1,6 @@
 {
   "next_display_id": 165,
-  "next_comment_id": 427,
+  "next_comment_id": 428,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -6203,11 +6203,20 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-08-03T17:05:14.058918Z",
-      "updated_at": "2026-08-03T22:29:58.313032Z",
+      "updated_at": "2026-08-03T22:38:51.636512Z",
       "labels": [
         "enhancement"
       ],
       "comments": {
+        "1f373e87-9677-45e8-b86e-7c90ddbb7019": {
+          "display_id": 427,
+          "author": "79Ig",
+          "content": "2b/2c COMPLETE — commit 86c0130 on feature/162-index-degradation (stacked on feature/163-bounds-catalog; 8 files, +260/-33). Delivered exactly the 1a design: build_from_parts returns (registry, Vec<DegradedSource>) — pure DSL layer emits data, verify::run renders W0049 (index-source-unreadable, WARNING, at .mdatron/patterns/, quoting index+source). State split as designed: OpenIo/OpenedUnreadable/non-UTF8 degrade; SymlinkRefused/TooLarge/None stay hard. Rule-over-degraded-index fires its own finding (conformance gate preserved). Behavior change (missing/unreadable/non-UTF8: E0080-abort -> W0049+continue) documented in CHANGELOG; 3 abort-tests updated to the new contract (2 verify-layer + 1 red-gate control), symlink stays hard. W0049 wired through page/catalog/BASELINE. 533 tests, 0 clippy, self-validation exit 0. PHASE 3 COMPOSITION: single combined security+correctness cold reviewer over 86c0130 (scaled shape — small well-scoped degradation lane; the state-split + no-silent-degradation invariants are the review targets; ceiling 1/round, rounds-to-MVR).",
+          "created_at": "2026-08-03T22:38:51.620033Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAqE/ZqVLGseG9UemuTibp0iIgavq6C4NL4Zygsi1zZ3AM3OO/+DQsudrM0I77la62gVH915GhfMXYcq7NvLQ/Dw=="
+        },
         "37c9c267-8fe7-4cfd-9601-a64c6697c4fa": {
           "display_id": 420,
           "author": "79Ig",
@@ -6858,8 +6867,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-03T22:29:58.313032Z",
+    "timestamp": "2026-08-03T22:38:51.636512Z",
     "agent_id": "79Ig",
-    "agent_seq": 818
+    "agent_seq": 819
   }
 }
