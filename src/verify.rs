@@ -701,7 +701,17 @@ fn run(
         }
         decl_sources.push((decl, sources));
     }
-    let registry = IndexRegistry::build_from_parts(&decl_sources, &snapshot)?;
+    let (registry, degraded_sources) = IndexRegistry::build_from_parts(&decl_sources, &snapshot)?;
+    // #162: a missing/unreadable/non-UTF8 index source degraded to an empty
+    // contribution rather than aborting the run — render each as a loud
+    // availability warning (W0049) at the patterns-family config home, so the
+    // inert source is observable. Rules referencing the now-empty key surface
+    // their own findings; this is the family's availability signal, not the
+    // conformance gate. Whole-tree only — an incremental scope filter would
+    // otherwise drop a patterns-located finding (mirrors W0043/W0046/W0047).
+    for d in &degraded_sources {
+        findings.push(index_source_degraded_finding(&project_root, d));
+    }
 
     // Incremental scope (#102, cold-review F3/F4): resolve the changed path to a
     // governed file by canonicalizing both sides — robust to symlinked roots
@@ -1236,6 +1246,48 @@ fn unreadable_body_finding(path: &Path, cause: &str) -> Finding {
         },
         explain_ref: Some("MDATRON-E0003".into()),
         quoted: Vec::new(),
+    }
+}
+
+/// A `keys:` source that could not be read (#162): a loud availability warning
+/// located at the patterns-family config home (`.mdatron/patterns/`, mirroring
+/// how W0043/W0046/W0047 locate at the declaring config surface). The index is
+/// inert for that source, so a rule referencing the now-empty key surfaces its
+/// own finding — this warning is the availability signal, not the conformance
+/// gate. The source path arrives pre-escaped from the DSL layer.
+fn index_source_degraded_finding(project_root: &Path, d: &crate::dsl::DegradedSource) -> Finding {
+    Finding {
+        code: "MDATRON-W0049".into(),
+        severity: Severity::Warning,
+        summary: "index-source-unreadable".into(),
+        message: format!(
+            "a `keys:` source for index '{}' could not be read ({}), so it \
+             contributed nothing — the index is inert for that source. A rule \
+             that requires the key will surface its own finding; this warning \
+             makes the missing coverage observable rather than silent.",
+            d.key_name, d.reason
+        ),
+        help: Some(
+            "restore or re-encode the source as a readable UTF-8 file, or \
+             remove the `keys:` declaration if the index is no longer needed"
+                .into(),
+        ),
+        location: Location {
+            file: project_root.join(".mdatron").join("patterns"),
+            line: 1,
+            column: 0,
+        },
+        explain_ref: Some("MDATRON-W0049".into()),
+        quoted: vec![
+            QuotedRegion {
+                label: "index".into(),
+                content: d.key_name.clone(),
+            },
+            QuotedRegion {
+                label: "source".into(),
+                content: d.source_display.clone(),
+            },
+        ],
     }
 }
 
@@ -5649,8 +5701,12 @@ pattern:
         }
     }
 
+    // #162: a non-UTF8 index source no longer ABORTS the run — it degrades to
+    // an empty contribution plus a loud W0049 (the index family is inert for
+    // that source, not silent), and the run completes. Rules referencing the
+    // now-empty key surface their own findings.
     #[test]
-    fn non_utf8_index_source_aborts_via_build_from_parts() {
+    fn non_utf8_index_source_degrades_to_w0049_not_abort() {
         let proj = TempProject::new("index-raw");
         proj.write(".mdatron/schemas/.keep.json", "{}");
         proj.write(
@@ -5664,11 +5720,74 @@ pattern:
         );
         proj.write("docs/d.md", "# plain\n");
         let cfg = VerifyConfig::from_project(&proj.0).unwrap();
-        let err = verify(&cfg).unwrap_err();
-        match err {
-            VerifyError::IndexBuild(IndexError::Io { .. }) => {}
-            other => panic!("a non-UTF8 index source is an index Io; got {other:?}"),
-        }
+        let findings = verify(&cfg).expect("a non-UTF8 index source must not abort the run");
+        let f = findings
+            .iter()
+            .find(|f| f.code == "MDATRON-W0049")
+            .unwrap_or_else(|| panic!("expected W0049; got {findings:?}"));
+        assert!(
+            f.quoted.iter().any(|q| q.content == "k")
+                && f.quoted.iter().any(|q| q.content.contains("data.yaml")),
+            "the finding names the key and the source; got {:?}",
+            f.quoted
+        );
+    }
+
+    // #162: a MISSING literal index source likewise degrades (was a hard Io
+    // abort) — the index is empty for that key and the run completes loud.
+    #[test]
+    fn missing_index_source_degrades_to_w0049_not_abort() {
+        let proj = TempProject::new("index-missing");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write(
+            ".mdatron/patterns/p.yaml",
+            "mdatron_dsl_version: 1\npattern:\n  id: miss\n  keys:\n    - name: k\n      source: registry/absent.yaml\n      select: $\n      indexed_by: $key\n  rules:\n    - id: r\n      context: no-such-class\n      assert: \"true\"\n      code: T-E0001\n      message: never\n",
+        );
+        proj.write("docs/d.md", "# plain\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).expect("a missing index source must not abort the run");
+        assert_eq!(codes_of(&findings, "MDATRON-W0049"), 1, "got {findings:?}");
+    }
+
+    // #162: the degraded index behaves as ABSENT, so a rule that requires the
+    // key (`defined(key(...))`) fires its OWN configured finding — the W0049
+    // is the availability signal, the rule is the conformance gate.
+    #[test]
+    fn rule_over_degraded_index_surfaces_its_own_finding() {
+        let proj = TempProject::new("index-degraded-rule");
+        proj.write(
+            ".mdatron/schemas/doc.json",
+            r#"{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","required":["schema_class","dep"],"properties":{"schema_class":{"const":"doc"},"dep":{"type":"string"}},"additionalProperties":true}"#,
+        );
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        std::fs::write(proj.0.join("registry.yaml"), [0xFF, 0xFE]).unwrap();
+        proj.write(
+            ".mdatron/patterns/p.yaml",
+            "mdatron_dsl_version: 1\npattern:\n  id: dep\n  keys:\n    - name: deps\n      source: registry.yaml\n      select: $\n      indexed_by: $key\n  rules:\n    - id: r\n      context: doc\n      assert: 'defined(key(\"deps\", $self.dep))'\n      code: T-E0001\n      message: \"dep must resolve\"\n",
+        );
+        proj.write(
+            "docs/d.md",
+            "---\nschema_class: doc\ndep: alpha\n---\n# d\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).expect("must not abort");
+        assert_eq!(
+            codes_of(&findings, "MDATRON-W0049"),
+            1,
+            "the source degradation is loud; got {findings:?}"
+        );
+        assert_eq!(
+            findings.iter().filter(|f| f.code == "T-E0001").count(),
+            1,
+            "the rule requiring the empty key fires its own finding; got {findings:?}"
+        );
     }
 
     // Phase-3 I-5/A-3: a snapshot miss is reported as an ENGINE defect

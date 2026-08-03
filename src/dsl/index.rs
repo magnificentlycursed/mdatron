@@ -72,6 +72,18 @@ pub struct IndexRegistry {
     pub indices: BTreeMap<String, Index>,
 }
 
+/// A `keys:` source that could not be read (missing, unreadable, or non-UTF8)
+/// and so contributed nothing to its index (#162). The build DEGRADES rather
+/// than aborts on this class; the caller renders each as a loud availability
+/// warning (`MDATRON-W0049`) so the inert source is observable, never silent.
+/// `source_display` is already escaped under the marking discipline.
+#[derive(Debug, Clone)]
+pub struct DegradedSource {
+    pub key_name: String,
+    pub source_display: String,
+    pub reason: String,
+}
+
 impl IndexRegistry {
     pub fn new() -> Self {
         Self::default()
@@ -85,7 +97,9 @@ impl IndexRegistry {
     /// [`IndexRegistry::build_from_parts`]. There is deliberately no second
     /// parse/merge body to drift from. Callers today are the unit tests that
     /// pin the confinement contract; the verify pipeline captures into ITS
-    /// run snapshot and calls `build_from_parts` directly (#103).
+    /// run snapshot and calls `build_from_parts` directly (#103). Discards the
+    /// degraded-source list (#162) — the tests here exercise the hard
+    /// confinement/bound errors, and the verify path renders the degradations.
     pub fn build(project_root: &Path, decls: &[KeyDecl]) -> Result<Self, IndexError> {
         let mut snapshot = crate::snapshot::Snapshot::new(
             crate::verify::MAX_FILE_BYTES,
@@ -103,21 +117,29 @@ impl IndexRegistry {
             }
             parts.push((decl.clone(), sources));
         }
-        Self::build_from_parts(&parts, &snapshot)
+        Self::build_from_parts(&parts, &snapshot).map(|(registry, _degraded)| registry)
     }
 
     /// Build a registry from pre-resolved sources whose content was captured
     /// into `snapshot` before the capture-complete seam (#103). Pure over the
-    /// snapshot: no filesystem access. Capture-time states map onto the same
-    /// taxonomy the live build produces — a symlinked source is
-    /// [`IndexError::SymlinkRefused`], an absent/unreadable one is
-    /// [`IndexError::Io`] — so the two build paths are finding-equivalent.
+    /// snapshot: no filesystem access.
+    ///
+    /// State posture (#162): a symlinked source ([`IndexError::SymlinkRefused`],
+    /// confinement) and an over-budget source ([`IndexError::InputBounded`],
+    /// the declared-bounds abort) stay HARD errors. A missing, unreadable, or
+    /// non-UTF8 source DEGRADES: it contributes nothing to its index and is
+    /// returned as a [`DegradedSource`] (the caller renders it as a loud
+    /// availability warning) — one unreadable source must not abort the whole
+    /// run, and the index is inert-for-that-source-with-reason, never silently
+    /// empty. A snapshot miss (`None`) stays a hard engine-defect error.
+    #[allow(clippy::type_complexity)]
     pub fn build_from_parts(
         parts: &[(KeyDecl, Vec<confine::ConfinedPath>)],
         snapshot: &crate::snapshot::Snapshot,
-    ) -> Result<Self, IndexError> {
+    ) -> Result<(Self, Vec<DegradedSource>), IndexError> {
         use crate::snapshot::Captured;
         let mut indices = BTreeMap::new();
+        let mut degraded: Vec<DegradedSource> = Vec::new();
         for (decl, sources) in parts {
             let mut entries: BTreeMap<String, Value> = BTreeMap::new();
             let mut provenance: BTreeMap<String, BTreeSet<PathBuf>> = BTreeMap::new();
@@ -133,11 +155,14 @@ impl IndexRegistry {
                 let content = match snapshot.get(rel.as_path()) {
                     Some(Captured::Content(c)) => match c.text() {
                         Some(text) => text,
+                        // Non-UTF8: degrade (empty contribution + warning).
                         None => {
-                            return Err(IndexError::Io {
-                                path: display_text,
-                                error: "stream did not contain valid UTF-8".into(),
-                            })
+                            degraded.push(DegradedSource {
+                                key_name: decl.name.clone(),
+                                source_display: display_text,
+                                reason: "not valid UTF-8".into(),
+                            });
+                            continue;
                         }
                     },
                     Some(Captured::SymlinkRefused { component }) => {
@@ -160,13 +185,20 @@ impl IndexRegistry {
                         };
                         return Err(IndexError::InputBounded { detail });
                     }
+                    // Missing / unreadable: degrade (#162) — one unreadable
+                    // source must not deny verification of the whole tree.
                     Some(Captured::OpenedUnreadable { error })
                     | Some(Captured::OpenIo { error }) => {
-                        return Err(IndexError::Io {
-                            path: display_text,
-                            error: error.clone(),
-                        })
+                        degraded.push(DegradedSource {
+                            key_name: decl.name.clone(),
+                            source_display: display_text,
+                            reason: error.clone(),
+                        });
+                        continue;
                     }
+                    // A snapshot miss is an ENGINE defect (discovery failed to
+                    // capture a declared source) — hard, never silently
+                    // degraded, so the bug cannot hide as an adopter warning.
                     None => {
                         return Err(IndexError::Io {
                             path: display_text,
@@ -202,7 +234,7 @@ impl IndexRegistry {
                 },
             );
         }
-        Ok(Self { indices })
+        Ok((Self { indices }, degraded))
     }
 
     /// Look up an entry by index name + key. Returns `None` if either is unknown.
@@ -1091,13 +1123,31 @@ mod tests {
     }
 
     #[test]
-    fn confined_but_missing_source_is_io_not_traversal() {
-        // A non-existent target inside the root is an IO condition, not a
-        // confinement violation — no silent degradation, no false traversal.
+    fn confined_but_missing_source_degrades_not_traversal() {
+        // A non-existent target inside the root is an availability condition
+        // (#162): it DEGRADES to a DegradedSource (empty contribution +
+        // warning), never a confinement/traversal error and never a silent
+        // skip. `build` discards the degraded list, so it succeeds with an
+        // empty index; `build_from_parts` exposes the reason.
         let temp = TempDir::new("missing-confined");
         let d = decl("m", "missing.yaml", "$", "$key");
-        let err = IndexRegistry::build(temp.path(), &[d]).unwrap_err();
-        assert!(matches!(err, IndexError::Io { .. }));
+        let registry = IndexRegistry::build(temp.path(), &[d.clone()]).unwrap();
+        assert!(registry.indices.get("m").unwrap().is_empty());
+
+        // Via build_from_parts: the missing source is reported as degraded,
+        // NOT as a confinement/traversal error.
+        let mut snap = crate::snapshot::Snapshot::new(
+            crate::verify::MAX_FILE_BYTES,
+            crate::verify::MAX_AGGREGATE_BYTES,
+        );
+        let sources = resolve_source(temp.path(), "missing.yaml").unwrap();
+        for rel in &sources {
+            snap.capture(temp.path(), rel).unwrap();
+        }
+        let (_registry, degraded) =
+            IndexRegistry::build_from_parts(&[(d, sources)], &snap).unwrap();
+        assert_eq!(degraded.len(), 1, "the missing source degrades");
+        assert_eq!(degraded[0].key_name, "m");
     }
 
     #[cfg(unix)]

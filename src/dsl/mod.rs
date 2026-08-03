@@ -19,6 +19,6 @@ pub mod types;
 pub use expr::{evaluate, EvalContext, EvalError, Expr, Value, VarRef};
 pub use expr_parser::{parse_expression, ParseError as ExprParseError};
 pub(crate) use index::resolve_source;
-pub use index::{Index, IndexError, IndexRegistry};
+pub use index::{DegradedSource, Index, IndexError, IndexRegistry};
 pub use parser::parse_pattern_file;
 pub use types::{ContextSelector, KeyDecl, LocationSpec, Pattern, PatternFile, Rule};

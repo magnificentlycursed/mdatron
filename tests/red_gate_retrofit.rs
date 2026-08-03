@@ -241,14 +241,20 @@ fn rg_glob_matched_symlink_refused() {
 // ── Control (must pass on BOTH trees; validates the harness itself) ────────────
 
 #[test]
-fn rg_control_confined_missing_source_errors_without_traversal_claim() {
+fn rg_control_confined_missing_source_degrades_not_traversal() {
+    // #162: a missing in-root source is an AVAILABILITY condition — it
+    // degrades (empty contribution; `build` discards the degraded reason and
+    // succeeds with an empty index), never a confinement/traversal error.
+    // This control still validates the harness distinguishes the confinement
+    // refusals above (Err) from a benign missing source (Ok-empty).
     let root = canonical_temp_root("missing-confined");
     let d = decl("m", "missing.yaml", "$", "$key");
     let result = IndexRegistry::build(&root, &[d]);
     std::fs::remove_dir_all(&root).unwrap();
+    let registry = result.expect("a missing confined source degrades, it does not error");
     assert!(
-        result.is_err(),
-        "control: absent in-root target must error (any class)"
+        registry.indices.get("m").unwrap().is_empty(),
+        "the index for a missing source is empty, not populated"
     );
 }
 
