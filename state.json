@@ -3167,11 +3167,12 @@
       "uuid": "89517494-f1f1-48d3-b610-9b0c288ffcb6",
       "display_id": 161,
       "title": "tracker hygiene: reconcile issues left open by the broken-hub sessions (close shipped #132/#155/#159, verify #133 relay)",
-      "status": "open",
+      "status": "closed",
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-08-03T15:30:59.082134Z",
-      "updated_at": "2026-08-03T15:35:15.108345Z",
+      "updated_at": "2026-08-03T15:35:21.828336Z",
+      "closed_at": "2026-08-03T15:35:21.828329Z",
       "labels": [
         "chore"
       ],
@@ -6511,8 +6512,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-03T15:35:15.108345Z",
+    "timestamp": "2026-08-03T15:35:21.828336Z",
     "agent_id": "79Ig",
-    "agent_seq": 768
+    "agent_seq": 769
   }
 }
