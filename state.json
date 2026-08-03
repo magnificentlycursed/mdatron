@@ -1,6 +1,6 @@
 {
   "next_display_id": 162,
-  "next_comment_id": 398,
+  "next_comment_id": 399,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -5170,7 +5170,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T07:22:08.149420Z",
-      "updated_at": "2026-08-03T15:47:42.250029Z",
+      "updated_at": "2026-08-03T15:48:05.732504Z",
       "labels": [
         "feature"
       ],
@@ -5186,6 +5186,15 @@
           "kind": "decision",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAoDqlDSI5xnyfmySaChUNVB3a2eFhfdA9oUINm1TmBXbsQ45enmSIktcgKhGcoyJyjyWuv3uYD8aG5dNTZ3JmBw=="
+        },
+        "6b5666ad-0e0d-4a76-9df2-8f77b2b995f9": {
+          "display_id": 398,
+          "author": "79Ig",
+          "content": "PHASE 1a DESIGN (the unification). One snapshot module (src/snapshot.rs): Snapshot = BTreeMap<rel, Captured>; Captured = Text(String) | Raw(Vec<u8>, non-UTF8 valid capture) | OpenedUnreadable{error} | SymlinkRefused{component} | OpenIo{error}. Capture = open_confined + bounded read_to_end + from_utf8 classify; PER-FILE MAX_FILE_BYTES and AGGREGATE caps now cover EVERY capture (closes the unbounded index-source/target reads — a real DoS fix, existing two bounds only; full bounds catalog stays sub-lane D). READ-ONCE ACROSS ROLES: capture is idempotent per rel — a file that is body+source+target is read exactly once; every consumer sees the same bytes (kills the T1-vs-T3 index inconsistency by construction). CAPTURE ORDER (all pre-seam): (1) governed bodies; (2) index sources (resolve_source enumerates, capture reads, IndexRegistry::build_from_snapshot parses captured bytes — build splits resolve/extract); (3) compute incremental scope (needs registry+bodies); (4) pin targets (scope-filtered) + cite/link/marker target DISCOVERY over in-scope body text using the same extraction the checks use (cite regex, link destinations, marker target_doc from route config) — capture each; (5) SEAL = existing on_capture_complete seam relocated after ALL capture. Post-seam: zero filesystem access; checks map Captured states to their existing finding codes (cite: Text->range-check, Raw/OpenedUnreadable->existence-only continue, SymlinkRefused->E0012, OpenIo->E0100; link: Text->slug check, Raw/OpenedUnreadable->exists-no-anchor, OpenIo->dead-link; marker: Text->member set, unreadable->empty set, OpenIo->empty set E0112-loud, Symlink->E0012; pin: Text|Raw->sha256 over bytes, OpenedUnreadable/OpenIo->E0062, Symlink->E0012 — byte-for-byte the current per-family semantics, now from capture-time state). CAPTURE-WINDOW SEMANTICS documented in DESIGN: each input read once during the capture window; the seam marks seal; per-file consistency guaranteed, cross-file window races are capture-order, not check-time, and are what read-once means. Security-review carried items: C fixed in-lane (non-UTF8 governed body -> per-file finding instead of VerifyError::Io whole-run abort = denial-of-verification fix; needs a code — check codes.rs range at impl time + explain page + catalog + re-pin codes.rs); F fixed in-lane (E0012 explain page generalized beyond key-sources); B resolved by construction (seam now covers every input class); E stays routed to sub-lane D.",
+          "created_at": "2026-08-03T15:48:05.698412Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAMLVoutjJRIozZZFkCFeue1pNKnXQtJLVVngGVwyu3til3D5DCMTAvShJEOhvb/LIJLETDAJ8Kv7Fvbcz/Wk0Cw=="
         },
         "7c227e91-07ed-41c9-b980-ef9c82a10223": {
           "display_id": 295,
@@ -6542,8 +6551,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-03T15:47:42.250029Z",
+    "timestamp": "2026-08-03T15:48:05.732504Z",
     "agent_id": "79Ig",
-    "agent_seq": 777
+    "agent_seq": 778
   }
 }
