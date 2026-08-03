@@ -170,9 +170,9 @@ pub enum VerifyError {
 /// governed markdown; a hostile oversized or deeply-nested input trips a loud
 /// `BoundExceeded` (pipeline_error kind `bound_exceeded`) instead of exhausting
 /// CPU/memory silently.
-pub const MAX_FILE_BYTES: usize = 8 * 1024 * 1024;
-pub const MAX_AGGREGATE_BYTES: usize = 64 * 1024 * 1024;
-pub const MAX_STRUCTURAL_NESTING: usize = 256;
+pub const MAX_FILE_BYTES: usize = crate::limits::SHIPPED.per_file_bytes;
+pub const MAX_AGGREGATE_BYTES: usize = crate::limits::SHIPPED.aggregate_bytes;
+pub const MAX_STRUCTURAL_NESTING: usize = crate::limits::SHIPPED.structural_nesting;
 
 /// Maximum flow-collection nesting depth (`[`/`{`) in a governed file (#124,
 /// roast SHO1 depth-bomb). O(n) pre-scan: a compact deeply-nested collection is
@@ -363,6 +363,35 @@ fn run(
             path: config.project_root.to_string_lossy().into_owned(),
             error: e.to_string(),
         })?;
+
+    // Concurrent-invocation bound (#92 D / DESIGN § hook-time cost): hold one
+    // of the declared per-root slots for the run's duration, or report the
+    // bound — never pile unbounded concurrent hook invocations onto one
+    // machine. The guard's lock dies with the process (flock / exclusive
+    // share-mode), so a crashed run cannot wedge the count. Slot-
+    // infrastructure IO failure is a loud error, not a silent unbounded run
+    // (no-silent-degradation doctrine).
+    let _invocation_slot = match crate::limits::acquire_invocation_slot(
+        &project_root,
+        crate::limits::SHIPPED.concurrent_invocations,
+    ) {
+        Ok(Some(slot)) => slot,
+        Ok(None) => {
+            return Err(VerifyError::BoundExceeded {
+                bound: "concurrent-invocation-count".into(),
+                detail: format!(
+                    "all {} concurrent verify invocation slots for this project root are busy",
+                    crate::limits::SHIPPED.concurrent_invocations
+                ),
+            })
+        }
+        Err(e) => {
+            return Err(VerifyError::Io {
+                path: "invocation slot directory".into(),
+                error: e.to_string(),
+            })
+        }
+    };
 
     // Union of all patterns' `keys:` declarations. The registry itself is built
     // AFTER the governed-body capture, from the same snapshot (#103): index
@@ -5250,6 +5279,235 @@ pattern:
             codes_of(&findings, "MDATRON-W0048") >= 1,
             "the degraded prose references are loud; got {findings:?}"
         );
+    }
+
+    // ── #92 sub-lane D: declared bounds catalog ──────────────────────────────
+
+    // DESIGN:148 "concurrent-invocation-count exceedance (N+1 overlapping
+    // runs)": with every declared slot held, a run reports the bound; freeing
+    // one slot lets it proceed.
+    #[test]
+    fn concurrent_invocation_count_is_bounded() {
+        let proj = TempProject::new("slots");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write("docs/d.md", "# plain\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+
+        let limit = crate::limits::SHIPPED.concurrent_invocations;
+        let mut held = Vec::new();
+        for _ in 0..limit {
+            held.push(
+                crate::limits::acquire_invocation_slot(&proj.0, limit)
+                    .unwrap()
+                    .expect("slots free under the limit"),
+            );
+        }
+        let err = verify(&cfg).unwrap_err();
+        match err {
+            VerifyError::BoundExceeded { ref bound, .. } => {
+                assert_eq!(bound, "concurrent-invocation-count", "got {err:?}")
+            }
+            other => panic!("the N+1st invocation must report the bound; got {other:?}"),
+        }
+        held.clear();
+        assert!(
+            verify(&cfg).is_ok(),
+            "with slots free again the run proceeds"
+        );
+    }
+
+    // DESIGN:148 "seeded alias-bomb": the YAML repetition guard refuses the
+    // expansion as a localized E0001 parse finding — bounded time and memory,
+    // never a whole-run abort, never an OOM. (The guard rides the parser; this
+    // fixture pins that the engine's posture over it is the per-file one.)
+    #[test]
+    fn frontmatter_alias_bomb_is_a_bounded_per_file_finding() {
+        let proj = TempProject::new("alias-bomb");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write("docs/good.md", "# fine\n");
+        let mut bomb = String::from("---\na0: &a0 [\"AAAAAAAA\",\"AAAAAAAA\",\"AAAAAAAA\",\"AAAAAAAA\",\"AAAAAAAA\",\"AAAAAAAA\",\"AAAAAAAA\",\"AAAAAAAA\"]\n");
+        for i in 1..10 {
+            let refs = (0..8)
+                .map(|_| format!("*a{}", i - 1))
+                .collect::<Vec<_>>()
+                .join(",");
+            bomb.push_str(&format!("a{i}: &a{i} [{refs}]\n"));
+        }
+        bomb.push_str("---\nbody\n");
+        proj.write("docs/bomb.md", &bomb);
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let (findings, _fam, _vis, files_checked) =
+            run(&cfg, None, None).expect("an alias bomb must not abort the run");
+        assert_eq!(
+            codes_of(&findings, "MDATRON-E0001"),
+            1,
+            "the refused expansion is a localized parse finding; got {findings:?}"
+        );
+        // Both files count as checked: the bomb ENTERED verify_file and was
+        // validated-as-malformed (E0001), unlike an E0003 unreadable body
+        // which never enters. The point pinned here is the sibling verifying
+        // and the run surviving.
+        assert_eq!(files_checked, 2, "both files ran the per-file checks");
+    }
+
+    // DESIGN:148 "seeded depth-bomb" on an INDEX source (the #103-routed
+    // observation): the parser's recursion guard refuses it as a clean index
+    // build error — bounded, no stack overflow.
+    #[test]
+    fn index_source_depth_bomb_is_a_bounded_index_error() {
+        let proj = TempProject::new("index-depth-bomb");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        let deep = format!("k: {}{}\n", "[".repeat(3000), "]".repeat(3000));
+        proj.write("registry/deep.yaml", &deep);
+        proj.write(
+            ".mdatron/patterns/p.yaml",
+            "mdatron_dsl_version: 1\npattern:\n  id: depth\n  keys:\n    - name: k\n      source: registry/deep.yaml\n      select: $\n      indexed_by: $key\n  rules:\n    - id: r\n      context: no-such-class\n      assert: \"true\"\n      code: T-E0001\n      message: never\n",
+        );
+        proj.write("docs/d.md", "# plain\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let err = verify(&cfg).unwrap_err();
+        assert!(
+            matches!(err, VerifyError::IndexBuild(IndexError::Parse { .. })),
+            "the depth bomb is a clean parse refusal; got {err:?}"
+        );
+    }
+
+    // DESIGN:147 "a symlink-cycle fixture terminates": a directory symlink
+    // cycle under the MAIN file_globs walk terminates promptly, every
+    // cycle-path capture refused loudly (E0012) — no unbounded enumeration.
+    #[cfg(unix)]
+    #[test]
+    fn main_walk_symlink_cycle_terminates_with_refusals() {
+        let proj = TempProject::new("walk-cycle");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write("docs/real.md", "# fine\n");
+        std::os::unix::fs::symlink(proj.0.join("docs"), proj.0.join("docs/loop")).unwrap();
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+
+        let (tx, rx) = std::sync::mpsc::channel();
+        let worker = std::thread::spawn(move || {
+            let _ = tx.send(verify(&cfg));
+        });
+        let findings = match rx.recv_timeout(std::time::Duration::from_secs(10)) {
+            Ok(result) => result.expect("the cycle walk must complete, not abort"),
+            Err(_) => panic!("the main walk did not terminate on a symlink cycle"),
+        };
+        let _ = worker.join();
+        assert!(
+            codes_of(&findings, "MDATRON-E0012") >= 1,
+            "cycle paths are refused loudly; got {findings:?}"
+        );
+    }
+
+    // ── #92 sub-lane E: concurrency safety ───────────────────────────────────
+
+    // DESIGN:148 "overlapping invocations with a mutation between their starts
+    // each report against their own snapshots": run 1 seals its snapshot and
+    // parks at the seam; the tree mutates; run 2 starts and completes against
+    // the NEW state; run 1 resumes and reports its OWN capture-time state.
+    #[test]
+    fn overlapping_runs_each_report_their_own_snapshot() {
+        let proj = TempProject::new("overlap-own");
+        proj.write(
+            ".mdatron/schemas/blog.json",
+            r#"{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","required":["schema_class","title"],"properties":{"schema_class":{"const":"blog"},"title":{"type":"string"}},"additionalProperties":false}"#,
+        );
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        // Valid at run 1's capture.
+        proj.write("docs/d.md", "---\nschema_class: blog\ntitle: ok\n---\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let doc = proj.0.join("docs/d.md");
+
+        let (sealed_tx, sealed_rx) = std::sync::mpsc::channel::<()>();
+        let (resume_tx, resume_rx) = std::sync::mpsc::channel::<()>();
+        let cfg1 = VerifyConfig::from_project(&proj.0).unwrap();
+        let run1 = std::thread::spawn(move || {
+            let park = move || {
+                let _ = sealed_tx.send(());
+                let _ = resume_rx.recv();
+            };
+            run(&cfg1, None, Some(&park)).map(|(f, _, _, _)| f)
+        });
+        sealed_rx
+            .recv_timeout(std::time::Duration::from_secs(10))
+            .expect("run 1 reaches its seam");
+        // Mutate between the starts: run 2 must see this, run 1 must not.
+        std::fs::write(&doc, "---\nschema_class: blog\n---\n").unwrap();
+        let findings2 = verify(&cfg).expect("run 2 completes during run 1's window");
+        assert_eq!(
+            codes_of(&findings2, "MDATRON-E0050"),
+            1,
+            "run 2 captured the mutated (now-invalid) state; got {findings2:?}"
+        );
+        resume_tx.send(()).unwrap();
+        let findings1 = run1.join().unwrap().expect("run 1 completes");
+        assert!(
+            findings1.is_empty(),
+            "run 1 reports its own (pre-mutation) snapshot; got {findings1:?}"
+        );
+    }
+
+    // DESIGN:148 "overlapping invocations producing results that differ from
+    // serial runs" is a falsification: on a STATIC tree, an overlapped run
+    // pair equals the serial results exactly.
+    #[test]
+    fn overlapping_runs_on_a_static_tree_equal_serial() {
+        let proj = TempProject::new("overlap-serial");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write("docs/a.md", "---\nschema_class: doc\n---\n# a\n");
+        proj.write("docs/b.md", "# plain\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let serial = verify(&cfg).unwrap();
+
+        let (sealed_tx, sealed_rx) = std::sync::mpsc::channel::<()>();
+        let (resume_tx, resume_rx) = std::sync::mpsc::channel::<()>();
+        let cfg1 = VerifyConfig::from_project(&proj.0).unwrap();
+        let run1 = std::thread::spawn(move || {
+            let park = move || {
+                let _ = sealed_tx.send(());
+                let _ = resume_rx.recv();
+            };
+            run(&cfg1, None, Some(&park)).map(|(f, _, _, _)| f)
+        });
+        sealed_rx
+            .recv_timeout(std::time::Duration::from_secs(10))
+            .expect("run 1 reaches its seam");
+        let overlapped = verify(&cfg).expect("run 2 completes inside run 1's window");
+        resume_tx.send(()).unwrap();
+        let findings1 = run1.join().unwrap().expect("run 1 completes");
+
+        let key = |f: &Finding| (f.location.file.clone(), f.code.clone(), f.location.line);
+        let mut s: Vec<_> = serial.iter().map(key).collect();
+        let mut o: Vec<_> = overlapped.iter().map(key).collect();
+        let mut f1: Vec<_> = findings1.iter().map(key).collect();
+        s.sort();
+        o.sort();
+        f1.sort();
+        assert_eq!(s, o, "the overlapped run equals serial");
+        assert_eq!(s, f1, "the parked run equals serial");
     }
 
     // Phase-3 R2I-6: the remaining snapshot-miss arms (link, marker, pin) all

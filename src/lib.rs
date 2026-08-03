@@ -36,6 +36,7 @@ pub mod error;
 pub(crate) mod format_version;
 pub mod frontmatter;
 pub mod init;
+pub mod limits;
 pub mod link;
 pub mod marker;
 pub(crate) mod markup;
