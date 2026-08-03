@@ -285,7 +285,46 @@ fn cmd_pin(project_root: Option<PathBuf>, update: bool, dry_run: bool, quiet: bo
             }
             Ok(Some(loaded)) => {
                 let mut findings = loaded.findings;
-                mdatron::pin::check(&root, &loaded.pins, &mut findings);
+                // Standalone `mdatron pin` builds its own capture (#103): the
+                // same read-once, confined, bounded path the verify pipeline
+                // uses — pin::check never touches the filesystem itself.
+                let mut snapshot = mdatron::snapshot::Snapshot::new(
+                    mdatron::verify::MAX_FILE_BYTES,
+                    mdatron::verify::MAX_AGGREGATE_BYTES,
+                );
+                for pin in &loaded.pins {
+                    if let Ok(confined) =
+                        mdatron::confine::confine_lexically(std::path::Path::new(&pin.file))
+                    {
+                        match snapshot.capture(&root, &confined) {
+                            // Config-scoped posture: an oversized pinned file
+                            // is the declared-bounds abort, as in verify.
+                            Ok(mdatron::snapshot::Captured::TooLarge { limit, dimension }) => {
+                                let e = mdatron::snapshot::Snapshot::too_large_error(
+                                    confined.as_path(),
+                                    *limit,
+                                    *dimension,
+                                );
+                                if !quiet {
+                                    eprintln!(
+                                        "error[MDATRON-E0080]: pin check failed\n   = note: {e}"
+                                    );
+                                }
+                                return ExitCode::from(2);
+                            }
+                            Ok(_) => {}
+                            Err(e) => {
+                                if !quiet {
+                                    eprintln!(
+                                        "error[MDATRON-E0080]: pin check failed\n   = note: {e}"
+                                    );
+                                }
+                                return ExitCode::from(2);
+                            }
+                        }
+                    }
+                }
+                mdatron::pin::check(&root, &loaded.pins, &snapshot, &mut findings);
                 let errors = findings
                     .iter()
                     .filter(|f| f.severity == Severity::Error)

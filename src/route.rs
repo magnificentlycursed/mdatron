@@ -195,6 +195,11 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
             }
             Ok(confined) => match open_confined(project_root, &confined) {
                 Ok(_handle) => {} // exists; handle dropped immediately
+                // Exists but is not a regular file: the probe only tests
+                // existence, so this passes here (the pre-#103 open accepted
+                // it); what a non-document governing target MEANS is a route
+                // question, not a confinement one.
+                Err(OpenViolation::NotRegular) => {}
                 Err(OpenViolation::Symlink { .. }) => {
                     findings.push(Finding {
                         code: "MDATRON-E0012".into(),

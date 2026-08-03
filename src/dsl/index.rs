@@ -26,8 +26,6 @@
 //! path component is refused.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::fs::File;
-use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use thiserror::Error;
@@ -80,11 +78,129 @@ impl IndexRegistry {
     }
 
     /// Build a registry from a list of key declarations rooted at `project_root`.
+    ///
+    /// A thin wrapper over the ONE build path: sources are captured into a
+    /// local bounded [`crate::snapshot::Snapshot`] (the same confined,
+    /// no-follow, size-capped read the verify pipeline performs) and parsed by
+    /// [`IndexRegistry::build_from_parts`]. There is deliberately no second
+    /// parse/merge body to drift from. Callers today are the unit tests that
+    /// pin the confinement contract; the verify pipeline captures into ITS
+    /// run snapshot and calls `build_from_parts` directly (#103).
     pub fn build(project_root: &Path, decls: &[KeyDecl]) -> Result<Self, IndexError> {
-        let mut indices = BTreeMap::new();
+        let mut snapshot = crate::snapshot::Snapshot::new(
+            crate::verify::MAX_FILE_BYTES,
+            crate::verify::MAX_AGGREGATE_BYTES,
+        );
+        let mut parts: Vec<(KeyDecl, Vec<confine::ConfinedPath>)> = Vec::new();
         for decl in decls {
-            let index = build_index(project_root, decl)?;
-            indices.insert(decl.name.clone(), index);
+            let sources = resolve_source(project_root, decl.source.trim())?;
+            for rel in &sources {
+                snapshot
+                    .capture(project_root, rel)
+                    .map_err(|e| IndexError::InputBounded {
+                        detail: e.to_string(),
+                    })?;
+            }
+            parts.push((decl.clone(), sources));
+        }
+        Self::build_from_parts(&parts, &snapshot)
+    }
+
+    /// Build a registry from pre-resolved sources whose content was captured
+    /// into `snapshot` before the capture-complete seam (#103). Pure over the
+    /// snapshot: no filesystem access. Capture-time states map onto the same
+    /// taxonomy the live build produces — a symlinked source is
+    /// [`IndexError::SymlinkRefused`], an absent/unreadable one is
+    /// [`IndexError::Io`] — so the two build paths are finding-equivalent.
+    pub fn build_from_parts(
+        parts: &[(KeyDecl, Vec<confine::ConfinedPath>)],
+        snapshot: &crate::snapshot::Snapshot,
+    ) -> Result<Self, IndexError> {
+        use crate::snapshot::Captured;
+        let mut indices = BTreeMap::new();
+        for (decl, sources) in parts {
+            let mut entries: BTreeMap<String, Value> = BTreeMap::new();
+            let mut provenance: BTreeMap<String, BTreeSet<PathBuf>> = BTreeMap::new();
+            let mut source_set: BTreeSet<PathBuf> = BTreeSet::new();
+            for rel in sources {
+                let display = rel.as_path().to_path_buf();
+                let display_text = escape_path_text(&display.to_string_lossy());
+                debug_assert!(
+                    snapshot.get(rel.as_path()).is_some(),
+                    "index source '{}' was not captured before the seam",
+                    display.display()
+                );
+                let content = match snapshot.get(rel.as_path()) {
+                    Some(Captured::Content(c)) => match c.text() {
+                        Some(text) => text,
+                        None => {
+                            return Err(IndexError::Io {
+                                path: display_text,
+                                error: "stream did not contain valid UTF-8".into(),
+                            })
+                        }
+                    },
+                    Some(Captured::SymlinkRefused { component }) => {
+                        return Err(IndexError::SymlinkRefused {
+                            path: display_text,
+                            component: escape_path_text(&component.to_string_lossy()),
+                        })
+                    }
+                    // Config-scoped posture: an oversized index source is the
+                    // declared-bounds abort, matching the governed-body case —
+                    // named for the dimension actually breached (R3-2).
+                    Some(Captured::TooLarge { limit, dimension }) => {
+                        let detail = match dimension {
+                            crate::snapshot::BoundDimension::PerFile => format!(
+                                "'{display_text}' exceeds the {limit}-byte per-file limit"
+                            ),
+                            crate::snapshot::BoundDimension::Aggregate => format!(
+                                "capturing '{display_text}' would exceed the {limit}-byte aggregate limit"
+                            ),
+                        };
+                        return Err(IndexError::InputBounded { detail });
+                    }
+                    Some(Captured::OpenedUnreadable { error })
+                    | Some(Captured::OpenIo { error }) => {
+                        return Err(IndexError::Io {
+                            path: display_text,
+                            error: error.clone(),
+                        })
+                    }
+                    None => {
+                        return Err(IndexError::Io {
+                            path: display_text,
+                            error: "source was not captured before the seam".into(),
+                        })
+                    }
+                };
+                let rel_buf = rel.as_path().to_path_buf();
+                source_set.insert(rel_buf.clone());
+                let mut file_entries: BTreeMap<String, Value> = BTreeMap::new();
+                extract_into(
+                    &display,
+                    content,
+                    &decl.select,
+                    &decl.indexed_by,
+                    &mut file_entries,
+                )?;
+                for (k, v) in file_entries {
+                    provenance
+                        .entry(k.clone())
+                        .or_default()
+                        .insert(rel_buf.clone());
+                    entries.insert(k, v);
+                }
+            }
+            indices.insert(
+                decl.name.clone(),
+                Index {
+                    name: decl.name.clone(),
+                    entries,
+                    provenance,
+                    sources: source_set,
+                },
+            );
         }
         Ok(Self { indices })
     }
@@ -142,6 +258,13 @@ pub enum IndexError {
         limit: usize,
     },
 
+    /// A source capture exceeded the per-file or aggregate input budget
+    /// (`bound_exceeded` posture carried through the standalone build path;
+    /// the verify pipeline surfaces the same condition as its own
+    /// `BoundExceeded` pipeline error).
+    #[error("input bound exceeded: {detail}")]
+    InputBounded { detail: String },
+
     #[error("unsupported file type at '{path}' (extension: '{ext}')")]
     UnsupportedFileType { path: String, ext: String },
 
@@ -154,62 +277,6 @@ pub enum IndexError {
 }
 
 // ── Build pipeline ─────────────────────────────────────────────────────────────
-
-fn build_index(project_root: &Path, decl: &KeyDecl) -> Result<Index, IndexError> {
-    // Trim incidental whitespace a YAML scalar may carry around the source
-    // value. Consequence (accepted): a target whose real name begins or ends
-    // with a space is unreachable via this declaration — a pathological name we
-    // do not support as a source; confinement and the rest of the pipeline see
-    // the trimmed value.
-    let source = decl.source.trim();
-    let mut entries: BTreeMap<String, Value> = BTreeMap::new();
-    let mut provenance: BTreeMap<String, BTreeSet<PathBuf>> = BTreeMap::new();
-    let mut sources: BTreeSet<PathBuf> = BTreeSet::new();
-
-    for rel in resolve_source(project_root, source)? {
-        // Project-root-RELATIVE display path (roast A2, #140): this value feeds
-        // only the IndexError message `path` fields (the file itself opens via the
-        // confined `rel` below), so an absolute `project_root.join(...)` here would
-        // leak the host layout into the IndexBuild pipeline_error.message.
-        let display = rel.as_path().to_path_buf();
-        let file = confine::open_confined(project_root, &rel).map_err(|v| match v {
-            confine::OpenViolation::Symlink { component } => IndexError::SymlinkRefused {
-                path: escape_path_text(&display.to_string_lossy()),
-                component: escape_path_text(&component.to_string_lossy()),
-            },
-            confine::OpenViolation::Io(e) => IndexError::Io {
-                path: escape_path_text(&display.to_string_lossy()),
-                error: e.to_string(),
-            },
-        })?;
-        let rel_buf = rel.as_path().to_path_buf();
-        sources.insert(rel_buf.clone());
-        // Extract per file, then merge — so provenance records which file
-        // produced each key while `entries` keeps its cross-file last-wins.
-        let mut file_entries: BTreeMap<String, Value> = BTreeMap::new();
-        extract_into(
-            &display,
-            file,
-            &decl.select,
-            &decl.indexed_by,
-            &mut file_entries,
-        )?;
-        for (k, v) in file_entries {
-            provenance
-                .entry(k.clone())
-                .or_default()
-                .insert(rel_buf.clone());
-            entries.insert(k, v);
-        }
-    }
-
-    Ok(Index {
-        name: decl.name.clone(),
-        entries,
-        provenance,
-        sources,
-    })
-}
 
 /// Resolve a source declaration to root-relative paths. Confinement is decided
 /// lexically here — before enumeration and without touching the filesystem —
@@ -239,7 +306,7 @@ fn build_index(project_root: &Path, decl: &KeyDecl) -> Result<Index, IndexError>
 /// the same basis (a walk cannot produce a `..` or root segment, so this
 /// always succeeds) so [`open_confined`](confine::open_confined) receives the
 /// type its seam requires.
-fn resolve_source(
+pub(crate) fn resolve_source(
     project_root: &Path,
     source: &str,
 ) -> Result<Vec<confine::ConfinedPath>, IndexError> {
@@ -509,34 +576,19 @@ fn list_for_walk(
     Ok(entries)
 }
 
-/// Escape control characters in adopter-derived path text to inert `\xNN`
-/// visible escapes before it enters a diagnostic message, mirroring
-/// [`crate::diagnostic::Location::safe_display`]. Adopter content in a
-/// diagnostic is a trust surface (`DESIGN.md` § Agents are the first consumer):
-/// a raw control byte in a source path or matched filename could inject ANSI
-/// controls or splitters into the agent-facing message. Printable text is
-/// unchanged, so ordinary paths render as-is.
-fn escape_path_text(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    for ch in s.chars() {
-        if ch.is_control() {
-            use std::fmt::Write;
-            let _ = write!(out, "\\x{:02X}", ch as u32);
-        } else {
-            out.push(ch);
-        }
-    }
-    out
-}
+// The marking-discipline escape for adopter path text lives in `diagnostic`
+// (hoisted so `snapshot`'s bound details use the same discipline); this module
+// keeps its historical name for the many call sites.
+use crate::diagnostic::escape_path_text;
 
 fn extract_into(
     path: &Path,
-    file: File,
+    content: &str,
     select: &str,
     indexed_by: &str,
     out: &mut BTreeMap<String, Value>,
 ) -> Result<(), IndexError> {
-    let parsed = parse_file_to_value(path, file)?;
+    let parsed = parse_file_to_value(path, content)?;
     let selected = apply_select(&parsed, select).map_err(|e| IndexError::Selection {
         path: escape_path_text(&path.to_string_lossy()),
         select: select.to_string(),
@@ -597,18 +649,12 @@ fn extract_into(
 
 // ── File parsing ───────────────────────────────────────────────────────────────
 
-/// Parse from an already-confined handle; `path` is display-only. Reading
-/// through the handle keeps confinement decided on the handle rather than on
-/// a path re-walked at read time (the check-then-read gap, DESIGN.md
+/// Parse already-captured content; `path` is display-only. The bytes arrive
+/// through a confined no-follow handle upstream (the live [`build_index`] read
+/// or the snapshot capture), so confinement stays decided on the handle rather
+/// than on a path re-walked at read time (the check-then-read gap, DESIGN.md
 /// § Verification is fast where it is invoked).
-fn parse_file_to_value(path: &Path, mut file: File) -> Result<Value, IndexError> {
-    let mut content = String::new();
-    file.read_to_string(&mut content)
-        .map_err(|e| IndexError::Io {
-            path: escape_path_text(&path.to_string_lossy()),
-            error: e.to_string(),
-        })?;
-
+fn parse_file_to_value(path: &Path, content: &str) -> Result<Value, IndexError> {
     let ext = path
         .extension()
         .and_then(|s| s.to_str())
@@ -618,7 +664,7 @@ fn parse_file_to_value(path: &Path, mut file: File) -> Result<Value, IndexError>
     match ext.as_str() {
         "yaml" | "yml" => {
             let yaml: serde_yaml_ng::Value =
-                serde_yaml_ng::from_str(&content).map_err(|e| IndexError::Parse {
+                serde_yaml_ng::from_str(content).map_err(|e| IndexError::Parse {
                     path: escape_path_text(&path.to_string_lossy()),
                     error: e.to_string(),
                 })?;
@@ -626,7 +672,7 @@ fn parse_file_to_value(path: &Path, mut file: File) -> Result<Value, IndexError>
         }
         "json" => {
             let json: serde_json::Value =
-                serde_json::from_str(&content).map_err(|e| IndexError::Parse {
+                serde_json::from_str(content).map_err(|e| IndexError::Parse {
                     path: escape_path_text(&path.to_string_lossy()),
                     error: e.to_string(),
                 })?;
@@ -634,7 +680,7 @@ fn parse_file_to_value(path: &Path, mut file: File) -> Result<Value, IndexError>
         }
         "md" => {
             // Markdown file: parse frontmatter, expose as $.frontmatter.
-            let fm_opt = crate::frontmatter::parse(&content).map_err(|e| IndexError::Parse {
+            let fm_opt = crate::frontmatter::parse(content).map_err(|e| IndexError::Parse {
                 path: escape_path_text(&path.to_string_lossy()),
                 error: e.to_string(),
             })?;

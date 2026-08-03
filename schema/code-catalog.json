@@ -1,6 +1,7 @@
 {
   "MDATRON-E0001": "frontmatter-parse-failed",
   "MDATRON-E0002": "schema-class-unknown",
+  "MDATRON-E0003": "governed-file-unreadable",
   "MDATRON-E0010": "key-source-absolute-path",
   "MDATRON-E0011": "key-source-parent-traversal",
   "MDATRON-E0012": "symlinked-component-refused",
@@ -36,5 +37,6 @@
   "MDATRON-W0044": "vocabulary-term-status-conflict",
   "MDATRON-W0045": "schema-class-unrouted",
   "MDATRON-W0046": "jurisdiction-glob-matches-nothing",
-  "MDATRON-W0047": "schema-dir-missing"
+  "MDATRON-W0047": "schema-dir-missing",
+  "MDATRON-W0048": "reference-target-unverified"
 }
