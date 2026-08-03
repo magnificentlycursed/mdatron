@@ -1,5 +1,5 @@
 {
-  "next_display_id": 161,
+  "next_display_id": 162,
   "next_comment_id": 391,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -83,6 +83,7 @@
     "87e35dbb-43b8-4ebb-a0f2-06777d8f956d": 109,
     "88be1f06-20a9-48da-8b35-4df657fbee27": 73,
     "8929a168-665b-4be1-8b8d-441e73f742c4": 90,
+    "89517494-f1f1-48d3-b610-9b0c288ffcb6": 161,
     "8a1968b7-de28-47b6-b2a1-b4d80b3104cc": 159,
     "8ac50e86-5777-4068-8ce0-3d628ff48d30": 15,
     "8bbf0d1a-ce4a-4096-b3ad-ae3bc065a6e7": 69,
@@ -3134,6 +3135,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAvoMTBo5mEON91q3k6LU7g1pC3Bg1Iuw2ciHKPjIBIGMGaaV4OszHBVHZuF0dFqydZznFhCojErGMJkaZG/6dAw=="
         }
       }
+    },
+    "89517494-f1f1-48d3-b610-9b0c288ffcb6": {
+      "uuid": "89517494-f1f1-48d3-b610-9b0c288ffcb6",
+      "display_id": 161,
+      "title": "tracker hygiene: reconcile issues left open by the broken-hub sessions (close shipped #132/#155/#159, verify #133 relay)",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-08-03T15:30:59.082134Z",
+      "updated_at": "2026-08-03T15:30:59.082134Z"
     },
     "8a1968b7-de28-47b6-b2a1-b4d80b3104cc": {
       "uuid": "8a1968b7-de28-47b6-b2a1-b4d80b3104cc",
@@ -6449,8 +6460,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-03T15:25:54.253326Z",
+    "timestamp": "2026-08-03T15:30:59.082134Z",
     "agent_id": "79Ig",
-    "agent_seq": 758
+    "agent_seq": 759
   }
 }
