@@ -230,11 +230,12 @@
       "uuid": "083ac886-79a0-4b90-a4fc-61a2d9f1877b",
       "display_id": 133,
       "title": "DEF7: cost-ledger single-family coverage (vsdd-methodology observability) — relay to vsdd-cli",
-      "status": "open",
+      "status": "closed",
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-07-30T15:35:19.787585Z",
-      "updated_at": "2026-08-03T15:42:09.369549Z",
+      "updated_at": "2026-08-03T15:42:16.621620Z",
+      "closed_at": "2026-08-03T15:42:16.621610Z",
       "labels": [
         "question"
       ],
@@ -6532,8 +6533,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-03T15:42:09.369549Z",
+    "timestamp": "2026-08-03T15:42:16.621620Z",
     "agent_id": "79Ig",
-    "agent_seq": 773
+    "agent_seq": 774
   }
 }
