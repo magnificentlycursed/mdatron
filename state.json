@@ -1,6 +1,6 @@
 {
   "next_display_id": 162,
-  "next_comment_id": 391,
+  "next_comment_id": 392,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -1640,10 +1640,21 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-30T15:34:58.467197Z",
-      "updated_at": "2026-07-30T15:35:03.233561Z",
+      "updated_at": "2026-08-03T15:32:07.840101Z",
       "labels": [
         "enhancement"
-      ]
+      ],
+      "comments": {
+        "7f49cda8-e5ae-44b8-9e5d-5731989c336b": {
+          "display_id": 391,
+          "author": "79Ig",
+          "content": "Shipped in PR #35 (merged to main 3b38666): commit 1588be1 'feat: DEF5 mdatron_format_version — per-file input-contract versioning'. Result comment lost to the broken-hub session (see #160); recorded now during tracker hygiene (#161).",
+          "created_at": "2026-08-03T15:32:07.827635Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA1wclQmEHGFdhLtzgr0vxI2IvsxqIJMlXRE3RcIv9v882Uq3+oniTa6TpRwmFGy04CcPsVVhmKt8xxjccEeetCw=="
+        }
+      }
     },
     "3cc73526-d8d8-4eb3-9bd3-a7affee9ee90": {
       "uuid": "3cc73526-d8d8-4eb3-9bd3-a7affee9ee90",
@@ -6468,8 +6479,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-03T15:31:11.803259Z",
+    "timestamp": "2026-08-03T15:32:07.840101Z",
     "agent_id": "79Ig",
-    "agent_seq": 761
+    "agent_seq": 762
   }
 }
