@@ -1,6 +1,6 @@
 {
   "next_display_id": 164,
-  "next_comment_id": 416,
+  "next_comment_id": 417,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -6115,11 +6115,20 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-08-03T17:05:14.058918Z",
-      "updated_at": "2026-08-03T17:05:37.752127Z",
+      "updated_at": "2026-08-03T20:25:18.669405Z",
       "labels": [
         "enhancement"
       ],
       "comments": {
+        "3e484c00-fa8d-483b-9bdb-093eea63caa3": {
+          "display_id": 416,
+          "author": "79Ig",
+          "content": "REFERENCE-ARCHITECTURE GROUNDING (per operator direction: consult the registered audits — [[sarif-envelope-audit]], [[ruff-registry-audit]], [[schematron-lineage-audit]]). The design shape for graceful index-source degradation is reference-validated on three legs: (1) SARIF separates RESULTS (about the code) from invocation NOTIFICATIONS (about the tool/run) — an unreadable source is tool-condition, not adopter-finding, so it must neither abort the run nor masquerade as a content finding; (2) mdatron's established idiom for tool-condition findings is the config-located W-code (W0043/W0046/W0047 precedent: loud, located at the declaring config, run continues) — the new diagnostic should locate at the PATTERN FILE's keys: declaration, not at the unreadable source; (3) the SVRL/families lesson (the audit's 'what was checked' vs 'what was found' line): a degraded index must be OBSERVABLE as degraded — the index builds empty-with-reason and rules referencing the key surface their own findings, never a silent empty index (exactly the families tri-state 'inert with reason' pattern). Ruff's posture confirms continue-on-error per unit (unreadable file -> per-file diagnostic, run continues). Design delta from this grounding: the new code is a config-located WARNING class (W00xx), located at .mdatron/patterns/<file> naming the declaration + source + cause; the affected Index carries an empty entry set; key() lookups on it behave as absent (rules fire their own diagnostics); comprehensive abort remains ONLY for the config-scoped oversize posture ruled in #103.",
+          "created_at": "2026-08-03T20:25:18.636942Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAJrrgnFlDgcxAB/WdvLdf3ljuQ4ELniA2xuJG86zyhJ8c3yyNIlVJdInmK6kYDP9Ng1EOuotvuThM7uZGse8FBg=="
+        },
         "a0d6dc4d-9cdf-4298-bf86-6e2e162fcc03": {
           "display_id": 404,
           "author": "79Ig",
@@ -6743,8 +6752,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-03T20:16:15.371885Z",
+    "timestamp": "2026-08-03T20:25:18.669405Z",
     "agent_id": "79Ig",
-    "agent_seq": 805
+    "agent_seq": 806
   }
 }
