@@ -1,6 +1,6 @@
 {
   "next_display_id": 165,
-  "next_comment_id": 430,
+  "next_comment_id": 431,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -6215,7 +6215,7 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-08-03T17:05:14.058918Z",
-      "updated_at": "2026-08-03T22:38:51.636512Z",
+      "updated_at": "2026-08-03T22:59:16.691731Z",
       "labels": [
         "enhancement"
       ],
@@ -6246,6 +6246,15 @@
           "kind": "plan",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAJrrgnFlDgcxAB/WdvLdf3ljuQ4ELniA2xuJG86zyhJ8c3yyNIlVJdInmK6kYDP9Ng1EOuotvuThM7uZGse8FBg=="
+        },
+        "3f4cab10-8090-4832-a245-ac4f4270fab2": {
+          "display_id": 430,
+          "author": "79Ig",
+          "content": "PHASE 3 ROUND 1 DISPOSITIONS + FIX (commit 9a411af). Reviewer certified the design clean (state split correct — symlink/oversize/engine-miss stay hard, availability-conditions degrade; no-silent-degradation mutation-sound; W0049 whole-tree-only; catalog/BASELINE/explain consistent; builds in isolation). ONE finding: F-1 should-fix (REPRODUCED) — the W0049 message interpolated the adopter-controlled index NAME + OS reason inline UNESCAPED (I escaped source_display at the DSL layer but missed name/reason), an ANSI/control-byte injection into TTY+compact = the #125/SHO5 class. FIX: message now FULLY engine-authored; name+source+reason all ride in render-escaped quoted regions. Injection regression test mutation-confirmed red against the old inline message. Also added directory-as-source coverage (the OpenedUnreadable arm the reviewer noted was only transitively exercised). 535 tests, 0 clippy, self-validation exit 0. Round 2 = exit round over 9a411af.",
+          "created_at": "2026-08-03T22:59:16.673773Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA+Nsyp72VZVI9A1roJx/9PdwBVoWcH1/uiAxZLyc3w/5E2RTvz6XWRc8RSrEhzJoDmIOOslsafoGvo5jXHxqaDg=="
         },
         "4400b114-0615-4f14-918b-1c60957dd16b": {
           "display_id": 426,
@@ -6879,8 +6888,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-03T22:43:40.895160Z",
+    "timestamp": "2026-08-03T22:59:16.691731Z",
     "agent_id": "79Ig",
-    "agent_seq": 825
+    "agent_seq": 826
   }
 }
