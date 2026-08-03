@@ -614,8 +614,10 @@ fn run(
             // A governed body over the per-file cap is the config-scoped
             // posture: a loud whole-run bound error (the jurisdiction declared
             // this file; raising limits is the bounds catalog's business).
-            crate::snapshot::Captured::TooLarge { limit } => {
-                return Err(crate::snapshot::Snapshot::too_large_error(rel, *limit));
+            crate::snapshot::Captured::TooLarge { limit, dimension } => {
+                return Err(crate::snapshot::Snapshot::too_large_error(
+                    rel, *limit, *dimension,
+                ));
             }
             // Unreadable OR open-refused: reported per-file at the walk
             // (E0003). Open refusal (permission denied, raced deletion) is
@@ -639,12 +641,13 @@ fn run(
         for rel in &sources {
             // Config-scoped posture: an oversized index source is the
             // declared-bounds abort, same as a governed body.
-            if let crate::snapshot::Captured::TooLarge { limit } =
+            if let crate::snapshot::Captured::TooLarge { limit, dimension } =
                 snapshot.capture(&project_root, rel)?
             {
                 return Err(crate::snapshot::Snapshot::too_large_error(
                     rel.as_path(),
                     *limit,
+                    *dimension,
                 ));
             }
         }
@@ -707,17 +710,55 @@ fn run(
             continue;
         }
         if let Ok(confined) = crate::confine::confine_lexically(Path::new(&pin.file)) {
-            if let crate::snapshot::Captured::TooLarge { limit } =
+            if let crate::snapshot::Captured::TooLarge { limit, dimension } =
                 snapshot.capture(&project_root, &confined)?
             {
                 return Err(crate::snapshot::Snapshot::too_large_error(
                     confined.as_path(),
                     *limit,
+                    *dimension,
                 ));
             }
         }
     }
     if let Some(routes) = &routes {
+        // ALL config-scoped targets capture BEFORE any prose-scoped one
+        // (phase-3 R3-1): prose captures consume the shared aggregate budget
+        // with the degrade posture, so a config-scoped capture ordered after
+        // them could inherit a prose-caused aggregate breach and escalate it
+        // into a whole-run abort — one authored citation line flipping a
+        // surviving run into a denial of verification. Config-first ordering
+        // means a config-scoped aggregate abort reflects config-declared
+        // inputs alone, and prose consumption can only ever degrade prose
+        // checks.
+        for (_path, rel) in &governed {
+            if let Some(scope) = &scope {
+                if !scope.contains(rel) {
+                    continue;
+                }
+            }
+            // Same gating as the prose pass below (phase-3 I-1): an
+            // unreadable or frontmatter-parse-failed file runs NO cross-file
+            // checks, marker included, so its rules' targets are not consulted.
+            let has_cross_file_checks = snapshot.text(rel).and_then(body_offset_of).is_some();
+            if !has_cross_file_checks {
+                continue;
+            }
+            for rule in crate::route::marker_rules_for(routes, rel) {
+                if let Ok(confined) = crate::confine::confine_lexically(Path::new(&rule.target_doc))
+                {
+                    if let crate::snapshot::Captured::TooLarge { limit, dimension } =
+                        snapshot.capture(&project_root, &confined)?
+                    {
+                        return Err(crate::snapshot::Snapshot::too_large_error(
+                            confined.as_path(),
+                            *limit,
+                            *dimension,
+                        ));
+                    }
+                }
+            }
+        }
         for (_path, rel) in &governed {
             if let Some(scope) = &scope {
                 if !scope.contains(rel) {
@@ -756,19 +797,6 @@ fn run(
                 // line could tip a large corpus over the cap and deny the
                 // whole run.
                 snapshot.capture_degrading(&project_root, target)?;
-            }
-            for rule in crate::route::marker_rules_for(routes, rel) {
-                if let Ok(confined) = crate::confine::confine_lexically(Path::new(&rule.target_doc))
-                {
-                    if let crate::snapshot::Captured::TooLarge { limit } =
-                        snapshot.capture(&project_root, &confined)?
-                    {
-                        return Err(crate::snapshot::Snapshot::too_large_error(
-                            confined.as_path(),
-                            *limit,
-                        ));
-                    }
-                }
             }
         }
     }
@@ -5152,7 +5180,13 @@ pattern:
             ".mdatron/routes.yaml",
             "routes:\n- files: \"docs/**/*.md\"\n  governed_by: GOVERNING.md\n  links: true\n",
         );
-        proj.write("docs/a.md", "See [t](../big.md#section-one).\n");
+        // One fragment-bearing link (anchor check genuinely skipped -> W0048)
+        // and one fragment-less link (fully verified by existence — NO W0048,
+        // phase-3 R3-3).
+        proj.write(
+            "docs/a.md",
+            "See [t](../big.md#section-one) and [u](../big.md).\n",
+        );
         let mut big = String::new();
         while big.len() <= MAX_FILE_BYTES {
             big.push_str("padding line to grow the link target past the per-file cap\n");
@@ -5165,7 +5199,56 @@ pattern:
         assert_eq!(
             codes_of(&findings, "MDATRON-W0048"),
             1,
-            "the skipped anchor check is loud; got {findings:?}"
+            "exactly the skipped anchor check warns — the fragment-less link \
+             is fully verified and stays quiet; got {findings:?}"
+        );
+    }
+
+    // Phase-3 R3-1 (the reproduced ordering lever): prose captures must never
+    // cause a config-scoped capture to inherit an aggregate breach — config-
+    // scoped targets capture FIRST. Nine sub-cap citation targets tip the
+    // aggregate; the marker target_doc must already be captured by then, so
+    // the run SURVIVES, the marker check resolves, and only the prose
+    // degradations warn. Red with prose-before-config ordering (the marker
+    // capture then aborts the whole run).
+    #[test]
+    fn prose_aggregate_consumption_cannot_abort_config_captures() {
+        let proj = TempProject::new("capture-order");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write("GOVERNING.md", "# gov\n");
+        proj.write(
+            ".mdatron/routes.yaml",
+            "routes:\n- files: \"docs/**/*.md\"\n  governed_by: GOVERNING.md\n  citations: true\n  marker_rules:\n    - pattern: \"^Provenance: (.+)$\"\n      element: list-item-bold-name\n      target_doc: refs/contract.md\n",
+        );
+        // A 4 MB marker target (config-scoped) carrying the referenced member.
+        let mut contract = String::from("- **Slice 1.** the slice\n");
+        while contract.len() < 4_000_000 {
+            contract.push_str("padding prose line for the contract body\n");
+        }
+        proj.write("refs/contract.md", &contract);
+        // Nine sub-cap citation targets whose combined size tips the aggregate.
+        let big = "x".repeat(7_999_999);
+        let mut plan = String::from("Provenance: Slice 1\n");
+        for i in 0..9 {
+            proj.write(&format!("big{i}.rs"), &big);
+            plan.push_str(&format!("Per big{i}.rs:1 this holds.\n"));
+        }
+        proj.write("docs/plan.md", &plan);
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg)
+            .expect("prose aggregate consumption must not abort a config-scoped capture");
+        assert_eq!(
+            codes_of(&findings, "MDATRON-E0112"),
+            0,
+            "the marker check resolves from its (config-first) capture; got {findings:?}"
+        );
+        assert!(
+            codes_of(&findings, "MDATRON-W0048") >= 1,
+            "the degraded prose references are loud; got {findings:?}"
         );
     }
 

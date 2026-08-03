@@ -239,24 +239,30 @@ fn resolve_link(
         // exists; its fragment (if any) is not resolved — the pre-#103
         // posture, unchanged and quiet by necessity.
         Some(Captured::OpenedUnreadable { .. }) => {}
-        // Over the size budget: the target exists and COULD be verified — the
-        // anchor check was skipped by budget, not necessity, so the
-        // degradation is loud (W0048; #103 phase-3 R2S-2). Warning severity
-        // keeps the run alive; `--deny-warnings` gates can escalate it.
+        // Over the size budget: the target exists. W0048 fires ONLY when a
+        // check was actually skipped — a fragment-bearing link to a markdown
+        // target (the anchor check needed the bytes). A fragment-less link,
+        // or a non-markdown target, is FULLY verified by existence alone, and
+        // warning there would fail `--deny-warnings` gates on verified links
+        // (#103 phase-3 R3-3). Warning severity keeps the run alive.
         Some(Captured::TooLarge { .. }) => {
-            let mut f = link_finding(
-                path,
-                content,
-                at,
-                "MDATRON-W0048",
-                "reference-target-unverified",
-                "this link's target exceeds the input size budget, so its \
-                 fragment was NOT resolved — existence only; raise attention \
-                 on the link or shrink the target",
-                dest,
-            );
-            f.severity = Severity::Warning;
-            findings.push(f);
+            let anchor_check_skipped =
+                anchor.is_some_and(|frag| !frag.is_empty()) && is_markdown(confined.as_path());
+            if anchor_check_skipped {
+                let mut f = link_finding(
+                    path,
+                    content,
+                    at,
+                    "MDATRON-W0048",
+                    "reference-target-unverified",
+                    "this link's target exceeds the input size budget, so its \
+                     fragment was NOT resolved — existence only; raise attention \
+                     on the link or shrink the target",
+                    dest,
+                );
+                f.severity = Severity::Warning;
+                findings.push(f);
+            }
         }
         Some(Captured::SymlinkRefused { .. }) => {
             findings.push(link_finding(

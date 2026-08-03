@@ -50,20 +50,34 @@ impl Content {
     }
 }
 
+/// Which byte budget a [`Captured::TooLarge`] refusal tripped — kept in the
+/// state so a later escalation names the RIGHT bound with the right limit
+/// (#103 phase-3 R3-2: an aggregate refusal must never read as "shrink this
+/// file", advice that cannot satisfy an aggregate breach).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BoundDimension {
+    PerFile,
+    Aggregate,
+}
+
 /// The capture-time state of one input path. Checks map these states onto
 /// their own finding taxonomy — the state is recorded once, neutrally, here.
 #[derive(Debug)]
 pub enum Captured {
     Content(Content),
-    /// The file exceeded the per-file byte budget. Stored (so capture stays
-    /// read-once even for refusals) but its bytes are dropped and NOT counted
-    /// in the aggregate. Policy lives with the consumer: config-scoped input
-    /// classes (governed bodies, index sources, pin and marker targets)
-    /// escalate this to the whole-run bound error; prose-scoped classes
-    /// (citation and link targets) treat it as present-but-unverifiable —
-    /// a prose line must not be able to abort the run (#103 phase-3 A-1).
+    /// The capture exceeded a byte budget — `dimension` says which one: the
+    /// file itself is over the per-file cap, or (degrading captures only)
+    /// storing it would have breached the run's aggregate budget. Stored (so
+    /// capture stays read-once even for refusals) but its bytes are dropped
+    /// and NOT counted in the aggregate. Policy lives with the consumer:
+    /// config-scoped input classes (governed bodies, index sources, pin and
+    /// marker targets) escalate this to the whole-run bound error for the
+    /// recorded dimension; prose-scoped classes (citation and link targets)
+    /// treat it as present-but-unverifiable — a prose line must not be able
+    /// to abort the run (#103 phase-3 A-1/R2S-1).
     TooLarge {
         limit: usize,
+        dimension: BoundDimension,
     },
     /// The confined open succeeded (the path exists) but the content is not
     /// verifiable — a read failure past the open, or a FIFO/socket/device/
@@ -111,13 +125,15 @@ impl Snapshot {
     }
 
     /// Capture `rel` under `root` if it is not already captured, and return its
-    /// state — the CONFIG-scoped posture: the aggregate budget is a hard error
-    /// (a global condition; nothing stored or counted when it trips).
-    /// Idempotent: a second capture of the same path returns the stored state
-    /// without touching the filesystem — read-once across roles, for refusals
-    /// (`TooLarge`) as much as for content. The per-file budget records a
-    /// `TooLarge` state and lets the consumer choose the posture — see
-    /// [`Captured::TooLarge`].
+    /// state — the CONFIG-scoped posture: a FRESH aggregate breach is a hard
+    /// error (nothing stored or counted when it trips). Idempotent: a second
+    /// capture of the same path returns the stored state without touching the
+    /// filesystem — read-once across roles, for refusals (`TooLarge`) as much
+    /// as for content; a state memoized by an earlier DEGRADING capture is
+    /// returned as-is, and the config-scoped caller escalates it via
+    /// [`Snapshot::too_large_error`] with its recorded dimension. The per-file
+    /// budget always records a `TooLarge` state and lets the consumer choose
+    /// the posture — see [`Captured::TooLarge`].
     pub fn capture(&mut self, root: &Path, rel: &ConfinedPath) -> Result<&Captured, VerifyError> {
         self.capture_impl(root, rel, false)
     }
@@ -166,6 +182,7 @@ impl Snapshot {
                             },
                             Ok(_) if bytes.len() > max_file_bytes => Captured::TooLarge {
                                 limit: max_file_bytes,
+                                dimension: BoundDimension::PerFile,
                             },
                             Ok(_) if self.aggregate + bytes.len() > self.max_aggregate_bytes => {
                                 if degrade_on_aggregate {
@@ -174,6 +191,7 @@ impl Snapshot {
                                     // and the check reports the degradation.
                                     Captured::TooLarge {
                                         limit: self.max_aggregate_bytes,
+                                        dimension: BoundDimension::Aggregate,
                                     }
                                 } else {
                                     // Config posture: a global hard stop;
@@ -220,16 +238,24 @@ impl Snapshot {
     }
 
     /// The whole-run bound error a config-scoped consumer raises on a
-    /// [`Captured::TooLarge`] state — one message shape for governed bodies,
-    /// index sources, and pin/marker targets, with the adopter path escaped
-    /// under the marking discipline.
-    pub fn too_large_error(rel: &Path, limit: usize) -> VerifyError {
-        VerifyError::BoundExceeded {
-            bound: "max-input-size-per-file".into(),
-            detail: format!(
-                "'{}' exceeds the {limit}-byte per-file limit",
-                crate::diagnostic::escape_path_text(&rel.to_string_lossy())
-            ),
+    /// [`Captured::TooLarge`] state — one message shape per DIMENSION for
+    /// governed bodies, index sources, and pin/marker targets, with the
+    /// adopter path escaped under the marking discipline. Naming the recorded
+    /// dimension keeps the diagnostic actionable: "shrink this file" cannot
+    /// satisfy an aggregate breach (#103 phase-3 R3-2).
+    pub fn too_large_error(rel: &Path, limit: usize, dimension: BoundDimension) -> VerifyError {
+        let escaped = crate::diagnostic::escape_path_text(&rel.to_string_lossy());
+        match dimension {
+            BoundDimension::PerFile => VerifyError::BoundExceeded {
+                bound: "max-input-size-per-file".into(),
+                detail: format!("'{escaped}' exceeds the {limit}-byte per-file limit"),
+            },
+            BoundDimension::Aggregate => VerifyError::BoundExceeded {
+                bound: "aggregate-snapshot-size".into(),
+                detail: format!(
+                    "capturing '{escaped}' would exceed the {limit}-byte aggregate limit"
+                ),
+            },
         }
     }
 
@@ -311,7 +337,10 @@ mod tests {
         std::fs::write(temp.0.join("ok.md"), "abc").unwrap();
         let mut snap = Snapshot::new(9, 12);
         match snap.capture(&temp.0, &confined("big.md")).unwrap() {
-            Captured::TooLarge { limit } => assert_eq!(*limit, 9),
+            Captured::TooLarge { limit, dimension } => {
+                assert_eq!(*limit, 9);
+                assert_eq!(*dimension, BoundDimension::PerFile);
+            }
             other => panic!("expected TooLarge; got {other:?}"),
         }
         // Not counted toward the aggregate: 3 more bytes still fit a 12-byte
@@ -341,10 +370,15 @@ mod tests {
         snap.capture(&temp.0, &confined("a.md")).unwrap();
         // Config posture: hard error, nothing stored.
         assert!(snap.capture(&temp.0, &confined("b.md")).is_err());
-        // Prose posture: the SAME breach is a stored refusal…
+        // Prose posture: the SAME breach is a stored refusal, recorded with
+        // the AGGREGATE dimension so any later escalation names the right
+        // bound (R3-2)…
         assert!(matches!(
             snap.capture_degrading(&temp.0, &confined("b.md")).unwrap(),
-            Captured::TooLarge { .. }
+            Captured::TooLarge {
+                dimension: BoundDimension::Aggregate,
+                ..
+            }
         ));
         // …whose dropped bytes did not consume the budget (4 bytes still fit)…
         match snap.capture(&temp.0, &confined("c.md")).unwrap() {

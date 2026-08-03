@@ -147,13 +147,18 @@ impl IndexRegistry {
                         })
                     }
                     // Config-scoped posture: an oversized index source is the
-                    // declared-bounds abort, matching the governed-body case.
-                    Some(Captured::TooLarge { limit }) => {
-                        return Err(IndexError::InputBounded {
-                            detail: format!(
+                    // declared-bounds abort, matching the governed-body case —
+                    // named for the dimension actually breached (R3-2).
+                    Some(Captured::TooLarge { limit, dimension }) => {
+                        let detail = match dimension {
+                            crate::snapshot::BoundDimension::PerFile => format!(
                                 "'{display_text}' exceeds the {limit}-byte per-file limit"
                             ),
-                        })
+                            crate::snapshot::BoundDimension::Aggregate => format!(
+                                "capturing '{display_text}' would exceed the {limit}-byte aggregate limit"
+                            ),
+                        };
+                        return Err(IndexError::InputBounded { detail });
                     }
                     Some(Captured::OpenedUnreadable { error })
                     | Some(Captured::OpenIo { error }) => {

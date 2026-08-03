@@ -299,10 +299,11 @@ fn cmd_pin(project_root: Option<PathBuf>, update: bool, dry_run: bool, quiet: bo
                         match snapshot.capture(&root, &confined) {
                             // Config-scoped posture: an oversized pinned file
                             // is the declared-bounds abort, as in verify.
-                            Ok(mdatron::snapshot::Captured::TooLarge { limit }) => {
+                            Ok(mdatron::snapshot::Captured::TooLarge { limit, dimension }) => {
                                 let e = mdatron::snapshot::Snapshot::too_large_error(
                                     confined.as_path(),
                                     *limit,
+                                    *dimension,
                                 );
                                 if !quiet {
                                     eprintln!(
