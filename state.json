@@ -6249,11 +6249,12 @@
       "uuid": "ee671da2-071b-4656-bf74-6259586911d8",
       "display_id": 162,
       "title": "Degrade unreadable or non-UTF8 index sources to per-declaration findings instead of a whole-run abort",
-      "status": "open",
+      "status": "closed",
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-08-03T17:05:14.058918Z",
-      "updated_at": "2026-08-03T23:35:56.667390Z",
+      "updated_at": "2026-08-03T23:36:02.663473Z",
+      "closed_at": "2026-08-03T23:36:02.663464Z",
       "labels": [
         "enhancement"
       ],
@@ -6962,8 +6963,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-03T23:35:56.667390Z",
+    "timestamp": "2026-08-03T23:36:02.663473Z",
     "agent_id": "79Ig",
-    "agent_seq": 835
+    "agent_seq": 836
   }
 }
