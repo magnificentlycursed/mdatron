@@ -1,6 +1,6 @@
 {
   "next_display_id": 162,
-  "next_comment_id": 403,
+  "next_comment_id": 404,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -5170,7 +5170,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T07:22:08.149420Z",
-      "updated_at": "2026-08-03T16:29:14.505521Z",
+      "updated_at": "2026-08-03T16:50:01.852028Z",
       "labels": [
         "feature"
       ],
@@ -5178,6 +5178,15 @@
         "a0e4b4b2-63f5-41c1-a62d-7713001a66d8"
       ],
       "comments": {
+        "17863e9e-af5c-465d-96ea-1fb0a9c732b8": {
+          "display_id": 403,
+          "author": "79Ig",
+          "content": "PHASE 3 ROUND 1 DISPOSITIONS (16 findings: S-1..4 security, I-1..6 impl, A-1..6 architecture; S-1/S-2 blockers both REPRODUCED by the reviewer against the built binary). ROUTING (before fix, per conduct): S-1 FIFO/special-file blocking-open hang (confine.rs open lacks O_NONBLOCK+S_ISREG check; commit broadened reachable surface to prose-named targets) -> CONFIRMED blocker, routes to 1b (threat inventory missed the special-file class), FIX IN-LANE at the confine seam. S-2 governed-body open-refusal (chmod 000) still aborts whole run -> CONFIRMED blocker, routes to 2b (item C half-implemented: only read-after-open was routed to E0003), FIX IN-LANE (OpenIo -> E0003). I-1 discovery over-captures for frontmatter-parse-Err files so an unconsultable target aborts the run -> CONFIRMED, routes to 2a (missing fixture for the parse-Err interplay), FIX IN-LANE (discovery mirrors verify_file gating exactly: parse-Err skips extraction). A-1 oversized PROSE-reachable target (cite/link) aborts whole run -> CONFIRMED, FIX IN-LANE via new stored TooLarge capture state: prose-scoped classes (cite/link) degrade to existence-verified-unverifiable (OpenedUnreadable posture); config-scoped classes (body/index/pin/marker target_doc) keep the loud BoundExceeded abort — the DoV lever is the PROSE reachability, and the config-scoped abort is the declared-bounds posture (raising limits is sub-lane D). I-3 capture Err paths break idempotence + aggregate coherence -> CONFIRMED, FIX IN-LANE (TooLarge stored+memoized, aggregate counts only stored content, entry API). A-3/I-5 seal unenforced + snapshot-miss misattributed as adopter findings -> CONFIRMED, FIX IN-LANE (runtime seal flag + miss -> E0080-coded engine-defect finding; full type-state seal noted as future). A-4/I-2 IndexRegistry::build duplication, false doc, dead-path red gate, unbounded legacy read -> CONFIRMED, FIX IN-LANE (build becomes a bounded wrapper over build_from_parts; one merge path; doc corrected; + pipeline tests for symlinked/non-UTF8 index source). S-4 target-Vec count amplification -> CONFIRMED nit, FIX IN-LANE (capture-as-discovered). A-6 unescaped path in BoundExceeded detail -> CONFIRMED, FIX IN-LANE (hoist escape_path_text to diagnostic, shared). A-2 CHANGELOG 'EVERY input' overclaim -> CONFIRMED, FIX IN-LANE (rescope to check-consulted content classes + name the residue). I-4 pipeline_error precedence drift -> CONFIRMED nit, DOCUMENT (CHANGELOG divergence note). A-5 link-family docs say live working-tree -> CONFIRMED nit, FIX IN-LANE (align on working-tree-snapshot phrasing). I-6 regex recompile + doubled extraction -> CONFIRMED nit, PARTIAL FIX (LazyLock detector); the double extraction itself is ACCEPTED (bounded, sound-by-immutability) with the memoization opportunity routed to #92 sub-lane D perf. S-3 index-source unreadable/non-UTF8 aborts + overlapping-glob asymmetry vs E0003 -> CONFIRMED, DEFERRED to a follow-up issue (needs its own 1a: per-declaration degradation taxonomy + codes; the asymmetry is real but the graceful-index design is not a patch). Round 2 cold re-review after the fix batch (rounds-to-MVR).",
+          "created_at": "2026-08-03T16:50:01.832334Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAWtS4I9xoFt05lb8AayVT8mVY7K2MXKKMN/Ls1TKUmFYuC4jUeomDr4Vrw+uS5b1VCa4BcWxQSpB6nap9K71BAA=="
+        },
         "564c0418-b56c-40d5-bcd5-3e97929e215a": {
           "display_id": 293,
           "author": "79Ig",
@@ -6587,8 +6596,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-03T16:29:14.505521Z",
+    "timestamp": "2026-08-03T16:50:01.852028Z",
     "agent_id": "79Ig",
-    "agent_seq": 782
+    "agent_seq": 783
   }
 }
