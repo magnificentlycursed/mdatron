@@ -1,6 +1,6 @@
 {
   "next_display_id": 165,
-  "next_comment_id": 420,
+  "next_comment_id": 421,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -6158,11 +6158,20 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-08-03T17:05:14.058918Z",
-      "updated_at": "2026-08-03T20:25:18.669405Z",
+      "updated_at": "2026-08-03T20:33:30.876086Z",
       "labels": [
         "enhancement"
       ],
       "comments": {
+        "37c9c267-8fe7-4cfd-9601-a64c6697c4fa": {
+          "display_id": 420,
+          "author": "79Ig",
+          "content": "ADDITIONAL grounding note (retrospective sweep of the audits vs landed work): the #103 roast's snapshot-miss arm reports an ENGINE condition as an E0080-coded finding — same channel tension this issue's W-code faces. [[sarif-envelope-audit]] models tool-conditions as invocation NOTIFICATIONS, structurally distinct from results[]. mdatron's envelope has only findings[] + pipeline_error today; when the tool-condition class accumulates (this issue's W-code, the miss E0080, any future degradations), a notifications[] member on the envelope is the SARIF-shaped home — an ADDITIVE 3.x consideration to weigh in this issue's 1a, not a blocker for the config-located-W design already recorded.",
+          "created_at": "2026-08-03T20:33:30.854610Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAsH8UUjNG1GhSqbmqouJBpMjcm88MM5bZitPlnjqveVJJ8JdaFGfNtBr5vCy03gX4sRG5Hcwo61telvJwHOX0Cw=="
+        },
         "3e484c00-fa8d-483b-9bdb-093eea63caa3": {
           "display_id": 416,
           "author": "79Ig",
@@ -6795,8 +6804,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-03T20:33:24.451932Z",
+    "timestamp": "2026-08-03T20:33:30.876086Z",
     "agent_id": "79Ig",
-    "agent_seq": 811
+    "agent_seq": 812
   }
 }
