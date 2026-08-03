@@ -1,5 +1,5 @@
 {
-  "next_display_id": 165,
+  "next_display_id": 166,
   "next_comment_id": 431,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -34,6 +34,7 @@
     "2b207fbe-b656-4cc1-8c3a-db693dfb36ff": 91,
     "2caa1838-562d-461f-9b53-05dbf16b73f4": 120,
     "2cf9c6a8-984e-448b-bf67-a2acd6b9fa13": 63,
+    "2d75df3e-6560-4e60-8904-1adcdf38e791": 165,
     "2e2fc00c-4730-4781-a765-f30420cdddd5": 67,
     "30572485-c72e-4a31-bb12-382684d69b4d": 25,
     "31f4d73d-f1e9-4ac1-864d-736d444ade9a": 51,
@@ -1370,6 +1371,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAlbmO4jpthzAKAoKITKgmapSM0paFh6mG2xhwhmRVfXLVqoSJMaC4ORT5HAizhsHq9s9+FD01F5s7Pz+vgvawAg=="
         }
       }
+    },
+    "2d75df3e-6560-4e60-8904-1adcdf38e791": {
+      "uuid": "2d75df3e-6560-4e60-8904-1adcdf38e791",
+      "display_id": 165,
+      "title": "Apply the marking discipline uniformly: three finding messages interpolate adopter text inline (injection into TTY/compact)",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-08-03T23:24:17.460958Z",
+      "updated_at": "2026-08-03T23:24:17.460958Z"
     },
     "2e2fc00c-4730-4781-a765-f30420cdddd5": {
       "uuid": "2e2fc00c-4730-4781-a765-f30420cdddd5",
@@ -6888,8 +6899,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-03T22:59:16.691731Z",
+    "timestamp": "2026-08-03T23:24:17.460958Z",
     "agent_id": "79Ig",
-    "agent_seq": 826
+    "agent_seq": 827
   }
 }
