@@ -14,19 +14,25 @@
 
 use std::path::Path;
 
-use crate::confine::{confine_lexically, open_confined, LexicalViolation, OpenViolation};
+use crate::confine::{confine_lexically, ConfinedPath, LexicalViolation};
 use crate::diagnostic::{Finding, Location, QuotedRegion, Severity};
+use crate::snapshot::{Captured, Snapshot};
 
-/// Scan one opted-in file's prose for `file:line` citations and verify each
-/// against the tree. `content` is the whole file; `body_offset` is where prose
-/// begins.
-pub fn check_file(
-    project_root: &Path,
-    path: &Path,
-    content: &str,
-    body_offset: usize,
-    findings: &mut Vec<Finding>,
-) {
+/// One detected citation token in a file's prose.
+struct Citation<'a> {
+    token: String,
+    cited_path: &'a str,
+    start_line: u64,
+    end_line: Option<u64>,
+    /// Byte offset of the token in the WHOLE file content.
+    at: usize,
+}
+
+/// Extract every citation token from `content[body_offset..]`. This is the ONE
+/// extraction both target discovery (#103, pre-seam capture) and the check run,
+/// so the set of targets the check consults is byte-identical to the set that
+/// was captured.
+fn citations(content: &str, body_offset: usize) -> Vec<Citation<'_>> {
     // path-with-extension : line [ - line ]. Conservative: the path segment
     // must carry an extension, so bare version numbers and prose ratios don't
     // read as citations.
@@ -39,6 +45,7 @@ pub fn check_file(
     .expect("engine citation detector compiles");
 
     let body = &content[body_offset..];
+    let mut out = Vec::new();
     for caps in detector.captures_iter(body) {
         let whole = caps.get(0).expect("match exists");
         // URL guard: a token whose match begins right after `/` or `:` is a
@@ -47,15 +54,50 @@ pub fn check_file(
         if prefix.ends_with('/') || prefix.ends_with(':') {
             continue;
         }
-        let cited_path = caps.get(1).expect("path group").as_str();
-        let start_line: u64 = caps
-            .get(2)
-            .and_then(|m| m.as_str().parse().ok())
-            .unwrap_or(0);
-        let end_line: Option<u64> = caps.get(3).and_then(|m| m.as_str().parse().ok());
+        out.push(Citation {
+            token: whole.as_str().to_string(),
+            cited_path: caps.get(1).expect("path group").as_str(),
+            start_line: caps
+                .get(2)
+                .and_then(|m| m.as_str().parse().ok())
+                .unwrap_or(0),
+            end_line: caps.get(3).and_then(|m| m.as_str().parse().ok()),
+            at: body_offset + whole.start(),
+        });
+    }
+    out
+}
 
-        let token = whole.as_str().to_string();
-        let at = body_offset + whole.start();
+/// The confinement-accepted citation targets of one file's prose — the paths
+/// target discovery captures into the snapshot before the seam (#103).
+/// Lexically-escaping citations never reach the filesystem (the check reports
+/// them on path text alone), so they are not returned.
+pub(crate) fn cited_targets(content: &str, body_offset: usize) -> Vec<ConfinedPath> {
+    citations(content, body_offset)
+        .into_iter()
+        .filter_map(|c| confine_lexically(Path::new(c.cited_path)).ok())
+        .collect()
+}
+
+/// Scan one opted-in file's prose for `file:line` citations and verify each
+/// against the captured snapshot (#103): the same bytes every other check saw,
+/// never a post-seam filesystem read. `content` is the whole file;
+/// `body_offset` is where prose begins.
+pub fn check_file(
+    snapshot: &Snapshot,
+    path: &Path,
+    content: &str,
+    body_offset: usize,
+    findings: &mut Vec<Finding>,
+) {
+    for citation in citations(content, body_offset) {
+        let Citation {
+            token,
+            cited_path,
+            start_line,
+            end_line,
+            at,
+        } = citation;
 
         // Confinement first: a citation escaping the governed tree is refused
         // whether or not its target exists (the falsification clause).
@@ -79,17 +121,24 @@ pub fn check_file(
             }
         };
 
-        match open_confined(project_root, &confined) {
-            Ok(mut handle) => {
-                use std::io::Read;
-                let mut target = String::new();
-                if handle.read_to_string(&mut target).is_err() {
-                    // Non-UTF8 or unreadable target: verified for existence
-                    // only; line ranges are not checkable against bytes we
-                    // cannot line-split, and a citation into such a file is
-                    // not rejected on that basis.
+        // The target's capture-time state. `citations` is the same extraction
+        // discovery ran, so a confined target is always captured; a miss can
+        // only mean a discovery defect — fail LOUD (dead-citation), never fall
+        // back to the filesystem.
+        debug_assert!(
+            snapshot.get(confined.as_path()).is_some(),
+            "citation target '{}' was not captured before the seam",
+            confined.as_path().display()
+        );
+        match snapshot.get(confined.as_path()) {
+            Some(Captured::Content(c)) => {
+                let Some(target) = c.text() else {
+                    // Non-UTF8 target: verified for existence only; line
+                    // ranges are not checkable against bytes we cannot
+                    // line-split, and a citation into such a file is not
+                    // rejected on that basis.
                     continue;
-                }
+                };
                 let line_count = target.lines().count() as u64;
                 let last = end_line.unwrap_or(start_line);
                 if start_line == 0 || last > line_count || start_line > last {
@@ -107,7 +156,9 @@ pub fn check_file(
                     ));
                 }
             }
-            Err(OpenViolation::Symlink { .. }) => {
+            // Opened but unreadable: existence verified, ranges not checkable.
+            Some(Captured::OpenedUnreadable { .. }) => {}
+            Some(Captured::SymlinkRefused { .. }) => {
                 findings.push(cite_finding(
                     path,
                     content,
@@ -119,7 +170,7 @@ pub fn check_file(
                     &token,
                 ));
             }
-            Err(OpenViolation::Io(_)) => {
+            Some(Captured::OpenIo { .. }) | None => {
                 findings.push(cite_finding(
                     path,
                     content,

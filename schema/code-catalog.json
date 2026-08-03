@@ -1,6 +1,7 @@
 {
   "MDATRON-E0001": "frontmatter-parse-failed",
   "MDATRON-E0002": "schema-class-unknown",
+  "MDATRON-E0003": "governed-file-unreadable",
   "MDATRON-E0010": "key-source-absolute-path",
   "MDATRON-E0011": "key-source-parent-traversal",
   "MDATRON-E0012": "symlinked-component-refused",

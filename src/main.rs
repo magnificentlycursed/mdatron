@@ -285,7 +285,26 @@ fn cmd_pin(project_root: Option<PathBuf>, update: bool, dry_run: bool, quiet: bo
             }
             Ok(Some(loaded)) => {
                 let mut findings = loaded.findings;
-                mdatron::pin::check(&root, &loaded.pins, &mut findings);
+                // Standalone `mdatron pin` builds its own capture (#103): the
+                // same read-once, confined, bounded path the verify pipeline
+                // uses — pin::check never touches the filesystem itself.
+                let mut snapshot = mdatron::snapshot::Snapshot::new(
+                    mdatron::verify::MAX_FILE_BYTES,
+                    mdatron::verify::MAX_AGGREGATE_BYTES,
+                );
+                for pin in &loaded.pins {
+                    if let Ok(confined) =
+                        mdatron::confine::confine_lexically(std::path::Path::new(&pin.file))
+                    {
+                        if let Err(e) = snapshot.capture(&root, &confined) {
+                            if !quiet {
+                                eprintln!("error[MDATRON-E0080]: pin check failed\n   = note: {e}");
+                            }
+                            return ExitCode::from(2);
+                        }
+                    }
+                }
+                mdatron::pin::check(&root, &loaded.pins, &snapshot, &mut findings);
                 let errors = findings
                     .iter()
                     .filter(|f| f.severity == Severity::Error)

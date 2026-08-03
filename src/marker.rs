@@ -26,20 +26,20 @@
 //! (dead-marker-reference).
 
 use std::collections::HashSet;
-use std::io::Read;
 use std::path::Path;
 
-use crate::confine::{confine_lexically, open_confined, LexicalViolation, OpenViolation};
+use crate::confine::{confine_lexically, LexicalViolation};
 use crate::diagnostic::{Finding, Location, QuotedRegion, Severity};
 use crate::markup::{atx_heading, list_item_bold_name, non_fenced_lines};
 use crate::route::{ElementClass, MarkerRule};
+use crate::snapshot::{Captured, Snapshot};
 
 /// Scan one opted-in file's body for marker-line references and resolve each
 /// against its rule's target doc. `content` is the whole file; `body_offset` is
 /// where the prose body begins. `rules` are the marker rules active for this
 /// file (every rule on every route claiming it).
 pub fn check_file(
-    project_root: &Path,
+    snapshot: &Snapshot,
     path: &Path,
     content: &str,
     body_offset: usize,
@@ -56,7 +56,7 @@ pub fn check_file(
     // matching lines are then skipped rather than spuriously flagged E0112.
     let member_sets: Vec<Option<HashSet<String>>> = rules
         .iter()
-        .map(|rule| resolve_members(project_root, path, rule, findings))
+        .map(|rule| resolve_members(snapshot, path, rule, findings))
         .collect();
 
     for (line_start, line) in non_fenced_lines(body) {
@@ -89,13 +89,13 @@ pub fn check_file(
     }
 }
 
-/// Read a rule's target document (confined, no-follow), scope it to
-/// `target_section` if named, and return the set of normalized member names for
-/// the rule's element class. `None` means the target failed confinement (a
-/// finding was emitted). A missing/unreadable target yields an empty set, so its
+/// A rule's target document from the captured snapshot (#103), scoped to
+/// `target_section` if named, as the set of normalized member names for the
+/// rule's element class. `None` means the target failed confinement (a finding
+/// was emitted). A missing/unreadable target yields an empty set, so its
 /// references surface loudly as `E0112` rather than degrading silently.
 fn resolve_members(
-    project_root: &Path,
+    snapshot: &Snapshot,
     path: &Path,
     rule: &MarkerRule,
     findings: &mut Vec<Finding>,
@@ -121,15 +121,23 @@ fn resolve_members(
         }
     };
 
-    let mut target = String::new();
-    match open_confined(project_root, &confined) {
-        Ok(mut handle) => {
-            if handle.read_to_string(&mut target).is_err() {
-                // Unreadable (non-UTF8) target: empty member set → references fail.
-                return Some(HashSet::new());
-            }
-        }
-        Err(OpenViolation::Symlink { .. }) => {
+    // The target's capture-time state (#103): marker targets come from route
+    // config, so discovery always captures a confined target_doc; a miss can
+    // only mean a discovery defect — fail LOUD (empty member set), never fall
+    // back to the filesystem.
+    debug_assert!(
+        snapshot.get(confined.as_path()).is_some(),
+        "marker target '{}' was not captured before the seam",
+        confined.as_path().display()
+    );
+    let target: &str = match snapshot.get(confined.as_path()) {
+        Some(Captured::Content(c)) => match c.text() {
+            Some(text) => text,
+            // Unreadable (non-UTF8) target: empty member set → references fail.
+            None => return Some(HashSet::new()),
+        },
+        Some(Captured::OpenedUnreadable { .. }) => return Some(HashSet::new()),
+        Some(Captured::SymlinkRefused { .. }) => {
             findings.push(marker_finding(
                 path,
                 "",
@@ -144,14 +152,14 @@ fn resolve_members(
             return None;
         }
         // Missing target: empty set → references surface as E0112 (loud, not silent).
-        Err(OpenViolation::Io(_)) => return Some(HashSet::new()),
-    }
+        Some(Captured::OpenIo { .. }) | None => return Some(HashSet::new()),
+    };
 
     // Strip any frontmatter so a YAML `# comment` in the target is not read as a
     // heading, then extract the element names (optionally section-scoped).
-    let doc_body = match crate::frontmatter::parse(&target) {
+    let doc_body = match crate::frontmatter::parse(target) {
         Ok(Some((_, b))) => b,
-        _ => &target,
+        _ => target,
     };
     Some(extract_members(
         doc_body,

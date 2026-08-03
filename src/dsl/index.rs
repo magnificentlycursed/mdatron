@@ -26,7 +26,6 @@
 //! path component is refused.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::fs::File;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
@@ -80,11 +79,103 @@ impl IndexRegistry {
     }
 
     /// Build a registry from a list of key declarations rooted at `project_root`.
+    ///
+    /// Reads each source live through a confined no-follow handle. The verify
+    /// pipeline does NOT use this: it captures sources into the run's immutable
+    /// snapshot first and builds via [`IndexRegistry::build_from_parts`] (#103),
+    /// so the index sees the same bytes every other check sees. This surface
+    /// serves standalone/bootstrap callers and the unit tests that pin the
+    /// confinement contract.
     pub fn build(project_root: &Path, decls: &[KeyDecl]) -> Result<Self, IndexError> {
         let mut indices = BTreeMap::new();
         for decl in decls {
             let index = build_index(project_root, decl)?;
             indices.insert(decl.name.clone(), index);
+        }
+        Ok(Self { indices })
+    }
+
+    /// Build a registry from pre-resolved sources whose content was captured
+    /// into `snapshot` before the capture-complete seam (#103). Pure over the
+    /// snapshot: no filesystem access. Capture-time states map onto the same
+    /// taxonomy the live build produces — a symlinked source is
+    /// [`IndexError::SymlinkRefused`], an absent/unreadable one is
+    /// [`IndexError::Io`] — so the two build paths are finding-equivalent.
+    pub fn build_from_parts(
+        parts: &[(KeyDecl, Vec<confine::ConfinedPath>)],
+        snapshot: &crate::snapshot::Snapshot,
+    ) -> Result<Self, IndexError> {
+        use crate::snapshot::Captured;
+        let mut indices = BTreeMap::new();
+        for (decl, sources) in parts {
+            let mut entries: BTreeMap<String, Value> = BTreeMap::new();
+            let mut provenance: BTreeMap<String, BTreeSet<PathBuf>> = BTreeMap::new();
+            let mut source_set: BTreeSet<PathBuf> = BTreeSet::new();
+            for rel in sources {
+                let display = rel.as_path().to_path_buf();
+                let display_text = escape_path_text(&display.to_string_lossy());
+                debug_assert!(
+                    snapshot.get(rel.as_path()).is_some(),
+                    "index source '{}' was not captured before the seam",
+                    display.display()
+                );
+                let content = match snapshot.get(rel.as_path()) {
+                    Some(Captured::Content(c)) => match c.text() {
+                        Some(text) => text,
+                        None => {
+                            return Err(IndexError::Io {
+                                path: display_text,
+                                error: "stream did not contain valid UTF-8".into(),
+                            })
+                        }
+                    },
+                    Some(Captured::SymlinkRefused { component }) => {
+                        return Err(IndexError::SymlinkRefused {
+                            path: display_text,
+                            component: escape_path_text(&component.to_string_lossy()),
+                        })
+                    }
+                    Some(Captured::OpenedUnreadable { error })
+                    | Some(Captured::OpenIo { error }) => {
+                        return Err(IndexError::Io {
+                            path: display_text,
+                            error: error.clone(),
+                        })
+                    }
+                    None => {
+                        return Err(IndexError::Io {
+                            path: display_text,
+                            error: "source was not captured before the seam".into(),
+                        })
+                    }
+                };
+                let rel_buf = rel.as_path().to_path_buf();
+                source_set.insert(rel_buf.clone());
+                let mut file_entries: BTreeMap<String, Value> = BTreeMap::new();
+                extract_into(
+                    &display,
+                    content,
+                    &decl.select,
+                    &decl.indexed_by,
+                    &mut file_entries,
+                )?;
+                for (k, v) in file_entries {
+                    provenance
+                        .entry(k.clone())
+                        .or_default()
+                        .insert(rel_buf.clone());
+                    entries.insert(k, v);
+                }
+            }
+            indices.insert(
+                decl.name.clone(),
+                Index {
+                    name: decl.name.clone(),
+                    entries,
+                    provenance,
+                    sources: source_set,
+                },
+            );
         }
         Ok(Self { indices })
     }
@@ -182,6 +273,15 @@ fn build_index(project_root: &Path, decl: &KeyDecl) -> Result<Index, IndexError>
                 error: e.to_string(),
             },
         })?;
+        let mut content = String::new();
+        {
+            let mut file = file;
+            file.read_to_string(&mut content)
+                .map_err(|e| IndexError::Io {
+                    path: escape_path_text(&display.to_string_lossy()),
+                    error: e.to_string(),
+                })?;
+        }
         let rel_buf = rel.as_path().to_path_buf();
         sources.insert(rel_buf.clone());
         // Extract per file, then merge — so provenance records which file
@@ -189,7 +289,7 @@ fn build_index(project_root: &Path, decl: &KeyDecl) -> Result<Index, IndexError>
         let mut file_entries: BTreeMap<String, Value> = BTreeMap::new();
         extract_into(
             &display,
-            file,
+            &content,
             &decl.select,
             &decl.indexed_by,
             &mut file_entries,
@@ -239,7 +339,7 @@ fn build_index(project_root: &Path, decl: &KeyDecl) -> Result<Index, IndexError>
 /// the same basis (a walk cannot produce a `..` or root segment, so this
 /// always succeeds) so [`open_confined`](confine::open_confined) receives the
 /// type its seam requires.
-fn resolve_source(
+pub(crate) fn resolve_source(
     project_root: &Path,
     source: &str,
 ) -> Result<Vec<confine::ConfinedPath>, IndexError> {
@@ -531,12 +631,12 @@ fn escape_path_text(s: &str) -> String {
 
 fn extract_into(
     path: &Path,
-    file: File,
+    content: &str,
     select: &str,
     indexed_by: &str,
     out: &mut BTreeMap<String, Value>,
 ) -> Result<(), IndexError> {
-    let parsed = parse_file_to_value(path, file)?;
+    let parsed = parse_file_to_value(path, content)?;
     let selected = apply_select(&parsed, select).map_err(|e| IndexError::Selection {
         path: escape_path_text(&path.to_string_lossy()),
         select: select.to_string(),
@@ -597,18 +697,12 @@ fn extract_into(
 
 // ── File parsing ───────────────────────────────────────────────────────────────
 
-/// Parse from an already-confined handle; `path` is display-only. Reading
-/// through the handle keeps confinement decided on the handle rather than on
-/// a path re-walked at read time (the check-then-read gap, DESIGN.md
+/// Parse already-captured content; `path` is display-only. The bytes arrive
+/// through a confined no-follow handle upstream (the live [`build_index`] read
+/// or the snapshot capture), so confinement stays decided on the handle rather
+/// than on a path re-walked at read time (the check-then-read gap, DESIGN.md
 /// § Verification is fast where it is invoked).
-fn parse_file_to_value(path: &Path, mut file: File) -> Result<Value, IndexError> {
-    let mut content = String::new();
-    file.read_to_string(&mut content)
-        .map_err(|e| IndexError::Io {
-            path: escape_path_text(&path.to_string_lossy()),
-            error: e.to_string(),
-        })?;
-
+fn parse_file_to_value(path: &Path, content: &str) -> Result<Value, IndexError> {
     let ext = path
         .extension()
         .and_then(|s| s.to_str())
@@ -618,7 +712,7 @@ fn parse_file_to_value(path: &Path, mut file: File) -> Result<Value, IndexError>
     match ext.as_str() {
         "yaml" | "yml" => {
             let yaml: serde_yaml_ng::Value =
-                serde_yaml_ng::from_str(&content).map_err(|e| IndexError::Parse {
+                serde_yaml_ng::from_str(content).map_err(|e| IndexError::Parse {
                     path: escape_path_text(&path.to_string_lossy()),
                     error: e.to_string(),
                 })?;
@@ -626,7 +720,7 @@ fn parse_file_to_value(path: &Path, mut file: File) -> Result<Value, IndexError>
         }
         "json" => {
             let json: serde_json::Value =
-                serde_json::from_str(&content).map_err(|e| IndexError::Parse {
+                serde_json::from_str(content).map_err(|e| IndexError::Parse {
                     path: escape_path_text(&path.to_string_lossy()),
                     error: e.to_string(),
                 })?;
@@ -634,7 +728,7 @@ fn parse_file_to_value(path: &Path, mut file: File) -> Result<Value, IndexError>
         }
         "md" => {
             // Markdown file: parse frontmatter, expose as $.frontmatter.
-            let fm_opt = crate::frontmatter::parse(&content).map_err(|e| IndexError::Parse {
+            let fm_opt = crate::frontmatter::parse(content).map_err(|e| IndexError::Parse {
                 path: escape_path_text(&path.to_string_lossy()),
                 error: e.to_string(),
             })?;

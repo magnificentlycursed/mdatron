@@ -24,6 +24,7 @@ use serde::{Deserialize, Serialize};
 
 const E0001: &str = include_str!("MDATRON-E0001.md");
 const E0002: &str = include_str!("MDATRON-E0002.md");
+const E0003: &str = include_str!("MDATRON-E0003.md");
 const E0010: &str = include_str!("MDATRON-E0010.md");
 const E0011: &str = include_str!("MDATRON-E0011.md");
 const E0012: &str = include_str!("MDATRON-E0012.md");
@@ -85,6 +86,7 @@ pub fn lookup(code: &str) -> Option<&'static str> {
     match code {
         "MDATRON-E0001" => Some(E0001),
         "MDATRON-E0002" => Some(E0002),
+        "MDATRON-E0003" => Some(E0003),
         "MDATRON-E0010" => Some(E0010),
         "MDATRON-E0011" => Some(E0011),
         "MDATRON-E0012" => Some(E0012),
@@ -259,6 +261,7 @@ mod tests {
     const BASELINE: &[&str] = &[
         "MDATRON-E0001",
         "MDATRON-E0002",
+        "MDATRON-E0003",
         "MDATRON-E0010",
         "MDATRON-E0011",
         "MDATRON-E0012",

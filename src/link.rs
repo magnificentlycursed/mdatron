@@ -41,20 +41,47 @@
 //! the engine does not reach the network.
 
 use std::collections::{HashMap, HashSet};
-use std::io::Read;
 use std::path::{Component, Path, PathBuf};
 
-use crate::confine::{confine_lexically, open_confined, OpenViolation};
+use crate::confine::{confine_lexically, ConfinedPath};
 use crate::diagnostic::{Finding, Location, QuotedRegion, Severity};
 use crate::markup::{body_links, heading_slugs, slugify};
+use crate::snapshot::{Captured, Snapshot};
 
-/// Scan one opted-in file's body for links + images and resolve each against the
-/// working tree. `content` is the whole file; `body_offset` is where the prose
-/// body begins (frontmatter is not link-scanned). Signature mirrors
-/// [`crate::cite::check_file`]. Link discovery is a single CommonMark parse
-/// ([`body_links`]) covering inline, reference-style, and image links, so a
-/// destination inside a code span or fence is excluded structurally.
+/// The confinement-accepted link targets of one file's body — the paths target
+/// discovery captures into the snapshot before the seam (#103). Runs the SAME
+/// CommonMark extraction and document-relative resolution the check runs, so
+/// the check-time target set cannot diverge from the captured set. External
+/// links, same-document fragments, and confinement violations resolve to no
+/// target and are not returned.
+pub(crate) fn link_targets(rel: &Path, content: &str, body_offset: usize) -> Vec<ConfinedPath> {
+    let base_dir = rel.parent().unwrap_or_else(|| Path::new(""));
+    let body = &content[body_offset..];
+    let mut out = Vec::new();
+    for link in body_links(body) {
+        if is_external(&link.dest) {
+            continue;
+        }
+        let (path_part, _anchor) = split_fragment(&link.dest);
+        if path_part.is_empty() {
+            continue;
+        }
+        if let Ok(confined) = resolve_target(base_dir, path_part) {
+            out.push(confined);
+        }
+    }
+    out
+}
+
+/// Scan one opted-in file's body for links + images and resolve each against
+/// the captured snapshot (#103) — the same bytes every other check saw, never
+/// a post-seam filesystem read. `content` is the whole file; `body_offset` is
+/// where the prose body begins (frontmatter is not link-scanned). Signature
+/// mirrors [`crate::cite::check_file`]. Link discovery is a single CommonMark
+/// parse ([`body_links`]) covering inline, reference-style, and image links, so
+/// a destination inside a code span or fence is excluded structurally.
 pub fn check_file(
+    snapshot: &Snapshot,
     project_root: &Path,
     path: &Path,
     content: &str,
@@ -86,7 +113,7 @@ pub fn check_file(
     for link in body_links(body) {
         let at = body_offset + link.offset;
         resolve_link(
-            project_root,
+            snapshot,
             path,
             content,
             at,
@@ -101,7 +128,7 @@ pub fn check_file(
 
 #[allow(clippy::too_many_arguments)]
 fn resolve_link(
-    project_root: &Path,
+    snapshot: &Snapshot,
     path: &Path,
     content: &str,
     at: usize,
@@ -171,8 +198,17 @@ fn resolve_link(
         }
     };
 
-    match open_confined(project_root, &confined) {
-        Ok(mut handle) => {
+    // The target's capture-time state (#103): `link_targets` is the same
+    // extraction discovery ran, so a confined target is always captured; a
+    // miss can only mean a discovery defect — fail LOUD (dead link), never
+    // fall back to the filesystem.
+    debug_assert!(
+        snapshot.get(confined.as_path()).is_some(),
+        "link target '{}' was not captured before the seam",
+        confined.as_path().display()
+    );
+    match snapshot.get(confined.as_path()) {
+        Some(Captured::Content(c)) => {
             // Target exists. If the link carries a fragment and the target is a
             // markdown file, the fragment must match one of its headings.
             let Some(frag) = anchor else { return };
@@ -181,14 +217,9 @@ fn resolve_link(
             }
             let key = confined.as_path().to_path_buf();
             if !target_slugs.contains_key(&key) {
-                let mut buf = String::new();
-                let slugs = if handle.read_to_string(&mut buf).is_ok() {
-                    Some(heading_slugs(markdown_body(&buf)))
-                } else {
-                    // Non-UTF8 / unreadable markdown target: existence is
-                    // verified, the fragment is not resolved (not flagged).
-                    None
-                };
+                // Non-UTF8 markdown target: existence is verified, the
+                // fragment is not resolved (not flagged).
+                let slugs = c.text().map(|t| heading_slugs(markdown_body(t)));
                 target_slugs.insert(key.clone(), slugs);
             }
             if let Some(Some(slugs)) = target_slugs.get(&key) {
@@ -207,7 +238,10 @@ fn resolve_link(
                 }
             }
         }
-        Err(OpenViolation::Symlink { .. }) => {
+        // Opened but unreadable: the target exists; its fragment (if any) is
+        // not resolved — same posture as a non-markdown target.
+        Some(Captured::OpenedUnreadable { .. }) => {}
+        Some(Captured::SymlinkRefused { .. }) => {
             findings.push(link_finding(
                 path,
                 content,
@@ -219,7 +253,7 @@ fn resolve_link(
                 dest,
             ));
         }
-        Err(OpenViolation::Io(_)) => {
+        Some(Captured::OpenIo { .. }) | None => {
             findings.push(link_finding(
                 path,
                 content,

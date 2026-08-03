@@ -25,7 +25,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-use crate::confine::{confine_lexically, open_confined, LexicalViolation, OpenViolation};
+use crate::confine::{confine_lexically, open_confined, LexicalViolation};
 use crate::diagnostic::{Finding, Location, QuotedRegion, Severity};
 use crate::init::sha256_hex;
 use crate::Error;
@@ -183,30 +183,42 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedPins>, Error> {
     Ok(Some(LoadedPins { pins, findings }))
 }
 
-/// Verify every active pin against the tree: the pinned file is opened
-/// no-follow and its sha256 compared to the record. Stale → `E0061`; target
-/// unopenable → `E0062`; symlinked target refused → `E0012`.
-pub fn check(project_root: &Path, pins: &[Pin], findings: &mut Vec<Finding>) {
+/// Verify every active pin against the captured snapshot (#103): the pinned
+/// file's capture-time bytes — the same bytes every other check validated —
+/// are sha256-compared to the record. Stale → `E0061`; target unopenable →
+/// `E0062`; symlinked target refused → `E0012`. The pin certifies what the run
+/// verified; a post-seam mutation is the NEXT run's finding.
+pub fn check(
+    project_root: &Path,
+    pins: &[Pin],
+    snapshot: &crate::snapshot::Snapshot,
+    findings: &mut Vec<Finding>,
+) {
+    use crate::snapshot::Captured;
     let pins_path = project_root.join(".mdatron").join(PINS_NAME);
     for pin in pins {
-        // Confinement was established at load; re-derive for the open.
+        // Confinement was established at load; re-derive for the lookup (a
+        // lexically-escaping pin path was never captured, and never read).
         let Ok(confined) = confine_lexically(Path::new(&pin.file)) else {
             continue;
         };
-        match open_confined(project_root, &confined) {
-            Ok(mut handle) => {
-                use std::io::Read;
-                let mut bytes = Vec::new();
-                if handle.read_to_end(&mut bytes).is_err() {
-                    findings.push(target_unopenable(&pins_path, pin));
-                    continue;
-                }
+        // Discovery captured every relevant pin target before the seam; a miss
+        // can only mean a discovery defect — fail LOUD (E0062), never fall
+        // back to the filesystem.
+        debug_assert!(
+            snapshot.get(confined.as_path()).is_some(),
+            "pin target '{}' was not captured before the seam",
+            confined.as_path().display()
+        );
+        match snapshot.get(confined.as_path()) {
+            Some(Captured::Content(c)) => {
+                let bytes = c.bytes();
                 let actual = match &pin.section {
-                    None => sha256_hex(&bytes),
+                    None => sha256_hex(bytes),
                     // Section pin (#146): hash only the heading-delimited span. A
                     // non-UTF8 file or a missing heading cannot be located → E0063.
-                    Some(section) => match std::str::from_utf8(&bytes)
-                        .ok()
+                    Some(section) => match c
+                        .text()
                         .and_then(|s| crate::markup::section_span(s, section))
                     {
                         Some(span) => sha256_hex(span.as_bytes()),
@@ -249,7 +261,7 @@ pub fn check(project_root: &Path, pins: &[Pin], findings: &mut Vec<Finding>) {
                     });
                 }
             }
-            Err(OpenViolation::Symlink { .. }) => {
+            Some(Captured::SymlinkRefused { .. }) => {
                 findings.push(Finding {
                     code: "MDATRON-E0012".into(),
                     severity: Severity::Error,
@@ -266,7 +278,9 @@ pub fn check(project_root: &Path, pins: &[Pin], findings: &mut Vec<Finding>) {
                     }],
                 });
             }
-            Err(OpenViolation::Io(_)) => findings.push(target_unopenable(&pins_path, pin)),
+            Some(Captured::OpenedUnreadable { .. }) | Some(Captured::OpenIo { .. }) | None => {
+                findings.push(target_unopenable(&pins_path, pin))
+            }
         }
     }
 }

@@ -364,12 +364,14 @@ fn run(
             error: e.to_string(),
         })?;
 
-    // Build a single registry from the union of all patterns' keys: declarations.
+    // Union of all patterns' `keys:` declarations. The registry itself is built
+    // AFTER the governed-body capture, from the same snapshot (#103): index
+    // sources and governed bodies are one read-once input set, so a file that
+    // is both is seen as one byte-state by every check.
     let mut all_keys = Vec::new();
     for pf in &patterns {
         all_keys.extend(pf.pattern.keys.clone());
     }
-    let registry = IndexRegistry::build(&project_root, &all_keys)?;
 
     // Opt-in frontmatter requirement (#80 D2): compile the globs once; a
     // malformed OR tree-escaping pattern is a loud config error, not a silent
@@ -512,19 +514,13 @@ fn run(
         }
     }
 
-    // Confined snapshot of the governed-file BODY (#103, security): each
-    // governed file's body is read ONCE through a confined no-follow handle, so
-    // the per-file schema and rule checks run against those bytes — a mutation
-    // after capture cannot change what they see, and a symlinked governed-file
-    // component is refused (E0012) rather than followed, closing the raw-read
-    // gap where verify_file used std::fs::read_to_string. PARTIAL (security
-    // review A, tracked on #103): the cross-file index is built earlier and the
-    // pin/citation families still read independently, so this is not yet the
-    // single-immutable-snapshot contract for ALL inputs — only the body read.
-    let mut snapshot: BTreeMap<PathBuf, String> = BTreeMap::new();
-    // #124 (roast SHO1): running aggregate of the snapshot so an adversary can't
-    // exhaust memory by supplying many under-cap files.
-    let mut aggregate_bytes: usize = 0;
+    // The ONE immutable snapshot (#103, security): every input the checks
+    // consult — governed bodies here, then index sources, then discovered
+    // cross-file targets — is captured through confined no-follow handles into
+    // this structure before the capture-complete seam; after the seam the run
+    // touches no filesystem. Capture is idempotent per path (read-once across
+    // roles) and bounded per-file + in aggregate for every input class (#124).
+    let mut snapshot = crate::snapshot::Snapshot::new(MAX_FILE_BYTES, MAX_AGGREGATE_BYTES);
     for (abs, rel) in &governed {
         let confined = match crate::confine::confine_lexically(rel) {
             Ok(c) => c,
@@ -570,53 +566,26 @@ fn run(
                 continue;
             }
         };
-        match crate::confine::open_confined(&project_root, &confined) {
-            Ok(handle) => {
-                use std::io::Read;
-                let mut content = String::new();
-                // #124 (roast SHO1): read at most MAX_FILE_BYTES + 1 so an
-                // oversized file caps memory here instead of loading gigabytes,
-                // then trips a loud bound rather than exhausting RAM.
-                if let Err(e) = handle
-                    .take(MAX_FILE_BYTES as u64 + 1)
-                    .read_to_string(&mut content)
-                {
-                    return Err(VerifyError::Io {
-                        path: abs.to_string_lossy().into_owned(),
-                        error: e.to_string(),
-                    });
+        match snapshot.capture(&project_root, &confined)? {
+            crate::snapshot::Captured::Content(content) => {
+                // The nesting bound applies to bodies (their frontmatter is
+                // YAML-parsed per file); a non-UTF8 body is reported at the
+                // walk (E0003), never a whole-run abort (#103 security C).
+                if let Some(text) = content.text() {
+                    let nesting = max_flow_nesting(text);
+                    if nesting > MAX_STRUCTURAL_NESTING {
+                        return Err(VerifyError::BoundExceeded {
+                            bound: "structural-nesting-depth".into(),
+                            detail: format!(
+                                "'{}' nests flow collections {nesting} deep (limit {MAX_STRUCTURAL_NESTING})",
+                                rel.display()
+                            ),
+                        });
+                    }
                 }
-                if content.len() > MAX_FILE_BYTES {
-                    return Err(VerifyError::BoundExceeded {
-                        bound: "max-input-size-per-file".into(),
-                        detail: format!(
-                            "'{}' exceeds the {MAX_FILE_BYTES}-byte per-file limit",
-                            rel.display()
-                        ),
-                    });
-                }
-                let nesting = max_flow_nesting(&content);
-                if nesting > MAX_STRUCTURAL_NESTING {
-                    return Err(VerifyError::BoundExceeded {
-                        bound: "structural-nesting-depth".into(),
-                        detail: format!(
-                            "'{}' nests flow collections {nesting} deep (limit {MAX_STRUCTURAL_NESTING})",
-                            rel.display()
-                        ),
-                    });
-                }
-                aggregate_bytes += content.len();
-                if aggregate_bytes > MAX_AGGREGATE_BYTES {
-                    return Err(VerifyError::BoundExceeded {
-                        bound: "aggregate-snapshot-size".into(),
-                        detail: format!(
-                            "the walked corpus exceeds the {MAX_AGGREGATE_BYTES}-byte aggregate limit"
-                        ),
-                    });
-                }
-                snapshot.insert(rel.clone(), content);
             }
-            Err(crate::confine::OpenViolation::Symlink { component }) => {
+            crate::snapshot::Captured::SymlinkRefused { component } => {
+                let component = component.to_string_lossy().into_owned();
                 findings.push(Finding {
                     code: "MDATRON-E0012".into(),
                     severity: Severity::Error,
@@ -638,25 +607,36 @@ fn run(
                     explain_ref: Some("MDATRON-E0012".into()),
                     quoted: vec![QuotedRegion {
                         label: "component".into(),
-                        content: component.to_string_lossy().into_owned(),
+                        content: component,
                     }],
                 });
             }
-            Err(crate::confine::OpenViolation::Io(e)) => {
+            // Opened but unreadable: reported per-file at the walk (E0003).
+            crate::snapshot::Captured::OpenedUnreadable { .. } => {}
+            crate::snapshot::Captured::OpenIo { error } => {
                 return Err(VerifyError::Io {
                     path: abs.to_string_lossy().into_owned(),
-                    error: e.to_string(),
+                    error: error.clone(),
                 });
             }
         }
     }
 
-    // Capture-complete seam (#103): the snapshot is sealed. A test injects a
-    // mutation here to prove the run reports against the snapshot bytes rather
-    // than racing a real filesystem window.
-    if let Some(cb) = on_capture_complete {
-        cb();
+    // Index sources (#103): resolve each declaration's sources (a bounded,
+    // no-follow, pre-seam enumeration), capture their content into the same
+    // snapshot, and build the registry from those captured bytes — the index
+    // sees exactly the bytes every other check sees.
+    let mut decl_sources: Vec<(crate::dsl::KeyDecl, Vec<crate::confine::ConfinedPath>)> =
+        Vec::new();
+    for decl in all_keys {
+        let sources = crate::dsl::resolve_source(&project_root, decl.source.trim())
+            .map_err(VerifyError::from)?;
+        for rel in &sources {
+            snapshot.capture(&project_root, rel)?;
+        }
+        decl_sources.push((decl, sources));
     }
+    let registry = IndexRegistry::build_from_parts(&decl_sources, &snapshot)?;
 
     // Incremental scope (#102, cold-review F3/F4): resolve the changed path to a
     // governed file by canonicalizing both sides — robust to symlinked roots
@@ -675,7 +655,7 @@ fn run(
             .iter()
             .map(|(_abs, rel)| crate::dep::GovernedFile {
                 path: rel.clone(),
-                schema_class: snapshot.get(rel).and_then(|c| read_schema_class(c)),
+                schema_class: snapshot.text(rel).and_then(read_schema_class),
             })
             .collect();
         let graph = crate::dep::DepGraph::build(
@@ -690,6 +670,61 @@ fn run(
     } else {
         None
     };
+
+    // Cross-file targets (#103): discover and capture, BEFORE the seam, every
+    // path the post-seam checks will consult. Pin targets are declared in
+    // pins.yaml; cite/link targets are extracted from in-scope body text with
+    // the same extraction the checks run (a pure function over snapshot bytes,
+    // so the check-time set cannot diverge); marker targets come from route
+    // config. A lexically-escaping path never reaches the filesystem — the
+    // check reports it on path text alone, so no capture is required.
+    for pin in &pins {
+        let relevant = scope
+            .as_ref()
+            .is_none_or(|s| s.contains(Path::new(&pin.file)));
+        if !relevant {
+            continue;
+        }
+        if let Ok(confined) = crate::confine::confine_lexically(Path::new(&pin.file)) {
+            snapshot.capture(&project_root, &confined)?;
+        }
+    }
+    if let Some(routes) = &routes {
+        let mut targets: Vec<crate::confine::ConfinedPath> = Vec::new();
+        for (_path, rel) in &governed {
+            if let Some(scope) = &scope {
+                if !scope.contains(rel) {
+                    continue;
+                }
+            }
+            let Some(content) = snapshot.text(rel) else {
+                continue;
+            };
+            let body_offset = body_offset_of(content);
+            if crate::route::citations_enabled(routes, rel) {
+                targets.extend(crate::cite::cited_targets(content, body_offset));
+            }
+            if crate::route::links_enabled(routes, rel) {
+                targets.extend(crate::link::link_targets(rel, content, body_offset));
+            }
+            for rule in crate::route::marker_rules_for(routes, rel) {
+                if let Ok(confined) = crate::confine::confine_lexically(Path::new(&rule.target_doc))
+                {
+                    targets.push(confined);
+                }
+            }
+        }
+        for t in &targets {
+            snapshot.capture(&project_root, t)?;
+        }
+    }
+
+    // Capture-complete seam (#103): the snapshot is sealed — every input this
+    // run will consult is captured. A test injects a mutation here to prove
+    // the checks report against snapshot bytes, not a live filesystem window.
+    if let Some(cb) = on_capture_complete {
+        cb();
+    }
 
     // #98: track whether a scoped register matched any walked file. Whole-tree
     // only — W0043 is `.mdatron/`-located (never in an incremental scope) and
@@ -726,15 +761,33 @@ fn run(
         if vocab_scoped && vocab_enabled {
             vocab_scoped_hits += 1;
         }
-        // Read from the immutable snapshot, never the filesystem (#103). A file
-        // refused at capture (symlinked) has no snapshot entry and its E0012 was
-        // already recorded.
-        let Some(content) = snapshot.get(rel) else {
-            continue;
+        // Read from the immutable snapshot, never the filesystem (#103). A
+        // symlinked file was refused at capture (its E0012 is recorded); a
+        // captured-but-unreadable body (non-UTF8, or a read failure past the
+        // open) is a PER-FILE finding (E0003), never a whole-run abort — one
+        // hostile file must not deny verification of the rest of the tree
+        // (#103 security C). Neither counts as validated in files_checked.
+        let content = match snapshot.get(rel) {
+            Some(crate::snapshot::Captured::Content(c)) => match c.text() {
+                Some(text) => text,
+                None => {
+                    findings.push(unreadable_body_finding(
+                        path,
+                        "the file's bytes are not valid UTF-8",
+                    ));
+                    continue;
+                }
+            },
+            Some(crate::snapshot::Captured::OpenedUnreadable { error }) => {
+                findings.push(unreadable_body_finding(path, error));
+                continue;
+            }
+            _ => continue,
         };
         any_unrouted_schema_class |= verify_file(
             path,
             content,
+            &snapshot,
             &project_root,
             &require,
             cite_enabled,
@@ -891,7 +944,12 @@ fn run(
             .as_ref()
             .is_none_or(|s| s.contains(Path::new(&pin.file)));
         if relevant {
-            crate::pin::check(&project_root, std::slice::from_ref(pin), &mut findings);
+            crate::pin::check(
+                &project_root,
+                std::slice::from_ref(pin),
+                &snapshot,
+                &mut findings,
+            );
         }
     }
 
@@ -994,6 +1052,44 @@ fn resolve_changed_rel(
     let canon = candidate.canonicalize().ok()?;
     let rel = canon.strip_prefix(project_root).ok()?.to_path_buf();
     governed_rels.contains(&rel).then_some(rel)
+}
+
+/// Where the prose body begins — the same offset the per-file checks compute
+/// from the frontmatter parse. Target discovery (#103) uses this so the
+/// extraction it runs is byte-identical to the check-time extraction. Parse
+/// failure or no frontmatter both mean the body is the whole file.
+fn body_offset_of(content: &str) -> usize {
+    match crate::frontmatter::parse(content) {
+        Ok(Some((_fm, body))) => content.len() - body.len(),
+        _ => 0,
+    }
+}
+
+/// A governed body that was captured but cannot be verified as text — non-UTF8
+/// bytes, or a read failure after the confined open (#103 security C). A
+/// localized per-file finding: the run continues over the rest of the tree.
+fn unreadable_body_finding(path: &Path, cause: &str) -> Finding {
+    Finding {
+        code: "MDATRON-E0003".into(),
+        severity: Severity::Error,
+        summary: "governed-file-unreadable".into(),
+        message: format!(
+            "this governed file's content cannot be verified ({cause}); \
+             nothing validated it"
+        ),
+        help: Some(
+            "re-encode the file as UTF-8 (or repair its readability); a file \
+             that cannot be read cannot be governed"
+                .into(),
+        ),
+        location: Location {
+            file: path.to_path_buf(),
+            line: 1,
+            column: 0,
+        },
+        explain_ref: Some("MDATRON-E0003".into()),
+        quoted: Vec::new(),
+    }
 }
 
 /// A governed file's `schema_class` from its snapshot content, for the
@@ -1306,6 +1402,7 @@ fn field_ref_finding(
 fn verify_file(
     path: &Path,
     content: &str,
+    snapshot: &crate::snapshot::Snapshot,
     project_root: &Path,
     require_frontmatter: &[glob::Pattern],
     cite_enabled: bool,
@@ -1361,12 +1458,12 @@ fn verify_file(
                 crate::vocab::check_file(v, path, content, 0, None, findings);
             }
             if cite_enabled {
-                crate::cite::check_file(project_root, path, content, 0, findings);
+                crate::cite::check_file(snapshot, path, content, 0, findings);
             }
             if link_enabled {
-                crate::link::check_file(project_root, path, content, 0, findings);
+                crate::link::check_file(snapshot, project_root, path, content, 0, findings);
             }
-            crate::marker::check_file(project_root, path, content, 0, marker_rules, findings);
+            crate::marker::check_file(snapshot, path, content, 0, marker_rules, findings);
             crate::codecat::check_file(code_catalogs, path, content, 0, findings);
             crate::section::check_file(section_rules, path, content, 0, findings);
             let rel = path.strip_prefix(project_root).unwrap_or(path);
@@ -1414,22 +1511,15 @@ fn verify_file(
     }
     if cite_enabled {
         let body_offset = content.len() - body_len;
-        crate::cite::check_file(project_root, path, content, body_offset, findings);
+        crate::cite::check_file(snapshot, path, content, body_offset, findings);
     }
     if link_enabled {
         let body_offset = content.len() - body_len;
-        crate::link::check_file(project_root, path, content, body_offset, findings);
+        crate::link::check_file(snapshot, project_root, path, content, body_offset, findings);
     }
     {
         let body_offset = content.len() - body_len;
-        crate::marker::check_file(
-            project_root,
-            path,
-            content,
-            body_offset,
-            marker_rules,
-            findings,
-        );
+        crate::marker::check_file(snapshot, path, content, body_offset, marker_rules, findings);
         crate::codecat::check_file(code_catalogs, path, content, body_offset, findings);
         crate::section::check_file(section_rules, path, content, body_offset, findings);
     }
@@ -4588,6 +4678,251 @@ pattern:
             codes_of(&findings, "MDATRON-E0012"),
             1,
             "the symlinked governed file is refused; got {findings:?}"
+        );
+    }
+
+    // ── #103 unification red gate ────────────────────────────────────────────
+    //
+    // Every input class is served from the ONE immutable snapshot sealed at the
+    // capture-complete seam (DESIGN.md § Verification is fast: "reads its inputs
+    // once ... all checks run against snapshot bytes"). Each fixture mutates or
+    // deletes an input AT THE SEAM and asserts the run reports capture-time
+    // state; a follow-up fresh run proves the mutation landed (no vacuous pass).
+
+    // A pin certifies the bytes the run validated, not whatever is on disk when
+    // pin::check happens to execute.
+    #[test]
+    fn pin_verdict_reflects_capture_time_bytes() {
+        use sha2::{Digest, Sha256};
+        let proj = TempProject::new("pin-seam");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        let content = "---\nschema_class: doc\n---\n# x\n";
+        proj.write("docs/x.md", content);
+        proj.write("docs/gov.md", "# governing\n");
+        let sha = format!("{:x}", Sha256::digest(content.as_bytes()));
+        proj.write(
+            ".mdatron/pins.yaml",
+            &format!("pins:\n- governing: docs/gov.md\n  file: docs/x.md\n  sha256: {sha}\n"),
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+
+        let doc = proj.0.join("docs/x.md");
+        let mutate = || {
+            std::fs::write(&doc, "---\nschema_class: doc\n---\n# mutated\n").unwrap();
+        };
+        let (findings, _fam, _vis, _n) = run(&cfg, None, Some(&mutate)).unwrap();
+        assert_eq!(
+            codes_of(&findings, "MDATRON-E0061"),
+            0,
+            "the pin verdict must certify the capture-time bytes (which match the \
+             recorded sha), not the post-seam mutation; got {findings:?}"
+        );
+        let after = verify_report(&cfg).unwrap().findings;
+        assert_eq!(
+            codes_of(&after, "MDATRON-E0061"),
+            1,
+            "a later run captures fresh and sees the stale pin"
+        );
+    }
+
+    // A citation's line-range check runs against the capture-time target.
+    #[test]
+    fn cite_range_checked_against_capture_time_target() {
+        let proj = cite_project("cite-seam-range", "Per src-file.rs:5 this holds.\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let target = proj.0.join("src-file.rs");
+        let mutate = || {
+            std::fs::write(&target, "line1\nline2\n").unwrap();
+        };
+        let (findings, _fam, _vis, _n) = run(&cfg, None, Some(&mutate)).unwrap();
+        assert_eq!(
+            codes_of(&findings, "MDATRON-E0101"),
+            0,
+            "the range check must use capture-time bytes (5 lines); got {findings:?}"
+        );
+        let after = verify_report(&cfg).unwrap().findings;
+        assert_eq!(
+            codes_of(&after, "MDATRON-E0101"),
+            1,
+            "a later run captures fresh and sees the truncated target"
+        );
+    }
+
+    // Read-once, observably: a citation target DELETED after capture still
+    // resolves from the snapshot — the run never re-touches the filesystem.
+    #[test]
+    fn cite_target_deleted_at_seam_still_resolves() {
+        let proj = cite_project("cite-seam-delete", "Per src-file.rs:2 this holds.\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let target = proj.0.join("src-file.rs");
+        let mutate = || {
+            std::fs::remove_file(&target).unwrap();
+        };
+        let (findings, _fam, _vis, _n) = run(&cfg, None, Some(&mutate)).unwrap();
+        assert_eq!(
+            codes_of(&findings, "MDATRON-E0100"),
+            0,
+            "a target captured before the seam is served from the snapshot; got {findings:?}"
+        );
+        let after = verify_report(&cfg).unwrap().findings;
+        assert_eq!(
+            codes_of(&after, "MDATRON-E0100"),
+            1,
+            "a later run captures fresh and reports the dead citation"
+        );
+    }
+
+    // A link's anchor resolution runs against the capture-time target headings.
+    #[test]
+    fn link_anchor_resolved_against_capture_time_target() {
+        let proj = TempProject::new("link-seam");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write("GOVERNING.md", "# gov\n");
+        proj.write(
+            ".mdatron/routes.yaml",
+            "routes:\n- files: \"docs/**/*.md\"\n  governed_by: GOVERNING.md\n  links: true\n",
+        );
+        proj.write("docs/a.md", "See [t](t2.md#section-one).\n");
+        proj.write("docs/t2.md", "# Section One\n\nbody\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+
+        let target = proj.0.join("docs/t2.md");
+        let mutate = || {
+            std::fs::write(&target, "# Renamed\n\nbody\n").unwrap();
+        };
+        let (findings, _fam, _vis, _n) = run(&cfg, None, Some(&mutate)).unwrap();
+        assert_eq!(
+            codes_of(&findings, "MDATRON-E0111"),
+            0,
+            "anchor resolution must use capture-time headings; got {findings:?}"
+        );
+        let after = verify_report(&cfg).unwrap().findings;
+        assert_eq!(
+            codes_of(&after, "MDATRON-E0111"),
+            1,
+            "a later run captures fresh and sees the dead anchor"
+        );
+    }
+
+    // A marker rule's member set comes from the capture-time target_doc.
+    #[test]
+    fn marker_members_resolved_against_capture_time_target() {
+        let proj = marker_project(
+            "marker-seam",
+            "Provenance: Slice 1 — Live self-governance: the tracker join\n",
+            MARKER_ROUTE_OPTIN,
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let target = proj.0.join("refs/contract.md");
+        let mutate = || {
+            std::fs::write(
+                &target,
+                "# Contract\n\n## Decomposition (phase 1c)\n\n- **Other.** x\n",
+            )
+            .unwrap();
+        };
+        let (findings, _fam, _vis, _n) = run(&cfg, None, Some(&mutate)).unwrap();
+        assert_eq!(
+            codes_of(&findings, "MDATRON-E0112"),
+            0,
+            "marker resolution must use the capture-time member set; got {findings:?}"
+        );
+        let after = verify_report(&cfg).unwrap().findings;
+        assert_eq!(
+            codes_of(&after, "MDATRON-E0112"),
+            1,
+            "a later run captures fresh and sees the dead reference"
+        );
+    }
+
+    // The per-file input bound covers EVERY captured input, not only governed
+    // bodies: an oversized index source is refused loudly (memory-DoS lever —
+    // today it is read unbounded).
+    #[test]
+    fn oversized_index_source_trips_the_per_file_bound() {
+        let proj = TempProject::new("index-bound");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        let mut big = String::from("k: v\n");
+        while big.len() <= MAX_FILE_BYTES {
+            big.push_str("# padding comment line to grow the file past the cap\n");
+        }
+        proj.write("registry/big.yaml", &big);
+        proj.write(
+            ".mdatron/patterns/p.yaml",
+            "mdatron_dsl_version: 1\npattern:\n  id: bound\n  keys:\n    - name: k\n      source: registry/big.yaml\n      select: $\n      indexed_by: $key\n  rules:\n    - id: r\n      context: no-such-class\n      assert: \"true\"\n      code: T-E0001\n      message: never\n",
+        );
+        proj.write("docs/d.md", "# plain\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let err = verify(&cfg).unwrap_err();
+        match err {
+            VerifyError::BoundExceeded { ref bound, .. } => {
+                assert_eq!(bound, "max-input-size-per-file", "got {err:?}")
+            }
+            other => {
+                panic!("an oversized index source must trip the per-file bound; got {other:?}")
+            }
+        }
+    }
+
+    // Same bound for a citation target (today: unbounded read at check time).
+    #[test]
+    fn oversized_cite_target_trips_the_per_file_bound() {
+        let proj = cite_project("cite-bound", "Per src-file.rs:1 this holds.\n");
+        let mut big = String::new();
+        while big.len() <= MAX_FILE_BYTES {
+            big.push_str("padding line to grow the cited target past the per-file cap\n");
+        }
+        proj.write("src-file.rs", &big);
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let err = verify(&cfg).unwrap_err();
+        match err {
+            VerifyError::BoundExceeded { ref bound, .. } => {
+                assert_eq!(bound, "max-input-size-per-file", "got {err:?}")
+            }
+            other => panic!("an oversized cite target must trip the per-file bound; got {other:?}"),
+        }
+    }
+
+    // Security review C (#103): a non-UTF8 governed body is a PER-FILE finding
+    // (E0003), never a whole-run abort — an adversary dropping one bad file must
+    // not deny verification of the rest of the tree.
+    #[test]
+    fn non_utf8_governed_body_is_a_finding_not_an_abort() {
+        let proj = TempProject::new("non-utf8");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write("docs/good.md", "# fine\n");
+        std::fs::write(
+            proj.0.join("docs/bad.md"),
+            b"---\nschema_class: doc\n---\n\xFF\xFE not utf8",
+        )
+        .unwrap();
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let (findings, _fam, _vis, files_checked) =
+            run(&cfg, None, None).expect("one bad file must not abort the run");
+        assert_eq!(
+            codes_of(&findings, "MDATRON-E0003"),
+            1,
+            "the non-UTF8 body is a localized finding; got {findings:?}"
+        );
+        assert_eq!(
+            files_checked, 1,
+            "the good file is still verified; the refused file does not count as validated"
         );
     }
 

@@ -44,6 +44,7 @@ pub mod pin;
 pub mod route;
 pub mod schema;
 pub mod section;
+pub mod snapshot;
 pub mod verify;
 pub mod vocab;
 
