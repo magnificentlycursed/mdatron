@@ -3733,11 +3733,12 @@
       "uuid": "a0e4b4b2-63f5-41c1-a62d-7713001a66d8",
       "display_id": 92,
       "title": "v0.3.x: incremental verify + declared bounds — changed-file+dependents, snapshot seam, budget diagnostics (vsdd rank 2: 178 files / 0.65s pre-commit tolerable; REQUIRED before their per-tool-call action-time hooks)",
-      "status": "open",
+      "status": "closed",
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-29T00:27:50.651130Z",
-      "updated_at": "2026-08-03T22:43:28.499400Z",
+      "updated_at": "2026-08-03T22:43:35.116901Z",
+      "closed_at": "2026-08-03T22:43:35.116892Z",
       "labels": [
         "feature"
       ],
@@ -6882,8 +6883,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-03T22:43:28.499400Z",
+    "timestamp": "2026-08-03T22:43:35.116901Z",
     "agent_id": "79Ig",
-    "agent_seq": 823
+    "agent_seq": 824
   }
 }
