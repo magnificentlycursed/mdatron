@@ -175,10 +175,6 @@
     "162": {
       "agent_id": "79Ig",
       "claimed_at": "2026-08-03T17:05:28.977289Z"
-    },
-    "163": {
-      "agent_id": "79Ig",
-      "claimed_at": "2026-08-03T20:04:48.620897Z"
     }
   },
   "issues": {
@@ -6877,8 +6873,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-03T22:43:06.814395Z",
+    "timestamp": "2026-08-03T22:43:14.063904Z",
     "agent_id": "79Ig",
-    "agent_seq": 821
+    "agent_seq": 822
   }
 }
