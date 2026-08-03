@@ -1,6 +1,6 @@
 {
   "next_display_id": 166,
-  "next_comment_id": 432,
+  "next_comment_id": 433,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -6240,7 +6240,7 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-08-03T17:05:14.058918Z",
-      "updated_at": "2026-08-03T22:59:16.691731Z",
+      "updated_at": "2026-08-03T23:25:00.060001Z",
       "labels": [
         "enhancement"
       ],
@@ -6289,6 +6289,15 @@
           "kind": "plan",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA6gSKhx6EK4lCYd+dtEcgUdJH1IF0v8eJAd9tD/BqXy+k8sKUzLv049zH00sjg18q7MlByB0dQbaSH8K0mTtFCw=="
+        },
+        "93c1761b-a7c7-42fd-9eb7-958731353a49": {
+          "display_id": 432,
+          "author": "79Ig",
+          "content": "PHASE 3 EXIT: implementation-MVR reached. Round 2 = NO FINDINGS with full exit certification (reviewer empirically re-ran the F-1 attack against the built binary: ESC/newline in a keys: name: over a non-UTF8 source renders escaped in the quoted 'index' region across TTY+compact+JSON, zero raw control bytes in message; grep -c ESC == 0; JSON marks origin:adopter/trusted:false; the injection regression test is mutation-red; directory-source hits the OpenedUnreadable arm distinctly; both commits build in isolation). ROAST TALLY (#162): 2 rounds, 1 finding (F-1 should-fix, REPRODUCED — the adopter-name/reason inline-message injection), fixed + regression-locked; round 2 clean. Branch feature/162-index-degradation = 2 commits (86c0130 feature, 9a411af F-1 fix), base already in main (reconciles clean, PR = these 2 commits). ADJACENCY (out of scope, filed): the review found the same marking-discipline gap in 3 pre-existing constructors (E0001/E0021/W0041) -> #165 (medium, security) with a codebase-wide-sweep + injection-corpus-test recommendation. REMAINING for #162: operator push + PR against updated main + merge (#162 open until merge).",
+          "created_at": "2026-08-03T23:25:00.044184Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAh9aoGdkhcvS8pzL0bQOawvC0lmW5t66gd9Vo5xFbK0em0/M6qOLWIP/C+7epFWL/zUXlqPL9/hb+r2W6mpffDg=="
         },
         "a0d6dc4d-9cdf-4298-bf86-6e2e162fcc03": {
           "display_id": 404,
@@ -6913,8 +6922,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-03T23:24:43.481639Z",
+    "timestamp": "2026-08-03T23:25:00.060001Z",
     "agent_id": "79Ig",
-    "agent_seq": 829
+    "agent_seq": 830
   }
 }
