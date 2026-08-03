@@ -37,7 +37,7 @@ pub struct Limits {
     /// Maximum directory entries listed across one glob walk (`entries` in
     /// `WalkBounded`).
     pub walk_entries: usize,
-    /// Maximum concurrent verify invocations per project root
+    /// Maximum concurrent verify invocations per user per project root
     /// (`concurrent-invocation-count`).
     pub concurrent_invocations: usize,
 }
@@ -70,35 +70,46 @@ pub struct InvocationSlot {
     _file: std::fs::File,
 }
 
+/// The result of an acquisition attempt: a held slot, or a busy pool (which
+/// the caller maps to the `concurrent-invocation-count` diagnostic). `Busy`
+/// carries whether the slot directory was just repaired from a permissive
+/// mode — because a lock a foreign process took THROUGH that window survives
+/// the repair (chmod revokes no held fd/lock, and never-unlink forbids
+/// rotating the slot files out), so a busy-after-repair pool may be
+/// foreign-held rather than genuinely N-concurrent (#103 phase-3 R3-1).
+#[derive(Debug)]
+pub enum SlotOutcome {
+    Acquired(InvocationSlot),
+    Busy { repaired_permissive_dir: bool },
+}
+
 /// Acquire one of the `limit` per-root invocation slots, or report that every
-/// slot is busy (the caller maps `None` to the `concurrent-invocation-count`
-/// bound diagnostic). Slot files live under the system temp directory — never
+/// slot is busy. Slot files live under the system temp directory — never
 /// inside the repository (no VCS noise, no `.mdatron/` managed-partition
 /// interaction) — keyed by the effective uid AND a digest of the
-/// canonicalized root, in a `0o700` directory whose ownership is verified
-/// (phase-3 B-1): on a shared host, two users verifying the same checkout get
-/// DISJOINT per-user pools instead of one user's directory permissions
-/// failing the other's runs, and a foreign or symlinked directory at the
-/// expected path is refused with a diagnostic naming the problem rather than
-/// a bare EACCES. (Residual accepted: per-user pools mean the count bounds
-/// each user's runs, not the machine total — the bound's purpose is runaway
-/// hook fan-out, which is per-user in practice.)
+/// canonicalized root, in a `0o700` directory verified through a no-follow
+/// handle (phase-3 B-1/R3-2): on a shared host, two users verifying the same
+/// checkout get DISJOINT per-user pools instead of one user's directory
+/// permissions failing the other's runs, and a foreign, symlinked, or
+/// non-directory path is refused with a named diagnostic. (Residual accepted:
+/// per-user pools mean the count bounds each user's runs, not the machine
+/// total — the bound's purpose is runaway hook fan-out, which is per-user in
+/// practice.)
 ///
 /// Platforms without either lock primitive (neither unix nor windows) run
 /// unbounded — the same documented, platform-scoped carve-out posture as the
 /// confine fallback.
-pub fn acquire_invocation_slot(
-    project_root: &Path,
-    limit: usize,
-) -> std::io::Result<Option<InvocationSlot>> {
-    let dir = slot_dir(project_root)?;
+pub fn acquire_invocation_slot(project_root: &Path, limit: usize) -> std::io::Result<SlotOutcome> {
+    let (dir, repaired_permissive_dir) = slot_dir(project_root)?;
     for i in 0..limit {
         let path = dir.join(format!("slot-{i}"));
         if let Some(slot) = try_lock_slot(&path)? {
-            return Ok(Some(slot));
+            return Ok(SlotOutcome::Acquired(slot));
         }
     }
-    Ok(None)
+    Ok(SlotOutcome::Busy {
+        repaired_permissive_dir,
+    })
 }
 
 fn root_digest_short(project_root: &Path) -> String {
@@ -112,9 +123,11 @@ fn root_digest_short(project_root: &Path) -> String {
     short
 }
 
+/// Returns the verified slot directory and whether it was repaired from a
+/// permissive mode this call.
 #[cfg(unix)]
-fn slot_dir(project_root: &Path) -> std::io::Result<std::path::PathBuf> {
-    use std::os::unix::fs::{DirBuilderExt, MetadataExt};
+fn slot_dir(project_root: &Path) -> std::io::Result<(std::path::PathBuf, bool)> {
+    use std::os::unix::fs::{DirBuilderExt, MetadataExt, OpenOptionsExt, PermissionsExt};
     // SAFETY: geteuid takes no arguments and cannot fail.
     let uid = unsafe { libc::geteuid() };
     let dir = std::env::temp_dir().join(format!(
@@ -127,32 +140,31 @@ fn slot_dir(project_root: &Path) -> std::io::Result<std::path::PathBuf> {
         .create(&dir)
     {
         Ok(()) => {}
-        // A regular FILE at the path lands here (EEXIST): fall through so the
-        // metadata checks below name what occupies the path (R2-4), instead
-        // of a bare "File exists".
+        // A pre-existing file/symlink/dir at the path lands here (EEXIST): the
+        // no-follow open below decides its fate.
         Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {}
         Err(e) => return Err(e),
     }
-    // Refuse a hostile pre-created path: a symlink, a non-directory, or a
-    // directory owned by another uid at OUR uid-keyed name is an attack or a
-    // misconfiguration — name it, never proceed onto foreign state.
-    //
-    // Residual (documented, R2-3): after these checks the slot files are
-    // opened BY PATH. On a sticky or per-user temp parent (Linux /tmp, the
-    // macOS and Windows per-user temp dirs) the verified directory cannot be
-    // swapped by another user; a SHARED, NON-STICKY custom TMPDIR retains a
-    // small check-to-open window — a platform-scoped tolerated posture in the
-    // same class as the confine fallback carve-out, with a blast radius of a
-    // 0-byte create/flock at an attacker-chosen path.
-    let meta = std::fs::symlink_metadata(&dir)?;
-    if meta.file_type().is_symlink() || !meta.is_dir() {
-        return Err(std::io::Error::other(format!(
-            "invocation-slot path '{}' exists but is not a real directory \
-             (symlink refused); point TMPDIR at a private directory, or remove \
-             the entry",
-            dir.display()
-        )));
-    }
+    // Open the directory through a NO-FOLLOW handle, and do every check AND
+    // the repair on THAT HANDLE, never the path (R3-2): a symlink or a
+    // non-directory squatting the path fails the open (ELOOP/ENOTDIR) and is
+    // named; a swap after the open cannot redirect the fstat or the fchmod.
+    // Only the by-path slot-file opens below remain a residual, tolerated on a
+    // sticky or per-user temp parent (Linux /tmp, the macOS and Windows
+    // per-user temp dirs) exactly as the confine fallback's check-to-open
+    // window is — see the module note.
+    let handle = std::fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_NOFOLLOW | libc::O_DIRECTORY)
+        .open(&dir)
+        .map_err(|e| {
+            std::io::Error::other(format!(
+                "invocation-slot path '{}' is not a real directory ({e}); point \
+                 TMPDIR at a private directory, or remove the entry",
+                dir.display()
+            ))
+        })?;
+    let meta = handle.metadata()?; // fstat on the handle
     if meta.uid() != uid {
         return Err(std::io::Error::other(format!(
             "invocation-slot directory '{}' is owned by uid {} (expected {uid}); \
@@ -162,26 +174,31 @@ fn slot_dir(project_root: &Path) -> std::io::Result<std::path::PathBuf> {
             meta.uid()
         )));
     }
-    // A same-uid directory pre-created with permissive modes (tooling,
-    // archive extraction, an old build) would let other users open and flock
-    // the slot files — flock needs no write bit — quietly re-opening the
-    // slot-holding denial lever (R2-2). We own it: repair to the declared
-    // 0700 posture instead of refusing.
+    // A same-uid directory pre-created with permissive modes (tooling, archive
+    // extraction, an old build) would let other users open and flock the slot
+    // files — flock needs no write bit — quietly re-opening the slot-holding
+    // denial lever (R2-2). We own it: repair to 0700 via fchmod on the handle
+    // (race-free). NOTE (R3-1): chmod revokes no fd or lock a foreign process
+    // ALREADY took through the permissive window, and never-unlink forbids
+    // rotating the slot files out — so the repair closes FUTURE opens, not
+    // locks already held. The caller flags a busy-after-repair pool as
+    // possibly foreign-held rather than genuinely N-concurrent.
+    let mut repaired = false;
     if meta.mode() & 0o077 != 0 {
-        use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o700))?;
+        handle.set_permissions(std::fs::Permissions::from_mode(0o700))?; // fchmod
+        repaired = true;
     }
-    Ok(dir)
+    Ok((dir, repaired))
 }
 
 #[cfg(not(unix))]
-fn slot_dir(project_root: &Path) -> std::io::Result<std::path::PathBuf> {
+fn slot_dir(project_root: &Path) -> std::io::Result<(std::path::PathBuf, bool)> {
     // Windows: `temp_dir()` is already per-user (%LOCALAPPDATA%\Temp), so the
     // uid keying and ownership check are inherent in the location.
     let dir =
         std::env::temp_dir().join(format!("mdatron-slots-{}", root_digest_short(project_root)));
     std::fs::create_dir_all(&dir)?;
-    Ok(dir)
+    Ok((dir, false))
 }
 
 #[cfg(unix)]
@@ -241,6 +258,14 @@ fn try_lock_slot(path: &Path) -> std::io::Result<Option<InvocationSlot>> {
 mod tests {
     use super::*;
 
+    // Test helper: the held slot, or None when the pool is busy.
+    fn acquired(outcome: SlotOutcome) -> Option<InvocationSlot> {
+        match outcome {
+            SlotOutcome::Acquired(slot) => Some(slot),
+            SlotOutcome::Busy { .. } => None,
+        }
+    }
+
     // N slots serve N holders; the N+1st acquisition reports busy; dropping a
     // guard frees its slot. flock is per open-file-description, so in-process
     // holders contend exactly like separate processes.
@@ -258,18 +283,17 @@ mod tests {
         let limit = 3;
         let mut held = Vec::new();
         for _ in 0..limit {
-            let slot = acquire_invocation_slot(&root, limit)
-                .unwrap()
+            let slot = acquired(acquire_invocation_slot(&root, limit).unwrap())
                 .expect("a free slot while under the limit");
             held.push(slot);
         }
         assert!(
-            acquire_invocation_slot(&root, limit).unwrap().is_none(),
+            acquired(acquire_invocation_slot(&root, limit).unwrap()).is_none(),
             "the N+1st concurrent invocation must find every slot busy"
         );
         held.pop();
         assert!(
-            acquire_invocation_slot(&root, limit).unwrap().is_some(),
+            acquired(acquire_invocation_slot(&root, limit).unwrap()).is_some(),
             "dropping a guard frees its slot"
         );
         let _ = std::fs::remove_dir_all(&root);
@@ -290,7 +314,7 @@ mod tests {
         ));
         std::fs::create_dir_all(&root).unwrap();
         // Learn the expected path, then replace it with a symlink elsewhere.
-        let dir = slot_dir(&root).unwrap();
+        let (dir, _) = slot_dir(&root).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
         let elsewhere = root.join("elsewhere");
         std::fs::create_dir_all(&elsewhere).unwrap();
@@ -318,7 +342,7 @@ mod tests {
                 .as_nanos()
         ));
         std::fs::create_dir_all(&root).unwrap();
-        let dir = slot_dir(&root).unwrap();
+        let (dir, _) = slot_dir(&root).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
         std::fs::write(&dir, b"squatter").unwrap();
         let err = acquire_invocation_slot(&root, 2).unwrap_err();
@@ -345,9 +369,12 @@ mod tests {
                 .as_nanos()
         ));
         std::fs::create_dir_all(&root).unwrap();
-        let dir = slot_dir(&root).unwrap();
+        let (dir, _) = slot_dir(&root).unwrap();
         std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o755)).unwrap();
-        let slot = acquire_invocation_slot(&root, 2).unwrap();
+        // slot_dir reports the repair; acquisition still yields a slot.
+        let (_, repaired) = slot_dir(&root).unwrap();
+        assert!(repaired, "the permissive mode is reported as repaired");
+        let slot = acquired(acquire_invocation_slot(&root, 2).unwrap());
         assert!(
             slot.is_some(),
             "a same-uid permissive dir is repaired, not refused"

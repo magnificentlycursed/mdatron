@@ -377,15 +377,32 @@ fn run(
         &project_root,
         crate::limits::SHIPPED.concurrent_invocations,
     ) {
-        Ok(Some(slot)) => slot,
-        Ok(None) => {
-            return Err(VerifyError::BoundExceeded {
-                bound: "concurrent-invocation-count".into(),
-                detail: format!(
+        Ok(crate::limits::SlotOutcome::Acquired(slot)) => slot,
+        Ok(crate::limits::SlotOutcome::Busy {
+            repaired_permissive_dir,
+        }) => {
+            // A pool that was just repaired from a permissive mode may be held
+            // by processes that grabbed its slots THROUGH that window (the
+            // repair cannot revoke their locks) — say so rather than
+            // misattribute it to N genuine concurrent runs (#103 phase-3 R3-1).
+            let detail = if repaired_permissive_dir {
+                format!(
+                    "the invocation-slot directory for this project root was found \
+                     world-accessible and repaired to 0700; its {} slots may be held \
+                     by processes that opened them through that window — point TMPDIR \
+                     at a private directory if this run is not genuinely concurrent",
+                    crate::limits::SHIPPED.concurrent_invocations
+                )
+            } else {
+                format!(
                     "all {} concurrent verify invocation slots for this project root are busy",
                     crate::limits::SHIPPED.concurrent_invocations
-                ),
-            })
+                )
+            };
+            return Err(VerifyError::BoundExceeded {
+                bound: "concurrent-invocation-count".into(),
+                detail,
+            });
         }
         Err(e) => {
             return Err(VerifyError::Io {
@@ -5302,11 +5319,10 @@ pattern:
         let limit = crate::limits::SHIPPED.concurrent_invocations;
         let mut held = Vec::new();
         for _ in 0..limit {
-            held.push(
-                crate::limits::acquire_invocation_slot(&proj.0, limit)
-                    .unwrap()
-                    .expect("slots free under the limit"),
-            );
+            match crate::limits::acquire_invocation_slot(&proj.0, limit).unwrap() {
+                crate::limits::SlotOutcome::Acquired(slot) => held.push(slot),
+                crate::limits::SlotOutcome::Busy { .. } => panic!("slots free under the limit"),
+            }
         }
         let err = verify(&cfg).unwrap_err();
         match err {
