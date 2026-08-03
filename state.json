@@ -1,6 +1,6 @@
 {
   "next_display_id": 163,
-  "next_comment_id": 407,
+  "next_comment_id": 408,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -5175,7 +5175,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T07:22:08.149420Z",
-      "updated_at": "2026-08-03T18:36:39.862336Z",
+      "updated_at": "2026-08-03T18:56:28.554290Z",
       "labels": [
         "feature"
       ],
@@ -5290,6 +5290,15 @@
           "kind": "result",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAR/eShrtv7oNbw6T8KmYWxh5BcdVH8fD2Weap8wc1qRvSW//Ko4s9ZKeXDbKkDSRbWAibzYAx/NTPue0sqNMdBw=="
+        },
+        "f49f9481-de6c-4029-bc3a-82896311e059": {
+          "display_id": 407,
+          "author": "79Ig",
+          "content": "PHASE 3 ROUND 3 DISPOSITIONS + FIXES (commit a7c32ea). All three findings confirmed (blocker + 2 should-fix, R3-1/R3-3 reproduced by the reviewer against the binary): R3-1 — capture ORDER reopened the R2S-1 lever (prose captures consumed the aggregate budget before marker-target config captures, which then escalated the inherited breach; one citation line = whole-run abort) -> all config-scoped targets now capture before any prose-scoped one + ordering regression test (red under prose-first). R3-2 — TooLarge conflated per-file/aggregate dimensions, producing a factually false 'shrink this file' diagnostic for aggregate breaches -> BoundDimension recorded in the state, every escalation names the right bound, docs corrected. R3-3 — link W0048 over-fired on fragment-less/non-markdown links (spurious --deny-warnings failures on fully-verified links) -> emission gated on a genuinely skipped anchor check, posture test extended. Reviewer also CERTIFIED: both prior commits build+pass in isolation; the re-gated I-1 test is mutation-red; W0048 catalog/tripwire consistency; per-reference cardinality matches E0100. 516 tests green, 0 clippy, self-validation exit 0. ROUND 4 launching (single cold reviewer over a7c32ea + branch sweep; clean round = implementation-MVR).",
+          "created_at": "2026-08-03T18:56:28.530835Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAD58gx+s6MsDs9cYREx9QT3jD4gYpRyoNZsNHt7QE6WTiJBPqOl+R3ij0YXgfqJxA/z6rjDcd7bzmH4EJcTWmBA=="
         }
       }
     },
@@ -6643,8 +6652,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-03T18:36:39.862336Z",
+    "timestamp": "2026-08-03T18:56:28.554290Z",
     "agent_id": "79Ig",
-    "agent_seq": 789
+    "agent_seq": 790
   }
 }
