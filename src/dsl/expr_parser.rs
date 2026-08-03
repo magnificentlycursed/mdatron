@@ -78,7 +78,7 @@ pub fn parse_expression(input: &str) -> Result<Expr, ParseError> {
 /// `not` chains yields a `ParseError`, not an uncatchable stack-overflow SIGABRT
 /// (which bypassed the `--json` envelope entirely). 256 is far beyond any
 /// legitimate expression; a real overflow needs tens of thousands of levels.
-const MAX_EXPR_DEPTH: usize = 256;
+const MAX_EXPR_DEPTH: usize = crate::limits::SHIPPED.expr_depth;
 
 struct Parser<'a> {
     input: &'a str,

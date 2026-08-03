@@ -322,7 +322,13 @@ pub(crate) fn resolve_source(
     let is_glob = source.contains('*') || source.contains('?') || source.contains('[');
 
     if is_glob {
-        resolve_glob(project_root, rel.as_path(), source)
+        resolve_glob(
+            project_root,
+            rel.as_path(),
+            source,
+            MAX_WALK_DEPTH,
+            MAX_WALK_ENTRIES,
+        )
     } else {
         Ok(vec![rel])
     }
@@ -335,8 +341,8 @@ pub(crate) fn resolve_source(
 /// already prevents symlink cycles from extending a walk; these cap a
 /// pathological real tree. Generous phase-1 values; the contract limits are set
 /// as data in phase 1b.
-const MAX_WALK_DEPTH: usize = 64;
-const MAX_WALK_ENTRIES: usize = 100_000;
+const MAX_WALK_DEPTH: usize = crate::limits::SHIPPED.walk_depth;
+const MAX_WALK_ENTRIES: usize = crate::limits::SHIPPED.walk_entries;
 
 /// A classified glob pattern segment (one path component of the pattern).
 enum Segment {
@@ -355,6 +361,8 @@ fn resolve_glob(
     root: &Path,
     rel: &Path,
     source: &str,
+    depth_limit: usize,
+    entries_limit: usize,
 ) -> Result<Vec<confine::ConfinedPath>, IndexError> {
     let segments: Vec<Segment> = rel
         .components()
@@ -374,6 +382,8 @@ fn resolve_glob(
         source,
         &mut out,
         &mut entries_seen,
+        depth_limit,
+        entries_limit,
     )?;
     out.sort();
     // Each match is a root-relative path built from Normal components by the
@@ -417,6 +427,7 @@ fn classify_segment(name: &std::ffi::OsStr) -> Result<Segment, IndexError> {
 /// directory that is a symlink is skipped (not descended). Terminal matches are
 /// existing non-directory entries; each is validated again at open time by
 /// [`confine::open_confined`], so a symlinked terminal match is still refused.
+#[allow(clippy::too_many_arguments)]
 fn walk_segments(
     root: &Path,
     prefix: &Path,
@@ -424,6 +435,8 @@ fn walk_segments(
     source: &str,
     out: &mut Vec<PathBuf>,
     entries_seen: &mut usize,
+    depth_limit: usize,
+    entries_limit: usize,
 ) -> Result<(), IndexError> {
     let (seg, rest) = match segments.split_first() {
         Some(split) => split,
@@ -436,7 +449,14 @@ fn walk_segments(
     // pattern matches only what is present) for both literal and wildcard
     // leaves under a wildcard prefix.
     if last {
-        let entries = list_for_walk(root, prefix, source, entries_seen)?;
+        let entries = list_for_walk(
+            root,
+            prefix,
+            source,
+            entries_seen,
+            depth_limit,
+            entries_limit,
+        )?;
         for entry in entries {
             if !segment_matches(seg, &entry.name) {
                 continue;
@@ -461,10 +481,26 @@ fn walk_segments(
             // symlink refusal are all decided when the child is listed (or,
             // for a literal terminal, opened) deeper in the walk — a missing
             // literal directory yields no matches, a symlinked one is refused.
-            walk_segments(root, &prefix.join(name), rest, source, out, entries_seen)?;
+            walk_segments(
+                root,
+                &prefix.join(name),
+                rest,
+                source,
+                out,
+                entries_seen,
+                depth_limit,
+                entries_limit,
+            )?;
         }
         Segment::Wildcard(pattern) => {
-            let entries = list_for_walk(root, prefix, source, entries_seen)?;
+            let entries = list_for_walk(
+                root,
+                prefix,
+                source,
+                entries_seen,
+                depth_limit,
+                entries_limit,
+            )?;
             for entry in entries {
                 if entry.file_type != confine::EntryType::Dir {
                     // Do not follow non-directories or symlinked directories.
@@ -478,6 +514,8 @@ fn walk_segments(
                         source,
                         out,
                         entries_seen,
+                        depth_limit,
+                        entries_limit,
                     )?;
                 }
             }
@@ -487,8 +525,24 @@ fn walk_segments(
             // into each real subdirectory with `**` retained. Symlinked
             // subdirectories are not real dirs here, so a symlink cycle cannot
             // extend the walk — it terminates.
-            walk_segments(root, prefix, rest, source, out, entries_seen)?;
-            let entries = list_for_walk(root, prefix, source, entries_seen)?;
+            walk_segments(
+                root,
+                prefix,
+                rest,
+                source,
+                out,
+                entries_seen,
+                depth_limit,
+                entries_limit,
+            )?;
+            let entries = list_for_walk(
+                root,
+                prefix,
+                source,
+                entries_seen,
+                depth_limit,
+                entries_limit,
+            )?;
             for entry in entries {
                 if entry.file_type == confine::EntryType::Dir {
                     walk_segments(
@@ -498,6 +552,8 @@ fn walk_segments(
                         source,
                         out,
                         entries_seen,
+                        depth_limit,
+                        entries_limit,
                     )?;
                 }
             }
@@ -531,16 +587,18 @@ fn list_for_walk(
     prefix: &Path,
     source: &str,
     entries_seen: &mut usize,
+    depth_limit: usize,
+    entries_limit: usize,
 ) -> Result<Vec<confine::DirEntryInfo>, IndexError> {
     let depth = prefix
         .components()
         .filter(|c| matches!(c, std::path::Component::Normal(_)))
         .count();
-    if depth > MAX_WALK_DEPTH {
+    if depth > depth_limit {
         return Err(IndexError::WalkBounded {
             pattern: escape_path_text(source),
             bound: "depth",
-            limit: MAX_WALK_DEPTH,
+            limit: depth_limit,
         });
     }
 
@@ -566,11 +624,11 @@ fn list_for_walk(
     };
 
     *entries_seen += entries.len();
-    if *entries_seen > MAX_WALK_ENTRIES {
+    if *entries_seen > entries_limit {
         return Err(IndexError::WalkBounded {
             pattern: escape_path_text(source),
             bound: "entries",
-            limit: MAX_WALK_ENTRIES,
+            limit: entries_limit,
         });
     }
     Ok(entries)
@@ -1108,6 +1166,44 @@ mod tests {
         let d = decl("g", "*.yaml", "$", "$key");
         let err = IndexRegistry::build(temp.path(), &[d]).unwrap_err();
         assert!(matches!(err, IndexError::SymlinkRefused { .. }));
+    }
+
+    // ── #92 sub-lane D: walk budgets, exercised with tiny injected limits ───
+    //
+    // The 100k-entry / 64-deep shipped values would need a pathological real
+    // tree to trip in integration (declared, not silent: the budget seam is
+    // the same code path either way).
+
+    #[test]
+    fn walk_depth_budget_is_enforced() {
+        let temp = TempDir::new("depth-budget");
+        temp.write("a/b/c/d/leaf.yaml", "k: v\n");
+        let rel = crate::confine::confine_lexically(Path::new("a/**/*.yaml")).unwrap();
+        let err = resolve_glob(temp.path(), rel.as_path(), "a/**/*.yaml", 2, 100).unwrap_err();
+        assert!(
+            matches!(err, IndexError::WalkBounded { bound: "depth", .. }),
+            "got {err:?}"
+        );
+    }
+
+    #[test]
+    fn walk_entries_budget_is_enforced() {
+        let temp = TempDir::new("entries-budget");
+        for i in 0..8 {
+            temp.write(&format!("w/f{i}.yaml"), "k: v\n");
+        }
+        let rel = crate::confine::confine_lexically(Path::new("w/*.yaml")).unwrap();
+        let err = resolve_glob(temp.path(), rel.as_path(), "w/*.yaml", 64, 4).unwrap_err();
+        assert!(
+            matches!(
+                err,
+                IndexError::WalkBounded {
+                    bound: "entries",
+                    ..
+                }
+            ),
+            "got {err:?}"
+        );
     }
 
     // ── Pin tests: engine-owned no-follow bounded glob walk (issue #55) ──────
