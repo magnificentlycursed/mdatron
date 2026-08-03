@@ -364,13 +364,15 @@ fn run(
             error: e.to_string(),
         })?;
 
-    // Concurrent-invocation bound (#92 D / DESIGN § hook-time cost): hold one
-    // of the declared per-root slots for the run's duration, or report the
-    // bound — never pile unbounded concurrent hook invocations onto one
-    // machine. The guard's lock dies with the process (flock / exclusive
-    // share-mode), so a crashed run cannot wedge the count. Slot-
-    // infrastructure IO failure is a loud error, not a silent unbounded run
-    // (no-silent-degradation doctrine).
+    // Concurrent VERIFY-invocation bound (#92 D / DESIGN § hook-time cost;
+    // the standalone `pin` command is outside the count — docs/limits.md
+    // scopes this honestly): hold one of the declared per-user, per-root
+    // slots for the run's duration, or report the bound — never pile
+    // unbounded concurrent hook-driven verify runs onto one machine. The
+    // guard's lock dies with the process (flock / exclusive share-mode), so a
+    // crashed run cannot wedge the count. Slot-infrastructure IO failure is a
+    // loud error, not a silent unbounded run (no-silent-degradation
+    // doctrine).
     let _invocation_slot = match crate::limits::acquire_invocation_slot(
         &project_root,
         crate::limits::SHIPPED.concurrent_invocations,

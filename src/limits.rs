@@ -54,11 +54,15 @@ pub const SHIPPED: Limits = Limits {
     concurrent_invocations: 8,
 };
 
-/// A held invocation slot: releasing (dropping) it frees the slot. The OS
-/// releases it on process death too — the lock is advisory `flock` on unix and
-/// a `share_mode(0)` exclusive open on windows, both of which evaporate with
-/// the owning process, so a crashed run can never wedge the count (no stale
-/// lockfile class).
+/// A held invocation slot: releasing (dropping) it frees the slot. The LOCK
+/// (not the file) dies with the process — advisory `flock` on unix, a
+/// `share_mode(0)` exclusive open on windows — so a crashed run can never
+/// wedge the count. The 0-byte slot FILES are deliberate durable litter:
+/// they are never unlinked, because unlinking a slot another process holds
+/// would let a fresh acquirer re-create and lock a NEW inode at the same
+/// path — the classic flock-on-unlinked-inode double-admit past the limit.
+/// Any future cleanup must respect that invariant (per-root cost is one
+/// directory and up to `limit` empty files, reaped by the OS temp cleaner).
 #[derive(Debug)]
 pub struct InvocationSlot {
     // Held only for its OS-level lock; never read. Dropping closes and
@@ -68,9 +72,17 @@ pub struct InvocationSlot {
 
 /// Acquire one of the `limit` per-root invocation slots, or report that every
 /// slot is busy (the caller maps `None` to the `concurrent-invocation-count`
-/// bound diagnostic). Slot files live under the system temp directory, keyed
-/// by a digest of the canonicalized root — never inside the repository, so no
-/// VCS noise and no interaction with the `.mdatron/` managed partition.
+/// bound diagnostic). Slot files live under the system temp directory — never
+/// inside the repository (no VCS noise, no `.mdatron/` managed-partition
+/// interaction) — keyed by the effective uid AND a digest of the
+/// canonicalized root, in a `0o700` directory whose ownership is verified
+/// (phase-3 B-1): on a shared host, two users verifying the same checkout get
+/// DISJOINT per-user pools instead of one user's directory permissions
+/// failing the other's runs, and a foreign or symlinked directory at the
+/// expected path is refused with a diagnostic naming the problem rather than
+/// a bare EACCES. (Residual accepted: per-user pools mean the count bounds
+/// each user's runs, not the machine total — the bound's purpose is runaway
+/// hook fan-out, which is per-user in practice.)
 ///
 /// Platforms without either lock primitive (neither unix nor windows) run
 /// unbounded — the same documented, platform-scoped carve-out posture as the
@@ -79,17 +91,7 @@ pub fn acquire_invocation_slot(
     project_root: &Path,
     limit: usize,
 ) -> std::io::Result<Option<InvocationSlot>> {
-    use sha2::{Digest, Sha256};
-    let canonical = project_root
-        .canonicalize()
-        .unwrap_or_else(|_| project_root.to_path_buf());
-    let digest = Sha256::digest(canonical.to_string_lossy().as_bytes());
-    let dir = {
-        let mut short = format!("{digest:x}");
-        short.truncate(16);
-        std::env::temp_dir().join(format!("mdatron-slots-{short}"))
-    };
-    std::fs::create_dir_all(&dir)?;
+    let dir = slot_dir(project_root)?;
     for i in 0..limit {
         let path = dir.join(format!("slot-{i}"));
         if let Some(slot) = try_lock_slot(&path)? {
@@ -97,6 +99,65 @@ pub fn acquire_invocation_slot(
         }
     }
     Ok(None)
+}
+
+fn root_digest_short(project_root: &Path) -> String {
+    use sha2::{Digest, Sha256};
+    let canonical = project_root
+        .canonicalize()
+        .unwrap_or_else(|_| project_root.to_path_buf());
+    let digest = Sha256::digest(canonical.to_string_lossy().as_bytes());
+    let mut short = format!("{digest:x}");
+    short.truncate(16);
+    short
+}
+
+#[cfg(unix)]
+fn slot_dir(project_root: &Path) -> std::io::Result<std::path::PathBuf> {
+    use std::os::unix::fs::{DirBuilderExt, MetadataExt};
+    // SAFETY: geteuid takes no arguments and cannot fail.
+    let uid = unsafe { libc::geteuid() };
+    let dir = std::env::temp_dir().join(format!(
+        "mdatron-slots-{uid}-{}",
+        root_digest_short(project_root)
+    ));
+    std::fs::DirBuilder::new()
+        .recursive(true)
+        .mode(0o700)
+        .create(&dir)?;
+    // Refuse a hostile pre-created path: a symlink, a non-directory, or a
+    // directory owned by another uid at OUR uid-keyed name is an attack or a
+    // misconfiguration — name it, never proceed onto foreign state. (The
+    // sticky bit on /tmp prevents another user swapping our verified 0700
+    // directory afterwards.)
+    let meta = std::fs::symlink_metadata(&dir)?;
+    if meta.file_type().is_symlink() || !meta.is_dir() {
+        return Err(std::io::Error::other(format!(
+            "invocation-slot path '{}' exists but is not a real directory \
+             (symlink refused); remove it, or point TMPDIR at a private \
+             directory",
+            dir.display()
+        )));
+    }
+    if meta.uid() != uid {
+        return Err(std::io::Error::other(format!(
+            "invocation-slot directory '{}' is owned by uid {} (expected {uid}); \
+             remove it, or point TMPDIR at a private directory",
+            dir.display(),
+            meta.uid()
+        )));
+    }
+    Ok(dir)
+}
+
+#[cfg(not(unix))]
+fn slot_dir(project_root: &Path) -> std::io::Result<std::path::PathBuf> {
+    // Windows: `temp_dir()` is already per-user (%LOCALAPPDATA%\Temp), so the
+    // uid keying and ownership check are inherent in the location.
+    let dir =
+        std::env::temp_dir().join(format!("mdatron-slots-{}", root_digest_short(project_root)));
+    std::fs::create_dir_all(&dir)?;
+    Ok(dir)
 }
 
 #[cfg(unix)]
@@ -188,5 +249,65 @@ mod tests {
             "dropping a guard frees its slot"
         );
         let _ = std::fs::remove_dir_all(&root);
+    }
+
+    // Phase-3 B-1: a symlink pre-created at the uid-keyed slot path is an
+    // attack (or wreckage) and is refused with a diagnostic naming it —
+    // never followed onto foreign state.
+    #[cfg(unix)]
+    #[test]
+    fn symlinked_slot_directory_is_refused() {
+        let root = std::env::temp_dir().join(format!(
+            "mdatron-slot-sym-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&root).unwrap();
+        // Learn the expected path, then replace it with a symlink elsewhere.
+        let dir = slot_dir(&root).unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+        let elsewhere = root.join("elsewhere");
+        std::fs::create_dir_all(&elsewhere).unwrap();
+        std::os::unix::fs::symlink(&elsewhere, &dir).unwrap();
+
+        let err = acquire_invocation_slot(&root, 2).unwrap_err();
+        assert!(
+            err.to_string().contains("not a real directory"),
+            "the refusal names the symlink; got: {err}"
+        );
+        let _ = std::fs::remove_file(&dir);
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    // Drift tripwire (reference: ruff-registry-audit — hand-synced peer
+    // artifacts drift unless a check forces agreement): every SHIPPED value
+    // must appear in its docs/limits.md table row, and SHIPPED itself must
+    // carry the values those rows render.
+    #[test]
+    fn docs_limits_table_matches_shipped() {
+        let doc =
+            std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("docs/limits.md"))
+                .unwrap();
+        let row = |needle: &str| {
+            doc.lines()
+                .find(|l| l.starts_with('|') && l.contains(needle))
+                .unwrap_or_else(|| panic!("docs/limits.md lacks a table row for {needle}"))
+        };
+        assert_eq!(SHIPPED.per_file_bytes, 8 * 1024 * 1024);
+        assert!(row("max-input-size-per-file").contains("8 MiB"));
+        assert_eq!(SHIPPED.aggregate_bytes, 64 * 1024 * 1024);
+        assert!(row("aggregate-snapshot-size").contains("64 MiB"));
+        assert_eq!(SHIPPED.structural_nesting, 256);
+        assert!(row("structural-nesting-depth").contains("| 256 |"));
+        assert_eq!(SHIPPED.expr_depth, 256);
+        assert!(row("DSL expression depth").contains("| 256 |"));
+        assert_eq!(SHIPPED.walk_depth, 64);
+        assert!(row("walk `depth`").contains("| 64 |"));
+        assert_eq!(SHIPPED.walk_entries, 100_000);
+        assert!(row("walk `entries`").contains("| 100 000 |"));
+        assert_eq!(SHIPPED.concurrent_invocations, 8);
+        assert!(row("concurrent-invocation-count").contains("| 8 |"));
     }
 }

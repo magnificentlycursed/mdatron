@@ -20,14 +20,20 @@ able to abort the run (#103).
 | DSL expression depth | 256 | adopter `assert:` expression nesting | expression `ParseError` at pattern load |
 | walk `depth` | 64 | engine-owned no-follow glob walk (index sources) | `WalkBounded` index error |
 | walk `entries` | 100 000 | directory entries listed across one glob walk | `WalkBounded` index error |
-| `concurrent-invocation-count` | 8 | simultaneous `verify` runs per project root | `bound_exceeded` |
+| `concurrent-invocation-count` | 8 | simultaneous `verify` runs per user per project root | `bound_exceeded` |
 
 ## Notes
 
-- **Concurrent invocations** are counted with per-root slot files under the
-  system temp directory (never inside the repository), locked with `flock` on
-  unix and an exclusive-share open on windows. Both evaporate with the owning
-  process, so a crashed run can never wedge the count. Platforms with neither
+- **Concurrent invocations** are counted with per-user, per-root slot files
+  under the system temp directory (never inside the repository; the directory
+  is uid-keyed, mode `0700`, ownership-verified — a foreign or symlinked
+  directory at the expected path is refused with a named diagnostic), locked
+  with `flock` on unix and an exclusive-share open on windows. The LOCKS
+  evaporate with the owning process, so a crashed run can never wedge the
+  count; the 0-byte slot files are deliberately never unlinked (unlinking a
+  held slot would let a fresh acquirer double-admit past the limit on a new
+  inode). The count bounds each user's runs, not the machine total; the
+  standalone `pin` command sits outside it. Platforms with neither lock
   primitive run unbounded — a documented carve-out mirroring the confine
   fallback posture.
 - **YAML alias and recursion bounds** ride the parser (`serde_yaml_ng`'s
