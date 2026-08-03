@@ -1947,11 +1947,12 @@
       "display_id": 155,
       "title": "enhancement(#145): link family slug + coverage gaps (lychee review) — dup-heading -N, reference-style, images, setext, root mode",
       "description": "From lychee-link-family-audit; the link family got the headline decisions right (document-relative, GitHub-slug, defer-external, skip-fenced, +confinement beyond the mature tools). Ranked gaps: (1) duplicate-heading -N disambiguation deferred -> false-positive E0111 on #foo-1 (cheap, highest value); (2) reference-style [t][ref] + image links are silent false NEGATIVES (lychee catches both) -> the pulldown-cmark case, which also fixes the inline-code-span bug; (3) setext + HTML anchors not in the slug set; (4) optional root: mode so /docs/x.md resolves in-tree instead of hard-refusing E0010. pulldown-cmark adoption is the strategic decision.",
-      "status": "open",
+      "status": "closed",
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-02T05:31:57.642692Z",
-      "updated_at": "2026-08-03T15:32:26.633880Z",
+      "updated_at": "2026-08-03T15:32:32.594723Z",
+      "closed_at": "2026-08-03T15:32:32.594716Z",
       "labels": [
         "enhancement"
       ],
@@ -6489,8 +6490,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-03T15:32:26.633880Z",
+    "timestamp": "2026-08-03T15:32:32.594723Z",
     "agent_id": "79Ig",
-    "agent_seq": 764
+    "agent_seq": 765
   }
 }
