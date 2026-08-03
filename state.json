@@ -1,6 +1,6 @@
 {
   "next_display_id": 164,
-  "next_comment_id": 417,
+  "next_comment_id": 418,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -5159,7 +5159,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-02T05:38:49.843362Z",
-      "updated_at": "2026-08-02T08:49:47.619235Z",
+      "updated_at": "2026-08-03T20:25:40.822413Z",
       "labels": [
         "enhancement"
       ],
@@ -5172,6 +5172,15 @@
           "kind": "result",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAkvSrC3DYf0ILnnwjJO4fZV9RP0OhrXhpxxW+ko9XLdXoLJfC09v35uo5KdYEtVxwzfFxoQaJ6g8xm4TzpUFAAw=="
+        },
+        "a3d6046c-f8ef-4db4-a771-05355f266be9": {
+          "display_id": 417,
+          "author": "79Ig",
+          "content": "REFERENCE-ARCHITECTURE GROUNDING for the remainder (per operator direction; the lane's own source audit [[cedar-opa-dsl-audit]] mapping (a) IS the spec): E0021 delivered the field-existence leg; the remainder is Cedar-validator legs 2-4 — (i) OPERAND TYPES: a $self path's schema-declared type checked against the operator context it appears in; (ii) ==/!= TYPE-COMPATIBILITY: flag string==number and kin (mdatron's grammar has ONLY equality/membership — audit table — so this is the whole comparison surface, far cheaper than Cedar's); (iii) DEAD-CLAUSE warnings (always-false conditions), Cedar's validator warns not errors — W-class here. CARRY THE E0021 CONSERVATISM VERBATIM (the ratified hard-gate posture requires it): only closed-object, schema-decidable shapes flag; every undecidable shape (open object, array element types under combinators, $ref) passes unflagged; only $self-rooted paths; type info from the loaded frontmatter schema its context binds. The audit also fixes the boundary: do NOT add ordering/arithmetic to make typing richer (stay narrower than Cedar — ruled); keep the symcc-style rule-comparison path LATENT (no SMT, no new deps); reject any Rego-shaped generalization. Severity split per Cedar: type-mismatch on a decidable shape -> E-class hard gate (extends E0021's range with distinct codes or E0021 subsumes — 1a decision at lane start); dead-clause -> W-class.",
+          "created_at": "2026-08-03T20:25:40.807449Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAi1q6ASZlT1SFjryFz6ErCkeuHip2RgeFG1x3vo3aqaHke37JYq32nCoZomyIQ3U1dNK6rKv95JVDf1WXWPffDQ=="
         },
         "d192984b-52e1-4fca-87a1-39c4e26cceab": {
           "display_id": 383,
@@ -6752,8 +6761,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-03T20:25:18.669405Z",
+    "timestamp": "2026-08-03T20:25:40.822413Z",
     "agent_id": "79Ig",
-    "agent_seq": 806
+    "agent_seq": 807
   }
 }
