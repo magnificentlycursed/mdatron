@@ -1,6 +1,6 @@
 {
   "next_display_id": 162,
-  "next_comment_id": 395,
+  "next_comment_id": 396,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -234,10 +234,21 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-07-30T15:35:19.787585Z",
-      "updated_at": "2026-07-30T15:35:24.883673Z",
+      "updated_at": "2026-08-03T15:41:29.097036Z",
       "labels": [
         "question"
-      ]
+      ],
+      "comments": {
+        "4fc01ee8-0588-45e8-9786-62bb49585058": {
+          "display_id": 395,
+          "author": "79Ig",
+          "content": "Plan: relay DEF7 to vsdd-cli as a methodology-observability raise per the #131 operator ruling ('relay to vsdd-cli, not an mdatron DESIGN ruling'). Original roast finding text wasn't committed (only the routing line, review-log/2026-07-29-phase4-routing-prepublish-roast.md:79); reconstructing substance from the observable gap: docs/cost-ledger.md holds exactly 2 measured shapes, both schema-family E0050 compact form (2026-07-25) — no other family measured, no latency actuals (vsdd's own 0.65s/178-files data point from #92 still unrecorded). Relay asks the methodology to define minimum ledger coverage + refresh discipline; mdatron conforms once defined.",
+          "created_at": "2026-08-03T15:41:29.063685Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAjF2EHRT3//0jJwFp7sAHFKnT62Nj6vDKTBAzxUO3lvorH77sQ/WZFc60Px+TW6BRL31nvYmerhxP4m2zTuuRAw=="
+        }
+      }
     },
     "0943c25f-129e-492b-a326-fff0d809c6c0": {
       "uuid": "0943c25f-129e-492b-a326-fff0d809c6c0",
@@ -6512,8 +6523,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-03T15:40:08.628273Z",
+    "timestamp": "2026-08-03T15:41:29.097036Z",
     "agent_id": "79Ig",
-    "agent_seq": 771
+    "agent_seq": 772
   }
 }
