@@ -1,5 +1,5 @@
 {
-  "next_display_id": 160,
+  "next_display_id": 161,
   "next_comment_id": 388,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -56,6 +56,7 @@
     "57311af8-98a9-4083-9f80-586f713d0089": 142,
     "588a808f-de8c-4824-8347-2ed0a5891594": 44,
     "59693794-3a00-4af8-a42f-477ed3766f24": 105,
+    "5da2ab05-31e7-4929-a268-a49e6fc77636": 160,
     "5eb9d32c-b382-4b47-8abf-7b7f75de5916": 34,
     "5ee2ea80-c483-44f0-815d-81d8fa6cd9f4": 88,
     "6135d3c6-44c0-43d1-8080-dd5fd5cda222": 23,
@@ -2098,6 +2099,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAv7B6p7jMXqKlwxp/sTwnWh2bNAaHqo1FBLjcu6U/YGfOyZ8okg5p6Xd8Bnh+3OhVCzZSb83RtPvQzUVTK/fJAw=="
         }
       }
+    },
+    "5da2ab05-31e7-4929-a268-a49e6fc77636": {
+      "uuid": "5da2ab05-31e7-4929-a268-a49e6fc77636",
+      "display_id": 160,
+      "title": "recover crosslink session/hub after Source→Source.nosync rename: stale ref-lock removal, iCloud collision-artifact cleanup in .hub-cache, stale issue-lock release, sync local main",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-08-03T15:14:30.840469Z",
+      "updated_at": "2026-08-03T15:14:30.840469Z"
     },
     "5eb9d32c-b382-4b47-8abf-7b7f75de5916": {
       "uuid": "5eb9d32c-b382-4b47-8abf-7b7f75de5916",
@@ -6442,8 +6453,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-02T10:37:25.017877Z",
+    "timestamp": "2026-08-03T15:14:30.840469Z",
     "agent_id": "79Ig",
-    "agent_seq": 745
+    "agent_seq": 525
   }
 }
