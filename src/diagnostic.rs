@@ -73,6 +73,27 @@ impl Serialize for Location {
     }
 }
 
+/// Escape control characters in adopter-derived path text to inert `\xNN`
+/// visible escapes before it enters a diagnostic message, mirroring
+/// [`Location::safe_display`]. Adopter content in a diagnostic is a trust
+/// surface (`DESIGN.md` § Agents are the first consumer): a raw control byte
+/// in a source path or matched filename could inject ANSI controls or
+/// splitters into the agent-facing message. Printable text is unchanged, so
+/// ordinary paths render as-is. Shared by the index build and the snapshot's
+/// bound diagnostics.
+pub(crate) fn escape_path_text(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for ch in s.chars() {
+        if ch.is_control() {
+            use std::fmt::Write;
+            let _ = write!(out, "\\x{:02X}", ch as u32);
+        } else {
+            out.push(ch);
+        }
+    }
+    out
+}
+
 impl Location {
     /// Construct a whole-file location: the given file at line 1, column 0.
     pub fn whole_file(file: impl Into<PathBuf>) -> Self {

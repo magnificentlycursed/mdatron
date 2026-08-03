@@ -1,6 +1,8 @@
 //! Link family (#145; `DESIGN.md` § check families): inline body links in
-//! governed markdown are resolved against the working tree — a link to a file
-//! that is not there, or a fragment that matches no heading, is a dead link.
+//! governed markdown are resolved against the snapshot of the working tree
+//! (#103 — the run's capture-time view; uncommitted content counts, no git
+//! history is consulted) — a link to a file that is not there, or a fragment
+//! that matches no heading, is a dead link.
 //!
 //! Data-less, per-route opt-in via the optional `links: true` flag (mirrors the
 //! citation family's `citations: true`): blanket activation over every routed
@@ -200,13 +202,8 @@ fn resolve_link(
 
     // The target's capture-time state (#103): `link_targets` is the same
     // extraction discovery ran, so a confined target is always captured; a
-    // miss can only mean a discovery defect — fail LOUD (dead link), never
-    // fall back to the filesystem.
-    debug_assert!(
-        snapshot.get(confined.as_path()).is_some(),
-        "link target '{}' was not captured before the seam",
-        confined.as_path().display()
-    );
+    // miss is an engine defect and reports as one (the None arm), never a
+    // filesystem fallback.
     match snapshot.get(confined.as_path()) {
         Some(Captured::Content(c)) => {
             // Target exists. If the link carries a fragment and the target is a
@@ -238,9 +235,11 @@ fn resolve_link(
                 }
             }
         }
-        // Opened but unreadable: the target exists; its fragment (if any) is
-        // not resolved — same posture as a non-markdown target.
-        Some(Captured::OpenedUnreadable { .. }) => {}
+        // Opened but unreadable, or over the per-file size cap: the target
+        // exists; its fragment (if any) is not resolved — same posture as a
+        // non-markdown target. A prose link must never be able to abort the
+        // run (#103 phase-3 A-1).
+        Some(Captured::OpenedUnreadable { .. }) | Some(Captured::TooLarge { .. }) => {}
         Some(Captured::SymlinkRefused { .. }) => {
             findings.push(link_finding(
                 path,
@@ -253,7 +252,7 @@ fn resolve_link(
                 dest,
             ));
         }
-        Some(Captured::OpenIo { .. }) | None => {
+        Some(Captured::OpenIo { .. }) => {
             findings.push(link_finding(
                 path,
                 content,
@@ -263,6 +262,22 @@ fn resolve_link(
                 "this link points at a relative path that does not exist in the \
                  working tree (uncommitted content counts; no git history is \
                  consulted)",
+                dest,
+            ));
+        }
+        // Never captured: an ENGINE defect in target discovery, not a dead
+        // link — misreporting would send the adopter to fix a healthy file
+        // (#103 phase-3 I-5/A-3).
+        None => {
+            findings.push(link_finding(
+                path,
+                content,
+                at,
+                "MDATRON-E0080",
+                "pipeline-orchestration-failure",
+                "this link's target was never captured into the run snapshot — \
+                 an engine defect in target discovery, not a defect in this \
+                 document; please report it upstream",
                 dest,
             ));
         }

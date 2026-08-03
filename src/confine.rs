@@ -63,6 +63,13 @@ pub enum OpenViolation {
     /// whatever its target — inside or outside the governed tree.
     /// MDATRON-E0012 territory.
     Symlink { component: PathBuf },
+    /// The leaf exists and opened, but is not a regular file — a FIFO, socket,
+    /// device, or directory. Refused before any read: a FIFO with no writer
+    /// would otherwise park the process in a blocking `open`/`read` forever
+    /// (a one-file denial of verification), and none of these carry content
+    /// the engine can verify. The path EXISTS — consumers that only test
+    /// existence treat this as present-but-unverifiable.
+    NotRegular,
     /// Ordinary IO failure (not found, permission, not-a-directory).
     Io(io::Error),
 }
@@ -152,6 +159,12 @@ fn open_confined_impl(root: &Path, components: &[&std::ffi::OsStr]) -> Result<Fi
         let mut flags = libc::O_RDONLY | libc::O_NOFOLLOW | libc::O_CLOEXEC;
         if directory {
             flags |= libc::O_DIRECTORY;
+        } else {
+            // O_NONBLOCK so opening an adopter-named FIFO cannot park the
+            // process in a blocking open (a one-file denial of verification).
+            // A no-op for the regular files the leaf fstat then requires, so
+            // the flag never changes read semantics on accepted handles.
+            flags |= libc::O_NONBLOCK;
         }
         // Retry on EINTR: signal delivery mid-syscall must not surface as a
         // spurious transient Io. Misclassification stays fail-closed — the
@@ -210,6 +223,18 @@ fn open_confined_impl(root: &Path, components: &[&std::ffi::OsStr]) -> Result<Fi
         dir = openat_no_follow(&dir, name, true)?;
     }
     let leaf_handle = openat_no_follow(&dir, leaf, false)?;
+    // The handle that passed confinement is the handle that is stat'd: refuse
+    // anything that is not a regular file (FIFO, socket, device, directory)
+    // BEFORE any read — a FIFO read would block until a writer appears, and
+    // none of these carry verifiable content.
+    let mut st: libc::stat = unsafe { std::mem::zeroed() };
+    let rc = unsafe { libc::fstat(leaf_handle.as_raw_fd(), &mut st) };
+    if rc != 0 {
+        return Err(OpenViolation::Io(io::Error::last_os_error()));
+    }
+    if (st.st_mode & libc::S_IFMT) != libc::S_IFREG {
+        return Err(OpenViolation::NotRegular);
+    }
     Ok(File::from(leaf_handle))
 }
 
@@ -232,7 +257,13 @@ fn open_confined_impl(root: &Path, components: &[&std::ffi::OsStr]) -> Result<Fi
             Err(err) => return Err(OpenViolation::Io(err)),
         }
     }
-    File::open(&current).map_err(OpenViolation::Io)
+    let handle = File::open(&current).map_err(OpenViolation::Io)?;
+    // Mirror the unix leaf fstat: only regular files carry verifiable content.
+    match handle.metadata() {
+        Ok(meta) if meta.is_file() => Ok(handle),
+        Ok(_) => Err(OpenViolation::NotRegular),
+        Err(err) => Err(OpenViolation::Io(err)),
+    }
 }
 
 // ── Closed-world directory enumeration ──────────────────────────────────────────
@@ -719,21 +750,47 @@ mod tests {
         std::fs::remove_dir_all(&root).unwrap();
     }
 
-    // SE-F7: a directory as the leaf opens (unix permits O_RDONLY on a
-    // directory); the not-a-file nature surfaces as EISDIR when the caller
-    // reads — the parse stage's error, not a confinement violation.
+    // SE-F7, revised by the #103 phase-3 S-1 fix: a non-regular leaf
+    // (directory, FIFO, socket, device) is refused at open with `NotRegular` —
+    // decided on the fstat of the handle that passed confinement, BEFORE any
+    // read. A FIFO would otherwise park the process in a blocking read (a
+    // one-file denial of verification).
     #[cfg(unix)]
     #[test]
-    fn directory_as_leaf_opens_but_read_is_eisdir() {
-        use std::io::Read;
+    fn directory_as_leaf_is_refused_not_regular() {
         let root = temp_root("dir-leaf");
         std::fs::create_dir_all(root.join("adir")).unwrap();
-
-        let mut file = open_confined(&root, &confined("adir")).unwrap();
-        let mut buf = Vec::new();
-        let err = file.read_to_end(&mut buf).unwrap_err();
-        assert_eq!(err.raw_os_error(), Some(libc::EISDIR));
+        let err = open_confined(&root, &confined("adir")).unwrap_err();
+        assert!(matches!(err, OpenViolation::NotRegular), "got {err:?}");
         std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    // #103 phase-3 S-1 (the reproduced hang): a FIFO leaf must be REFUSED,
+    // promptly — not opened (a blocking open/read would hang the run forever).
+    #[cfg(unix)]
+    #[test]
+    fn fifo_as_leaf_is_refused_not_regular_without_blocking() {
+        use std::os::unix::ffi::OsStrExt;
+        let root = temp_root("fifo-leaf");
+        let fifo = root.join("pipe.md");
+        let c_path = std::ffi::CString::new(fifo.as_os_str().as_bytes()).unwrap();
+        assert_eq!(unsafe { libc::mkfifo(c_path.as_ptr(), 0o644) }, 0);
+
+        let (tx, rx) = std::sync::mpsc::channel();
+        let worker = std::thread::spawn(move || {
+            let _ = tx.send(matches!(
+                open_confined(&root, &confined("pipe.md")),
+                Err(OpenViolation::NotRegular)
+            ));
+        });
+        match rx.recv_timeout(std::time::Duration::from_secs(5)) {
+            Ok(refused) => assert!(refused, "a FIFO leaf must be NotRegular-refused"),
+            Err(_) => panic!("opening a FIFO blocked (the S-1 hang): O_NONBLOCK missing"),
+        }
+        let _ = worker.join();
+        let _ = std::fs::remove_file(std::path::PathBuf::from(std::ffi::OsStr::from_bytes(
+            c_path.as_bytes(),
+        )));
     }
 
     // SEC-F6 / invariant I7: the handle walks (open_confined) and the

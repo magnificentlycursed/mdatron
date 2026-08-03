@@ -55,9 +55,20 @@ impl Content {
 #[derive(Debug)]
 pub enum Captured {
     Content(Content),
-    /// The confined open succeeded (the path exists) but reading failed — e.g.
-    /// a directory, or an I/O error mid-read. Consumers that only test
-    /// existence treat this as present.
+    /// The file exceeded the per-file byte budget. Stored (so capture stays
+    /// read-once even for refusals) but its bytes are dropped and NOT counted
+    /// in the aggregate. Policy lives with the consumer: config-scoped input
+    /// classes (governed bodies, index sources, pin and marker targets)
+    /// escalate this to the whole-run bound error; prose-scoped classes
+    /// (citation and link targets) treat it as present-but-unverifiable —
+    /// a prose line must not be able to abort the run (#103 phase-3 A-1).
+    TooLarge {
+        limit: usize,
+    },
+    /// The confined open succeeded (the path exists) but the content is not
+    /// verifiable — a read failure past the open, or a FIFO/socket/device/
+    /// directory (refused before any read; a FIFO would block forever).
+    /// Consumers that only test existence treat this as present.
     OpenedUnreadable {
         error: String,
     },
@@ -78,6 +89,7 @@ pub struct Snapshot {
     aggregate: usize,
     max_file_bytes: usize,
     max_aggregate_bytes: usize,
+    sealed: bool,
 }
 
 impl Snapshot {
@@ -87,66 +99,103 @@ impl Snapshot {
             aggregate: 0,
             max_file_bytes,
             max_aggregate_bytes,
+            sealed: false,
         }
+    }
+
+    /// Seal the snapshot at the capture-complete seam: any later `capture` is
+    /// an engine defect and fails as one instead of silently reopening the
+    /// filesystem window the seal exists to close.
+    pub fn seal(&mut self) {
+        self.sealed = true;
     }
 
     /// Capture `rel` under `root` if it is not already captured, and return its
     /// state. Idempotent: a second capture of the same path returns the stored
-    /// state without touching the filesystem — read-once across roles.
+    /// state without touching the filesystem — read-once across roles, for
+    /// refusals (`TooLarge`) as much as for content.
     ///
-    /// A capture exceeding the per-file or aggregate budget is a loud
-    /// whole-run error (`bound_exceeded`), never a silent truncation.
+    /// Only the AGGREGATE budget is a hard error here (a global condition, not
+    /// a per-file state; nothing is stored or counted when it trips). The
+    /// per-file budget records a `TooLarge` state and lets the consumer choose
+    /// the posture — see [`Captured::TooLarge`].
     pub fn capture(&mut self, root: &Path, rel: &ConfinedPath) -> Result<&Captured, VerifyError> {
-        let key = rel.as_path().to_path_buf();
-        if !self.files.contains_key(&key) {
-            let state = match confine::open_confined(root, rel) {
-                Ok(handle) => {
-                    let mut bytes = Vec::new();
-                    // Read at most cap + 1 so an oversized file trips the bound
-                    // instead of loading unbounded memory.
-                    match handle
-                        .take(self.max_file_bytes as u64 + 1)
-                        .read_to_end(&mut bytes)
-                    {
-                        Err(e) => Captured::OpenedUnreadable {
-                            error: e.to_string(),
-                        },
-                        Ok(_) => {
-                            if bytes.len() > self.max_file_bytes {
-                                return Err(VerifyError::BoundExceeded {
-                                    bound: "max-input-size-per-file".into(),
-                                    detail: format!(
-                                        "'{}' exceeds the {}-byte per-file limit",
-                                        key.display(),
-                                        self.max_file_bytes
-                                    ),
-                                });
-                            }
-                            self.aggregate += bytes.len();
-                            if self.aggregate > self.max_aggregate_bytes {
-                                return Err(VerifyError::BoundExceeded {
-                                    bound: "aggregate-snapshot-size".into(),
-                                    detail: format!(
-                                        "the captured inputs exceed the {}-byte aggregate limit",
-                                        self.max_aggregate_bytes
-                                    ),
-                                });
-                            }
-                            match String::from_utf8(bytes) {
-                                Ok(s) => Captured::Content(Content::Utf8(s)),
-                                Err(e) => Captured::Content(Content::Raw(e.into_bytes())),
+        debug_assert!(!self.sealed, "capture after seal (engine defect)");
+        if self.sealed {
+            return Err(VerifyError::Io {
+                path: crate::diagnostic::escape_path_text(&rel.as_path().to_string_lossy()),
+                error: "capture after the seam sealed the snapshot (engine defect)".into(),
+            });
+        }
+        let max_file_bytes = self.max_file_bytes;
+        match self.files.entry(rel.as_path().to_path_buf()) {
+            std::collections::btree_map::Entry::Occupied(entry) => Ok(&*entry.into_mut()),
+            std::collections::btree_map::Entry::Vacant(slot) => {
+                let state = match confine::open_confined(root, rel) {
+                    Ok(handle) => {
+                        let mut bytes = Vec::new();
+                        // Read at most cap + 1 so an oversized file trips the
+                        // bound instead of loading unbounded memory.
+                        match handle
+                            .take(max_file_bytes as u64 + 1)
+                            .read_to_end(&mut bytes)
+                        {
+                            Err(e) => Captured::OpenedUnreadable {
+                                error: e.to_string(),
+                            },
+                            Ok(_) if bytes.len() > max_file_bytes => Captured::TooLarge {
+                                limit: max_file_bytes,
+                            },
+                            Ok(_) => {
+                                // Commit-then-count: the aggregate reflects
+                                // exactly the bytes the snapshot stores.
+                                if self.aggregate + bytes.len() > self.max_aggregate_bytes {
+                                    return Err(VerifyError::BoundExceeded {
+                                        bound: "aggregate-snapshot-size".into(),
+                                        detail: format!(
+                                            "the captured inputs exceed the {}-byte aggregate limit",
+                                            self.max_aggregate_bytes
+                                        ),
+                                    });
+                                }
+                                self.aggregate += bytes.len();
+                                match String::from_utf8(bytes) {
+                                    Ok(s) => Captured::Content(Content::Utf8(s)),
+                                    Err(e) => Captured::Content(Content::Raw(e.into_bytes())),
+                                }
                             }
                         }
                     }
-                }
-                Err(OpenViolation::Symlink { component }) => Captured::SymlinkRefused { component },
-                Err(OpenViolation::Io(e)) => Captured::OpenIo {
-                    error: e.to_string(),
-                },
-            };
-            self.files.insert(key.clone(), state);
+                    Err(OpenViolation::Symlink { component }) => {
+                        Captured::SymlinkRefused { component }
+                    }
+                    // A FIFO/socket/device/directory: it EXISTS but carries no
+                    // verifiable content (and a FIFO read would block forever)
+                    // — the same consumer posture as opened-but-unreadable.
+                    Err(OpenViolation::NotRegular) => Captured::OpenedUnreadable {
+                        error: "not a regular file".into(),
+                    },
+                    Err(OpenViolation::Io(e)) => Captured::OpenIo {
+                        error: e.to_string(),
+                    },
+                };
+                Ok(&*slot.insert(state))
+            }
         }
-        Ok(&self.files[&key])
+    }
+
+    /// The whole-run bound error a config-scoped consumer raises on a
+    /// [`Captured::TooLarge`] state — one message shape for governed bodies,
+    /// index sources, and pin/marker targets, with the adopter path escaped
+    /// under the marking discipline.
+    pub fn too_large_error(rel: &Path, limit: usize) -> VerifyError {
+        VerifyError::BoundExceeded {
+            bound: "max-input-size-per-file".into(),
+            detail: format!(
+                "'{}' exceeds the {limit}-byte per-file limit",
+                crate::diagnostic::escape_path_text(&rel.to_string_lossy())
+            ),
+        }
     }
 
     /// The captured state of `rel`, if it was captured. Post-seam consumers use
@@ -217,18 +266,56 @@ mod tests {
         }
     }
 
-    // The per-file budget refuses an oversized capture loudly.
+    // The per-file budget records a stored, memoized `TooLarge` state (the
+    // consumer chooses abort vs degrade), its bytes are dropped, NOT counted
+    // in the aggregate, and the refusal is read-once like any capture.
     #[test]
-    fn per_file_budget_is_enforced() {
+    fn per_file_budget_is_a_stored_memoized_state() {
         let temp = TempDir::new("per-file");
         std::fs::write(temp.0.join("big.md"), "0123456789").unwrap();
-        let mut snap = Snapshot::new(9, 4096);
-        let err = snap.capture(&temp.0, &confined("big.md")).unwrap_err();
-        match err {
-            VerifyError::BoundExceeded { ref bound, .. } => {
-                assert_eq!(bound, "max-input-size-per-file")
-            }
-            other => panic!("expected the per-file bound; got {other:?}"),
+        std::fs::write(temp.0.join("ok.md"), "abc").unwrap();
+        let mut snap = Snapshot::new(9, 12);
+        match snap.capture(&temp.0, &confined("big.md")).unwrap() {
+            Captured::TooLarge { limit } => assert_eq!(*limit, 9),
+            other => panic!("expected TooLarge; got {other:?}"),
+        }
+        // Not counted toward the aggregate: 3 more bytes still fit a 12-byte
+        // budget that 10 dropped bytes would have blown.
+        match snap.capture(&temp.0, &confined("ok.md")).unwrap() {
+            Captured::Content(c) => assert_eq!(c.text(), Some("abc")),
+            other => panic!("expected content; got {other:?}"),
+        }
+        // Memoized: deleting the file changes nothing on a second request.
+        std::fs::remove_file(temp.0.join("big.md")).unwrap();
+        assert!(matches!(
+            snap.capture(&temp.0, &confined("big.md")).unwrap(),
+            Captured::TooLarge { .. }
+        ));
+    }
+
+    // Sealing makes any later capture an engine error, never a silent
+    // filesystem reopen.
+    #[test]
+    fn capture_after_seal_is_an_engine_error() {
+        let temp = TempDir::new("sealed");
+        std::fs::write(temp.0.join("a.md"), "x").unwrap();
+        let mut snap = Snapshot::new(64, 4096);
+        snap.capture(&temp.0, &confined("a.md")).unwrap();
+        snap.seal();
+        // Already-captured paths stay readable through `get`/`text`…
+        assert_eq!(snap.text(Path::new("a.md")), Some("x"));
+        // …but a NEW capture after the seam must fail as an engine defect.
+        // (Guarded by debug_assert in debug builds; exercise the release-mode
+        // contract via the returned error when assertions are disabled — here
+        // we assert the debug panic instead.)
+        let attempt = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            snap.capture(&temp.0, &confined("b.md")).is_err()
+        }));
+        match attempt {
+            // Debug build: the assert fires — the defect is loud.
+            Err(_) => {}
+            // Release build (debug_assertions off): the Err path is the seal.
+            Ok(errored) => assert!(errored, "post-seal capture must error"),
         }
     }
 

@@ -296,11 +296,30 @@ fn cmd_pin(project_root: Option<PathBuf>, update: bool, dry_run: bool, quiet: bo
                     if let Ok(confined) =
                         mdatron::confine::confine_lexically(std::path::Path::new(&pin.file))
                     {
-                        if let Err(e) = snapshot.capture(&root, &confined) {
-                            if !quiet {
-                                eprintln!("error[MDATRON-E0080]: pin check failed\n   = note: {e}");
+                        match snapshot.capture(&root, &confined) {
+                            // Config-scoped posture: an oversized pinned file
+                            // is the declared-bounds abort, as in verify.
+                            Ok(mdatron::snapshot::Captured::TooLarge { limit }) => {
+                                let e = mdatron::snapshot::Snapshot::too_large_error(
+                                    confined.as_path(),
+                                    *limit,
+                                );
+                                if !quiet {
+                                    eprintln!(
+                                        "error[MDATRON-E0080]: pin check failed\n   = note: {e}"
+                                    );
+                                }
+                                return ExitCode::from(2);
                             }
-                            return ExitCode::from(2);
+                            Ok(_) => {}
+                            Err(e) => {
+                                if !quiet {
+                                    eprintln!(
+                                        "error[MDATRON-E0080]: pin check failed\n   = note: {e}"
+                                    );
+                                }
+                                return ExitCode::from(2);
+                            }
                         }
                     }
                 }

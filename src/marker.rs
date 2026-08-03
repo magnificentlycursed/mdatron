@@ -122,21 +122,21 @@ fn resolve_members(
     };
 
     // The target's capture-time state (#103): marker targets come from route
-    // config, so discovery always captures a confined target_doc; a miss can
-    // only mean a discovery defect — fail LOUD (empty member set), never fall
-    // back to the filesystem.
-    debug_assert!(
-        snapshot.get(confined.as_path()).is_some(),
-        "marker target '{}' was not captured before the seam",
-        confined.as_path().display()
-    );
+    // config, so discovery always captures a confined target_doc; a miss is an
+    // engine defect and reports as one (the None arm), never a filesystem
+    // fallback.
     let target: &str = match snapshot.get(confined.as_path()) {
         Some(Captured::Content(c)) => match c.text() {
             Some(text) => text,
             // Unreadable (non-UTF8) target: empty member set → references fail.
             None => return Some(HashSet::new()),
         },
-        Some(Captured::OpenedUnreadable { .. }) => return Some(HashSet::new()),
+        // Unreadable, or (defensively) over the size cap — config-scoped
+        // discovery escalates TooLarge before the seam, but if one reaches
+        // here the empty set keeps its references loud (E0112), not silent.
+        Some(Captured::OpenedUnreadable { .. }) | Some(Captured::TooLarge { .. }) => {
+            return Some(HashSet::new())
+        }
         Some(Captured::SymlinkRefused { .. }) => {
             findings.push(marker_finding(
                 path,
@@ -152,7 +152,24 @@ fn resolve_members(
             return None;
         }
         // Missing target: empty set → references surface as E0112 (loud, not silent).
-        Some(Captured::OpenIo { .. }) | None => return Some(HashSet::new()),
+        Some(Captured::OpenIo { .. }) => return Some(HashSet::new()),
+        // Never captured: an ENGINE defect in target discovery — report it as
+        // one and disable the rule rather than flag healthy references.
+        None => {
+            findings.push(marker_finding(
+                path,
+                "",
+                0,
+                "MDATRON-E0080",
+                "pipeline-orchestration-failure",
+                "this rule's target_doc was never captured into the run \
+                 snapshot — an engine defect in target discovery, not a defect \
+                 in this document; please report it upstream",
+                "target_doc",
+                &rule.target_doc,
+            ));
+            return None;
+        }
     };
 
     // Strip any frontmatter so a YAML `# comment` in the target is not read as a

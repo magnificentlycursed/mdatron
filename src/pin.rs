@@ -202,14 +202,9 @@ pub fn check(
         let Ok(confined) = confine_lexically(Path::new(&pin.file)) else {
             continue;
         };
-        // Discovery captured every relevant pin target before the seam; a miss
-        // can only mean a discovery defect — fail LOUD (E0062), never fall
-        // back to the filesystem.
-        debug_assert!(
-            snapshot.get(confined.as_path()).is_some(),
-            "pin target '{}' was not captured before the seam",
-            confined.as_path().display()
-        );
+        // Discovery captured every relevant pin target before the seam; a
+        // miss is an engine defect and reports as one (the None arm), never a
+        // filesystem fallback.
         match snapshot.get(confined.as_path()) {
             Some(Captured::Content(c)) => {
                 let bytes = c.bytes();
@@ -278,8 +273,32 @@ pub fn check(
                     }],
                 });
             }
-            Some(Captured::OpenedUnreadable { .. }) | Some(Captured::OpenIo { .. }) | None => {
-                findings.push(target_unopenable(&pins_path, pin))
+            // Unreadable, open-refused, or (defensively) over the size cap —
+            // config-scoped discovery escalates TooLarge before the seam, but
+            // if one reaches here E0062 keeps it loud, not silent.
+            Some(Captured::OpenedUnreadable { .. })
+            | Some(Captured::OpenIo { .. })
+            | Some(Captured::TooLarge { .. }) => findings.push(target_unopenable(&pins_path, pin)),
+            // Never captured: an ENGINE defect in target discovery — a pin
+            // verdict against a healthy file would be a false attestation.
+            None => {
+                findings.push(Finding {
+                    code: "MDATRON-E0080".into(),
+                    severity: Severity::Error,
+                    summary: "pipeline-orchestration-failure".into(),
+                    message: "this pin's target was never captured into the run \
+                              snapshot — an engine defect in target discovery, \
+                              not a defect in the pin record; please report it \
+                              upstream"
+                        .into(),
+                    help: None,
+                    location: Location::whole_file(&pins_path),
+                    explain_ref: Some("MDATRON-E0080".into()),
+                    quoted: vec![QuotedRegion {
+                        label: "file".into(),
+                        content: pin.file.clone(),
+                    }],
+                });
             }
         }
     }

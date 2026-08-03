@@ -298,12 +298,12 @@ declared both `registered` and `draft` resolves to draft with a warning
 
 **Citations** — data-less; opt a route in with `citations: true` and its
 files' `path:line` / `path:start-end` references are verified against the
-working tree (uncommitted content counts; no git subprocess): a dead citation
+working-tree snapshot (uncommitted content counts; no git subprocess): a dead citation
 blocks (`E0100`), one past the target's end blocks (`E0101`). Historical
 corpora simply don't opt in.
 
 **Links** — data-less; opt a route in with `links: true` and its files' inline
-markdown links are resolved against the working tree via a CommonMark parse
+markdown links are resolved against the working-tree snapshot via a CommonMark parse
 (`pulldown-cmark`), so **inline** `[text](target)`, **reference-style**
 `[text][ref]`, and **image** `![alt](src)` links are all checked, while a link
 inside an inline `` `code` `` span or a fenced block is a syntax example and

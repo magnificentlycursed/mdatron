@@ -39,10 +39,15 @@ fn citations(content: &str, body_offset: usize) -> Vec<Citation<'_>> {
     // Three shapes so confinement sees escapes intact: parent-prefixed,
     // absolute, and word-start relative (interior `..` rides the relative
     // branch's class and is still confinement-refused).
-    let detector = regex_lite::Regex::new(
-        r"((?:\.\./)+[A-Za-z0-9_/.-]*\.[A-Za-z][A-Za-z0-9]{0,7}|/[A-Za-z0-9_][A-Za-z0-9_/.-]*\.[A-Za-z][A-Za-z0-9]{0,7}|\b[A-Za-z0-9_][A-Za-z0-9_/.-]*\.[A-Za-z][A-Za-z0-9]{0,7}):([0-9]{1,6})(?:-([0-9]{1,6}))?",
-    )
-    .expect("engine citation detector compiles");
+    // Compiled once: this extraction runs twice per opted-in file (discovery +
+    // check), so a per-call compile would tax the hot path (phase-3 I-6).
+    static DETECTOR: std::sync::LazyLock<regex_lite::Regex> = std::sync::LazyLock::new(|| {
+        regex_lite::Regex::new(
+            r"((?:\.\./)+[A-Za-z0-9_/.-]*\.[A-Za-z][A-Za-z0-9]{0,7}|/[A-Za-z0-9_][A-Za-z0-9_/.-]*\.[A-Za-z][A-Za-z0-9]{0,7}|\b[A-Za-z0-9_][A-Za-z0-9_/.-]*\.[A-Za-z][A-Za-z0-9]{0,7}):([0-9]{1,6})(?:-([0-9]{1,6}))?",
+        )
+        .expect("engine citation detector compiles")
+    });
+    let detector = &*DETECTOR;
 
     let body = &content[body_offset..];
     let mut out = Vec::new();
@@ -122,14 +127,9 @@ pub fn check_file(
         };
 
         // The target's capture-time state. `citations` is the same extraction
-        // discovery ran, so a confined target is always captured; a miss can
-        // only mean a discovery defect — fail LOUD (dead-citation), never fall
-        // back to the filesystem.
-        debug_assert!(
-            snapshot.get(confined.as_path()).is_some(),
-            "citation target '{}' was not captured before the seam",
-            confined.as_path().display()
-        );
+        // discovery ran, so a confined target is always captured; a miss is an
+        // engine defect and reports as one (the None arm), never a filesystem
+        // fallback.
         match snapshot.get(confined.as_path()) {
             Some(Captured::Content(c)) => {
                 let Some(target) = c.text() else {
@@ -156,8 +156,11 @@ pub fn check_file(
                     ));
                 }
             }
-            // Opened but unreadable: existence verified, ranges not checkable.
-            Some(Captured::OpenedUnreadable { .. }) => {}
+            // Opened but unreadable, or over the per-file size cap: the
+            // target EXISTS; existence is verified and the line range is not
+            // checkable — the same posture as a non-UTF8 target. A prose line
+            // must never be able to abort the run (#103 phase-3 A-1).
+            Some(Captured::OpenedUnreadable { .. }) | Some(Captured::TooLarge { .. }) => {}
             Some(Captured::SymlinkRefused { .. }) => {
                 findings.push(cite_finding(
                     path,
@@ -170,7 +173,7 @@ pub fn check_file(
                     &token,
                 ));
             }
-            Some(Captured::OpenIo { .. }) | None => {
+            Some(Captured::OpenIo { .. }) => {
                 findings.push(cite_finding(
                     path,
                     content,
@@ -180,6 +183,23 @@ pub fn check_file(
                     "the citation names content that does not exist in the \
                      working-tree snapshot (uncommitted content counts; no git \
                      history is consulted)",
+                    &token,
+                ));
+            }
+            // Never captured: an ENGINE defect (discovery failed to mirror
+            // this extraction), not a defect in this document — misreporting
+            // it as a dead citation would send the adopter to fix a healthy
+            // file (#103 phase-3 I-5/A-3).
+            None => {
+                findings.push(cite_finding(
+                    path,
+                    content,
+                    at,
+                    "MDATRON-E0080",
+                    "pipeline-orchestration-failure",
+                    "this citation's target was never captured into the run \
+                     snapshot — an engine defect in target discovery, not a \
+                     defect in this document; please report it upstream",
                     &token,
                 ));
             }
