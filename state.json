@@ -1,6 +1,6 @@
 {
   "next_display_id": 161,
-  "next_comment_id": 390,
+  "next_comment_id": 391,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -2076,7 +2076,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-03T15:14:30.840469Z",
-      "updated_at": "2026-08-03T15:22:51.384618Z",
+      "updated_at": "2026-08-03T15:25:37.804428Z",
       "labels": [
         "maintenance"
       ],
@@ -2098,6 +2098,15 @@
           "kind": "note",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAJ6RshL12qX17ZQmKC7Z3a3f7sFwJPJo/AmsOn/6WVM/Xi4jsrRxsiSQHPoQtFiEWclnIrQauoYOszlF6x2dFBg=="
+        },
+        "a0abdc36-fbc8-4dd9-a4d6-07328832e871": {
+          "display_id": 390,
+          "author": "79Ig",
+          "content": "Recovery complete. Root cause: iCloud collision-copying regressed the local agents/79Ig loose ref to seq 524 (Jul 29 state) and left a stale ref lock (.git/refs/heads/crosslink/agents/79Ig.lock, Aug 2 03:37) that froze all local ref updates; remote held true history to seq 745. Fix: user renamed Source→Source.nosync + symlink (stops iCloud syncing); removed stale ref lock; human restored local ref to remote tip ce12044 via git update-ref; crosslink sync fast-forwarded checkpoint ref; removed collision artifacts (hub-cache 'issues 2'/'meta 2'/'trust 2', '.claude/skills/design 2', ~140 target/ dupes); released 9 stale locks; integrity locks/counters/hydration all PASS. Note: this issue's original IssueCreated event (seq 525) was on the abandoned stray fork — this comment is the durable record. Remaining: local main is behind 6 (user: git fetch origin main:main); hub-cache/knowledge-cache worktrees still registered under old Source/ path (works via symlink; git worktree repair if symlink is ever removed).",
+          "created_at": "2026-08-03T15:25:37.772459Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAVMSeCXijGoQXztJvNDUCgKmlRu5oPUi3Omux8I/8uQWu77vyIk2X6w8XI+HaJ04jb09v7QX0Cq5NpiG5Gy5cCg=="
         }
       }
     },
@@ -6444,8 +6453,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-03T15:24:42.840661Z",
+    "timestamp": "2026-08-03T15:25:37.804428Z",
     "agent_id": "79Ig",
-    "agent_seq": 755
+    "agent_seq": 756
   }
 }
