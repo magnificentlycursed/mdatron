@@ -1,6 +1,6 @@
 {
   "next_display_id": 166,
-  "next_comment_id": 436,
+  "next_comment_id": 437,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -6253,7 +6253,7 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-08-03T17:05:14.058918Z",
-      "updated_at": "2026-08-03T23:28:43.744084Z",
+      "updated_at": "2026-08-03T23:35:56.667390Z",
       "labels": [
         "enhancement"
       ],
@@ -6275,6 +6275,15 @@
           "kind": "observation",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAsH8UUjNG1GhSqbmqouJBpMjcm88MM5bZitPlnjqveVJJ8JdaFGfNtBr5vCy03gX4sRG5Hcwo61telvJwHOX0Cw=="
+        },
+        "3a7c360b-b9d8-49c5-a5cd-4f25786ed2b1": {
+          "display_id": 436,
+          "author": "79Ig",
+          "content": "MERGED to main: PR #40 (operator-gated). S-3 (the last open finding from #103's roast) closed: unreadable/non-UTF8/missing index keys: source now degrades to W0049 instead of aborting; roasted to MVR (2 rounds, F-1 injection fixed). Adjacency #165 filed. Closing --no-changelog (CHANGELOG in-branch).",
+          "created_at": "2026-08-03T23:35:56.648276Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAkkjD+rL+bp8XtTjbvCA5rwb/jV+JTwscLkWH2qgi+c+YFsk6m0KoKA4htcDQMyQU1Nx64I6P0lRJc+4f0ezPDg=="
         },
         "3e484c00-fa8d-483b-9bdb-093eea63caa3": {
           "display_id": 416,
@@ -6953,8 +6962,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-03T23:32:03.588245Z",
+    "timestamp": "2026-08-03T23:35:56.667390Z",
     "agent_id": "79Ig",
-    "agent_seq": 834
+    "agent_seq": 835
   }
 }
