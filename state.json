@@ -1,6 +1,6 @@
 {
   "next_display_id": 166,
-  "next_comment_id": 437,
+  "next_comment_id": 438,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -5275,11 +5275,20 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-02T05:38:49.843362Z",
-      "updated_at": "2026-08-03T23:32:03.588245Z",
+      "updated_at": "2026-08-03T23:45:19.680026Z",
       "labels": [
         "enhancement"
       ],
       "comments": {
+        "01ca17c8-f14f-498e-972a-959bbc2194f5": {
+          "display_id": 437,
+          "author": "79Ig",
+          "content": "2b/2c COMPLETE — commit e1af26a (7 files, +649). Delivered the cedar-audit mapping (a) remainder exactly per 1a: field_path_type + field_path_enum accessors (conservative closed-object walk, mirror field_path_status); check_rule_comparisons extends the E0021 walk over every ==/!= — E0022 (type-mismatch, error/hard-gate) when both operands decidable+incompatible, W0050 (dead-clause, warning) when a well-typed $self.field literal is outside a declared enum; type-check precedes enum-check; integer/number lenient; every undecidable shape passes (E0021 conservatism carried verbatim). Messages fully engine-authored + adopter operands in escaped quoted regions (#162 F-1 learned) with a builder injection regression test. Boundary held (audit leg d): no SMT, no cross-clause value reasoning. Codes W0050+E0022 (W0050 not W0049 — avoids the merged-#162 collision). 453 lib green (13 new), 0 clippy, self-validation exit 0. NOTE: branched pre-#162 so catalog/explain may need a trivial both-codes-kept merge vs main. PHASE 3 COMPOSITION: single combined DSL-correctness + security cold reviewer over e1af26a (the conservatism/no-false-positive invariant on a HARD GATE is the review target — a false E0022 breaks adopter builds; plus the F-1 marking discipline; ceiling 1/round, rounds-to-MVR).",
+          "created_at": "2026-08-03T23:45:19.662462Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABABr6+TfZ0NoBcgd8EcMYnfnwJfQYeg42H6pDftTePStJJtnDb45yU9Sk/R2mfopPfd00+7Hqgx9bi1U+kFKVtDQ=="
+        },
         "1a7ec646-ee15-4db8-ad23-6f424158398a": {
           "display_id": 384,
           "author": "79Ig",
@@ -6959,8 +6968,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-03T23:36:08.282683Z",
+    "timestamp": "2026-08-03T23:45:19.680026Z",
     "agent_id": "79Ig",
-    "agent_seq": 837
+    "agent_seq": 838
   }
 }
