@@ -1,6 +1,6 @@
 {
   "next_display_id": 162,
-  "next_comment_id": 399,
+  "next_comment_id": 400,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -5170,7 +5170,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T07:22:08.149420Z",
-      "updated_at": "2026-08-03T15:48:05.732504Z",
+      "updated_at": "2026-08-03T15:48:21.365974Z",
       "labels": [
         "feature"
       ],
@@ -5204,6 +5204,15 @@
           "kind": "result",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAetqiCGBhlbRXpMYoZKRJDF5C3G43TsKBHQhwZo3NkbA//kaKIjVAElRkOFJ88dxM2TS3I7SqLkZyqQO+qczwCQ=="
+        },
+        "8a513a91-7378-49d4-a27f-0810e87c2b35": {
+          "display_id": 399,
+          "author": "79Ig",
+          "content": "PHASE 2a RED GATE (authored before implementation): (1) pin-target mutated at seam -> staleness verdict reflects capture-time bytes [red: pin reads live at T6]; (2) cite-target mutated at seam -> line-range check against capture bytes [red]; (3) link anchor-target mutated at seam -> anchor resolution against capture bytes [red]; (4) marker target_doc mutated at seam -> member set from capture bytes [red]; (5) index source > MAX_FILE_BYTES -> BoundExceeded [red: unbounded today]; (6) cite target > MAX_FILE_BYTES -> BoundExceeded [red]; (7) aggregate bound counts target captures [red]; (8) non-UTF8 governed body -> per-file finding + run continues + files_checked honest [red: aborts today]; (9) snapshot unit: capture-once — capture, delete file on disk, second capture request for same rel still serves content, no second FS read [red: no module]; (10) existing green stays green: body-mutation-at-seam test, symlink-refusal tests, catalog suite. Implementation follows only after these are red.",
+          "created_at": "2026-08-03T15:48:21.339779Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAibJGL9zPMaeUfvNdgpMJdw9XwS+khpS46wRe0q49ZGoTEHxQs9l1Kwwn6rzoFskRH6VXccVZU4xmkTNR8DvGAg=="
         },
         "90a0d369-0dd3-4dc9-9584-62b186c1dd6a": {
           "display_id": 292,
@@ -6551,8 +6560,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-03T15:48:05.732504Z",
+    "timestamp": "2026-08-03T15:48:21.365974Z",
     "agent_id": "79Ig",
-    "agent_seq": 778
+    "agent_seq": 779
   }
 }
