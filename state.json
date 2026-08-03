@@ -1,6 +1,6 @@
 {
   "next_display_id": 162,
-  "next_comment_id": 397,
+  "next_comment_id": 398,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -5170,7 +5170,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T07:22:08.149420Z",
-      "updated_at": "2026-07-29T08:00:00.383385Z",
+      "updated_at": "2026-08-03T15:47:42.250029Z",
       "labels": [
         "feature"
       ],
@@ -5204,6 +5204,15 @@
           "kind": "plan",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA555JyuYu7/N7+RTaZX7bmS6F+8Yy2ppRKTtG4oTg8CMuazBT83kHOQ124j/AsLS0yHK9ApTICh83z8XvpcVSBA=="
+        },
+        "c75a17b4-90a1-44bc-8096-88839a2ba937": {
+          "display_id": 397,
+          "author": "79Ig",
+          "content": "PHASE 1a FRESH START (operator ruling 2026-07-29: security review front-loaded). READ-SURFACE INVENTORY of run() (verify.rs:334) — the full TOCTOU/consistency map vs DESIGN.md:104 ('reads its inputs once ... into an immutable snapshot; all checks run against snapshot bytes'):\nT0 load (pre-capture, read-once-by-parse, OUT of snapshot scope — engine-config partition): config.yaml, schemas/*, patterns/* (verify.rs:1052/1095), routes.yaml + governing-doc existence probes (route.rs:151/196, opens handle, reads nothing), pins.yaml (pin.rs:98), vocabulary.yaml, code-catalogs.yaml.\nT1 IndexRegistry::build (verify.rs:372, dsl/index.rs:604): source CONTENT read confined+no-follow but at a DIFFERENT TIME than body capture — a file that is both index source and governed body can be seen as two different byte-states in one run. Also UNBOUNDED read (no MAX_FILE_BYTES/aggregate cap) = memory-DoS lever.\nT3 body capture + T4 seam (verify.rs:528-659): governed bodies confined + bounded ✓ (the partial-A merge).\nT5 walk, POST-SEAM LIVE READS (the Finding-A blocker): cite.rs:82 (target read per citation, re-read on every citation), link.rs:174 (anchor-target read, memoized per target), marker.rs:125 (target_doc read).\nT6 pin::check post-walk LIVE READS (verify.rs:894 -> pin.rs:196): pinned bytes re-read from disk — pin can certify bytes Y while Layers 1/2 validated X. Cite/link/marker/pin target reads are also all UNBOUNDED.",
+          "created_at": "2026-08-03T15:47:42.235074Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAIMqmV95IlCDfXz+zpX2qsZjqlVyWmB/c4RaaPLEPkVJxGuOiJ7W/zDdotOs9wIxS6hkQ9YZs4Tg1tmrme5o0BA=="
         }
       }
     },
@@ -6533,8 +6542,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-03T15:43:01.216093Z",
+    "timestamp": "2026-08-03T15:47:42.250029Z",
     "agent_id": "79Ig",
-    "agent_seq": 776
+    "agent_seq": 777
   }
 }
