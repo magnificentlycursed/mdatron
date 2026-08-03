@@ -1,6 +1,6 @@
 {
   "next_display_id": 163,
-  "next_comment_id": 404,
+  "next_comment_id": 405,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -5997,10 +5997,21 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-08-03T17:05:14.058918Z",
-      "updated_at": "2026-08-03T17:05:19.708129Z",
+      "updated_at": "2026-08-03T17:05:37.752127Z",
       "labels": [
         "enhancement"
-      ]
+      ],
+      "comments": {
+        "a0d6dc4d-9cdf-4298-bf86-6e2e162fcc03": {
+          "display_id": 404,
+          "author": "79Ig",
+          "content": "Deferred from #103 phase-3 round 1 (finding S-3, security reviewer, REPRODUCED): (1) a single non-UTF8/unreadable file matched by a keys: source glob turns into IndexError::Io -> E0080 whole-run abort, zero findings — the same denial-of-verification shape #103 closed for governed bodies (E0003); (2) when a source glob overlaps file_globs, the SAME bytes are handled gracefully by the body path (per-file E0003) and fatally by the index path, and build order lets the fatal one win. Design needed (own 1a): per-declaration degradation taxonomy — an unreadable source likely yields an empty/partial index + a new diagnostic code (W-class or E-class?), rules referencing the key then surface their own findings; explain page + catalog + DESIGN wording. Oversized sources stay the config-scoped bound_exceeded abort (ruled in #103 round 1). See #103 dispositions comment for full context.",
+          "created_at": "2026-08-03T17:05:37.737647Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAVPUHzURG6dFgTzfBjXZ78EKtOWqmuUNlJK79oO9XCIgbf6L9QDPZW4sGGXHUhBVJTswHYOK9qhmwpxUZW1kIDg=="
+        }
+      }
     },
     "f00730f0-5883-4ad4-9ae0-9a665b2baa0b": {
       "uuid": "f00730f0-5883-4ad4-9ae0-9a665b2baa0b",
@@ -6614,8 +6625,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-03T17:05:28.977289Z",
+    "timestamp": "2026-08-03T17:05:37.752127Z",
     "agent_id": "79Ig",
-    "agent_seq": 786
+    "agent_seq": 787
   }
 }
