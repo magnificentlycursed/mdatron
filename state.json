@@ -5171,11 +5171,12 @@
       "uuid": "ca2e6c21-f9fd-4751-9ca4-24ef840c72e0",
       "display_id": 103,
       "title": "incremental sub-lane A: immutable snapshot seam — read-once via confined no-follow handles + capture-complete seam (#92, security)",
-      "status": "open",
+      "status": "closed",
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T07:22:08.149420Z",
-      "updated_at": "2026-08-03T19:31:07.994148Z",
+      "updated_at": "2026-08-03T19:31:14.752508Z",
+      "closed_at": "2026-08-03T19:31:14.752499Z",
       "labels": [
         "feature"
       ],
@@ -6697,8 +6698,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-03T19:31:07.994148Z",
+    "timestamp": "2026-08-03T19:31:14.752508Z",
     "agent_id": "79Ig",
-    "agent_seq": 797
+    "agent_seq": 798
   }
 }
