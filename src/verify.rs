@@ -5338,6 +5338,52 @@ pattern:
         );
     }
 
+    // Phase-3 R4-1: when the pool is busy AND the slot directory was just
+    // repaired from a permissive mode, the diagnostic must name the possible
+    // foreign hold (the honesty guarantee R3-1 added) — not the generic
+    // "N concurrent runs" message. Reproduces the real window: foreign
+    // holders take the slots while the dir is world-accessible, then the
+    // victim's run repairs it but the locks survive (chmod revokes none).
+    #[cfg(unix)]
+    #[test]
+    fn busy_after_repair_names_the_foreign_hold() {
+        use std::os::unix::fs::PermissionsExt;
+        let proj = TempProject::new("repaired-busy");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write("docs/d.md", "# plain\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+
+        // Hold every slot (this creates + repairs the dir to 0700).
+        let limit = crate::limits::SHIPPED.concurrent_invocations;
+        let mut held = Vec::new();
+        for _ in 0..limit {
+            match crate::limits::acquire_invocation_slot(&proj.0, limit).unwrap() {
+                crate::limits::SlotOutcome::Acquired(slot) => held.push(slot),
+                crate::limits::SlotOutcome::Busy { .. } => panic!("slots free under the limit"),
+            }
+        }
+        // Re-permission the (still-held) dir to simulate the window a foreign
+        // process grabbed the slots through; the held flocks survive the mode
+        // change.
+        let (dir, _) = crate::limits::slot_dir(&proj.0).unwrap();
+        std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+        let err = verify(&cfg).unwrap_err();
+        match err {
+            VerifyError::BoundExceeded { ref detail, .. } => assert!(
+                detail.contains("world-accessible and repaired"),
+                "the busy-after-repair diagnostic must name the foreign-hold \
+                 possibility; got {detail:?}"
+            ),
+            other => panic!("expected the bound; got {other:?}"),
+        }
+        held.clear();
+    }
+
     // DESIGN:148 "seeded alias-bomb": the YAML repetition guard refuses the
     // expansion as a localized E0001 parse finding — bounded time and memory,
     // never a whole-run abort, never an OOM. (The guard rides the parser; this

@@ -124,9 +124,10 @@ fn root_digest_short(project_root: &Path) -> String {
 }
 
 /// Returns the verified slot directory and whether it was repaired from a
-/// permissive mode this call.
+/// permissive mode this call. `pub(crate)` so the verify-layer test can learn
+/// the slot path to reproduce the repaired-busy scenario (R4-1).
 #[cfg(unix)]
-fn slot_dir(project_root: &Path) -> std::io::Result<(std::path::PathBuf, bool)> {
+pub(crate) fn slot_dir(project_root: &Path) -> std::io::Result<(std::path::PathBuf, bool)> {
     use std::os::unix::fs::{DirBuilderExt, MetadataExt, OpenOptionsExt, PermissionsExt};
     // SAFETY: geteuid takes no arguments and cannot fail.
     let uid = unsafe { libc::geteuid() };
@@ -192,7 +193,7 @@ fn slot_dir(project_root: &Path) -> std::io::Result<(std::path::PathBuf, bool)> 
 }
 
 #[cfg(not(unix))]
-fn slot_dir(project_root: &Path) -> std::io::Result<(std::path::PathBuf, bool)> {
+pub(crate) fn slot_dir(project_root: &Path) -> std::io::Result<(std::path::PathBuf, bool)> {
     // Windows: `temp_dir()` is already per-user (%LOCALAPPDATA%\Temp), so the
     // uid keying and ownership check are inherent in the location.
     let dir =
@@ -210,6 +211,9 @@ fn try_lock_slot(path: &Path) -> std::io::Result<Option<InvocationSlot>> {
         .write(true)
         .open(path)?;
     // LOCK_NB: a busy slot is an immediate "try the next one", never a wait.
+    // SAFETY: as_raw_fd() yields a valid fd owned by `file` for the duration of
+    // the call; flock touches only kernel lock state and cannot violate memory
+    // safety.
     let rc = unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) };
     if rc == 0 {
         Ok(Some(InvocationSlot { _file: file }))
