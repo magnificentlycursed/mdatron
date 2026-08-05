@@ -1,5 +1,5 @@
 {
-  "next_display_id": 166,
+  "next_display_id": 167,
   "next_comment_id": 439,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -143,6 +143,7 @@
     "dc7c4aa3-af1b-41be-87dd-2a778fcd6c8d": 43,
     "defb3290-053e-4af9-989f-daf56c87410a": 102,
     "df97fa67-a0e9-46f5-b742-43663606453b": 157,
+    "e055a0eb-e767-4ca7-8248-7c695b3c501a": 166,
     "e06b1201-7654-4266-ad6b-93d5c3daabf9": 12,
     "e4347785-d8d9-445f-b83e-3986f4904b7c": 86,
     "e504525f-77cd-4dfc-94f1-ba221ebab2f2": 22,
@@ -5968,6 +5969,16 @@
         }
       }
     },
+    "e055a0eb-e767-4ca7-8248-7c695b3c501a": {
+      "uuid": "e055a0eb-e767-4ca7-8248-7c695b3c501a",
+      "display_id": 166,
+      "title": "Add optional root-relative link mode + percent-decode link destinations (GH #37)",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-08-05T21:59:42.368075Z",
+      "updated_at": "2026-08-05T21:59:42.368075Z"
+    },
     "e06b1201-7654-4266-ad6b-93d5c3daabf9": {
       "uuid": "e06b1201-7654-4266-ad6b-93d5c3daabf9",
       "display_id": 12,
@@ -6977,8 +6988,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-05T21:55:57.099006Z",
+    "timestamp": "2026-08-05T21:59:42.368075Z",
     "agent_id": "79Ig",
-    "agent_seq": 839
+    "agent_seq": 840
   }
 }
