@@ -1,6 +1,6 @@
 {
   "next_display_id": 167,
-  "next_comment_id": 440,
+  "next_comment_id": 441,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -5990,10 +5990,21 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-05T21:59:42.368075Z",
-      "updated_at": "2026-08-05T21:59:48.599393Z",
+      "updated_at": "2026-08-05T22:17:07.901805Z",
       "labels": [
         "enhancement"
-      ]
+      ],
+      "comments": {
+        "15152b98-3230-49d4-8e4c-8a58e26351a4": {
+          "display_id": 440,
+          "author": "79Ig",
+          "content": "2b/2c COMPLETE — commit bdd1fcd on feature/gh37-link-root-percentdecode (GH #37, from main; 7 files, +287/-17). Both parts grounded in [[lychee-link-family-audit]] per the operator's architecture-references direction. Percent-decoding: all-or-nothing decode of link destinations before resolution (my%20doc.md -> my doc.md), applied at BOTH discovery + check sites (captured set can't diverge); malformed/non-UTF8 leaves literal (can only remove a false positive). Root-relative: new per-route link_root: true (sibling of links:, gated on it) resolving leading-slash /docs/x.md from project root — the opt-in analog of lychee --root-dir (audit item 5); confinement unchanged (E0011 above-root, E0012 symlink); document-relative stays default (lychee's default too). Threaded root_relative through resolve_target/resolve_link/check_file/link_targets. DESIGN change carried the amendment-discipline citation (audit item 5 + operator architecture-references direction). 455 lib green (5 new), 0 clippy, self-validation exit 0. PHASE 3 COMPOSITION: single combined security+correctness cold reviewer over bdd1fcd — the confinement-preservation under root: mode is the security target (a root-relative path must NOT enable escape), plus the percent-decode discovery/check symmetry and the F-1 marking discipline; ceiling 1/round, rounds-to-MVR.",
+          "created_at": "2026-08-05T22:17:07.887651Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA6pWUHDG75A+t6CBlecYIChcc3FlM0oZpx/Sl4i9GHjVPUJpmFLTrHBeEVI2uWjX2uq294zwDCCzow2BI+rJmBg=="
+        }
+      }
     },
     "e06b1201-7654-4266-ad6b-93d5c3daabf9": {
       "uuid": "e06b1201-7654-4266-ad6b-93d5c3daabf9",
@@ -7004,8 +7015,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-05T22:16:35.325698Z",
+    "timestamp": "2026-08-05T22:17:07.901805Z",
     "agent_id": "79Ig",
-    "agent_seq": 843
+    "agent_seq": 844
   }
 }
