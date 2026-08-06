@@ -269,8 +269,10 @@ pub fn check_file(
                     "a bold-introduced term is not in the vocabulary registry \
                      (draft-status terms are exempt; register the coinage or \
                      unbold the emphasis)",
-                    "term",
-                    &term,
+                    vec![QuotedRegion {
+                        label: "term".into(),
+                        content: term.clone(),
+                    }],
                 ));
             }
         }
@@ -288,8 +290,10 @@ pub fn check_file(
                     "a reserved-status term appears in prose; reserved means \
                      held for a registered future sense, not usable — the use \
                      is surfaced for review",
-                    "term",
-                    term,
+                    vec![QuotedRegion {
+                        label: "term".into(),
+                        content: term.clone(),
+                    }],
                 ));
             }
         }
@@ -321,8 +325,10 @@ pub fn check_file(
                     "a letter-plus-number cluster matches no allowed label \
                      scheme; invented schemes proliferate faster than review \
                      can police them",
-                    "cluster",
-                    cluster,
+                    vec![QuotedRegion {
+                        label: "cluster".into(),
+                        content: cluster.to_string(),
+                    }],
                 ));
             }
         }
@@ -340,9 +346,19 @@ pub fn check_file(
                 body_offset + m.start(),
                 "MDATRON-E0093",
                 "register-anti-pattern",
-                &format!("prose matches the listed '{register}' register anti-pattern"),
-                "matched",
-                m.as_str(),
+                // #165: the register name is adopter-derived (vocabulary.yaml) —
+                // it rides in a quoted region, not inline in the message.
+                "prose matches a listed register anti-pattern",
+                vec![
+                    QuotedRegion {
+                        label: "matched".into(),
+                        content: m.as_str().to_string(),
+                    },
+                    QuotedRegion {
+                        label: "register".into(),
+                        content: register.clone(),
+                    },
+                ],
             ));
         }
     }
@@ -374,13 +390,23 @@ pub fn check_file(
                             body_offset + line_start,
                             "MDATRON-E0094",
                             "numeric-claim-drift",
+                            // #165: the frontmatter field name is adopter-derived —
+                            // it rides in a quoted region, not inline in the message.
                             &format!(
-                                "prose claims {n} where the frontmatter field \
-                                 '{field}' holds {actual}; cite the field, \
-                                 never copy the value"
+                                "prose claims {n} where the referenced frontmatter \
+                                 field holds {actual}; cite the field, never copy \
+                                 the value"
                             ),
-                            "claim",
-                            line.trim(),
+                            vec![
+                                QuotedRegion {
+                                    label: "claim".into(),
+                                    content: line.trim().to_string(),
+                                },
+                                QuotedRegion {
+                                    label: "field".into(),
+                                    content: field.clone(),
+                                },
+                            ],
                         ));
                     }
                 }
@@ -493,8 +519,7 @@ fn prose_finding(
     code: &str,
     summary: &str,
     message: &str,
-    label: &str,
-    quoted: &str,
+    quoted: Vec<QuotedRegion>,
 ) -> Finding {
     let line = 1 + content[..offset.min(content.len())].matches('\n').count() as u32;
     Finding {
@@ -509,10 +534,7 @@ fn prose_finding(
             column: 0,
         },
         explain_ref: Some(code.to_string()),
-        quoted: vec![QuotedRegion {
-            label: label.into(),
-            content: quoted.into(),
-        }],
+        quoted,
     }
 }
 

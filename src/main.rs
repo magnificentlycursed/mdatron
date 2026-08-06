@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
-use mdatron::diagnostic::{Finding, Location, Severity};
+use mdatron::diagnostic::{Finding, Location, QuotedRegion, Severity};
 use mdatron::verify::{verify_incremental, verify_report, VerifyConfig, VerifyError};
 
 mod explain;
@@ -668,11 +668,29 @@ fn print_finding(f: &Finding) {
 /// through the same single-source-of-truth paths (format_tty / format_compact /
 /// JSON envelope). Per crosslink #13 SE/F5.
 fn pipeline_error_finding(e: &VerifyError) -> Finding {
+    // #165 marking discipline: the message is engine-authored per error kind; the
+    // full `Display` detail — which interpolates adopter pattern/rule ids, globs,
+    // file paths, and parser output (already root-relativized upstream) — rides in
+    // an escaped `quoted[]` region, so the agent-facing compact/tty renders can't
+    // be injected by a crafted id, glob, filename, or parser byte. (The JSON
+    // envelope's `pipeline_error.message` is serde-escaped independently.)
+    let kind: &str = match e {
+        VerifyError::Io { .. } => "an input could not be read during verification",
+        VerifyError::SchemaLoad { .. } => "a schema file failed to load",
+        VerifyError::PatternLoad { .. } => "a pattern file failed to load",
+        VerifyError::IndexBuild(_) => "a cross-file index failed to build",
+        VerifyError::ExprParse { .. } => "a pattern rule expression failed to parse",
+        VerifyError::Eval { .. } => "a pattern rule expression failed to evaluate",
+        VerifyError::Glob(_) => "a configured glob pattern is invalid",
+        VerifyError::Config(_) => "the run could not be configured",
+        VerifyError::Frontmatter { .. } => "a file's frontmatter failed to parse",
+        VerifyError::BoundExceeded { .. } => "a declared resource bound was exceeded",
+    };
     Finding {
         code: "MDATRON-E0080".into(),
         severity: Severity::Error,
         summary: "verify pipeline failed".into(),
-        message: e.to_string(),
+        message: kind.into(),
         help: None,
         location: Location {
             file: std::path::PathBuf::new(),
@@ -680,7 +698,10 @@ fn pipeline_error_finding(e: &VerifyError) -> Finding {
             column: 0,
         },
         explain_ref: None,
-        quoted: Vec::new(),
+        quoted: vec![QuotedRegion {
+            label: "detail".into(),
+            content: e.to_string(),
+        }],
     }
 }
 

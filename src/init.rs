@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use crate::confine::confine_lexically;
-use crate::diagnostic::{Finding, Location, Severity};
+use crate::diagnostic::{Finding, Location, QuotedRegion, Severity};
 
 /// The engine-default config, **seeded** at init and adopter-owned from then
 /// on. Its `file_globs` are the consumer-authored jurisdiction the verify
@@ -347,13 +347,11 @@ pub fn drift_findings(project_root: &Path, drifts: &[Drift]) -> Vec<Finding> {
             code: "MDATRON-E0060".into(),
             severity: Severity::Error,
             summary: "managed-manifest-drift".into(),
-            message: format!(
-                "managed file '{}' was modified after init (recorded {}, found {}); \
-                 restore it or re-init in a clean tree",
-                d.file,
-                short(&d.expected_sha256),
-                short(&d.actual_sha256),
-            ),
+            // #165: the managed file path + recorded sha are adopter-influenced —
+            // they ride in quoted regions, not inline in the engine message.
+            message: "a managed file was modified after init; restore it or \
+                      re-init in a clean tree"
+                .into(),
             help: Some(
                 "managed files are engine-owned; adopter data belongs in \
                  .mdatron/schemas/ or .mdatron/patterns/, outside the manifest"
@@ -365,18 +363,48 @@ pub fn drift_findings(project_root: &Path, drifts: &[Drift]) -> Vec<Finding> {
                 column: 0,
             },
             explain_ref: Some("MDATRON-E0060".into()),
-            quoted: Vec::new(),
+            quoted: vec![
+                QuotedRegion {
+                    label: "file".into(),
+                    content: d.file.clone(),
+                },
+                QuotedRegion {
+                    label: "recorded".into(),
+                    content: short(&d.expected_sha256).to_string(),
+                },
+                QuotedRegion {
+                    label: "found".into(),
+                    content: short(&d.actual_sha256).to_string(),
+                },
+            ],
         })
         .collect()
 }
 
 fn short(hash: &str) -> &str {
-    &hash[..hash.len().min(12)]
+    // Char-boundary-safe truncation to at most 12 chars (#165 review): a manifest
+    // sha field is not validated as hex, so a multibyte char could straddle byte
+    // 12 and panic a naive byte slice.
+    match hash.char_indices().nth(12) {
+        Some((idx, _)) => &hash[..idx],
+        None => hash,
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // #165 review: `short` truncates to at most 12 CHARS, char-boundary-safe — an
+    // adopter/manifest sha field is not validated as hex, so a multibyte char
+    // straddling byte 12 must not panic a naive byte slice.
+    #[test]
+    fn short_truncates_char_boundary_safe() {
+        assert_eq!(short("0123456789abcdef"), "0123456789ab"); // 12 of 16 ascii
+        assert_eq!(short("abc"), "abc"); // shorter than 12
+                                         // 'é' is two bytes, straddling byte 12 → a naive &s[..12] would panic.
+        assert_eq!(short("0123456789aé0"), "0123456789aé");
+    }
 
     fn temp_root(label: &str) -> std::path::PathBuf {
         let nanos = std::time::SystemTime::now()

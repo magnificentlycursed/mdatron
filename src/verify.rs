@@ -3652,7 +3652,14 @@ pattern:
         let findings = verify(&cfg).unwrap();
         assert_eq!(codes_of(&findings, "MDATRON-E0093"), 1, "got {findings:?}");
         let f = findings.iter().find(|f| f.code == "MDATRON-E0093").unwrap();
-        assert!(f.message.contains("hedged-absolute"));
+        // #165: the register name is adopter-derived — it rides in a quoted
+        // region, never inline in the engine-authored message.
+        assert!(
+            !f.message.contains("hedged-absolute"),
+            "register name must not echo into the message: {:?}",
+            f.message
+        );
+        assert!(f.quoted.iter().any(|q| q.content == "hedged-absolute"));
         assert!(f.quoted.iter().any(|q| q.content.contains("very unique")));
     }
 
@@ -6306,18 +6313,23 @@ pattern:
         );
     }
 
-    // #165 marking-discipline sweep — the highest-severity site: the frontmatter
-    // parser's detail is derived from the governed file's own UNTRUSTED bytes (the
-    // primary trust boundary), so it must ride in an escaped quoted region; a
-    // control byte must never reach the engine-authored E0001 message.
+    // #165 marking-discipline sweep: an adopter-controlled token from the governed
+    // file's frontmatter must not echo into the engine-authored E0001 message.
+    // serde_yaml_ng's parse errors are POSITIONAL (they never echo raw bytes), so
+    // the one channel that actually carries an adopter value into `e.to_string()`
+    // is the duplicate-key error, which names the key — the seed used here (a raw
+    // control byte can't reach the message through this parser, so a byte-only
+    // assertion would be vacuous; roast round-1 R2). The detail rides in a quoted
+    // region.
     #[test]
-    fn e0001_message_never_carries_raw_frontmatter_bytes() {
+    fn e0001_message_is_engine_authored_not_parser_echo() {
         let proj = TempProject::new("e0001-inject");
         proj.write(".mdatron/schemas/.keep.json", "{}");
-        // Malformed frontmatter (unterminated quote) embedding ESC + a newline.
+        // Duplicate frontmatter key: serde_yaml_ng errors `duplicate entry with
+        // key "zqxmarker"`, so the OLD `message: e.to_string()` echoed the token.
         proj.write(
             "broken.md",
-            "---\nschema_class: \"x\u{1b}[31m\n---\n# body\n",
+            "---\nzqxmarker: 1\nzqxmarker: 2\n---\n# body\n",
         );
         let cfg = VerifyConfig::new(&proj.0);
         let findings = verify(&cfg).expect("a parse failure emits a finding, not an error");
@@ -6326,8 +6338,13 @@ pattern:
             .find(|f| f.code == "MDATRON-E0001")
             .unwrap_or_else(|| panic!("expected E0001; got {findings:?}"));
         assert!(
+            !f.message.contains("zqxmarker"),
+            "the adopter frontmatter token must not echo into the message: {:?}",
+            f.message
+        );
+        assert!(
             !f.message.chars().any(char::is_control),
-            "no raw control byte may reach the engine-authored message: {:?}",
+            "engine message carries no control byte: {:?}",
             f.message
         );
         assert!(
