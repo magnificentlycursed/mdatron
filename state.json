@@ -1,6 +1,6 @@
 {
   "next_display_id": 167,
-  "next_comment_id": 445,
+  "next_comment_id": 446,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -1381,7 +1381,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-03T23:24:17.460958Z",
-      "updated_at": "2026-08-03T23:24:43.481639Z",
+      "updated_at": "2026-08-06T15:58:44.049359Z",
       "labels": [
         "security"
       ],
@@ -1394,6 +1394,15 @@
           "kind": "plan",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAROaMC5XrTuMXBHAaUR2Kxxx2WC9DVfJm9e4hY1FA0dBiXKOFMugYZ1ipcDYexLY09ajEYhvb/s8NKR+zWxD+AQ=="
+        },
+        "66f57c98-6ecc-4846-8732-412d493a3156": {
+          "display_id": 445,
+          "author": "79Ig",
+          "content": "2c EXIT-GATE: commit 1315926 on feature/165-marking-discipline-sweep. E0001/E0021/W0041 messages fully engine-authored; adopter values moved to escaped quoted[] regions (E0001 parse error; E0021 undeclared-property+schema; W0041 naming grammar). 470 lib green, clippy/fmt/self-validation clean. Grounded in schematron-lineage-audit (diagnostic/message decoupling) + sarif-envelope-audit (quoted[]->region.snippet) per the operator's architecture-references direction. PHASE-3 COMPOSITION (reviewer cold-session, worktree-free read-only): 2 cold reviewers, adversarial-pair separated — R1 Security/injection-completeness (any remaining inline-adopter surface across src/), R2 SE+QE correctness + test-vacuity (do fixes preserve diagnostic value; are the 3 regression tests non-vacuous). Ceiling 2 agents/round, iterative rounds-to-MVR.",
+          "created_at": "2026-08-06T15:58:44.024307Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAT5iCR5nS/wjSnVXQZwChv18asJ6CgHmHy5lYPiXbI72JhCzejZ1SnNxikduQ5krBzx/np34IQbQZolZqLUNxDA=="
         }
       }
     },
@@ -7049,8 +7058,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-06T15:41:31.467690Z",
+    "timestamp": "2026-08-06T15:58:44.049359Z",
     "agent_id": "79Ig",
-    "agent_seq": 853
+    "agent_seq": 854
   }
 }
