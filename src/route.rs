@@ -61,6 +61,14 @@ struct RawEntry {
     /// heading. Default off, so link-checking is an explicit choice.
     #[serde(default)]
     links: bool,
+    /// Opt this route's files into ROOT-RELATIVE link resolution (GH #37): a
+    /// leading-slash link `/docs/x.md` resolves against the project root
+    /// instead of being refused as an absolute path (`E0010`). Still confined —
+    /// a `..` climbing above the root is `E0011`, a symlinked component
+    /// `E0012`. Off by default: document-relative resolution is the CommonMark
+    /// norm, and root-relative is a per-consumer convention. Requires `links`.
+    #[serde(default)]
+    link_root: bool,
     /// Marker-line reference rules (#147, vsdd GH#20 P3): a body line matching
     /// `pattern` names a reference whose captured `<name>` must resolve to an
     /// existing element in a named target doc. Empty by default, so marker
@@ -122,6 +130,7 @@ pub struct Route {
     pub naming: Option<regex_lite::Regex>,
     pub citations: bool,
     pub links: bool,
+    pub link_root: bool,
     pub marker_rules: Vec<MarkerRule>,
     pub section_rules: Vec<crate::section::Rule>,
 }
@@ -291,6 +300,7 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
             naming,
             citations: entry.citations,
             links: entry.links,
+            link_root: entry.link_root,
             marker_rules,
             section_rules,
         });
@@ -388,6 +398,15 @@ pub fn citations_enabled(routes: &[Route], rel: &Path) -> bool {
 /// True when any route claiming `rel` opts it into body-link verification (#145).
 pub fn links_enabled(routes: &[Route], rel: &Path) -> bool {
     routes.iter().any(|r| r.links && r.files.matches_path(rel))
+}
+
+/// True when a link-checked route claiming `rel` also enables root-relative
+/// link resolution (GH #37). Gated on `links` too, so `link_root` without
+/// `links` is inert (the flag only affects how the link check resolves).
+pub fn link_root_enabled(routes: &[Route], rel: &Path) -> bool {
+    routes
+        .iter()
+        .any(|r| r.links && r.link_root && r.files.matches_path(rel))
 }
 
 /// The marker-line reference rules active for `rel` — every rule on every route

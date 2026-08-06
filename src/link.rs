@@ -24,6 +24,16 @@
 //! (`MDATRON-E0010`) and a symlinked component refused (`MDATRON-E0012`), so the
 //! family-wide confinement contract still holds on every target that is opened.
 //!
+//! **Optional root-relative mode** (`link_root: true` on a route, GH #37): a
+//! leading-slash link `/docs/x.md` resolves from the project ROOT instead of
+//! being refused `E0010` — the opt-in analog of lychee's `--root-dir`
+//! ([[lychee-link-family-audit]] item 5), for static-site corpora that author
+//! links that way. Confinement is unchanged: a `..` climbing above the root is
+//! still `E0011`, a symlinked component `E0012`. Document-relative remains the
+//! default (lychee's default too); root-relative is a per-consumer convention.
+//! Destinations are **percent-decoded** before resolution (`my%20doc.md` →
+//! `my doc.md`), all-or-nothing so a malformed escape never corrupts a path.
+//!
 //! Findings: a link whose in-tree target does not exist is `MDATRON-E0110`
 //! (dead-link-target); an existing markdown target (or the same document) whose
 //! `#fragment` matches no heading is `MDATRON-E0111` (dead-anchor). Anchors are
@@ -37,10 +47,8 @@
 //! Heading anchors cover ATX **and setext** headings, GitHub duplicate-heading
 //! `-N` disambiguation, and explicit HTML anchors (`markup::heading_slugs`).
 //!
-//! Deferred: percent-decoding of destinations, and an optional root-relative
-//! `root:` resolution mode (`/docs/x.md`, tracked separately). External links
-//! (any URL scheme, or protocol-relative `//host`) are out of scope by design —
-//! the engine does not reach the network.
+//! External links (any URL scheme, or protocol-relative `//host`) are out of
+//! scope by design — the engine does not reach the network.
 
 use std::collections::{HashMap, HashSet};
 use std::path::{Component, Path, PathBuf};
@@ -56,7 +64,12 @@ use crate::snapshot::{Captured, Snapshot};
 /// the check-time target set cannot diverge from the captured set. External
 /// links, same-document fragments, and confinement violations resolve to no
 /// target and are not returned.
-pub(crate) fn link_targets(rel: &Path, content: &str, body_offset: usize) -> Vec<ConfinedPath> {
+pub(crate) fn link_targets(
+    rel: &Path,
+    content: &str,
+    body_offset: usize,
+    root_relative: bool,
+) -> Vec<ConfinedPath> {
     let base_dir = rel.parent().unwrap_or_else(|| Path::new(""));
     let body = &content[body_offset..];
     let mut out = Vec::new();
@@ -68,8 +81,13 @@ pub(crate) fn link_targets(rel: &Path, content: &str, body_offset: usize) -> Vec
         if path_part.is_empty() {
             continue;
         }
-        if let Ok(confined) = resolve_target(base_dir, path_part) {
-            out.push(confined);
+        let path_part = percent_decode(path_part);
+        if let Ok(confined) = resolve_target(base_dir, path_part.as_ref(), root_relative) {
+            // Skip a bare-root `/` (empty resolved path): the check skips it too
+            // (GH #37), so capturing it would be a discovery/check mismatch.
+            if !confined.as_path().as_os_str().is_empty() {
+                out.push(confined);
+            }
         }
     }
     out
@@ -82,12 +100,14 @@ pub(crate) fn link_targets(rel: &Path, content: &str, body_offset: usize) -> Vec
 /// mirrors [`crate::cite::check_file`]. Link discovery is a single CommonMark
 /// parse ([`body_links`]) covering inline, reference-style, and image links, so
 /// a destination inside a code span or fence is excluded structurally.
+#[allow(clippy::too_many_arguments)]
 pub fn check_file(
     snapshot: &Snapshot,
     project_root: &Path,
     path: &Path,
     content: &str,
     body_offset: usize,
+    root_relative: bool,
     findings: &mut Vec<Finding>,
 ) {
     // The containing file's directory, root-relative — the base every
@@ -122,6 +142,7 @@ pub fn check_file(
             base_dir,
             &link.dest,
             &own_slugs,
+            root_relative,
             &mut target_slugs,
             findings,
         );
@@ -137,6 +158,7 @@ fn resolve_link(
     base_dir: &Path,
     dest: &str,
     own_slugs: &HashSet<String>,
+    root_relative: bool,
     target_slugs: &mut HashMap<PathBuf, Option<HashSet<String>>>,
     findings: &mut Vec<Finding>,
 ) {
@@ -152,7 +174,11 @@ fn resolve_link(
     // file's own headings. A bare `#` (top of page) is always valid.
     if path_part.is_empty() {
         if let Some(frag) = anchor {
-            if !frag.is_empty() && !own_slugs.contains(&slugify(frag)) {
+            // GitHub percent-decodes the fragment before slug matching, so
+            // `#caf%C3%A9` resolves the "Café" heading (GH #37, the fragment
+            // twin of the path percent-decode).
+            let frag = percent_decode(frag);
+            if !frag.is_empty() && !own_slugs.contains(&slugify(&frag)) {
                 findings.push(link_finding(
                     path,
                     content,
@@ -169,8 +195,11 @@ fn resolve_link(
         return;
     }
 
-    // Document-relative confinement decided on the RESOLVED path.
-    let confined = match resolve_target(base_dir, path_part) {
+    // Document-relative confinement decided on the RESOLVED path. Percent-decode
+    // first (GH #37): `my%20doc.md` resolves to `my doc.md` rather than being a
+    // literal E0110 false positive. The finding still quotes the ORIGINAL `dest`.
+    let confined = match resolve_target(base_dir, percent_decode(path_part).as_ref(), root_relative)
+    {
         Ok(c) => c,
         Err(TargetViolation::Absolute) => {
             findings.push(link_finding(
@@ -200,6 +229,14 @@ fn resolve_link(
         }
     };
 
+    // A bare root-relative `/` (GH #37) resolves to the empty path — the
+    // project root DIRECTORY, not a file. It is not a document-link target, so
+    // it is out of the family's scope rather than a dead link (reporting E0110
+    // "does not exist" would be wrong: the root exists).
+    if confined.as_path().as_os_str().is_empty() {
+        return;
+    }
+
     // The target's capture-time state (#103): `link_targets` is the same
     // extraction discovery ran, so a confined target is always captured; a
     // miss is an engine defect and reports as one (the None arm), never a
@@ -209,6 +246,8 @@ fn resolve_link(
             // Target exists. If the link carries a fragment and the target is a
             // markdown file, the fragment must match one of its headings.
             let Some(frag) = anchor else { return };
+            // GitHub percent-decodes the fragment before slug matching (GH #37).
+            let frag = percent_decode(frag);
             if frag.is_empty() || !is_markdown(confined.as_path()) {
                 return;
             }
@@ -220,7 +259,7 @@ fn resolve_link(
                 target_slugs.insert(key.clone(), slugs);
             }
             if let Some(Some(slugs)) = target_slugs.get(&key) {
-                if !slugs.contains(&slugify(frag)) {
+                if !slugs.contains(&slugify(&frag)) {
                     findings.push(link_finding(
                         path,
                         content,
@@ -326,6 +365,7 @@ enum TargetViolation {
 fn resolve_target(
     base_dir: &Path,
     path_part: &str,
+    root_relative: bool,
 ) -> Result<crate::confine::ConfinedPath, TargetViolation> {
     // Seed the stack with the containing directory's components (all Normal by
     // construction — it is a walked governed path).
@@ -339,7 +379,19 @@ fn resolve_target(
 
     for component in Path::new(path_part).components() {
         match component {
-            Component::Prefix(_) | Component::RootDir => return Err(TargetViolation::Absolute),
+            // A drive/UNC prefix is always absolute — root-relative mode does
+            // not admit it.
+            Component::Prefix(_) => return Err(TargetViolation::Absolute),
+            // A leading `/`: document-relative refuses it (E0010); root-relative
+            // (GH #37) resolves it from the project root — discard the base
+            // directory and start the stack empty, still fully confined.
+            Component::RootDir => {
+                if root_relative {
+                    stack.clear();
+                } else {
+                    return Err(TargetViolation::Absolute);
+                }
+            }
             Component::CurDir => {}
             Component::ParentDir => {
                 // Pop within the tree; popping past the root is an escape.
@@ -359,6 +411,52 @@ fn resolve_target(
         resolved.push(c);
     }
     confine_lexically(&resolved).map_err(|_| TargetViolation::Escapes)
+}
+
+/// Percent-decode a link path component (GH #37): `my%20doc.md` → `my doc.md`.
+///
+/// **All-or-nothing per destination** — if any `%` sequence is malformed (not
+/// followed by two hex digits) or the decoded bytes are not valid UTF-8, the
+/// original literal is returned unchanged. A link is therefore never resolved
+/// to a corrupted path, so decoding can only *remove* a false positive, never
+/// introduce a false resolution. Applied AFTER fragment splitting (RFC 3986:
+/// the fragment delimiter is a literal `#`; an encoded `%23` is path content).
+fn percent_decode(s: &str) -> std::borrow::Cow<'_, str> {
+    if !s.contains('%') {
+        return std::borrow::Cow::Borrowed(s);
+    }
+    let hex = |b: u8| match b {
+        b'0'..=b'9' => Some(b - b'0'),
+        b'a'..=b'f' => Some(b - b'a' + 10),
+        b'A'..=b'F' => Some(b - b'A' + 10),
+        _ => None,
+    };
+    let bytes = s.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%' {
+            match (
+                (i + 3 <= bytes.len()).then(|| hex(bytes[i + 1])).flatten(),
+                (i + 3 <= bytes.len()).then(|| hex(bytes[i + 2])).flatten(),
+            ) {
+                (Some(hi), Some(lo)) => {
+                    out.push(hi * 16 + lo);
+                    i += 3;
+                    continue;
+                }
+                // Malformed `%` sequence: leave the whole destination literal.
+                _ => return std::borrow::Cow::Borrowed(s),
+            }
+        }
+        out.push(bytes[i]);
+        i += 1;
+    }
+    match String::from_utf8(out) {
+        Ok(decoded) => std::borrow::Cow::Owned(decoded),
+        // Decoded bytes are not UTF-8: keep the literal rather than corrupt it.
+        Err(_) => std::borrow::Cow::Borrowed(s),
+    }
 }
 
 /// Split a destination into its path and optional `#fragment`. The first `#`
@@ -467,30 +565,84 @@ mod tests {
     }
 
     #[test]
+    fn percent_decode_decodes_valid_and_preserves_invalid() {
+        assert_eq!(percent_decode("my%20doc.md"), "my doc.md");
+        assert_eq!(percent_decode("a%2Fb.md"), "a/b.md"); // encoded slash
+        assert_eq!(percent_decode("plain.md"), "plain.md"); // no `%` -> borrowed
+                                                            // Malformed sequences stay literal (no corruption, no false resolution).
+        assert_eq!(percent_decode("bad%2.md"), "bad%2.md"); // one hex digit
+        assert_eq!(percent_decode("bad%zz.md"), "bad%zz.md"); // non-hex
+        assert_eq!(percent_decode("trailing%"), "trailing%"); // truncated
+                                                              // Non-UTF8 decode stays literal.
+        assert_eq!(percent_decode("%ff%fe"), "%ff%fe");
+        // A real UTF-8 multibyte sequence decodes.
+        assert_eq!(percent_decode("caf%C3%A9.md"), "café.md");
+    }
+
+    #[test]
     fn resolve_target_is_document_relative() {
         // `docs` + `api.md` -> `docs/api.md`
         assert_eq!(
-            resolve_target(Path::new("docs"), "api.md")
+            resolve_target(Path::new("docs"), "api.md", false)
                 .unwrap()
                 .as_path(),
             Path::new("docs/api.md")
         );
         // `docs` + `../README.md` -> `README.md` (in-tree)
         assert_eq!(
-            resolve_target(Path::new("docs"), "../README.md")
+            resolve_target(Path::new("docs"), "../README.md", false)
                 .unwrap()
                 .as_path(),
             Path::new("README.md")
         );
         // climbing above the root escapes
         assert!(matches!(
-            resolve_target(Path::new("docs"), "../../outside.md"),
+            resolve_target(Path::new("docs"), "../../outside.md", false),
             Err(TargetViolation::Escapes)
         ));
         // absolute is refused distinctly
         assert!(matches!(
-            resolve_target(Path::new("docs"), "/etc/passwd"),
+            resolve_target(Path::new("docs"), "/etc/passwd", false),
             Err(TargetViolation::Absolute)
         ));
+    }
+
+    // GH #37 (lychee-link-family-audit item 5): root-relative mode resolves a
+    // leading-slash link from the project root while preserving confinement —
+    // the opt-in analog of lychee's `--root-dir`. mdatron adds the confinement
+    // layer the mature tools lack.
+    #[test]
+    fn resolve_target_root_relative_mode() {
+        // `/docs/x.md` from a file in `notes/` -> `docs/x.md` (base ignored).
+        assert_eq!(
+            resolve_target(Path::new("notes"), "/docs/x.md", true)
+                .unwrap()
+                .as_path(),
+            Path::new("docs/x.md")
+        );
+        // A `..` immediately climbing above the root is still an escape.
+        assert!(matches!(
+            resolve_target(Path::new("docs"), "/../secret.md", true),
+            Err(TargetViolation::Escapes)
+        ));
+        // A `..` that stays in-tree collapses normally.
+        assert_eq!(
+            resolve_target(Path::new("docs"), "/a/../b.md", true)
+                .unwrap()
+                .as_path(),
+            Path::new("b.md")
+        );
+        // Without the flag the SAME leading-slash path is refused (default).
+        assert!(matches!(
+            resolve_target(Path::new("docs"), "/docs/x.md", false),
+            Err(TargetViolation::Absolute)
+        ));
+        // A document-relative path is unaffected by the flag.
+        assert_eq!(
+            resolve_target(Path::new("notes"), "peer.md", true)
+                .unwrap()
+                .as_path(),
+            Path::new("notes/peer.md")
+        );
     }
 }
