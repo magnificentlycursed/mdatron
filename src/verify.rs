@@ -845,7 +845,12 @@ fn run(
                     ts.extend(crate::cite::cited_targets(content, body_offset));
                 }
                 if crate::route::links_enabled(routes, rel) {
-                    ts.extend(crate::link::link_targets(rel, content, body_offset));
+                    ts.extend(crate::link::link_targets(
+                        rel,
+                        content,
+                        body_offset,
+                        crate::route::link_root_enabled(routes, rel),
+                    ));
                 }
                 ts
             };
@@ -889,12 +894,14 @@ fn run(
         }
         let mut cite_enabled = false;
         let mut link_enabled = false;
+        let mut link_root = false;
         let mut marker_rules: Vec<&crate::route::MarkerRule> = Vec::new();
         let mut section_rules: Vec<&crate::section::Rule> = Vec::new();
         if let Some(routes) = &routes {
             crate::route::check_file(routes, rel, path, &mut findings);
             cite_enabled = crate::route::citations_enabled(routes, rel);
             link_enabled = crate::route::links_enabled(routes, rel);
+            link_root = crate::route::link_root_enabled(routes, rel);
             marker_rules = crate::route::marker_rules_for(routes, rel);
             section_rules = crate::route::section_rules_for(routes, rel);
         }
@@ -946,6 +953,7 @@ fn run(
             &require,
             cite_enabled,
             link_enabled,
+            link_root,
             &marker_rules,
             catalogs.as_deref().unwrap_or(&[]),
             &section_rules,
@@ -1924,6 +1932,7 @@ fn verify_file(
     require_frontmatter: &[glob::Pattern],
     cite_enabled: bool,
     link_enabled: bool,
+    link_root: bool,
     marker_rules: &[&crate::route::MarkerRule],
     code_catalogs: &[crate::codecat::CodeCatalog],
     section_rules: &[&crate::section::Rule],
@@ -1978,7 +1987,15 @@ fn verify_file(
                 crate::cite::check_file(snapshot, path, content, 0, findings);
             }
             if link_enabled {
-                crate::link::check_file(snapshot, project_root, path, content, 0, findings);
+                crate::link::check_file(
+                    snapshot,
+                    project_root,
+                    path,
+                    content,
+                    0,
+                    link_root,
+                    findings,
+                );
             }
             crate::marker::check_file(snapshot, path, content, 0, marker_rules, findings);
             crate::codecat::check_file(code_catalogs, path, content, 0, findings);
@@ -2032,7 +2049,15 @@ fn verify_file(
     }
     if link_enabled {
         let body_offset = content.len() - body_len;
-        crate::link::check_file(snapshot, project_root, path, content, body_offset, findings);
+        crate::link::check_file(
+            snapshot,
+            project_root,
+            path,
+            content,
+            body_offset,
+            link_root,
+            findings,
+        );
     }
     {
         let body_offset = content.len() - body_len;
@@ -4114,6 +4139,173 @@ pattern:
         fam
     }
 
+    // GH #37: with `link_root: true` on the route, a leading-slash link
+    // resolves from the project root (existing target clean; missing flags),
+    // and confinement still holds. Without the flag it stays E0010.
+    #[test]
+    fn root_relative_link_mode_resolves_from_project_root() {
+        let proj = TempProject::new("link-root");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(".mdatron/config.yaml", "file_globs:\n  - \"**/*.md\"\n");
+        proj.write("GOVERNING.md", "# gov\n");
+        proj.write(
+            ".mdatron/routes.yaml",
+            "routes:\n- files: \"notes/**/*.md\"\n  governed_by: GOVERNING.md\n  links: true\n  link_root: true\n",
+        );
+        proj.write("docs/real.md", "# real\n");
+        // A note deep in the tree links root-relative to /docs/real.md (exists)
+        // and /docs/gone.md (missing).
+        proj.write(
+            "notes/deep/n.md",
+            "---\nschema_class: phase-primer\nphase: phase-1a\nrelevant_domains: [se]\n---\nSee [ok](/docs/real.md) and [bad](/docs/gone.md).\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        let dead: Vec<&Finding> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0110")
+            .collect();
+        assert_eq!(
+            dead.len(),
+            1,
+            "only the missing root-relative target; got {findings:?}"
+        );
+        assert!(dead[0]
+            .quoted
+            .iter()
+            .any(|q| q.content.contains("/docs/gone.md")));
+        // No E0010: the leading slash is resolved, not refused.
+        assert_eq!(codes_of(&findings, "MDATRON-E0010"), 0, "{findings:?}");
+    }
+
+    // GH #37: WITHOUT link_root, a leading-slash link is refused E0010 (default
+    // document-relative posture, matching lychee's default).
+    #[test]
+    fn leading_slash_link_without_root_mode_is_e0010() {
+        let proj = link_project("link-slash-default", "See [x](/docs/target.md).\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert_eq!(codes_of(&findings, "MDATRON-E0010"), 1, "{findings:?}");
+    }
+
+    // GH #37 phase-3 F-1: `link_root: true` WITHOUT `links: true` is inert —
+    // the link family does no work at all, so a leading-slash link produces no
+    // link-family finding (the flag only affects HOW the link check resolves,
+    // never whether it runs).
+    #[test]
+    fn link_root_without_links_is_inert() {
+        let proj = TempProject::new("link-root-inert");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write("GOVERNING.md", "# gov\n");
+        proj.write(
+            ".mdatron/routes.yaml",
+            "routes:\n- files: \"docs/**/*.md\"\n  governed_by: GOVERNING.md\n  link_root: true\n",
+        );
+        proj.write(
+            "docs/d.md",
+            "---\nschema_class: phase-primer\nphase: phase-1a\nrelevant_domains: [se]\n---\nSee [x](/docs/gone.md) and [y](also-gone.md).\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        for code in ["MDATRON-E0110", "MDATRON-E0111", "MDATRON-E0010"] {
+            assert_eq!(
+                codes_of(&findings, code),
+                0,
+                "{code} should not fire; got {findings:?}"
+            );
+        }
+    }
+
+    // GH #37 phase-3 F-2: a percent-encoded `#fragment` resolves the heading
+    // (GitHub decodes fragments) — the fragment twin of the path decode.
+    #[test]
+    fn percent_encoded_fragment_resolves_heading() {
+        let proj = link_project("link-frag-pct", "See [x](target.md#caf%C3%A9).\n");
+        // target.md's heading "Café" -> slug "café".
+        proj.write("docs/target.md", "# Café\n\nbody\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert_eq!(
+            codes_of(&findings, "MDATRON-E0111"),
+            0,
+            "the decoded fragment matches the heading; got {findings:?}"
+        );
+    }
+
+    // GH #37 phase-3 F-3: a bare-root `/` link under root mode is out of scope
+    // (the project root is a directory, not a document) — not a dead-link E0110.
+    #[test]
+    fn bare_root_link_under_root_mode_is_not_dead_link() {
+        let proj = TempProject::new("link-bare-root");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write("GOVERNING.md", "# gov\n");
+        proj.write(
+            ".mdatron/routes.yaml",
+            "routes:\n- files: \"docs/**/*.md\"\n  governed_by: GOVERNING.md\n  links: true\n  link_root: true\n",
+        );
+        proj.write(
+            "docs/d.md",
+            "---\nschema_class: phase-primer\nphase: phase-1a\nrelevant_domains: [se]\n---\nSee [root](/).\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert_eq!(codes_of(&findings, "MDATRON-E0110"), 0, "{findings:?}");
+        assert_eq!(
+            codes_of(&findings, "MDATRON-E0080"),
+            0,
+            "no engine-defect miss either"
+        );
+    }
+
+    // GH #37: a percent-encoded link to a real file with a space in its name
+    // resolves (was a latent E0110 false positive on the literal `%20`), while a
+    // percent-encoded link to a genuinely-missing file still flags.
+    #[test]
+    fn percent_encoded_link_resolves_against_decoded_path() {
+        let proj = link_project(
+            "link-pct",
+            "See [spaced](my%20doc.md) and [gone](ab%20sent.md).\n",
+        );
+        proj.write("docs/my doc.md", "# spaced target\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        let dead: Vec<&Finding> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0110")
+            .collect();
+        assert_eq!(
+            dead.len(),
+            1,
+            "only the truly-missing target flags; got {findings:?}"
+        );
+        // The finding quotes the ORIGINAL destination, not the decoded form.
+        assert!(
+            dead[0]
+                .quoted
+                .iter()
+                .any(|q| q.content.contains("ab%20sent.md")),
+            "the original encoded dest is quoted: {:?}",
+            dead[0].quoted
+        );
+    }
+
     // RED GATE (#145): a body link to a missing in-tree file is E0110.
     #[test]
     fn dead_link_target_rejected() {
@@ -5958,6 +6150,7 @@ pattern:
             Path::new("docs/a.md"),
             "See [t](t2.md#a).\n",
             0,
+            false,
             &mut findings,
         );
         assert_eq!(codes_of(&findings, "MDATRON-E0080"), 1, "{findings:?}");
