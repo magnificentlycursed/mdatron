@@ -1,5 +1,5 @@
 {
-  "next_display_id": 168,
+  "next_display_id": 169,
   "next_comment_id": 449,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -122,6 +122,7 @@
     "b996b1ec-a892-47dc-9569-7b00b64bdeec": 118,
     "b99bb9e4-ae94-4219-9d15-490769f6b4d0": 147,
     "bb1578a3-5e79-4e29-a2fb-4c6e1c88eb7f": 72,
+    "bb606be0-b0ed-44b7-b34f-dfb31aabeede": 168,
     "bc81359e-bf75-45ec-896a-418745373491": 56,
     "bcae5adb-91b0-47d3-a95f-28dbcfb86e24": 17,
     "bec6b353-b08d-42fd-a2ed-b2fdad239134": 2,
@@ -4856,6 +4857,16 @@
         "security"
       ]
     },
+    "bb606be0-b0ed-44b7-b34f-dfb31aabeede": {
+      "uuid": "bb606be0-b0ed-44b7-b34f-dfb31aabeede",
+      "display_id": 168,
+      "title": "interpolate_message casts UTF-8 bytes to char (verify.rs:2398) — mojibake + raw C1 in adopter rule-message templates",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-08-06T23:06:37.597736Z",
+      "updated_at": "2026-08-06T23:06:37.597736Z"
+    },
     "bc81359e-bf75-45ec-896a-418745373491": {
       "uuid": "bc81359e-bf75-45ec-896a-418745373491",
       "display_id": 56,
@@ -7107,8 +7118,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-06T22:37:24.176627Z",
+    "timestamp": "2026-08-06T23:06:37.597736Z",
     "agent_id": "79Ig",
-    "agent_seq": 861
+    "agent_seq": 862
   }
 }
