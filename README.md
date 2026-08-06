@@ -251,6 +251,7 @@ routes:
   naming: "^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9-]+\\.md$"   # optional
   citations: true                                        # optional, see below
   links: true                                            # optional, see below
+  link_root: true                                        # optional: resolve /root-relative links (needs links)
 ```
 
 With routes supplied: an unclaimed walked file blocks (`E0030`), a route
@@ -314,8 +315,11 @@ ATX + setext headings, duplicate-heading `-N` suffixes, and explicit HTML
 anchors). Targets resolve **document-relative** (as GitHub renders them):
 `[api](api.md)` from `docs/guide.md` is `docs/api.md`, and a one-level
 `../README.md` that stays in-tree is fine — only a target that escapes the
-governed tree is refused (`E0010`/`E0011`/`E0012`). External links (any URL
-scheme) are left alone.
+governed tree is refused (`E0010`/`E0011`/`E0012`). Destinations are
+percent-decoded first (`my%20doc.md` → `my doc.md`), and `link_root: true`
+opts a route into resolving a leading-slash `/docs/x.md` from the project root
+(still confined) for static-site corpora that author links that way. External
+links (any URL scheme) are left alone.
 
 **Markers** — data-less; give a route one or more `marker_rules` and each body
 line matching a rule's `pattern` names a reference whose captured `<name>` must
