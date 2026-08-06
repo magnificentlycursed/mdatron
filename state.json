@@ -1,6 +1,6 @@
 {
   "next_display_id": 167,
-  "next_comment_id": 446,
+  "next_comment_id": 447,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -1381,7 +1381,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-03T23:24:17.460958Z",
-      "updated_at": "2026-08-06T15:58:44.049359Z",
+      "updated_at": "2026-08-06T16:10:16.670131Z",
       "labels": [
         "security"
       ],
@@ -1394,6 +1394,15 @@
           "kind": "plan",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAROaMC5XrTuMXBHAaUR2Kxxx2WC9DVfJm9e4hY1FA0dBiXKOFMugYZ1ipcDYexLY09ajEYhvb/s8NKR+zWxD+AQ=="
+        },
+        "510b8235-2f6f-4b4e-8ab2-30bbe0bbcd65": {
+          "display_id": 446,
+          "author": "79Ig",
+          "content": "PHASE-3 ROUND 1 (2 cold reviewers) — NOT MVR, real findings; the 'last three constructors' claim was FALSE. R1 (injection-completeness): BLOCKER E0080 pipeline_error_finding (main.rs, message: e.to_string() over VerifyError::Display = adopter pattern/rule ids + globs + paths + parser detail, rendered unescaped in --compact) — broadest surface, un-swept; BLOCKER E0121 section-ids-not-disjoint (section.rs, inlines governed-body-captured ids + section names); SHOULD-FIX E0120/E0093/E0094 (adopter identifiers inline); NIT E0061/E0060 (+ a real short() byte-slice panic on a multibyte sha at byte 12). R1 verified the 3 fixed constructors clean + cleared E0022/E0032/E0010/E0011/E0003/E0050. R2 (test-vacuity): SHOULD-FIX the e0001 regression test is VACUOUS (serde_yaml_ng errors are positional, never echo raw bytes; hand-revert still passes) — remedy: duplicate-key input echoes the adopter key, assert !message.contains(marker); NIT the E0001 'highest-severity' framing is inverted (not an active ANSI vector; info-hygiene/defense-in-depth). ROUND 2: fix all + re-scope the issue to the exhaustive sweep it always called for, then re-roast.",
+          "created_at": "2026-08-06T16:10:16.649849Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA1inoBcc6LZLyhtOERg1MQdkOuR/aIEAgpOg84MD6c2wax3LuyF6z14lORGYbP/GbSMjSZ6bA/4a7yE/ZaKakAg=="
         },
         "66f57c98-6ecc-4846-8732-412d493a3156": {
           "display_id": 445,
@@ -7058,8 +7067,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-06T15:58:44.049359Z",
+    "timestamp": "2026-08-06T16:10:16.670131Z",
     "agent_id": "79Ig",
-    "agent_seq": 854
+    "agent_seq": 855
   }
 }
