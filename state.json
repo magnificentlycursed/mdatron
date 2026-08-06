@@ -1,5 +1,5 @@
 {
-  "next_display_id": 167,
+  "next_display_id": 168,
   "next_comment_id": 448,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -125,6 +125,7 @@
     "bc81359e-bf75-45ec-896a-418745373491": 56,
     "bcae5adb-91b0-47d3-a95f-28dbcfb86e24": 17,
     "bec6b353-b08d-42fd-a2ed-b2fdad239134": 2,
+    "c05af961-4252-465a-a751-d6ff68d99efa": 167,
     "c07826cb-7293-4bec-9f53-3c530fe1decf": 13,
     "c0c1830e-4e87-4ae9-b8fe-0a7d8701f1be": 7,
     "c1771947-9855-4b6e-aca7-b6e8d5d3000a": 139,
@@ -5030,6 +5031,16 @@
         }
       }
     },
+    "c05af961-4252-465a-a751-d6ff68d99efa": {
+      "uuid": "c05af961-4252-465a-a751-d6ff68d99efa",
+      "display_id": 167,
+      "title": "Marking discipline beyond message/help: summary+code head-line render adopter bytes unescaped (DSL-rule id/code); E0003 cause inline",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-08-06T22:36:50.992780Z",
+      "updated_at": "2026-08-06T22:36:50.992780Z"
+    },
     "c07826cb-7293-4bec-9f53-3c530fe1decf": {
       "uuid": "c07826cb-7293-4bec-9f53-3c530fe1decf",
       "display_id": 13,
@@ -7076,8 +7087,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-06T22:07:05.588672Z",
+    "timestamp": "2026-08-06T22:36:50.992780Z",
     "agent_id": "79Ig",
-    "agent_seq": 857
+    "agent_seq": 858
   }
 }
