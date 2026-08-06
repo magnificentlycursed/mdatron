@@ -6,6 +6,7 @@
   "MDATRON-E0011": "key-source-parent-traversal",
   "MDATRON-E0012": "symlinked-component-refused",
   "MDATRON-E0021": "undeclared-field-reference",
+  "MDATRON-E0022": "comparison-type-mismatch",
   "MDATRON-E0030": "unrouted-file",
   "MDATRON-E0031": "governing-document-absent",
   "MDATRON-E0032": "route-conflict",
@@ -39,5 +40,6 @@
   "MDATRON-W0046": "jurisdiction-glob-matches-nothing",
   "MDATRON-W0047": "schema-dir-missing",
   "MDATRON-W0048": "reference-target-unverified",
-  "MDATRON-W0049": "index-source-unreadable"
+  "MDATRON-W0049": "index-source-unreadable",
+  "MDATRON-W0050": "comparison-dead-clause"
 }
