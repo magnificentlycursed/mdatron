@@ -1383,11 +1383,12 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-03T23:24:17.460958Z",
-      "updated_at": "2026-08-06T22:37:24.176627Z",
+      "updated_at": "2026-08-06T23:07:36.526275Z",
       "labels": [
         "security"
       ],
       "related": [
+        "bb606be0-b0ed-44b7-b34f-dfb31aabeede",
         "c05af961-4252-465a-a751-d6ff68d99efa"
       ],
       "comments": {
@@ -4865,9 +4866,12 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-06T23:06:37.597736Z",
-      "updated_at": "2026-08-06T23:07:23.325457Z",
+      "updated_at": "2026-08-06T23:07:36.526275Z",
       "labels": [
         "bug"
+      ],
+      "related": [
+        "2d75df3e-6560-4e60-8904-1adcdf38e791"
       ],
       "comments": {
         "25c81c09-fce7-44c9-b752-f62d9102fd9b": {
@@ -7132,8 +7136,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-06T23:07:23.325457Z",
+    "timestamp": "2026-08-06T23:07:36.526275Z",
     "agent_id": "79Ig",
-    "agent_seq": 864
+    "agent_seq": 865
   }
 }
