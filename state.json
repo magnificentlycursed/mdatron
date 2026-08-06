@@ -5272,11 +5272,12 @@
       "display_id": 156,
       "title": "enhancement(DSL): Cedar-style rule-expression validation against the frontmatter schema at load",
       "description": "From the Cedar/OPA reference-arch review (knowledge page cedar-opa-dsl-audit), the highest-value DSL item. Today a misspelled field or a type-mismatched ==/!= in an adopter rule surfaces (best case) as a runtime evaluator error or (worst case) a SILENT NO-OP. Cedar's validator type-checks each policy against the schema BEFORE deploy, catching typo'd attributes, type mismatches (string == array/number), unsafe optional access, and dead/always-false conditions. mdatron already parses its DSL + engine-shipped schemas strictly (unknown fields refused) -- structurally the Cedar-validator posture -- but does NOT type-check rule EXPRESSIONS against the frontmatter schema. Add static validation of adopter rule expressions at rule-load: field existence, operand types, ==/!= type-compatibility, dead-clause warnings. Converts runtime errors/silent no-ops into pre-gate diagnostics; cheaper for mdatron than Cedar (the expression grammar is already a strict subset -- only ==/!=, no arithmetic/ordering), and keeps a future symcc-style rule-comparison analysis latent. Pick up AFTER #149 + #154 (operator sequencing).",
-      "status": "open",
+      "status": "closed",
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-02T05:38:49.843362Z",
-      "updated_at": "2026-08-06T15:31:23.106407Z",
+      "updated_at": "2026-08-06T15:31:28.844729Z",
+      "closed_at": "2026-08-06T15:31:28.844719Z",
       "labels": [
         "enhancement"
       ],
@@ -7048,8 +7049,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-06T15:31:23.106407Z",
+    "timestamp": "2026-08-06T15:31:28.844729Z",
     "agent_id": "79Ig",
-    "agent_seq": 850
+    "agent_seq": 851
   }
 }
