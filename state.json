@@ -1,6 +1,6 @@
 {
   "next_display_id": 169,
-  "next_comment_id": 449,
+  "next_comment_id": 450,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -4865,10 +4865,21 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-06T23:06:37.597736Z",
-      "updated_at": "2026-08-06T23:06:48.765577Z",
+      "updated_at": "2026-08-06T23:07:23.325457Z",
       "labels": [
         "bug"
-      ]
+      ],
+      "comments": {
+        "25c81c09-fce7-44c9-b752-f62d9102fd9b": {
+          "display_id": 449,
+          "author": "79Ig",
+          "content": "From #165 phase-3 round-2 (R1 finding 2, pre-existing). interpolate_message does out.push(bytes[i] as char) at verify.rs:2398, casting UTF-8 bytes of the adopter rule-message TEMPLATE literal to char: a multibyte char yields mojibake AND emits raw C1 controls (U+0080-U+00BF) into an unescaped message. Fix: iterate chars not bytes (and/or escape the template at render); add a multibyte+C1 regression test.",
+          "created_at": "2026-08-06T23:07:23.280386Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAWfzh25gR4JBCCPqz35Lxud2M7UgtNR8t+y3RBPSylk4g419Ip0dJQRR4NERENM3DY76B2IlAc7d03rd96NnRBQ=="
+        }
+      }
     },
     "bc81359e-bf75-45ec-896a-418745373491": {
       "uuid": "bc81359e-bf75-45ec-896a-418745373491",
@@ -7121,8 +7132,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-06T23:06:48.765577Z",
+    "timestamp": "2026-08-06T23:07:23.325457Z",
     "agent_id": "79Ig",
-    "agent_seq": 863
+    "agent_seq": 864
   }
 }
