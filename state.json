@@ -1382,9 +1382,12 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-03T23:24:17.460958Z",
-      "updated_at": "2026-08-06T22:07:05.588672Z",
+      "updated_at": "2026-08-06T22:37:24.176627Z",
       "labels": [
         "security"
+      ],
+      "related": [
+        "c05af961-4252-465a-a751-d6ff68d99efa"
       ],
       "comments": {
         "04b6eb42-7231-4af2-9956-c797b23eb9d0": {
@@ -5039,9 +5042,12 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-06T22:36:50.992780Z",
-      "updated_at": "2026-08-06T22:37:08.926556Z",
+      "updated_at": "2026-08-06T22:37:24.176627Z",
       "labels": [
         "security"
+      ],
+      "related": [
+        "2d75df3e-6560-4e60-8904-1adcdf38e791"
       ],
       "comments": {
         "ad45859f-d4ee-4266-9e14-1fc69eb1a619": {
@@ -7101,8 +7107,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-06T22:37:08.926556Z",
+    "timestamp": "2026-08-06T22:37:24.176627Z",
     "agent_id": "79Ig",
-    "agent_seq": 860
+    "agent_seq": 861
   }
 }
