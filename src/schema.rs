@@ -107,6 +107,40 @@ impl Schema {
         FieldPathStatus::Declared
     }
 
+    /// Walk `path` to its declared schema node, or `None` if any segment is
+    /// undecidable (open object, non-object level, missing `properties`,
+    /// `$ref`/combinator) — the same conservative closed-property walk
+    /// [`field_path_status`](Self::field_path_status) performs, sharing its
+    /// no-false-positive discipline.
+    fn field_path_node(&self, path: &[String]) -> Option<&JsonValue> {
+        let mut cur = &self.raw;
+        for seg in path {
+            let props = cur.get("properties").and_then(|p| p.as_object())?;
+            cur = props.get(seg)?;
+        }
+        Some(cur)
+    }
+
+    /// The single declared JSON-Schema `type` of a `$self.<path>` field (#156),
+    /// or `None` when undecidable — an open/undeclared path, a node with no
+    /// `type`, or a MULTI-type node (`["string","null"]`), all of which are
+    /// left unchecked so the type comparison cannot false-positive. Returns the
+    /// canonical type string (`"string"`, `"integer"`, `"number"`, `"boolean"`,
+    /// `"array"`, `"object"`, `"null"`).
+    pub fn field_path_type(&self, path: &[String]) -> Option<&str> {
+        self.field_path_node(path)?.get("type")?.as_str()
+    }
+
+    /// The declared scalar `enum` of a `$self.<path>` field (#156), if the leaf
+    /// declares one — used for the always-false dead-clause check. `None` when
+    /// the path is undecidable or has no `enum`.
+    pub fn field_path_enum(&self, path: &[String]) -> Option<&[JsonValue]> {
+        self.field_path_node(path)?
+            .get("enum")?
+            .as_array()
+            .map(|v| v.as_slice())
+    }
+
     /// Validate a YAML frontmatter value against this schema.
     ///
     /// Returns an empty `Vec` on success; one or more [`ValidationError`]s when the
@@ -300,6 +334,40 @@ mod tests {
 
     fn yaml(s: &str) -> YamlValue {
         serde_yaml_ng::from_str(s).unwrap()
+    }
+
+    // #156: the type/enum accessors are conservative — a single concrete type
+    // or a declared enum on a decidable path, `None` on every undecidable shape.
+    #[test]
+    fn field_path_type_and_enum_are_conservative() {
+        let schema = Schema::compile(&json!({
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "count": { "type": "integer" },
+                "phase": { "type": "string", "enum": ["a", "b"] },
+                "maybe": { "type": ["string", "null"] },
+                "blob":  { "description": "no type" }
+            }
+        }))
+        .unwrap();
+        let p = |s: &str| vec![s.to_string()];
+        assert_eq!(schema.field_path_type(&p("count")), Some("integer"));
+        assert_eq!(schema.field_path_type(&p("phase")), Some("string"));
+        assert_eq!(
+            schema.field_path_type(&p("maybe")),
+            None,
+            "multi-type -> None"
+        );
+        assert_eq!(schema.field_path_type(&p("blob")), None, "no type -> None");
+        assert_eq!(
+            schema.field_path_type(&p("absent")),
+            None,
+            "undeclared -> None"
+        );
+
+        assert_eq!(schema.field_path_enum(&p("phase")).map(<[_]>::len), Some(2));
+        assert_eq!(schema.field_path_enum(&p("count")), None, "no enum -> None");
     }
 
     #[test]

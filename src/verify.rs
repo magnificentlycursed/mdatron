@@ -33,6 +33,7 @@ use crate::dsl::{
 };
 use crate::frontmatter;
 use crate::schema::{FieldPathStatus, Schema};
+use serde_json::Value as JsonValue;
 
 // ── Public surface ─────────────────────────────────────────────────────────────
 
@@ -1469,6 +1470,15 @@ fn validate_rule_field_refs(
                 // document. Skip it rather than double-reporting.
                 if let Ok(expr) = parse_expression(src) {
                     collect_self_paths(&expr, &mut paths);
+                    // #156: Cedar-style comparison type-check + dead-clause.
+                    check_rule_comparisons(
+                        &expr,
+                        schema,
+                        patterns_dir,
+                        &pf.pattern.id,
+                        rule,
+                        findings,
+                    );
                 }
             }
             paths.sort();
@@ -1556,6 +1566,304 @@ fn collect_self_paths(e: &Expr, out: &mut Vec<Vec<String>>) {
             collect_self_paths(pred, out);
         }
         Expr::Lit(_) | Expr::Var(_) => {}
+    }
+}
+
+// ── #156: Cedar-style comparison validation (legs i-iii of the DSL audit) ────
+//
+// Extends the E0021 validate-before-deploy posture from field EXISTENCE to
+// comparison TYPE-COMPATIBILITY and always-false dead clauses. Same
+// conservatism, mandatory since E0022 hard-gates: a check fires only when both
+// operands are statically decidable against a CLOSED-object schema leaf; any
+// undecidable shape (open object, multi-type/nullable, array/object level,
+// `$ref`/combinator, non-`$self` operand) is left unchecked. No value-level
+// cross-clause reasoning (SMT-shaped, deliberately out of scope — the audit's
+// "stay narrower than Cedar").
+
+/// The canonical JSON-Schema type of a scalar literal, or `None` for a
+/// null/array/object literal (skipped — their comparison semantics are subtle
+/// and rare, and flagging them risks a false positive).
+fn literal_type(v: &crate::dsl::Value) -> Option<&'static str> {
+    match v {
+        crate::dsl::Value::Str(_) => Some("string"),
+        crate::dsl::Value::Int(_) => Some("integer"),
+        crate::dsl::Value::Bool(_) => Some("boolean"),
+        _ => None,
+    }
+}
+
+/// The static type of a comparison operand, or `None` when undecidable. A
+/// scalar literal yields its own type; a `$self.<field>` chain yields the
+/// field's declared schema type (only on a closed-object leaf). A bare `$self`,
+/// a binding/`$file`/`$project` chain, or any richer expression is `None`.
+fn operand_type(e: &Expr, schema: &Schema) -> Option<String> {
+    match e {
+        Expr::Lit(v) => literal_type(v).map(str::to_string),
+        _ => {
+            let p = self_path(e)?;
+            if p.is_empty() {
+                return None;
+            }
+            schema.field_path_type(&p).map(str::to_string)
+        }
+    }
+}
+
+/// Two schema types are comparison-compatible when equal, or both numeric
+/// (`integer` is a subset of `number`; the DSL's only numeric literal is an
+/// int, which is a valid instance of either).
+fn types_compatible(a: &str, b: &str) -> bool {
+    let numeric = |t: &str| t == "integer" || t == "number";
+    a == b || (numeric(a) && numeric(b))
+}
+
+/// The `$self.<path>` of a comparison operand that is a `$self` field chain
+/// (non-empty), for the enum dead-clause check.
+fn operand_self_field(e: &Expr) -> Option<Vec<String>> {
+    let p = self_path(e)?;
+    if p.is_empty() {
+        None
+    } else {
+        Some(p)
+    }
+}
+
+/// Is scalar literal `v` a member of a declared JSON `enum`?
+fn value_in_enum(v: &crate::dsl::Value, enum_vals: &[JsonValue]) -> bool {
+    enum_vals.iter().any(|j| match (v, j) {
+        (crate::dsl::Value::Str(s), JsonValue::String(js)) => s == js,
+        (crate::dsl::Value::Int(i), JsonValue::Number(n)) => n.as_i64() == Some(*i),
+        (crate::dsl::Value::Bool(b), JsonValue::Bool(jb)) => b == jb,
+        _ => false,
+    })
+}
+
+/// Render a comparison operand for a quoted region: a `$self.<path>` chain or a
+/// scalar literal's value. Adopter-derived — the caller places it in a quoted
+/// region (escaped at render), never inline in the engine-authored message.
+fn render_operand(e: &Expr) -> Option<String> {
+    if let Some(p) = self_path(e) {
+        return Some(if p.is_empty() {
+            "$self".into()
+        } else {
+            format!("$self.{}", p.join("."))
+        });
+    }
+    match e {
+        Expr::Lit(crate::dsl::Value::Str(s)) => Some(format!("\"{s}\"")),
+        Expr::Lit(crate::dsl::Value::Int(i)) => Some(i.to_string()),
+        Expr::Lit(crate::dsl::Value::Bool(b)) => Some(b.to_string()),
+        _ => None,
+    }
+}
+
+/// Walk a rule expression and check every `==`/`!=` comparison (#156):
+///
+/// - incompatible operand types → `MDATRON-E0022` (error, hard-gate);
+/// - a `$self`-field-vs-literal comparison whose literal is outside the field's
+///   declared `enum` → `MDATRON-W0050` (warning, an always-constant clause).
+///
+/// Type-check takes precedence: a wrong-TYPE literal is E0022, not W0050.
+fn check_rule_comparisons(
+    e: &Expr,
+    schema: &Schema,
+    patterns_dir: &Path,
+    pattern_id: &str,
+    rule: &Rule,
+    findings: &mut Vec<Finding>,
+) {
+    let comparison = match e {
+        Expr::Eq(a, b) => Some((a, b, true)),
+        Expr::Ne(a, b) => Some((a, b, false)),
+        _ => None,
+    };
+    if let Some((a, b, is_eq)) = comparison {
+        let (lt, rt) = (operand_type(a, schema), operand_type(b, schema));
+        if let (Some(lt), Some(rt)) = (&lt, &rt) {
+            if !types_compatible(lt, rt) {
+                if let (Some(la), Some(rb)) = (render_operand(a), render_operand(b)) {
+                    findings.push(comparison_type_finding(
+                        patterns_dir,
+                        pattern_id,
+                        rule,
+                        (&la, lt),
+                        (&rb, rt),
+                        is_eq,
+                    ));
+                }
+                // A type error is not also a dead-enum clause; done with this node.
+                return recurse_comparisons(e, schema, patterns_dir, pattern_id, rule, findings);
+            }
+        }
+        // Types are compatible (or undecidable): the enum dead-clause check.
+        // Whichever side is a `$self` field with a declared enum, the other a
+        // scalar literal outside it, is an always-constant clause.
+        for (field, lit) in [(a.as_ref(), b.as_ref()), (b.as_ref(), a.as_ref())] {
+            if let (Some(path), Expr::Lit(v)) = (operand_self_field(field), lit) {
+                if literal_type(v).is_some() {
+                    if let Some(en) = schema.field_path_enum(&path) {
+                        if !value_in_enum(v, en) {
+                            if let (Some(fr), Some(lr)) =
+                                (render_operand(field), render_operand(lit))
+                            {
+                                findings.push(dead_clause_finding(
+                                    patterns_dir,
+                                    pattern_id,
+                                    rule,
+                                    &fr,
+                                    &lr,
+                                ));
+                            }
+                            break; // one finding per comparison
+                        }
+                    }
+                }
+            }
+        }
+    }
+    recurse_comparisons(e, schema, patterns_dir, pattern_id, rule, findings);
+}
+
+/// Recurse into a comparison node's operand-bearing children (the E0021 walk's
+/// shape) so comparisons nested in operators, calls, and quantifiers are found.
+fn recurse_comparisons(
+    e: &Expr,
+    schema: &Schema,
+    patterns_dir: &Path,
+    pattern_id: &str,
+    rule: &Rule,
+    findings: &mut Vec<Finding>,
+) {
+    let mut go = |c: &Expr| {
+        check_rule_comparisons(c, schema, patterns_dir, pattern_id, rule, findings);
+    };
+    match e {
+        Expr::Field(inner, _) | Expr::Not(inner) => go(inner),
+        Expr::Eq(a, b)
+        | Expr::Ne(a, b)
+        | Expr::And(a, b)
+        | Expr::Or(a, b)
+        | Expr::In(a, b)
+        | Expr::NotIn(a, b) => {
+            go(a);
+            go(b);
+        }
+        Expr::Call(_, args) => args.iter().for_each(go),
+        Expr::Every(_, coll, pred) | Expr::Some_(_, coll, pred) | Expr::Filter(_, coll, pred) => {
+            go(coll);
+            go(pred);
+        }
+        Expr::Lit(_) | Expr::Var(_) => {}
+    }
+}
+
+/// `MDATRON-E0022` — a comparison between statically type-incompatible operands.
+/// Message is fully engine-authored (the type keywords are a closed engine
+/// vocabulary, safe inline); the adopter-derived operand renderings ride in
+/// escaped quoted regions (#162 F-1 discipline).
+fn comparison_type_finding(
+    patterns_dir: &Path,
+    pattern_id: &str,
+    rule: &Rule,
+    left: (&str, &str),
+    right: (&str, &str),
+    is_eq: bool,
+) -> Finding {
+    // Operator-aware (#156 phase-3 F-1): a type mismatch makes `==` always
+    // false (the assertion always fires, flagging every document) but `!=`
+    // always true (the assertion never fires — a silent no-op, the exact
+    // defect this check exists to catch). Both are the same type ERROR; only
+    // the consequence framing differs.
+    let consequence = if is_eq {
+        "so the `==` is always false: the rule's assertion always fires, \
+         flagging every document"
+    } else {
+        "so the `!=` is always true: the rule's assertion never fires — a \
+         silent no-op"
+    };
+    Finding {
+        code: "MDATRON-E0022".into(),
+        severity: Severity::Error,
+        summary: "comparison-type-mismatch".into(),
+        message: format!(
+            "a rule compares a `{}` operand with a `{}` operand (both quoted \
+             below); their types are incompatible, {consequence}. Correct the \
+             operands so their types match.",
+            left.1, right.1
+        ),
+        help: None,
+        location: Location {
+            file: patterns_dir.to_path_buf(),
+            line: 0,
+            column: 0,
+        },
+        explain_ref: Some("MDATRON-E0022".to_string()),
+        quoted: vec![
+            QuotedRegion {
+                label: "pattern".into(),
+                content: pattern_id.into(),
+            },
+            QuotedRegion {
+                label: "rule".into(),
+                content: rule.id.clone(),
+            },
+            QuotedRegion {
+                label: "left".into(),
+                content: left.0.into(),
+            },
+            QuotedRegion {
+                label: "right".into(),
+                content: right.0.into(),
+            },
+        ],
+    }
+}
+
+/// `MDATRON-W0050` — a `$self`-field comparison against a literal outside the
+/// field's declared `enum`: the clause never varies with the document. Message
+/// engine-authored; adopter operands in escaped quoted regions.
+fn dead_clause_finding(
+    patterns_dir: &Path,
+    pattern_id: &str,
+    rule: &Rule,
+    field: &str,
+    literal: &str,
+) -> Finding {
+    Finding {
+        code: "MDATRON-W0050".into(),
+        severity: Severity::Warning,
+        summary: "comparison-dead-clause".into(),
+        message: "a rule compares a field against a literal that is not among \
+                  the field's declared `enum` (both quoted below), so the \
+                  comparison is constant for every conforming document — the \
+                  clause never varies. Use a declared enum value, or correct \
+                  the field."
+            .into(),
+        help: None,
+        location: Location {
+            file: patterns_dir.to_path_buf(),
+            line: 0,
+            column: 0,
+        },
+        explain_ref: Some("MDATRON-W0050".to_string()),
+        quoted: vec![
+            QuotedRegion {
+                label: "pattern".into(),
+                content: pattern_id.into(),
+            },
+            QuotedRegion {
+                label: "rule".into(),
+                content: rule.id.clone(),
+            },
+            QuotedRegion {
+                label: "field".into(),
+                content: field.into(),
+            },
+            QuotedRegion {
+                label: "literal".into(),
+                content: literal.into(),
+            },
+        ],
     }
 }
 
@@ -6635,5 +6943,240 @@ pattern:
             0,
             "path-glob context has no static schema: {findings:?}"
         );
+    }
+
+    // ── #156: comparison type-check (E0022) + dead-clause (W0050) ────────────
+    //
+    // Same conservatism as E0021 (E0022 also hard-gates): fire only on a
+    // closed-object single-concrete-type leaf vs a scalar literal; every
+    // undecidable shape passes.
+
+    const TYPED_DOC_SCHEMA: &str = r#"{
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_class": { "type": "string" },
+        "count":  { "type": "integer" },
+        "score":  { "type": "number" },
+        "title":  { "type": "string" },
+        "phase":  { "type": "string", "enum": ["phase-1a", "phase-2a"] },
+        "maybe":  { "type": ["string", "null"] },
+        "blob":   { "description": "no declared type" }
+      }
+    }"#;
+
+    // TRUE POSITIVE: an integer field compared to a string literal is a type
+    // mismatch — a hard-gate error (Cedar's validate-before-deploy posture).
+    #[test]
+    fn rg_int_field_vs_string_literal_is_e0022() {
+        let findings = run_field_ref_gate(
+            "e0022-int-str",
+            TYPED_DOC_SCHEMA,
+            "",
+            r#"$self.count == "yes""#,
+        );
+        let e: Vec<&Finding> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0022")
+            .collect();
+        assert_eq!(e.len(), 1, "one type mismatch; got {findings:?}");
+        assert_eq!(e[0].severity, Severity::Error, "E0022 hard-gates");
+    }
+
+    // The reverse order, and the `!=` operator, are equally mismatched.
+    #[test]
+    fn rg_string_field_vs_int_and_ne_are_e0022() {
+        assert_eq!(
+            codes_of(
+                &run_field_ref_gate("e0022-str-int", TYPED_DOC_SCHEMA, "", "$self.title == 5"),
+                "MDATRON-E0022"
+            ),
+            1
+        );
+        assert_eq!(
+            codes_of(
+                &run_field_ref_gate("e0022-ne", TYPED_DOC_SCHEMA, "", r#"$self.count != "x""#),
+                "MDATRON-E0022"
+            ),
+            1,
+            "!= is checked like =="
+        );
+    }
+
+    // NEGATIVE: an int field vs an int literal is clean; a `number` field vs an
+    // int literal is clean (integer is a valid number — lenient numeric rule).
+    #[test]
+    fn rg_compatible_numeric_comparisons_are_clean() {
+        assert_eq!(
+            codes_of(
+                &run_field_ref_gate("e0022-int-ok", TYPED_DOC_SCHEMA, "", "$self.count == 5"),
+                "MDATRON-E0022"
+            ),
+            0
+        );
+        assert_eq!(
+            codes_of(
+                &run_field_ref_gate("e0022-num-ok", TYPED_DOC_SCHEMA, "", "$self.score == 5"),
+                "MDATRON-E0022"
+            ),
+            0,
+            "int literal is a valid `number`"
+        );
+    }
+
+    // NEGATIVE (conservatism): a multi-type/nullable field and a no-`type` field
+    // are undecidable — never flagged, even against a mismatched literal.
+    #[test]
+    fn rg_undecidable_field_types_are_not_flagged() {
+        assert_eq!(
+            codes_of(
+                &run_field_ref_gate("e0022-multitype", TYPED_DOC_SCHEMA, "", "$self.maybe == 5"),
+                "MDATRON-E0022"
+            ),
+            0,
+            "a ['string','null'] field is undecidable"
+        );
+        assert_eq!(
+            codes_of(
+                &run_field_ref_gate("e0022-notype", TYPED_DOC_SCHEMA, "", "$self.blob == 5"),
+                "MDATRON-E0022"
+            ),
+            0,
+            "a field with no declared type is undecidable"
+        );
+    }
+
+    // TRUE POSITIVE (dead clause): a string field with a declared enum compared
+    // to a same-typed literal OUTSIDE the enum is always-constant — W0050
+    // (warning), NOT E0022 (the types match).
+    #[test]
+    fn rg_enum_nonmember_literal_is_w0050() {
+        let findings = run_field_ref_gate(
+            "w0050-dead",
+            TYPED_DOC_SCHEMA,
+            "",
+            r#"$self.phase == "phase-99""#,
+        );
+        let w: Vec<&Finding> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-W0050")
+            .collect();
+        assert_eq!(w.len(), 1, "one dead clause; got {findings:?}");
+        assert_eq!(w[0].severity, Severity::Warning, "W0050 is a warning");
+        assert_eq!(
+            codes_of(&findings, "MDATRON-E0022"),
+            0,
+            "matched types -> not a type error"
+        );
+    }
+
+    // NEGATIVE: an enum MEMBER is clean.
+    #[test]
+    fn rg_enum_member_literal_is_clean() {
+        let findings = run_field_ref_gate(
+            "w0050-member",
+            TYPED_DOC_SCHEMA,
+            "",
+            r#"$self.phase == "phase-1a""#,
+        );
+        assert_eq!(codes_of(&findings, "MDATRON-W0050"), 0, "{findings:?}");
+    }
+
+    // Phase-3 F-2: type-check PRECEDES the enum dead-clause check — a field
+    // that has BOTH a declared type and an enum, compared to a type-
+    // incompatible literal, is E0022 ONLY (never also W0050 on the same
+    // clause). Red if the precedence `return` is dropped.
+    #[test]
+    fn rg_type_error_on_enum_field_is_e0022_only() {
+        let schema = r#"{
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "schema_class": { "type": "string" },
+            "level": { "type": "integer", "enum": [1, 2, 3] }
+          }
+        }"#;
+        // level is integer; "x" is a string -> type mismatch, not an enum miss.
+        let findings = run_field_ref_gate("e0022-enum-typed", schema, "", r#"$self.level == "x""#);
+        assert_eq!(codes_of(&findings, "MDATRON-E0022"), 1, "{findings:?}");
+        assert_eq!(
+            codes_of(&findings, "MDATRON-W0050"),
+            0,
+            "a type error is not ALSO reported as a dead clause; got {findings:?}"
+        );
+    }
+
+    // Phase-3 F-1: the `!=` type-mismatch message names the always-true /
+    // silent-no-op consequence, not the `==` "always false" one.
+    #[test]
+    fn rg_ne_type_mismatch_message_is_operator_correct() {
+        let findings = run_field_ref_gate(
+            "e0022-ne-msg",
+            TYPED_DOC_SCHEMA,
+            "",
+            r#"$self.count != "x""#,
+        );
+        let f = findings
+            .iter()
+            .find(|f| f.code == "MDATRON-E0022")
+            .expect("E0022 present");
+        assert!(
+            f.message.contains("never fires") && f.message.contains("silent no-op"),
+            "the != consequence is always-true/no-op, not always-false: {:?}",
+            f.message
+        );
+    }
+
+    // A comparison nested inside another operator is still checked.
+    #[test]
+    fn rg_nested_comparison_is_checked() {
+        let findings = run_field_ref_gate(
+            "e0022-nested",
+            TYPED_DOC_SCHEMA,
+            "",
+            r#"not ($self.count == "y")"#,
+        );
+        assert_eq!(codes_of(&findings, "MDATRON-E0022"), 1, "{findings:?}");
+    }
+
+    // #162 F-1 discipline: the E0022/W0050 builders keep the message fully
+    // engine-authored — an adopter operand rendering carrying control bytes
+    // rides ONLY in a quoted region, never inline. (Tested at the builder
+    // rather than through a YAML pattern, since YAML itself rejects raw control
+    // bytes in a scalar — the value can only reach a literal via a `\u` escape,
+    // and the builder is where the marking discipline must hold regardless.)
+    #[test]
+    fn e0022_w0050_builders_never_inline_adopter_bytes() {
+        let rule = crate::dsl::Rule {
+            id: "r".into(),
+            context: crate::dsl::ContextSelector::Bare("doc".into()),
+            let_bindings: Vec::new(),
+            assert: String::new(),
+            code: "T".into(),
+            message: String::new(),
+            location: None,
+        };
+        let dir = Path::new(".mdatron/patterns");
+        let nasty = "$self.x\u{1b}[31m\n"; // ESC + CSI + newline in the rendering
+
+        let e =
+            comparison_type_finding(dir, "pat", &rule, (nasty, "string"), ("5", "integer"), true);
+        assert!(
+            !e.message.contains('\u{1b}') && !e.message.contains('\n'),
+            "E0022 message stays engine-authored: {:?}",
+            e.message
+        );
+        assert!(
+            e.quoted.iter().any(|q| q.content.contains('\u{1b}')),
+            "the nasty operand rides in a quoted region"
+        );
+
+        let w = dead_clause_finding(dir, "pat", &rule, nasty, "\"bad\"");
+        assert!(
+            !w.message.contains('\u{1b}') && !w.message.contains('\n'),
+            "W0050 message stays engine-authored: {:?}",
+            w.message
+        );
+        assert!(w.quoted.iter().any(|q| q.content.contains('\u{1b}')));
     }
 }
