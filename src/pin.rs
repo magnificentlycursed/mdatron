@@ -254,11 +254,11 @@ pub fn check(
                             },
                             QuotedRegion {
                                 label: "recorded".into(),
-                                content: short(&pin.sha256).to_string(),
+                                content: crate::init::short(&pin.sha256).to_string(),
                             },
                             QuotedRegion {
                                 label: "found".into(),
-                                content: short(&actual).to_string(),
+                                content: crate::init::short(&actual).to_string(),
                             },
                         ],
                     });
@@ -466,15 +466,5 @@ fn confinement_finding(
             label: field.to_string(),
             content: value.to_string(),
         }],
-    }
-}
-
-fn short(hash: &str) -> &str {
-    // Char-boundary-safe truncation to at most 12 chars. An adopter-authored
-    // `sha256` (pins.yaml) is not validated as hex, so a multibyte char could
-    // straddle byte 12 and panic a naive byte slice (#165 review).
-    match hash.char_indices().nth(12) {
-        Some((idx, _)) => &hash[..idx],
-        None => hash,
     }
 }

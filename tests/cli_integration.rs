@@ -267,6 +267,39 @@ fn pipeline_error_message_relativizes_a_parse_error_path() {
     );
 }
 
+// #165 round-3 (roast R2): the DEF4 host-layout contract must hold in the
+// AGENT-FACING compact/tty render, not only the JSON envelope — E0080's `detail`
+// region is relativized the same way. A malformed config bakes an absolute path
+// into a free-form Config message; --compact must not leak it.
+#[test]
+fn e0080_compact_detail_relativizes_host_path() {
+    let proj = TempProject::new("e0080-relativize");
+    proj.write(".mdatron/config.yaml", "file_globs: [unclosed\n");
+    proj.write("doc.md", "# prose\n");
+
+    let out = Command::new(mdatron_bin())
+        .args(["verify", "--project-root"])
+        .arg(proj.path())
+        .arg("--compact")
+        .output()
+        .expect("mdatron binary executes");
+    assert_eq!(out.status.code(), Some(2), "pipeline failure exits 2");
+    let combined = format!(
+        "{}{}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let abs = proj.path().to_string_lossy().into_owned();
+    assert!(
+        !combined.contains(&abs),
+        "absolute host path leaked into the E0080 compact/tty detail: {combined:?}"
+    );
+    assert!(
+        combined.contains("config.yaml"),
+        "still names the config file (relatively): {combined:?}"
+    );
+}
+
 // #121 (requested by vsdd-cli): `--deny-warnings` escalates a warnings-only run
 // (exit 0) to a failing exit 1, so a hard-gate consumer need not parse the
 // envelope. Errors and pipeline failures are unaffected.
