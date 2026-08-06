@@ -1890,12 +1890,15 @@ fn field_ref_finding(
         code: "MDATRON-E0021".into(),
         severity: Severity::Error,
         summary: "undeclared-field-reference".into(),
-        message: format!(
-            "rule references `{dotted}`, but `{last}` is not a declared property \
-             of the closed schema `{schema_class}` — the reference would read as \
-             absent at evaluation. Correct the field name or declare it in the schema",
-            last = path.last().map(String::as_str).unwrap_or_default(),
-        ),
+        // Engine-authored message only (#165): the referenced field, its
+        // undeclared leaf, and the schema class are all adopter-derived, so they
+        // ride in the escaped quoted regions below rather than inline — uniform
+        // with the marking discipline the #162 F-1 fix set for W0049.
+        message: "the rule references a `$self` field that is not a declared \
+                  property of the closed schema it evaluates against — the \
+                  reference would read as absent at evaluation. Correct the field \
+                  name, or declare it in the schema"
+            .into(),
         help: None,
         location: Location {
             file: patterns_dir.to_path_buf(),
@@ -1915,6 +1918,14 @@ fn field_ref_finding(
             QuotedRegion {
                 label: "reference".into(),
                 content: dotted,
+            },
+            QuotedRegion {
+                label: "undeclared property".into(),
+                content: path.last().cloned().unwrap_or_default(),
+            },
+            QuotedRegion {
+                label: "schema".into(),
+                content: schema_class.to_string(),
             },
         ],
     }
@@ -1957,7 +1968,18 @@ fn verify_file(
                 code: "MDATRON-E0001".into(),
                 severity: Severity::Error,
                 summary: "frontmatter-parse-failed".into(),
-                message: e.to_string(),
+                // Engine-authored message only (#165): the parser's detail is
+                // derived from the governed file's own UNTRUSTED frontmatter
+                // bytes — the primary trust boundary — so it rides in an escaped
+                // quoted region, never inline where a control byte would inject
+                // ANSI/splitters into the agent-facing TTY/compact views. The
+                // marking discipline the #162 F-1 fix set for W0049, applied to
+                // the highest-severity site (schematron-lineage-audit
+                // § diagnostic/message decoupling; sarif-envelope-audit
+                // § quoted[]→region.snippet).
+                message: "the file's YAML frontmatter could not be parsed; the \
+                          file cannot be governed until it is valid YAML"
+                    .into(),
                 help: None,
                 location: Location {
                     file: path.to_path_buf(),
@@ -1965,7 +1987,10 @@ fn verify_file(
                     column: 0,
                 },
                 explain_ref: Some("MDATRON-E0001".into()),
-                quoted: Vec::new(),
+                quoted: vec![QuotedRegion {
+                    label: "parse error".into(),
+                    content: e.to_string(),
+                }],
             });
             // Unparseable frontmatter has no readable schema_class to route.
             return Ok(false);
@@ -6278,6 +6303,116 @@ pattern:
         assert!(
             f.quoted.iter().any(|q| q.label == "index"),
             "the index name rides in a quoted region"
+        );
+    }
+
+    // #165 marking-discipline sweep — the highest-severity site: the frontmatter
+    // parser's detail is derived from the governed file's own UNTRUSTED bytes (the
+    // primary trust boundary), so it must ride in an escaped quoted region; a
+    // control byte must never reach the engine-authored E0001 message.
+    #[test]
+    fn e0001_message_never_carries_raw_frontmatter_bytes() {
+        let proj = TempProject::new("e0001-inject");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        // Malformed frontmatter (unterminated quote) embedding ESC + a newline.
+        proj.write(
+            "broken.md",
+            "---\nschema_class: \"x\u{1b}[31m\n---\n# body\n",
+        );
+        let cfg = VerifyConfig::new(&proj.0);
+        let findings = verify(&cfg).expect("a parse failure emits a finding, not an error");
+        let f = findings
+            .iter()
+            .find(|f| f.code == "MDATRON-E0001")
+            .unwrap_or_else(|| panic!("expected E0001; got {findings:?}"));
+        assert!(
+            !f.message.chars().any(char::is_control),
+            "no raw control byte may reach the engine-authored message: {:?}",
+            f.message
+        );
+        assert!(
+            f.quoted.iter().any(|q| q.label == "parse error"),
+            "the parser detail rides in a quoted region: {:?}",
+            f.quoted
+        );
+    }
+
+    // #165: E0021's offending `$self` path, its undeclared leaf, and the schema
+    // class are adopter-derived — none may echo into the engine-authored message;
+    // they ride in escaped quoted regions.
+    #[test]
+    fn e0021_message_is_engine_authored_not_adopter_echo() {
+        let findings = run_field_ref_gate(
+            "e0021-inject",
+            CLOSED_DOC_SCHEMA,
+            "",
+            r#"$self.zqx_undeclared_zqx == "x""#,
+        );
+        let f = findings
+            .iter()
+            .find(|f| f.code == "MDATRON-E0021")
+            .unwrap_or_else(|| panic!("expected E0021; got {findings:?}"));
+        assert!(
+            !f.message.contains("zqx_undeclared_zqx"),
+            "the adopter field name must not echo into the message: {:?}",
+            f.message
+        );
+        assert!(
+            !f.message.chars().any(char::is_control),
+            "engine message carries no control byte: {:?}",
+            f.message
+        );
+        assert!(
+            f.quoted
+                .iter()
+                .any(|q| q.label == "reference" && q.content == "$self.zqx_undeclared_zqx"),
+            "reference region carries the path: {:?}",
+            f.quoted
+        );
+        assert!(
+            f.quoted
+                .iter()
+                .any(|q| q.label == "undeclared property" && q.content == "zqx_undeclared_zqx"),
+            "undeclared-property region carries the leaf: {:?}",
+            f.quoted
+        );
+        assert!(
+            f.quoted.iter().any(|q| q.label == "schema"),
+            "schema region present: {:?}",
+            f.quoted
+        );
+    }
+
+    // #165: the route's naming grammar is adopter-derived (routes.yaml); a control
+    // byte in it must not reach the engine-authored W0041 message — it rides in an
+    // escaped quoted region.
+    #[test]
+    fn w0041_message_never_carries_raw_grammar_bytes() {
+        let proj = routed_project("w0041-inject");
+        proj.write(
+            "docs/x.md",
+            "---\nschema_class: phase-primer\nphase: phase-1a\nrelevant_domains: [se]\n---\n",
+        );
+        // The naming grammar embeds an ESC — the old message inlined it as /.../.
+        proj.write(
+            ".mdatron/routes.yaml",
+            "routes:\n- files: \"docs/**/*.md\"\n  governed_by: GOVERNING.md\n  naming: \"^bad\\u001b$\"\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        let f = findings
+            .iter()
+            .find(|f| f.code == "MDATRON-W0041")
+            .unwrap_or_else(|| panic!("expected W0041; got {findings:?}"));
+        assert!(
+            !f.message.chars().any(char::is_control),
+            "no raw control byte may reach the engine message: {:?}",
+            f.message
+        );
+        assert!(
+            f.quoted.iter().any(|q| q.label == "naming grammar"),
+            "the grammar rides in a quoted region: {:?}",
+            f.quoted
         );
     }
 
