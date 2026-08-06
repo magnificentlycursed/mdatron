@@ -1,6 +1,6 @@
 {
   "next_display_id": 167,
-  "next_comment_id": 443,
+  "next_comment_id": 444,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -6008,7 +6008,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-05T21:59:42.368075Z",
-      "updated_at": "2026-08-05T22:17:07.901805Z",
+      "updated_at": "2026-08-06T15:31:05.619274Z",
       "labels": [
         "enhancement"
       ],
@@ -6021,6 +6021,15 @@
           "kind": "result",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA6pWUHDG75A+t6CBlecYIChcc3FlM0oZpx/Sl4i9GHjVPUJpmFLTrHBeEVI2uWjX2uq294zwDCCzow2BI+rJmBg=="
+        },
+        "18a68cfa-cd6c-4d5c-8259-d2222e5b3718": {
+          "display_id": 443,
+          "author": "79Ig",
+          "content": "MERGED — PR #41 (magnificentlycursed/mdatron) landed on main @ b337fbb. Both halves shipped (percent-decode + link_root: root-relative mode). CI green after clearing the concurrency-cancelled duplicate run. Branch was reconstructed after the iCloud .git corruption (see [[icloud-git-corruption-incident]]) and re-verified before push. CHANGELOG entry shipped in the PR.",
+          "created_at": "2026-08-06T15:31:05.590492Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAZOWWsbIh/dqr0JtI6l8nHrtchCWOcOWLRK6zknaAb3+IgVs03WyBBwNWGvIzJhgZtjxa/f9Hn3JPMhxkX8qaCg=="
         }
       }
     },
@@ -7033,8 +7042,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-06T14:56:59.571744Z",
+    "timestamp": "2026-08-06T15:31:05.619274Z",
     "agent_id": "79Ig",
-    "agent_seq": 846
+    "agent_seq": 847
   }
 }
