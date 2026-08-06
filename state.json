@@ -1,6 +1,6 @@
 {
   "next_display_id": 167,
-  "next_comment_id": 447,
+  "next_comment_id": 448,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -1381,7 +1381,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-03T23:24:17.460958Z",
-      "updated_at": "2026-08-06T22:06:59.647369Z",
+      "updated_at": "2026-08-06T22:07:05.588672Z",
       "labels": [
         "security"
       ],
@@ -1412,6 +1412,15 @@
           "kind": "decision",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAT5iCR5nS/wjSnVXQZwChv18asJ6CgHmHy5lYPiXbI72JhCzejZ1SnNxikduQ5krBzx/np34IQbQZolZqLUNxDA=="
+        },
+        "abf41715-89a8-47b5-91f4-5d86a41ff746": {
+          "display_id": 447,
+          "author": "79Ig",
+          "content": "ROUND 2 (fixes + re-scope): the exhaustive sweep the issue always called for. FIXED all 7 R1 sites — E0080 pipeline_error_finding (engine per-kind message + 'detail' region; DEF4 relativization preserved, JSON envelope already serde-escaped), E0121 (section names + governed-body shared ids -> 3 regions; section_finding takes Vec<QuotedRegion> now), E0120 (section name region), E0093/E0094 (register/field -> regions; prose_finding takes Vec now), E0061 (recorded sha region), E0060 (managed path + sha regions) — plus short() made char-boundary-safe (the multibyte-at-byte-12 panic). FIXED R2: e0001 test de-vacuous'd via duplicate-key echo; E0001 severity framing corrected (defense-in-depth, not active ANSI vector). New regression tests: e0080 (--compact no raw ESC), e0121 (governed ids quoted), short() char-safety, e0001 echo; register_anti_pattern_flagged updated to assert the discipline. 472 lib + integration green, clippy/fmt/self-validation clean. Next: re-roast round 2.",
+          "created_at": "2026-08-06T22:07:05.575787Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAenGx0MH49ZWFPfJou9im6C428sFN3ACIfq7s8feWbdY0XFKiwbXR9nw/baD9wdl5rcwRpMNheZa3xu/ZAEoPDw=="
         }
       }
     },
@@ -7067,8 +7076,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-06T22:06:59.647369Z",
+    "timestamp": "2026-08-06T22:07:05.588672Z",
     "agent_id": "79Ig",
-    "agent_seq": 856
+    "agent_seq": 857
   }
 }
