@@ -228,13 +228,13 @@ pub fn check(
                         code: "MDATRON-E0061".into(),
                         severity: Severity::Error,
                         summary: "pin-stale".into(),
-                        message: format!(
-                            "the governed file changed after its pin was recorded \
-                             (recorded {}, found {}); re-read the governing document, \
-                             then re-pin with `mdatron pin --update`",
-                            short(&pin.sha256),
-                            short(&actual)
-                        ),
+                        // #165: the recorded sha is adopter-authored (pins.yaml,
+                        // not validated as hex) — it rides in a quoted region,
+                        // not inline in the engine-authored message.
+                        message: "the governed file changed after its pin was \
+                                  recorded; re-read the governing document, then \
+                                  re-pin with `mdatron pin --update`"
+                            .into(),
                         help: Some(
                             "the stale pin is the attention loop working: the \
                              governing relationship must be reviewed, not just the \
@@ -251,6 +251,14 @@ pub fn check(
                             QuotedRegion {
                                 label: "governing".into(),
                                 content: pin.governing.clone(),
+                            },
+                            QuotedRegion {
+                                label: "recorded".into(),
+                                content: crate::init::short(&pin.sha256).to_string(),
+                            },
+                            QuotedRegion {
+                                label: "found".into(),
+                                content: crate::init::short(&actual).to_string(),
                             },
                         ],
                     });
@@ -459,8 +467,4 @@ fn confinement_finding(
             content: value.to_string(),
         }],
     }
-}
-
-fn short(hash: &str) -> &str {
-    &hash[..hash.len().min(12)]
 }

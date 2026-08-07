@@ -345,11 +345,13 @@ pub fn check_file(routes: &[Route], rel: &Path, abs: &Path, findings: &mut Vec<F
                         code: "MDATRON-W0041".into(),
                         severity: Severity::Warning,
                         summary: "name-underivable".into(),
-                        message: format!(
-                            "this file's name is not derivable from its route's \
-                             naming grammar /{}/",
-                            naming.as_str()
-                        ),
+                        // Engine-authored message only (#165): the naming grammar
+                        // is adopter-derived (routes.yaml), so it rides in an
+                        // escaped quoted region rather than inline in message —
+                        // uniform with the marking discipline (#162 F-1).
+                        message: "this file's name is not derivable from its \
+                                  route's naming grammar"
+                            .into(),
                         help: Some(
                             "rename the file to match the grammar, or amend the \
                              route's naming field"
@@ -357,10 +359,16 @@ pub fn check_file(routes: &[Route], rel: &Path, abs: &Path, findings: &mut Vec<F
                         ),
                         location: Location::whole_file(abs),
                         explain_ref: Some("MDATRON-W0041".into()),
-                        quoted: vec![QuotedRegion {
-                            label: "name".into(),
-                            content: name,
-                        }],
+                        quoted: vec![
+                            QuotedRegion {
+                                label: "name".into(),
+                                content: name,
+                            },
+                            QuotedRegion {
+                                label: "naming grammar".into(),
+                                content: naming.as_str().to_string(),
+                            },
+                        ],
                     });
                 }
             }

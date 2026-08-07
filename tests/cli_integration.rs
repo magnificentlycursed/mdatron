@@ -183,6 +183,58 @@ fn pipeline_failure_json_quiet_carries_structured_reason() {
     );
 }
 
+// #165 marking-discipline sweep: a pipeline error (E0080) renders to the
+// agent-facing forms via `pipeline_error_finding`; an adopter-controlled token (a
+// pattern id) carrying a control byte must NOT reach the rendered output raw — the
+// `Display` detail rides in an escaped quoted region. Before the fix, E0080's
+// `message: e.to_string()` emitted the raw ESC into `--compact` (the agent mode).
+#[test]
+fn e0080_render_never_emits_raw_adopter_control_byte() {
+    let proj = TempProject::new("e0080-inject");
+    proj.write(
+        ".mdatron/schemas/doc.json",
+        r#"{"type":"object","properties":{"schema_class":{"const":"doc"},"x":{"type":"string"}}}"#,
+    );
+    // A pattern whose id carries an ESC and whose assert fails to parse. The
+    // expression is parsed when the rule evaluates against a matching doc, so the
+    // doc below is classified `doc` to force it → a VerifyError::ExprParse pipeline
+    // failure whose Display names the (ESC-bearing) pattern id.
+    proj.write(
+        ".mdatron/patterns/p.yaml",
+        "mdatron_dsl_version: 1\npattern:\n  id: \"p\\u001b[2Jx\"\n  rules:\n    - id: r\n      context: doc\n      assert: \"$self.x ==== bad\"\n      code: T-E0001\n      message: m\n",
+    );
+    proj.write("doc.md", "---\nschema_class: doc\nx: hi\n---\n# prose\n");
+
+    let out = Command::new(mdatron_bin())
+        .args(["verify", "--project-root"])
+        .arg(proj.path())
+        .arg("--compact")
+        .output()
+        .expect("mdatron binary executes");
+    assert_eq!(
+        out.status.code(),
+        Some(2),
+        "expected a pipeline failure (exit 2); stderr={:?}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    // The agent-facing render (compact stdout + human stderr) carries no raw ESC.
+    assert!(
+        !out.stdout.contains(&0x1b) && !out.stderr.contains(&0x1b),
+        "raw ESC leaked into the E0080 render; stdout={:?} stderr={:?}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr),
+    );
+    let combined = format!(
+        "{}{}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(
+        combined.contains("MDATRON-E0080"),
+        "expected E0080; got {combined:?}"
+    );
+}
+
 // roast round-3 A: a load-path PARSE error (malformed config) bakes an absolute
 // path into a free-form Config message that `relativize_paths` cannot reach; the
 // cmd_verify chokepoint strips the root so `pipeline_error.message` stays host-
@@ -212,6 +264,39 @@ fn pipeline_error_message_relativizes_a_parse_error_path() {
     assert!(
         msg.contains("config.yaml"),
         "still names the config file (relatively); got {msg:?}"
+    );
+}
+
+// #165 round-3 (roast R2): the DEF4 host-layout contract must hold in the
+// AGENT-FACING compact/tty render, not only the JSON envelope — E0080's `detail`
+// region is relativized the same way. A malformed config bakes an absolute path
+// into a free-form Config message; --compact must not leak it.
+#[test]
+fn e0080_compact_detail_relativizes_host_path() {
+    let proj = TempProject::new("e0080-relativize");
+    proj.write(".mdatron/config.yaml", "file_globs: [unclosed\n");
+    proj.write("doc.md", "# prose\n");
+
+    let out = Command::new(mdatron_bin())
+        .args(["verify", "--project-root"])
+        .arg(proj.path())
+        .arg("--compact")
+        .output()
+        .expect("mdatron binary executes");
+    assert_eq!(out.status.code(), Some(2), "pipeline failure exits 2");
+    let combined = format!(
+        "{}{}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let abs = proj.path().to_string_lossy().into_owned();
+    assert!(
+        !combined.contains(&abs),
+        "absolute host path leaked into the E0080 compact/tty detail: {combined:?}"
+    );
+    assert!(
+        combined.contains("config.yaml"),
+        "still names the config file (relatively): {combined:?}"
     );
 }
 

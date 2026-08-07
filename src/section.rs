@@ -275,13 +275,17 @@ pub fn check_file(
                         section_line(content, body_offset, section),
                         "MDATRON-E0120",
                         "section-count-violation",
+                        // #165: the section name is adopter-derived — it rides in
+                        // the quoted region, not inline in the message.
                         &format!(
-                            "section '{section}' has {count} matching h{level} heading(s); the \
+                            "a section has {count} matching h{level} heading(s); the \
                              rule requires the count {}",
                             pred.describe()
                         ),
-                        "section",
-                        section,
+                        vec![QuotedRegion {
+                            label: "section".into(),
+                            content: section.clone(),
+                        }],
                     ));
                 }
             }
@@ -302,12 +306,25 @@ pub fn check_file(
                         section_line(content, body_offset, &a.section),
                         "MDATRON-E0121",
                         "section-ids-not-disjoint",
-                        &format!(
-                            "sections '{}' and '{}' must have disjoint ids but share: {shared}",
-                            a.section, b.section
-                        ),
-                        "shared-ids",
-                        &shared,
+                        // #165: the two section names are adopter-derived and the
+                        // shared ids are captured from the governed body (the
+                        // primary trust boundary) — all ride in quoted regions,
+                        // never inline in the engine-authored message.
+                        "two sections that must have disjoint ids share one or more",
+                        vec![
+                            QuotedRegion {
+                                label: "section a".into(),
+                                content: a.section.clone(),
+                            },
+                            QuotedRegion {
+                                label: "section b".into(),
+                                content: b.section.clone(),
+                            },
+                            QuotedRegion {
+                                label: "shared ids".into(),
+                                content: shared,
+                            },
+                        ],
                     ));
                 }
             }
@@ -374,8 +391,7 @@ fn section_finding(
     code: &str,
     summary: &str,
     message: &str,
-    label: &str,
-    quoted: &str,
+    quoted: Vec<QuotedRegion>,
 ) -> Finding {
     Finding {
         code: code.into(),
@@ -389,10 +405,7 @@ fn section_finding(
             column: 0,
         },
         explain_ref: Some(code.to_string()),
-        quoted: vec![QuotedRegion {
-            label: label.into(),
-            content: quoted.into(),
-        }],
+        quoted,
     }
 }
 
@@ -451,6 +464,51 @@ mod tests {
         assert!(
             open_ids.is_disjoint(&done_ids),
             "no false overlap on Slice 3"
+        );
+    }
+
+    // #165: E0121's two section names (adopter) and the shared ids (captured from
+    // the governed body — the primary trust boundary) ride in quoted regions,
+    // never inline in the engine-authored message.
+    #[test]
+    fn e0121_message_is_engine_authored_governed_ids_quoted() {
+        let body = "## Alpha\n\n### zqxshared\n\n## Beta\n\n### zqxshared\n";
+        let mk = |section: &str| Operand {
+            section: section.into(),
+            id_source: IdSource::H3Heading,
+            id_pattern: rx(r"(zqx\w+)"),
+        };
+        let rule = Rule::Disjoint {
+            a: mk("## Alpha"),
+            b: mk("## Beta"),
+        };
+        let mut findings = Vec::new();
+        check_file(&[&rule], Path::new("d.md"), body, 0, &mut findings);
+        let f = findings
+            .iter()
+            .find(|f| f.code == "MDATRON-E0121")
+            .unwrap_or_else(|| panic!("expected E0121; got {findings:?}"));
+        assert!(
+            !f.message.contains("Alpha")
+                && !f.message.contains("Beta")
+                && !f.message.contains("zqxshared"),
+            "no adopter/governed token echoes into the message: {:?}",
+            f.message
+        );
+        assert!(f
+            .quoted
+            .iter()
+            .any(|q| q.label == "section a" && q.content == "## Alpha"));
+        assert!(f
+            .quoted
+            .iter()
+            .any(|q| q.label == "section b" && q.content == "## Beta"));
+        assert!(
+            f.quoted
+                .iter()
+                .any(|q| q.label == "shared ids" && q.content.contains("zqxshared")),
+            "shared ids quoted: {:?}",
+            f.quoted
         );
     }
 }
