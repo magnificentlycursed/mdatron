@@ -1,6 +1,6 @@
 {
   "next_display_id": 169,
-  "next_comment_id": 450,
+  "next_comment_id": 451,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -5071,7 +5071,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-06T22:36:50.992780Z",
-      "updated_at": "2026-08-06T22:37:24.176627Z",
+      "updated_at": "2026-08-07T00:10:49.918640Z",
       "labels": [
         "security"
       ],
@@ -5079,6 +5079,15 @@
         "2d75df3e-6560-4e60-8904-1adcdf38e791"
       ],
       "comments": {
+        "13e5b153-7956-468c-964a-61e70734401b": {
+          "display_id": 450,
+          "author": "79Ig",
+          "content": "ADDITIONAL surface (found in #165 round-3 self-verification): the pin/init/explain/root-resolution SUBCOMMANDS print error Display raw via direct eprintln!, bypassing the Finding pipeline entirely — src/main.rs:270 (pin update, PinError), :350 (pin check), :404 (init failed, InitError carries adopter '{path}'), :246/:365/:443 (E0070 root-resolution, --project-root arg). Lower threat than the verify path (these act on the adopter's OWN config, not governed files authored by others), and these are not Finding.message so they're outside #165's sweep — but they're the same 'adopter bytes in agent-facing output' class and belong in this 'beyond message/help' issue. Also: several are NOT DEF4-relativized (absolute path leak). Envelope-serialization eprintln (:597/:750) is a serde error — engine-internal, safe. Fix alongside summary/code: engine-author these CLI error lines + relativize/escape the detail.",
+          "created_at": "2026-08-07T00:10:49.868350Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAo9oU6+Z18zH7Kadn7kQvDDPtj6R/1l9xZ5LO+ylIlKm82n8157p6qY2EwNohlG0ueOOdaU2LEQHgdmkr+RwgCA=="
+        },
         "ad45859f-d4ee-4266-9e14-1fc69eb1a619": {
           "display_id": 448,
           "author": "79Ig",
@@ -7136,8 +7145,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-06T23:07:36.526275Z",
+    "timestamp": "2026-08-07T00:10:49.918640Z",
     "agent_id": "79Ig",
-    "agent_seq": 865
+    "agent_seq": 866
   }
 }
