@@ -266,56 +266,66 @@ fn extract_section(markdown: &str, heading: &str) -> Option<String> {
 mod tests {
     use super::*;
 
-    const BASELINE: &[&str] = &[
-        "MDATRON-E0001",
-        "MDATRON-E0002",
-        "MDATRON-E0003",
-        "MDATRON-E0010",
-        "MDATRON-E0011",
-        "MDATRON-E0012",
-        "MDATRON-E0050",
-        "MDATRON-E0060",
-        "MDATRON-E0070",
-        "MDATRON-E0080",
-        "MDATRON-W0040",
-        "MDATRON-E0030",
-        "MDATRON-E0031",
-        "MDATRON-E0032",
-        "MDATRON-W0041",
-        "MDATRON-E0061",
-        "MDATRON-E0062",
-        "MDATRON-E0063",
-        "MDATRON-W0042",
-        "MDATRON-W0043",
-        "MDATRON-W0044",
-        "MDATRON-W0045",
-        "MDATRON-W0046",
-        "MDATRON-W0047",
-        "MDATRON-W0048",
-        "MDATRON-W0049",
-        "MDATRON-W0050",
-        "MDATRON-L0001",
-        "MDATRON-E0090",
-        "MDATRON-E0091",
-        "MDATRON-E0092",
-        "MDATRON-E0093",
-        "MDATRON-E0094",
-        "MDATRON-E0021",
-        "MDATRON-E0022",
-        "MDATRON-E0100",
-        "MDATRON-E0101",
-        "MDATRON-E0110",
-        "MDATRON-E0111",
-        "MDATRON-E0112",
-        "MDATRON-E0113",
-        "MDATRON-E0120",
-        "MDATRON-E0121",
-    ];
+    // #164: the hand-maintained BASELINE array was dissolved — the code set is now
+    // DERIVED from the explain pages (see `baseline()` below), so a new code needs
+    // no edit here.
 
     use std::path::{Path, PathBuf};
 
     fn repo_root() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+    }
+
+    fn catalog_path() -> PathBuf {
+        repo_root().join("schema/code-catalog.json")
+    }
+
+    /// Build the code catalog from the explain pages — the SINGLE source of truth
+    /// (#164, ruff-registry-audit takeaway 1). Each page's H1 `# CODE — summary`
+    /// yields one `(code, summary)` entry; `schema/code-catalog.json` and the
+    /// derived code set are GENERATED from this, never hand-maintained.
+    fn generate_catalog_from_pages() -> std::collections::BTreeMap<String, String> {
+        let dir = repo_root().join("src").join("explain");
+        let mut built = std::collections::BTreeMap::new();
+        for e in std::fs::read_dir(&dir).unwrap().flatten() {
+            let p = e.path();
+            let name = p.file_name().and_then(|s| s.to_str()).unwrap_or("");
+            if !(name.starts_with("MDATRON-") && name.ends_with(".md")) {
+                continue;
+            }
+            let content = std::fs::read_to_string(&p).unwrap();
+            let h1 = content.lines().next().unwrap_or("");
+            let (code, summary) = h1
+                .strip_prefix("# ")
+                .and_then(|s| s.split_once(" \u{2014} "))
+                .unwrap_or_else(|| {
+                    panic!("page {name} H1 must be `# CODE \u{2014} summary`; got {h1:?}")
+                });
+            let code = code.trim();
+            // The filename IS the lookup key (`lookup` reads `MDATRON-<code>.md`),
+            // so it must equal the H1 code the catalog is generated from.
+            assert_eq!(
+                Some(code),
+                name.strip_suffix(".md"),
+                "page {name} H1 code must match its filename"
+            );
+            let prev = built.insert(code.to_string(), summary.trim().to_string());
+            assert!(prev.is_none(), "duplicate explain page for {code}");
+        }
+        built
+    }
+
+    /// Render the catalog to its exact on-disk JSON form (2-space pretty, sorted
+    /// keys, trailing newline) so the byte-level generation check and the
+    /// regenerator agree.
+    fn render_catalog(map: &std::collections::BTreeMap<String, String>) -> String {
+        format!("{}\n", serde_json::to_string_pretty(map).unwrap())
+    }
+
+    /// The code set, DERIVED from the explain pages (#164): adding/renaming a code
+    /// needs no hand-edit of a baseline list — the pages ARE the registry.
+    fn baseline() -> std::collections::BTreeSet<String> {
+        generate_catalog_from_pages().into_keys().collect()
     }
 
     /// Collect every `MDATRON-<L><NNNN>` literal in `content`.
@@ -378,83 +388,49 @@ mod tests {
         }
         assert!(
             missing.is_empty(),
-            "production codes with no explain page (add the page + BASELINE entry): {missing:?}"
+            "production codes with no explain page (add the page — the code set is derived from the pages): {missing:?}"
         );
     }
 
-    // TRIPWIRE (#90): the committed code-semantics catalog
-    // (`schema/code-catalog.json`, code -> one-line summary from each page's
-    // H1) is current. Changing a code's MEANING (its page summary) without
-    // regenerating the catalog FAILS — the "seeded code-meaning change fails
-    // CI" criterion; the regen is the intentional acknowledgment.
+    // #164 (ruff-registry-audit takeaway 1): schema/code-catalog.json is GENERATED
+    // from the explain pages — the byte-level regenerate-then-diff gate (the moral
+    // upgrade of the old "catalog matches pages" detection tripwire, #90). A page's
+    // H1-summary change, a new/removed page, or any hand-edit to the catalog that
+    // was not regenerated FAILS here (and thus in CI's `cargo test`); the fix is
+    // the regenerator below.
     #[test]
-    fn code_semantics_catalog_is_current() {
-        let dir = repo_root().join("src").join("explain");
-        let mut built: std::collections::BTreeMap<String, String> = Default::default();
-        for e in std::fs::read_dir(&dir).unwrap().flatten() {
-            let p = e.path();
-            let name = p.file_name().and_then(|s| s.to_str()).unwrap_or("");
-            if !(name.starts_with("MDATRON-") && name.ends_with(".md")) {
-                continue;
-            }
-            let first = std::fs::read_to_string(&p).unwrap();
-            let h1 = first.lines().next().unwrap_or("");
-            let (code, summary) = h1
-                .strip_prefix("# ")
-                .and_then(|s| s.split_once(" \u{2014} "))
-                .unwrap_or_else(|| {
-                    panic!("page {name} H1 must be `# CODE \u{2014} summary`; got {h1:?}")
-                });
-            built.insert(code.trim().to_string(), summary.trim().to_string());
-        }
-        let golden: std::collections::BTreeMap<String, String> = serde_json::from_str(
-            &std::fs::read_to_string(repo_root().join("schema/code-catalog.json")).unwrap(),
-        )
-        .unwrap();
+    fn code_catalog_is_generated_from_pages() {
+        let on_disk = std::fs::read_to_string(catalog_path()).unwrap();
+        let generated = render_catalog(&generate_catalog_from_pages());
         assert_eq!(
-            built, golden,
-            "code-semantics drift: regenerate schema/code-catalog.json (a code's meaning changed)"
+            on_disk, generated,
+            "schema/code-catalog.json is stale — run \
+             `cargo test -p mdatron regenerate_code_catalog -- --ignored`"
         );
     }
 
-    // Consistency: the BASELINE list, the explain-page files, and the golden
-    // catalog are the same code set — adding a code requires touching all three.
+    // The generator (#164). Run after adding/renaming a code or editing a page's H1
+    // summary: `cargo test -p mdatron regenerate_code_catalog -- --ignored`. The
+    // check above enforces currency, so a forgotten regen fails CI.
     #[test]
-    fn baseline_pages_and_catalog_are_the_same_code_set() {
-        use std::collections::BTreeSet;
-        let baseline: BTreeSet<&str> = BASELINE.iter().copied().collect();
-        let mut pages: BTreeSet<String> = Default::default();
-        for e in std::fs::read_dir(repo_root().join("src/explain"))
-            .unwrap()
-            .flatten()
-        {
-            let name = e.file_name().to_string_lossy().into_owned();
-            if let Some(code) = name.strip_prefix("").and_then(|n| n.strip_suffix(".md")) {
-                if code.starts_with("MDATRON-") {
-                    pages.insert(code.to_string());
-                }
-            }
-        }
-        let pages_ref: BTreeSet<&str> = pages.iter().map(|s| s.as_str()).collect();
-        assert_eq!(
-            baseline, pages_ref,
-            "BASELINE and explain-page files must match exactly"
-        );
-        let golden: std::collections::BTreeMap<String, String> = serde_json::from_str(
-            &std::fs::read_to_string(repo_root().join("schema/code-catalog.json")).unwrap(),
+    #[ignore = "generator: rewrites schema/code-catalog.json from the explain pages"]
+    fn regenerate_code_catalog() {
+        std::fs::write(
+            catalog_path(),
+            render_catalog(&generate_catalog_from_pages()),
         )
         .unwrap();
-        let golden_codes: BTreeSet<&str> = golden.keys().map(|s| s.as_str()).collect();
-        assert_eq!(
-            baseline, golden_codes,
-            "BASELINE and the golden catalog must match"
-        );
     }
+
+    // (Removed in #164: "BASELINE == pages == catalog" is now true by construction
+    // — the catalog is generated from the pages, checked byte-level by
+    // `code_catalog_is_generated_from_pages`, and `baseline()` derives from them.
+    // The filename↔H1-code invariant moved into `generate_catalog_from_pages`.)
 
     #[test]
     fn every_baseline_code_has_a_catalog_page() {
-        for code in BASELINE {
-            let page = lookup(code).unwrap_or_else(|| panic!("missing catalog page for {code}"));
+        for code in baseline() {
+            let page = lookup(&code).unwrap_or_else(|| panic!("missing catalog page for {code}"));
             assert!(
                 page.contains("## What this means"),
                 "{code} page missing required '## What this means' heading"
@@ -477,10 +453,10 @@ mod tests {
     #[test]
     fn every_baseline_code_parses_into_structured_explain_page() {
         // Per crosslink #13 DE/F1: parser-level catalog integrity.
-        for code in BASELINE {
+        for code in baseline() {
             let parsed =
-                lookup_structured(code).unwrap_or_else(|| panic!("{code} failed to parse"));
-            assert_eq!(parsed.code, *code);
+                lookup_structured(&code).unwrap_or_else(|| panic!("{code} failed to parse"));
+            assert_eq!(parsed.code, code);
             assert!(!parsed.severity.is_empty(), "{code} severity empty");
             assert!(!parsed.status.is_empty(), "{code} status empty");
             assert!(
