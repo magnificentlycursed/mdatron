@@ -400,7 +400,13 @@ mod tests {
     // the regenerator below.
     #[test]
     fn code_catalog_is_generated_from_pages() {
-        let on_disk = std::fs::read_to_string(catalog_path()).unwrap();
+        // Normalize CRLF: a Windows `core.autocrlf` checkout gives the on-disk file
+        // `\r\n`, but the generator (and `.gitattributes eol=lf`) canonicalize to
+        // `\n` — the line ending is a checkout artifact, not catalog content. The
+        // byte-level check still catches indent/order/trailing-newline drift.
+        let on_disk = std::fs::read_to_string(catalog_path())
+            .unwrap()
+            .replace("\r\n", "\n");
         let generated = render_catalog(&generate_catalog_from_pages());
         assert_eq!(
             on_disk, generated,

@@ -1,0 +1,5 @@
+# The code catalog is a GENERATED artifact (see src/explain: generate_catalog_from_pages).
+# Keep it LF-canonical on every platform so the byte-level generation gate
+# (`code_catalog_is_generated_from_pages`) is stable regardless of a checkout's
+# core.autocrlf setting.
+schema/code-catalog.json text eol=lf
