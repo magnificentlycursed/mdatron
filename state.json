@@ -3865,11 +3865,12 @@
       "uuid": "a3650f15-722a-4a28-8623-1ef292c9c187",
       "display_id": 164,
       "title": "Make the code registry the generator: derive code-catalog.json and the explain-page consistency surface from one source (ruff-registry-audit takeaway 1)",
-      "status": "open",
+      "status": "closed",
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-08-03T20:32:54.657097Z",
-      "updated_at": "2026-08-03T20:33:24.451932Z",
+      "updated_at": "2026-08-09T17:30:31.118650Z",
+      "closed_at": "2026-08-09T17:30:31.118636Z",
       "labels": [
         "enhancement"
       ],
@@ -7155,8 +7156,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-07T21:27:13.619126Z",
+    "timestamp": "2026-08-09T17:30:31.118650Z",
     "agent_id": "79Ig",
-    "agent_seq": 870
+    "agent_seq": 871
   }
 }
