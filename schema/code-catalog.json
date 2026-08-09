@@ -41,5 +41,6 @@
   "MDATRON-W0047": "schema-dir-missing",
   "MDATRON-W0048": "reference-target-unverified",
   "MDATRON-W0049": "index-source-unreadable",
-  "MDATRON-W0050": "comparison-dead-clause"
+  "MDATRON-W0050": "comparison-dead-clause",
+  "MDATRON-W0051": "require-frontmatter-scope-matches-nothing"
 }

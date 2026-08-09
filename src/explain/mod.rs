@@ -65,6 +65,7 @@ const E0022: &str = include_str!("MDATRON-E0022.md");
 const W0050: &str = include_str!("MDATRON-W0050.md");
 const E0120: &str = include_str!("MDATRON-E0120.md");
 const E0121: &str = include_str!("MDATRON-E0121.md");
+const W0051: &str = include_str!("MDATRON-W0051.md");
 
 /// Structured shape of an explain page. Surfaces the required fields named
 /// in the Phase 1a behavioral spec. Used by `mdatron explain --json <code>`.
@@ -131,6 +132,7 @@ pub fn lookup(code: &str) -> Option<&'static str> {
         "MDATRON-E0113" => Some(E0113),
         "MDATRON-E0120" => Some(E0120),
         "MDATRON-E0121" => Some(E0121),
+        "MDATRON-W0051" => Some(W0051),
         _ => None,
     }
 }

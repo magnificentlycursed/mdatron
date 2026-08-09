@@ -906,8 +906,7 @@ fn run(
             section_rules = crate::route::section_rules_for(routes, rel);
         }
         // Vocabulary scope (#97): empty globs = every walked file.
-        let vocab_enabled =
-            vocab_globs.is_empty() || vocab_globs.iter().any(|p| p.matches_path(rel));
+        let vocab_enabled = vocab_globs.is_empty() || vocab_globs.matches_any(rel);
         if vocab_scoped && vocab_enabled {
             vocab_scoped_hits += 1;
         }
@@ -1011,6 +1010,43 @@ fn run(
                 quoted: vec![QuotedRegion {
                     label: "glob".into(),
                     content: pattern.clone(),
+                }],
+            });
+        }
+
+        // GH #36 item 2 (Security-c / SA F4): a `require_frontmatter` glob that
+        // matches no walked file silently DISABLES the requirement it declares — a
+        // typo'd or stale scope fails OPEN (no file is held to the frontmatter
+        // rule), the mirror image of a dead `file_globs` entry (W0046). Make each
+        // dead require-scope loud. Whole-tree only (`scope.is_none()`), like W0046:
+        // an incremental walk legitimately sees a subset of the tree.
+        for pat in require.iter() {
+            if governed.iter().any(|(_, rel)| pat.matches_path(rel)) {
+                continue;
+            }
+            findings.push(Finding {
+                code: "MDATRON-W0051".into(),
+                severity: Severity::Warning,
+                summary: "require-frontmatter-scope-matches-nothing".into(),
+                message: "a `require_frontmatter` glob in .mdatron/config.yaml \
+                          matches no walked file, so the frontmatter requirement it \
+                          declares is silently disabled — a typo or stale path fails \
+                          open, holding nothing to the rule while the run exits clean"
+                    .into(),
+                help: Some(
+                    "correct the glob to cover the files that must carry \
+                     frontmatter, or remove it if the requirement no longer applies"
+                        .into(),
+                ),
+                location: Location {
+                    file: config_path.clone(),
+                    line: 1,
+                    column: 0,
+                },
+                explain_ref: Some("MDATRON-W0051".into()),
+                quoted: vec![QuotedRegion {
+                    label: "glob".into(),
+                    content: pat.as_str().to_string(),
                 }],
             });
         }
@@ -1323,6 +1359,29 @@ fn read_schema_class(content: &str) -> Option<String> {
         .map(|s| s.to_string())
 }
 
+/// A confined + compiled set of adopter **scope globs** (`require_frontmatter`,
+/// `vocabulary_globs`) — a small newtype unifying the two sites' matcher (GH #36
+/// item 1). A scope glob is a pure `matches_path` predicate over the already-
+/// confined walk; the type carries NO empty-default policy — each site keeps its
+/// own empty semantics (vocab empty = every walked file; require empty = none).
+struct FileScope(Vec<glob::Pattern>);
+
+impl FileScope {
+    /// True if any glob in the scope matches the root-relative `path`.
+    fn matches_any(&self, path: &Path) -> bool {
+        self.0.iter().any(|p| p.matches_path(path))
+    }
+
+    fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    /// The compiled globs, for the per-glob dead-scope check (W0051).
+    fn iter(&self) -> std::slice::Iter<'_, glob::Pattern> {
+        self.0.iter()
+    }
+}
+
 /// Confine + compile a list of adopter **scope globs** (`require_frontmatter`,
 /// `vocabulary_globs`) against the governed tree. A glob whose text escapes the
 /// tree — an absolute path, or one climbing above the root with `..` — is a loud
@@ -1332,10 +1391,7 @@ fn read_schema_class(content: &str) -> Option<String> {
 /// names the config key for the message. Scope globs are pure `matches_path`
 /// predicates over the already-confined walk, so this only makes an escaping
 /// glob *legible*; it never widens the file set (Security's scope-∩-confinement).
-fn confine_and_compile_globs(
-    globs: &[String],
-    field: &str,
-) -> Result<Vec<glob::Pattern>, VerifyError> {
+fn confine_and_compile_globs(globs: &[String], field: &str) -> Result<FileScope, VerifyError> {
     globs
         .iter()
         .map(|g| {
@@ -1353,7 +1409,8 @@ fn confine_and_compile_globs(
             glob::Pattern::new(g)
                 .map_err(|e| VerifyError::Config(format!("{field} glob '{g}': {e}")))
         })
-        .collect()
+        .collect::<Result<Vec<_>, _>>()
+        .map(FileScope)
 }
 
 // ── Schema + pattern loading ───────────────────────────────────────────────────
@@ -1940,7 +1997,7 @@ fn verify_file(
     content: &str,
     snapshot: &crate::snapshot::Snapshot,
     project_root: &Path,
-    require_frontmatter: &[glob::Pattern],
+    require_frontmatter: &FileScope,
     cite_enabled: bool,
     link_enabled: bool,
     link_root: bool,
@@ -2026,7 +2083,7 @@ fn verify_file(
             crate::codecat::check_file(code_catalogs, path, content, 0, findings);
             crate::section::check_file(section_rules, path, content, 0, findings);
             let rel = path.strip_prefix(project_root).unwrap_or(path);
-            if require_frontmatter.iter().any(|p| p.matches_path(rel)) {
+            if require_frontmatter.matches_any(rel) {
                 findings.push(Finding {
                     code: "MDATRON-W0040".into(),
                     severity: Severity::Warning,
@@ -2573,6 +2630,80 @@ mod tests {
         assert_eq!(findings[0].code, "MDATRON-W0040");
         assert_eq!(findings[0].severity, Severity::Warning);
         assert!(findings[0].location.file.ends_with("docs/naked.md"));
+    }
+
+    // GH #36 item 2 (Security-c / SA F4): a `require_frontmatter` glob matching no
+    // walked file fails OPEN (silently disables the requirement) — it must be loud
+    // (W0051), the mirror of W0046. The adopter glob rides in a quoted region, not
+    // inline in the message (marking discipline, #165).
+    #[test]
+    fn dead_require_frontmatter_glob_fires_w0051() {
+        let proj = TempProject::new("w0051-dead");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\nrequire_frontmatter:\n  - \"typo/**/*.md\"\n",
+        );
+        proj.write("docs/x.md", "---\nk: v\n---\n# body\n");
+        let cfg = VerifyConfig::from_project(&proj.0).expect("config loads");
+        let findings = verify(&cfg).unwrap();
+        let f = findings
+            .iter()
+            .find(|f| f.code == "MDATRON-W0051")
+            .unwrap_or_else(|| panic!("expected W0051; got {findings:?}"));
+        assert_eq!(f.severity, Severity::Warning);
+        assert!(
+            f.quoted.iter().any(|q| q.content == "typo/**/*.md"),
+            "the dead glob rides in a quoted region: {:?}",
+            f.quoted
+        );
+        assert!(
+            !f.message.contains("typo/**/*.md"),
+            "the adopter glob does not echo into the message: {:?}",
+            f.message
+        );
+    }
+
+    // NEGATIVE: a `require_frontmatter` glob that DOES match a walked file is clean.
+    #[test]
+    fn live_require_frontmatter_glob_is_not_w0051() {
+        let proj = TempProject::new("w0051-live");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\nrequire_frontmatter:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write("docs/x.md", "---\nk: v\n---\n# body\n");
+        let cfg = VerifyConfig::from_project(&proj.0).expect("config loads");
+        let findings = verify(&cfg).unwrap();
+        assert_eq!(
+            codes_of(&findings, "MDATRON-W0051"),
+            0,
+            "a live require glob is not flagged: {findings:?}"
+        );
+    }
+
+    // W0051 is whole-tree ONLY: an incremental (`--changed`) run walks a subset,
+    // so a require glob that matches nothing IN SCOPE is expected, not a dead
+    // scope — it must NOT fire (also compile-enforced: the emission lives inside
+    // the `if scope.is_none()` block). Mirrors W0046/W0043's whole-tree gate.
+    #[test]
+    fn dead_require_glob_is_silent_on_incremental() {
+        let proj = TempProject::new("w0051-incremental");
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\nrequire_frontmatter:\n  - \"typo/**/*.md\"\n",
+        );
+        proj.write("docs/x.md", "---\nk: v\n---\n# body\n");
+        let cfg = VerifyConfig::from_project(&proj.0).expect("config loads");
+        let inc = verify_incremental(&cfg, Path::new("docs/x.md")).unwrap();
+        assert_eq!(
+            codes_of(&inc.report.findings, "MDATRON-W0051"),
+            0,
+            "a dead require glob is not flagged on an incremental run: {:?}",
+            inc.report.findings
+        );
     }
 
     // ── route family (#83): the allowlist over the governed tree ───────────
