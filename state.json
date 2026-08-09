@@ -1,6 +1,6 @@
 {
   "next_display_id": 170,
-  "next_comment_id": 452,
+  "next_comment_id": 453,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -4818,14 +4818,25 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-07-29T12:45:17.020349Z",
-      "updated_at": "2026-07-29T12:45:37.976649Z",
+      "updated_at": "2026-08-09T20:57:33.700867Z",
       "labels": [
         "enhancement"
       ],
       "related": [
         "18545077-3dbb-4401-847d-c6b4bdbe7d78",
         "2456d20a-0560-437f-81a0-2d54a1b96d80"
-      ]
+      ],
+      "comments": {
+        "0681077b-28ee-4552-b866-0443a6421ed7": {
+          "display_id": 452,
+          "author": "79Ig",
+          "content": "PLAN (operator chose full rule-level spans): saphyr is already integrated (frontmatter.rs). Design: in load_patterns (verify.rs), parse each pattern file's content with saphyr MarkedYaml (inside catch_unwind, mirroring frontmatter::resolve_e0050_locations), walk pattern.rules[], build a map (pattern_id,rule_id)->(line,col) from each rule's id-key span; thread it through validate_rule_field_refs + check_rule_comparisons to the 3 builders (field_ref_finding E0021, comparison_type_finding E0022, dead_clause_finding W0050), replacing the patterns_dir:0:0 location with (pattern_file,line,col). Fallback (no span) = (pattern_file or patterns_dir,1,0). NOTE the frontmatter marker_to_location adds +1 for the --- fence; pattern files parse whole so need their own offset (pin with a test). Cold-review after.",
+          "created_at": "2026-08-09T20:57:33.686488Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAi9zfzJ3pqqKSnFlpDsJL3PwF18T6KOXj0yyKdqPFBXGLS2f8xrreJtY6uFvfoNswKJnX6NAaha41S22zvySjBA=="
+        }
+      }
     },
     "b99bb9e4-ae94-4219-9d15-490769f6b4d0": {
       "uuid": "b99bb9e4-ae94-4219-9d15-490769f6b4d0",
@@ -7171,8 +7182,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-09T20:50:33.763481Z",
+    "timestamp": "2026-08-09T20:57:33.700867Z",
     "agent_id": "79Ig",
-    "agent_seq": 878
+    "agent_seq": 879
   }
 }
