@@ -1,5 +1,5 @@
 {
-  "next_display_id": 170,
+  "next_display_id": 171,
   "next_comment_id": 454,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -50,6 +50,7 @@
     "44e04ea5-0edc-4919-bcf7-7c234a3c8954": 74,
     "48642aed-2145-4a65-b014-0df508ad37c5": 11,
     "49197eb8-d2b6-4462-9185-1e9065d2d847": 3,
+    "4ca77036-160b-443f-9480-bef7a625d82f": 170,
     "4dd99e1d-a2be-43b8-b748-53449ce44113": 152,
     "4fe1ca8e-6b24-4d43-86c1-7a29b108f3ac": 126,
     "52ecc683-68d9-47ce-934f-0d9b43c371f4": 70,
@@ -1959,6 +1960,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAniNUdFB04wb7QOdEYCaxX2b2Z84Bloo+IWFud6cdaeL2aCz66ZXA6Esu7tJS6jfW2LU2WfxFmefHFSEZZBZPAA=="
         }
       }
+    },
+    "4ca77036-160b-443f-9480-bef7a625d82f": {
+      "uuid": "4ca77036-160b-443f-9480-bef7a625d82f",
+      "display_id": 170,
+      "title": "vsdd methodology follow-ups (from #96 close): routing-before-fix-close + round-result parity seams (vsdd-cli boundary); durable core.hooksPath auto-bind; methodology-docs cold review",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-08-10T12:43:34.794950Z",
+      "updated_at": "2026-08-10T12:43:34.794950Z"
     },
     "4dd99e1d-a2be-43b8-b748-53449ce44113": {
       "uuid": "4dd99e1d-a2be-43b8-b748-53449ce44113",
@@ -7192,8 +7203,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-10T12:41:12.288138Z",
+    "timestamp": "2026-08-10T12:43:34.794950Z",
     "agent_id": "79Ig",
-    "agent_seq": 883
+    "agent_seq": 884
   }
 }
