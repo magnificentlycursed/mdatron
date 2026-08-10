@@ -4814,11 +4814,12 @@
       "uuid": "b996b1ec-a892-47dc-9569-7b00b64bdeec",
       "display_id": 118,
       "title": "audit-signal W4: pattern-rule finding locations are :1 col 0, not the precise field :line:col (needs span-capable YAML)",
-      "status": "open",
+      "status": "closed",
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-07-29T12:45:17.020349Z",
-      "updated_at": "2026-08-09T22:38:27.007360Z",
+      "updated_at": "2026-08-10T12:39:44.455476Z",
+      "closed_at": "2026-08-10T12:39:44.455464Z",
       "labels": [
         "enhancement"
       ],
@@ -7191,8 +7192,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-09T22:38:27.007360Z",
+    "timestamp": "2026-08-10T12:39:44.455476Z",
     "agent_id": "79Ig",
-    "agent_seq": 880
+    "agent_seq": 881
   }
 }
