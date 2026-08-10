@@ -1,6 +1,6 @@
 {
   "next_display_id": 171,
-  "next_comment_id": 456,
+  "next_comment_id": 457,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -1117,7 +1117,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-07-29T01:38:59.747297Z",
-      "updated_at": "2026-08-10T12:43:53.846223Z",
+      "updated_at": "2026-08-10T12:55:46.946445Z",
       "labels": [
         "process"
       ],
@@ -1162,6 +1162,15 @@
           "kind": "decision",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAVXcXgZQrbxcwkD6mQcPKw4cGGtsa4+icizUeuu+bsqf5fpfMt4aD6JvOxn1oL9FukK7FKYNkVycsx0wjOrY6Cw=="
+        },
+        "9b18b0d9-1d50-4f93-a5e6-c5e5a3bdf94e": {
+          "display_id": 456,
+          "author": "79Ig",
+          "content": "CLOSED as disposition (operator-directed 2026-08-10). Mechanized half shipped + merged: S1 .githooks/commit-msg amendment seam (this issue), #97 governed-estate register, #99 lessons; core.hooksPath rebound + per-clone durability documented in methodology-enforcement.md (PR #47, merged). Conduct half internalized in methodology.md. The two remaining seams (routing-before-fix-close, round-result parity) + durable auto-bind + optional methodology-docs cold review are deferred to the vsdd-cli process-integrity boundary, tracked in #170. The standing-methodology-home role is now served by the docs + [[methodology-adoption]] memory, not an open tracker issue.",
+          "created_at": "2026-08-10T12:55:46.930322Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAy9FJVWoWeg0vB6igfa4ofk0AJa28/prRqUOK0/HNFy4O7Ipr3kOv/J86KoOGj3Xnqcmqm/TH30viQRR2Pn6jCg=="
         },
         "e9778298-353c-44d4-b144-1be697bf0a4b": {
           "display_id": 255,
@@ -7230,8 +7239,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-10T12:53:55.030066Z",
+    "timestamp": "2026-08-10T12:55:46.946445Z",
     "agent_id": "79Ig",
-    "agent_seq": 888
+    "agent_seq": 889
   }
 }
