@@ -49,6 +49,14 @@ Each guardrail is named for the discipline it binds — no coined labels
 | routing before fix-close | a fix-close finding carries a prior routing plan (§2) | planned — crosslink-querying check (near the vsdd-cli boundary) | planned |
 | round-result parity | a round-result comment cites its child-issue handle (§4) | planned — crosslink-querying check | planned |
 
+**Binding is per-clone (#96).** The `.githooks/commit-msg` friction is active only
+where `git config core.hooksPath .githooks` is set — a LOCAL git config a fresh
+clone does not inherit (it is untracked, so a full re-clone drops it silently).
+Re-run it after cloning. Friction is deliberately the *weaker* half of each seam:
+the CI-backed block (`tests/methodology_seams.rs` seeds plus `mdatron verify`
+self-validate) re-derives the same integrity in CI regardless of a missing local
+hook — so an unbound clone loses the commit-time nudge, not the guarantee.
+
 ## Escape corpus (regression seeds)
 
 Each escape is a dodge the guardrails must catch; the escapes are the negative
