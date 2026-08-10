@@ -353,7 +353,7 @@ fn run(
     // deliberate opt-out, not drift, so only true absence is flagged.
     let schemas_dir_missing = !config.schemas_dir.is_dir();
     let schemas = load_schemas(&config.schemas_dir)?;
-    let patterns = load_patterns(&config.patterns_dir)?;
+    let (patterns, rule_locations) = load_patterns(&config.patterns_dir)?;
 
     // Canonicalize the project root so globs joined against it produce absolute
     // patterns. This avoids cwd ambiguity when callers pass a relative root.
@@ -493,7 +493,13 @@ fn run(
     // schema its context binds; a path naming an undeclared property under a
     // closed object hard-gates as E0021. Conservative by construction — see
     // `validate_rule_field_refs`.
-    validate_rule_field_refs(&config.patterns_dir, &patterns, &schemas, &mut findings);
+    validate_rule_field_refs(
+        &config.patterns_dir,
+        &patterns,
+        &schemas,
+        &rule_locations,
+        &mut findings,
+    );
 
     // Keep the pins for after the scope filter: a pin finding locates at
     // pins.yaml but is ABOUT the pinned file, so incremental includes it by the
@@ -1458,10 +1464,28 @@ fn load_schemas(dir: &Path) -> Result<BTreeMap<String, Schema>, VerifyError> {
     Ok(out)
 }
 
-fn load_patterns(dir: &Path) -> Result<Vec<PatternFile>, VerifyError> {
+/// Per-rule source locations, parallel to the `Vec<PatternFile>` returned
+/// alongside them: `rule_locations[i][j]` is the [`Location`] of
+/// `patterns[i].pattern.rules[j]`. Built by [`load_patterns`] from a
+/// position-tracking re-parse so the DSL rule-validation findings
+/// (E0021/E0022/W0050) anchor at the offending rule's line in its own pattern
+/// file, not the bare `.mdatron/patterns/` directory (#118).
+///
+/// The association is scoped per SOURCE FILE and per rule POSITION, not by
+/// `(pattern_id, rule_id)` (#118 cold-review): pattern ids are not unique across
+/// files and rule ids are not unique within a file, so a global id-keyed map
+/// mislocated a finding onto a same-id rule in a sibling file (nondeterministic
+/// by `read_dir` order) or onto a same-id rule later in the same file. Indexing
+/// by file + position removes both collisions. Every loaded rule gets an entry —
+/// a file-precise fallback (`line 1, col 0`) when the span re-parse cannot
+/// pinpoint it.
+type RuleLocations = Vec<Vec<Location>>;
+
+fn load_patterns(dir: &Path) -> Result<(Vec<PatternFile>, RuleLocations), VerifyError> {
     let mut out = Vec::new();
+    let mut locations: RuleLocations = Vec::new();
     if !dir.is_dir() {
-        return Ok(out);
+        return Ok((out, locations));
     }
     for entry in std::fs::read_dir(dir).map_err(|e| VerifyError::Io {
         path: dir.to_string_lossy().into_owned(),
@@ -1484,9 +1508,143 @@ fn load_patterns(dir: &Path) -> Result<Vec<PatternFile>, VerifyError> {
             path: path.to_string_lossy().into_owned(),
             error: e.to_string(),
         })?;
+        locations.push(resolve_file_rule_locations(&content, &path, &pf));
         out.push(pf);
     }
-    Ok(out)
+    Ok((out, locations))
+}
+
+/// Resolve one [`Location`] per rule in `pf`, positionally aligned to
+/// `pf.pattern.rules`. Each rule starts with a file-precise fallback
+/// (`file: path, line: 1, column: 0`); a position-tracking re-parse of the same
+/// `content` then overwrites it with the rule's exact line/column where the rule
+/// can be located. The two steps guarantee a finding always points at the
+/// specific pattern FILE — never a same-id sibling — even when the span re-parse
+/// degrades (#118).
+fn resolve_file_rule_locations(content: &str, path: &Path, pf: &PatternFile) -> Vec<Location> {
+    let mut locs: Vec<Location> = pf
+        .pattern
+        .rules
+        .iter()
+        .map(|_| Location {
+            file: path.to_path_buf(),
+            line: 1,
+            column: 0,
+        })
+        .collect();
+    // Positional overwrite: the saphyr sequence and the AST rule list are the
+    // same `rules:` sequence in document order, so index i addresses the same
+    // rule in both. A count mismatch (e.g. a saphyr quirk) degrades safely —
+    // unmatched rules keep their file-precise fallback.
+    for (i, span) in resolve_rule_spans(content).into_iter().enumerate() {
+        if let (Some(slot), Some((line, column))) = (locs.get_mut(i), span) {
+            *slot = Location {
+                file: path.to_path_buf(),
+                line,
+                column,
+            };
+        }
+    }
+    locs
+}
+
+/// Resolve each rule's `(line, column)` within a pattern file, IN SEQUENCE ORDER,
+/// by re-parsing the SAME content with saphyr's position-tracking loader — the
+/// AST parse ([`parse_pattern_file`]) does not retain spans. One entry is emitted
+/// per `rules:` sequence item (so the result aligns positionally with the AST
+/// rule list); each points at the rule's `id:` key (its identifying line), or the
+/// item's own start when no `id` key is present. Mirrors
+/// [`frontmatter::resolve_e0050_locations`]: the parse runs inside `catch_unwind`
+/// because saphyr is pre-1.0, so a parser panic degrades to "no spans" (the
+/// caller keeps its file-precise fallbacks) rather than aborting the run. Any
+/// unexpected shape (missing `pattern`/`rules`, a non-sequence `rules`) likewise
+/// yields no spans; the AST parse that already succeeded is the source of truth
+/// for which rules exist.
+fn resolve_rule_spans(content: &str) -> Vec<Option<(u32, u32)>> {
+    use saphyr::{LoadableYamlNode, MarkedYaml, YamlData};
+
+    let root: Option<MarkedYaml> = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        MarkedYaml::load_from_str(content).ok()?.into_iter().next()
+    }))
+    .ok()
+    .flatten();
+    let Some(root) = root else {
+        return Vec::new();
+    };
+
+    let Some(rules) = mapping_get(&root, "pattern").and_then(|p| mapping_get(p, "rules")) else {
+        return Vec::new();
+    };
+    let YamlData::Sequence(items) = &rules.data else {
+        return Vec::new();
+    };
+
+    // Exactly one entry per sequence item, preserving positional alignment with
+    // the AST rule list. Prefer the rule's `id:` key (its identifying line);
+    // fall back to the item mapping's own start otherwise.
+    items
+        .iter()
+        .map(|item| {
+            let marker = id_key_marker(item).unwrap_or(item.span.start);
+            pattern_marker_to_location(marker)
+        })
+        .collect()
+}
+
+/// The source [`Marker`](saphyr::Marker) of a rule mapping's `id:` key, or `None`
+/// when the item is not a mapping or has no `id` key.
+fn id_key_marker(item: &saphyr::MarkedYaml) -> Option<saphyr::Marker> {
+    use saphyr::{Scalar, YamlData};
+    let YamlData::Mapping(map) = &item.data else {
+        return None;
+    };
+    map.iter().find_map(|(k, _)| match &k.data {
+        YamlData::Value(Scalar::String(s)) if s.as_ref() == "id" => Some(k.span.start),
+        _ => None,
+    })
+}
+
+/// Fetch a mapping child by key name from a marked YAML node, or `None` when the
+/// node is not a mapping or has no such key.
+fn mapping_get<'a, 'i>(
+    node: &'a saphyr::MarkedYaml<'i>,
+    key: &str,
+) -> Option<&'a saphyr::MarkedYaml<'i>> {
+    use saphyr::{Scalar, YamlData};
+    let YamlData::Mapping(map) = &node.data else {
+        return None;
+    };
+    map.iter().find_map(|(k, v)| match &k.data {
+        YamlData::Value(Scalar::String(s)) if s.as_ref() == key => Some(v),
+        _ => None,
+    })
+}
+
+/// 1-based `(line, column)` of a node in a WHOLE-file pattern parse. Unlike
+/// [`frontmatter`]'s resolver — whose YAML block starts at file line 2 (the
+/// opening `---` is line 1), hence its `+1` on the line — a pattern file is
+/// parsed whole, so saphyr's already-1-based line IS the file line. Columns are
+/// 0-based, rendered 1-based.
+fn pattern_marker_to_location(marker: saphyr::Marker) -> Option<(u32, u32)> {
+    let line = u32::try_from(marker.line()).ok()?;
+    let column = u32::try_from(marker.col()).ok()?.saturating_add(1);
+    Some((line, column))
+}
+
+/// The source [`Location`] for the rule at `rule_idx` in the file whose
+/// per-rule locations are `rule_locs`. The load-time list holds a file-precise
+/// entry for every loaded rule, so this only falls back to the bare patterns
+/// directory for a rule with no entry at all (e.g. a hand-built [`PatternFile`]
+/// in a unit test that never went through [`load_patterns`]).
+fn rule_location(rule_locs: &[Location], rule_idx: usize, patterns_dir: &Path) -> Location {
+    rule_locs
+        .get(rule_idx)
+        .cloned()
+        .unwrap_or_else(|| Location {
+            file: patterns_dir.to_path_buf(),
+            line: 1,
+            column: 0,
+        })
 }
 
 // ── Rule field-reference validation (#156) ──────────────────────────────────────
@@ -1511,16 +1669,27 @@ fn validate_rule_field_refs(
     patterns_dir: &Path,
     patterns: &[PatternFile],
     schemas: &BTreeMap<String, Schema>,
+    rule_locations: &RuleLocations,
     findings: &mut Vec<Finding>,
 ) {
-    for pf in patterns {
-        for rule in &pf.pattern.rules {
+    // `rule_locations` is parallel to `patterns` (one inner vec per file, one
+    // entry per rule position), so a rule's span is resolved by its file AND its
+    // index — never by a globally-colliding (pattern_id, rule_id) key (#118).
+    let empty: Vec<Location> = Vec::new();
+    for (pf, rule_locs) in patterns
+        .iter()
+        .zip(rule_locations.iter().chain(std::iter::repeat(&empty)))
+    {
+        for (rule_idx, rule) in pf.pattern.rules.iter().enumerate() {
             let Some(schema_class) = context_schema_class(&rule.context) else {
                 continue;
             };
             let Some(schema) = schemas.get(schema_class) else {
                 continue;
             };
+            // The precise source span of this rule in its own pattern file (#118),
+            // resolved once and shared by every finding the rule produces.
+            let location = rule_location(rule_locs, rule_idx, patterns_dir);
             // Every expression the rule evaluates: each let-binding value in
             // order, then the assertion itself.
             let sources = rule
@@ -1539,7 +1708,7 @@ fn validate_rule_field_refs(
                     check_rule_comparisons(
                         &expr,
                         schema,
-                        patterns_dir,
+                        &location,
                         &pf.pattern.id,
                         rule,
                         findings,
@@ -1551,7 +1720,7 @@ fn validate_rule_field_refs(
             for path in paths {
                 if schema.field_path_status(&path) == FieldPathStatus::UndeclaredClosed {
                     findings.push(field_ref_finding(
-                        patterns_dir,
+                        &location,
                         &pf.pattern.id,
                         rule,
                         schema_class,
@@ -1732,7 +1901,7 @@ fn render_operand(e: &Expr) -> Option<String> {
 fn check_rule_comparisons(
     e: &Expr,
     schema: &Schema,
-    patterns_dir: &Path,
+    location: &Location,
     pattern_id: &str,
     rule: &Rule,
     findings: &mut Vec<Finding>,
@@ -1748,7 +1917,7 @@ fn check_rule_comparisons(
             if !types_compatible(lt, rt) {
                 if let (Some(la), Some(rb)) = (render_operand(a), render_operand(b)) {
                     findings.push(comparison_type_finding(
-                        patterns_dir,
+                        location,
                         pattern_id,
                         rule,
                         (&la, lt),
@@ -1757,7 +1926,7 @@ fn check_rule_comparisons(
                     ));
                 }
                 // A type error is not also a dead-enum clause; done with this node.
-                return recurse_comparisons(e, schema, patterns_dir, pattern_id, rule, findings);
+                return recurse_comparisons(e, schema, location, pattern_id, rule, findings);
             }
         }
         // Types are compatible (or undecidable): the enum dead-clause check.
@@ -1772,11 +1941,7 @@ fn check_rule_comparisons(
                                 (render_operand(field), render_operand(lit))
                             {
                                 findings.push(dead_clause_finding(
-                                    patterns_dir,
-                                    pattern_id,
-                                    rule,
-                                    &fr,
-                                    &lr,
+                                    location, pattern_id, rule, &fr, &lr,
                                 ));
                             }
                             break; // one finding per comparison
@@ -1786,7 +1951,7 @@ fn check_rule_comparisons(
             }
         }
     }
-    recurse_comparisons(e, schema, patterns_dir, pattern_id, rule, findings);
+    recurse_comparisons(e, schema, location, pattern_id, rule, findings);
 }
 
 /// Recurse into a comparison node's operand-bearing children (the E0021 walk's
@@ -1794,13 +1959,13 @@ fn check_rule_comparisons(
 fn recurse_comparisons(
     e: &Expr,
     schema: &Schema,
-    patterns_dir: &Path,
+    location: &Location,
     pattern_id: &str,
     rule: &Rule,
     findings: &mut Vec<Finding>,
 ) {
     let mut go = |c: &Expr| {
-        check_rule_comparisons(c, schema, patterns_dir, pattern_id, rule, findings);
+        check_rule_comparisons(c, schema, location, pattern_id, rule, findings);
     };
     match e {
         Expr::Field(inner, _) | Expr::Not(inner) => go(inner),
@@ -1827,7 +1992,7 @@ fn recurse_comparisons(
 /// vocabulary, safe inline); the adopter-derived operand renderings ride in
 /// escaped quoted regions (#162 F-1 discipline).
 fn comparison_type_finding(
-    patterns_dir: &Path,
+    location: &Location,
     pattern_id: &str,
     rule: &Rule,
     left: (&str, &str),
@@ -1857,11 +2022,7 @@ fn comparison_type_finding(
             left.1, right.1
         ),
         help: None,
-        location: Location {
-            file: patterns_dir.to_path_buf(),
-            line: 0,
-            column: 0,
-        },
+        location: location.clone(),
         explain_ref: Some("MDATRON-E0022".to_string()),
         quoted: vec![
             QuotedRegion {
@@ -1888,7 +2049,7 @@ fn comparison_type_finding(
 /// field's declared `enum`: the clause never varies with the document. Message
 /// engine-authored; adopter operands in escaped quoted regions.
 fn dead_clause_finding(
-    patterns_dir: &Path,
+    location: &Location,
     pattern_id: &str,
     rule: &Rule,
     field: &str,
@@ -1905,11 +2066,7 @@ fn dead_clause_finding(
                   the field."
             .into(),
         help: None,
-        location: Location {
-            file: patterns_dir.to_path_buf(),
-            line: 0,
-            column: 0,
-        },
+        location: location.clone(),
         explain_ref: Some("MDATRON-W0050".to_string()),
         quoted: vec![
             QuotedRegion {
@@ -1933,10 +2090,10 @@ fn dead_clause_finding(
 }
 
 /// Build the `MDATRON-E0021` finding for an undeclared `$self` field reference.
-/// Anchored at the patterns directory (rules carry no per-file source span); the
+/// Anchored at the offending rule's line in its own pattern file (#118); the
 /// pattern id, rule id, and offending `$self.<path>` name the exact site.
 fn field_ref_finding(
-    patterns_dir: &Path,
+    location: &Location,
     pattern_id: &str,
     rule: &Rule,
     schema_class: &str,
@@ -1957,11 +2114,7 @@ fn field_ref_finding(
                   name, or declare it in the schema"
             .into(),
         help: None,
-        location: Location {
-            file: patterns_dir.to_path_buf(),
-            line: 0,
-            column: 0,
-        },
+        location: location.clone(),
         explain_ref: Some("MDATRON-E0021".to_string()),
         quoted: vec![
             QuotedRegion {
@@ -7615,6 +7768,317 @@ pattern:
         assert_eq!(codes_of(&findings, "MDATRON-E0022"), 1, "{findings:?}");
     }
 
+    // ── #118: precise per-rule source location for E0021/E0022/W0050 ─────────
+    //
+    // These findings previously anchored at the bare `.mdatron/patterns/`
+    // DIRECTORY (line 0). They must now point at the offending rule's own line
+    // in its specific `.yaml` file — diagnostic precision only, with no change
+    // to WHICH findings fire (the surrounding gate tests pin the firing set).
+
+    /// The 1-based line of the first content line containing `needle`.
+    fn line_of(content: &str, needle: &str) -> u32 {
+        let idx = content
+            .lines()
+            .position(|l| l.contains(needle))
+            .unwrap_or_else(|| panic!("needle {needle:?} not found in:\n{content}"));
+        u32::try_from(idx + 1).unwrap()
+    }
+
+    /// Write a single pattern file `.mdatron/patterns/<name>` verbatim alongside
+    /// one schema, then run verify. Returns the findings; the caller keeps the
+    /// pattern text to compute expected line numbers from it.
+    fn run_pattern_file(label: &str, schema: &str, name: &str, pattern: &str) -> Vec<Finding> {
+        let proj = TempProject::new(label);
+        proj.write(".mdatron/schemas/doc.json", schema);
+        proj.write(&format!(".mdatron/patterns/{name}"), pattern);
+        let cfg = VerifyConfig::new(&proj.0);
+        verify(&cfg).expect("verify runs")
+    }
+
+    /// The rule id declaration lands on file line 5 in each single-rule fixture.
+    const SINGLE_RULE_ID_LINE: &str = "id: only-rule";
+
+    #[test]
+    fn e0021_locates_at_the_rule_line_in_its_pattern_file() {
+        // A single-rule fixture with an undeclared `$self.ownr` (typo for
+        // `owner`) under the closed schema.
+        let pattern = "mdatron_dsl_version: 1\n\
+                       pattern:\n\
+                       \x20 id: p\n\
+                       \x20 rules:\n\
+                       \x20   - id: only-rule\n\
+                       \x20     context: doc\n\
+                       \x20     assert: '$self.ownr == \"x\"'\n\
+                       \x20     code: T-E0001\n\
+                       \x20     message: \"m\"\n";
+        let findings = run_pattern_file("e0021-loc", CLOSED_DOC_SCHEMA, "rules.yaml", pattern);
+        let f = findings
+            .iter()
+            .find(|f| f.code == "MDATRON-E0021")
+            .unwrap_or_else(|| panic!("expected E0021; got {findings:?}"));
+        // Points at the specific .yaml FILE, not the bare patterns/ directory.
+        assert_eq!(
+            f.location.file.file_name().and_then(|s| s.to_str()),
+            Some("rules.yaml"),
+            "E0021 locates in the .yaml file, not the patterns dir: {:?}",
+            f.location.file
+        );
+        // ...and at the rule's own line, computed from the fixture (line 5).
+        let want = line_of(pattern, SINGLE_RULE_ID_LINE);
+        assert_eq!(want, 5, "fixture sanity: the rule id is on line 5");
+        assert_eq!(
+            f.location.line, want,
+            "E0021 points at the rule's line; got {}",
+            f.location.line
+        );
+        assert!(
+            f.location.column > 0,
+            "a resolved span carries a real column"
+        );
+        // Marking discipline unchanged: the reference still rides in a quoted
+        // region (only the location moved).
+        assert!(
+            f.quoted
+                .iter()
+                .any(|q| q.label == "reference" && q.content == "$self.ownr"),
+            "the reference still rides in a quoted region: {:?}",
+            f.quoted
+        );
+    }
+
+    #[test]
+    fn e0022_locates_at_the_rule_line_in_its_pattern_file() {
+        // `count` is integer; comparing it to a string literal is a type
+        // mismatch (E0022).
+        let pattern = "mdatron_dsl_version: 1\n\
+                       pattern:\n\
+                       \x20 id: p\n\
+                       \x20 rules:\n\
+                       \x20   - id: only-rule\n\
+                       \x20     context: doc\n\
+                       \x20     assert: '$self.count == \"yes\"'\n\
+                       \x20     code: T-E0001\n\
+                       \x20     message: \"m\"\n";
+        let findings = run_pattern_file("e0022-loc", TYPED_DOC_SCHEMA, "typed.yaml", pattern);
+        let f = findings
+            .iter()
+            .find(|f| f.code == "MDATRON-E0022")
+            .unwrap_or_else(|| panic!("expected E0022; got {findings:?}"));
+        assert_eq!(
+            f.location.file.file_name().and_then(|s| s.to_str()),
+            Some("typed.yaml"),
+            "E0022 locates in the .yaml file: {:?}",
+            f.location.file
+        );
+        let want = line_of(pattern, SINGLE_RULE_ID_LINE);
+        assert_eq!(
+            f.location.line, want,
+            "E0022 points at the rule's line; got {}",
+            f.location.line
+        );
+        assert!(
+            f.location.column > 0,
+            "a resolved span carries a real column"
+        );
+    }
+
+    #[test]
+    fn w0050_locates_at_the_rule_line_in_its_pattern_file() {
+        // `phase`'s enum excludes "phase-99": an always-constant clause (W0050).
+        let pattern = "mdatron_dsl_version: 1\n\
+                       pattern:\n\
+                       \x20 id: p\n\
+                       \x20 rules:\n\
+                       \x20   - id: only-rule\n\
+                       \x20     context: doc\n\
+                       \x20     assert: '$self.phase == \"phase-99\"'\n\
+                       \x20     code: T-E0001\n\
+                       \x20     message: \"m\"\n";
+        let findings = run_pattern_file("w0050-loc", TYPED_DOC_SCHEMA, "dead.yaml", pattern);
+        let f = findings
+            .iter()
+            .find(|f| f.code == "MDATRON-W0050")
+            .unwrap_or_else(|| panic!("expected W0050; got {findings:?}"));
+        assert_eq!(
+            f.location.file.file_name().and_then(|s| s.to_str()),
+            Some("dead.yaml"),
+            "W0050 locates in the .yaml file: {:?}",
+            f.location.file
+        );
+        let want = line_of(pattern, SINGLE_RULE_ID_LINE);
+        assert_eq!(
+            f.location.line, want,
+            "W0050 points at the rule's line; got {}",
+            f.location.line
+        );
+        assert!(
+            f.location.column > 0,
+            "a resolved span carries a real column"
+        );
+    }
+
+    #[test]
+    fn e0021_points_at_the_second_rule_when_only_it_is_bad() {
+        // Two rules in one file: the FIRST is clean (`$self.owner`, declared),
+        // the SECOND is the typo (`$self.ownr`). The single E0021 must point at
+        // the SECOND rule's line — per-rule precision, not per-file.
+        let pattern = "mdatron_dsl_version: 1\n\
+                       pattern:\n\
+                       \x20 id: p\n\
+                       \x20 rules:\n\
+                       \x20   - id: good-rule\n\
+                       \x20     context: doc\n\
+                       \x20     assert: '$self.owner == \"x\"'\n\
+                       \x20     code: T-E0001\n\
+                       \x20     message: \"m\"\n\
+                       \x20   - id: bad-rule\n\
+                       \x20     context: doc\n\
+                       \x20     assert: '$self.ownr == \"x\"'\n\
+                       \x20     code: T-E0002\n\
+                       \x20     message: \"m\"\n";
+        let findings = run_pattern_file("e0021-2nd", CLOSED_DOC_SCHEMA, "two.yaml", pattern);
+        let e0021: Vec<&Finding> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0021")
+            .collect();
+        assert_eq!(
+            e0021.len(),
+            1,
+            "only the second rule is bad; got {findings:?}"
+        );
+        let f = e0021[0];
+        let bad_line = line_of(pattern, "id: bad-rule");
+        let good_line = line_of(pattern, "id: good-rule");
+        assert_eq!(bad_line, 10, "fixture sanity: bad-rule id is on line 10");
+        assert_ne!(
+            f.location.line, good_line,
+            "must not point at the clean rule"
+        );
+        assert_eq!(
+            f.location.line, bad_line,
+            "E0021 points at the SECOND (offending) rule's line; got {}",
+            f.location.line
+        );
+        // The column resolves to the `id:` key of the offending rule.
+        let want_col = u32::try_from(
+            pattern
+                .lines()
+                .find(|l| l.contains("id: bad-rule"))
+                .and_then(|l| l.find("id:"))
+                .expect("bad-rule id line")
+                + 1,
+        )
+        .unwrap();
+        assert_eq!(
+            f.location.column, want_col,
+            "column points at the offending rule's `id:` key"
+        );
+    }
+
+    // #118 cold-review SHOULD-FIX: two pattern files sharing a `pattern.id` AND
+    // a same-named rule must NOT cross-contaminate locations. The old global
+    // (pattern_id, rule_id) map collided them, so the finding about a.yaml's rule
+    // could be located in b.yaml — nondeterministic by `read_dir` order across
+    // platforms. Per-file, per-position resolution locks the finding to the file
+    // that actually contains the offending rule.
+    #[test]
+    fn e0021_does_not_bleed_across_files_sharing_pattern_id() {
+        let proj = TempProject::new("e0021-crossfile");
+        proj.write(".mdatron/schemas/doc.json", CLOSED_DOC_SCHEMA);
+        // Both files: identical `pattern.id: p` and identical rule id `only-rule`.
+        // Only a.yaml's rule is bad (undeclared `$self.ownr`); b.yaml's is clean.
+        let bad = "mdatron_dsl_version: 1\n\
+                   pattern:\n\
+                   \x20 id: p\n\
+                   \x20 rules:\n\
+                   \x20   - id: only-rule\n\
+                   \x20     context: doc\n\
+                   \x20     assert: '$self.ownr == \"x\"'\n\
+                   \x20     code: T-E0001\n\
+                   \x20     message: \"m\"\n";
+        let good = "mdatron_dsl_version: 1\n\
+                    pattern:\n\
+                    \x20 id: p\n\
+                    \x20 rules:\n\
+                    \x20   - id: only-rule\n\
+                    \x20     context: doc\n\
+                    \x20     assert: '$self.owner == \"x\"'\n\
+                    \x20     code: T-E0002\n\
+                    \x20     message: \"m\"\n";
+        proj.write(".mdatron/patterns/a.yaml", bad);
+        proj.write(".mdatron/patterns/b.yaml", good);
+        let cfg = VerifyConfig::new(&proj.0);
+        let findings = verify(&cfg).expect("verify runs");
+        let e0021: Vec<&Finding> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0021")
+            .collect();
+        assert_eq!(
+            e0021.len(),
+            1,
+            "only a.yaml's rule is bad; got {findings:?}"
+        );
+        let f = e0021[0];
+        // Deterministic: the finding is located in the file that actually
+        // contains the bad rule, never its same-id sibling — regardless of the
+        // order `read_dir` yields the two files.
+        assert_eq!(
+            f.location.file.file_name().and_then(|s| s.to_str()),
+            Some("a.yaml"),
+            "the finding must locate in a.yaml (the file with the bad rule), \
+             not its same-`pattern.id` sibling b.yaml: {:?}",
+            f.location.file
+        );
+        assert_eq!(
+            f.location.line,
+            line_of(bad, "id: only-rule"),
+            "and at a.yaml's own rule line"
+        );
+    }
+
+    // #118 cold-review NIT: two list-item rules with the SAME `id` in one file
+    // both fire, and each finding must point at its OWN rule's line. The old
+    // id-keyed last-wins map mislocated the earlier rule onto its later sibling.
+    #[test]
+    fn duplicate_rule_id_in_one_file_locates_each_at_its_own_line() {
+        // Two rules both `id: dup`, each with a distinct undeclared field, so both
+        // produce an E0021.
+        let pattern = "mdatron_dsl_version: 1\n\
+                       pattern:\n\
+                       \x20 id: p\n\
+                       \x20 rules:\n\
+                       \x20   - id: dup\n\
+                       \x20     context: doc\n\
+                       \x20     assert: '$self.ownr == \"x\"'\n\
+                       \x20     code: T-E0001\n\
+                       \x20     message: \"m\"\n\
+                       \x20   - id: dup\n\
+                       \x20     context: doc\n\
+                       \x20     assert: '$self.typoo == \"x\"'\n\
+                       \x20     code: T-E0002\n\
+                       \x20     message: \"m\"\n";
+        let findings = run_pattern_file("e0021-dupid", CLOSED_DOC_SCHEMA, "dup.yaml", pattern);
+        let mut lines: Vec<u32> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0021")
+            .map(|f| f.location.line)
+            .collect();
+        lines.sort_unstable();
+        // Both `- id: dup` lines, computed from the fixture (lines 5 and 10).
+        let dup_lines: Vec<u32> = pattern
+            .lines()
+            .enumerate()
+            .filter(|(_, l)| l.contains("id: dup"))
+            .map(|(i, _)| u32::try_from(i + 1).unwrap())
+            .collect();
+        assert_eq!(dup_lines, vec![5, 10], "fixture sanity: two dup rules");
+        assert_eq!(
+            lines, dup_lines,
+            "each duplicate-`id` rule's finding points at its OWN line, not the \
+             last occurrence's; got {findings:?}"
+        );
+    }
+
     // #162 F-1 discipline: the E0022/W0050 builders keep the message fully
     // engine-authored — an adopter operand rendering carrying control bytes
     // rides ONLY in a quoted region, never inline. (Tested at the builder
@@ -7632,11 +8096,21 @@ pattern:
             message: String::new(),
             location: None,
         };
-        let dir = Path::new(".mdatron/patterns");
+        let loc = Location {
+            file: Path::new(".mdatron/patterns/p.yaml").to_path_buf(),
+            line: 5,
+            column: 7,
+        };
         let nasty = "$self.x\u{1b}[31m\n"; // ESC + CSI + newline in the rendering
 
-        let e =
-            comparison_type_finding(dir, "pat", &rule, (nasty, "string"), ("5", "integer"), true);
+        let e = comparison_type_finding(
+            &loc,
+            "pat",
+            &rule,
+            (nasty, "string"),
+            ("5", "integer"),
+            true,
+        );
         assert!(
             !e.message.contains('\u{1b}') && !e.message.contains('\n'),
             "E0022 message stays engine-authored: {:?}",
@@ -7647,7 +8121,7 @@ pattern:
             "the nasty operand rides in a quoted region"
         );
 
-        let w = dead_clause_finding(dir, "pat", &rule, nasty, "\"bad\"");
+        let w = dead_clause_finding(&loc, "pat", &rule, nasty, "\"bad\"");
         assert!(
             !w.message.contains('\u{1b}') && !w.message.contains('\n'),
             "W0050 message stays engine-authored: {:?}",
