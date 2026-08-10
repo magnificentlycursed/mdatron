@@ -1,6 +1,6 @@
 {
   "next_display_id": 171,
-  "next_comment_id": 455,
+  "next_comment_id": 456,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -1595,7 +1595,7 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-07-21T03:53:35.156084Z",
-      "updated_at": "2026-07-21T03:54:02.887027Z",
+      "updated_at": "2026-08-10T12:53:55.030066Z",
       "labels": [
         "security"
       ],
@@ -1603,6 +1603,15 @@
         "bc81359e-bf75-45ec-896a-418745373491"
       ],
       "comments": {
+        "24916ad9-06d0-486a-b874-d508312326fb": {
+          "display_id": 455,
+          "author": "79Ig",
+          "content": "DECISION 2026-08-10 (operator, at the 0.6.0 pre-release decision point): DEFER — Windows is not a declared target yet (windows-latest CI is compiles+basic-tests, not a support commitment). Keep the honest documented carve-out (DESIGN.md:104 swap-proof-is-Unix-only; #56). Grounded in the architecture references: (1) docs/dependencies/libc.md is the FFI-dep precedent + already names this carve-out — a windows-sys dep would need its own libc.md-style doc gated on an SO Windows-target justification that does not exist today; (2) the Cedar + Schematron audits' philosophy (trade coverage for bounded/analyzable/VERIFIABLE safety; never reintroduce an un-analyzable risk surface) means untestable unsafe FFI is only acceptable if FAIL-CLOSED BY CONSTRUCTION (any ambiguity/reparse → deny, never grant) with CI tests pinning the refusals — so an untested bug over-refuses, never holes confinement. WHEN Windows becomes a target: implement the NtCreateFile/CreateFileW no-follow handle-walk fail-closed, add docs/dependencies/windows-sys.md (SO+PE+Security), windows-latest CI tests asserting symlink/junction/mount-point refusal, then revert the E0012 explain Unix-only hedge + the DESIGN:137 qualification to universal. Stays OPEN (deferred), not closed.",
+          "created_at": "2026-08-10T12:53:55.013663Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAcTXvuzPLNvhFs+V0J4aQw+QCFOuez8Z4FWP7ok8Lvl68KybVm7CMH1SRlm+hA/G+o/BsUzRdSj7ju/9NZRxRAA=="
+        },
         "9b3ae267-ac0c-4af4-9704-fe987ca03005": {
           "author": "79Ig",
           "content": "CHANGELOG reconcile shipped (#63, merge 0f27676). #56 DESIGN carve-out RATIFIED by operator (carve-out now + defer b) and applied (merge fa0dd27): swap-proof confinement guarantee qualified Unix-only in DESIGN.md § Verification is fast; #56 closed. Filed #64 (deferred Windows handle-walk, low). Fixed orphaned hub-cache --worktree signingkey after worktree cleanup (upstream #610). Closed dup chore issues #61/#62. Main tip fa0dd27, awaiting operator push. Open: #57, #59, #60, #64.",
@@ -7221,8 +7230,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-10T12:43:53.846223Z",
+    "timestamp": "2026-08-10T12:53:55.030066Z",
     "agent_id": "79Ig",
-    "agent_seq": 887
+    "agent_seq": 888
   }
 }
