@@ -1,6 +1,6 @@
 {
   "next_display_id": 171,
-  "next_comment_id": 454,
+  "next_comment_id": 455,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -1969,10 +1969,21 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-08-10T12:43:34.794950Z",
-      "updated_at": "2026-08-10T12:43:40.154777Z",
+      "updated_at": "2026-08-10T12:43:47.268705Z",
       "labels": [
         "process"
-      ]
+      ],
+      "comments": {
+        "9fd4c506-8d99-40fc-8d2b-8a76d0333430": {
+          "display_id": 454,
+          "author": "79Ig",
+          "content": "Spun off from #96's disposition close. (1) The two planned crosslink-querying seams (routing-before-fix-close, round-result parity) sit on the vsdd-cli process-integrity boundary — build them WITH vsdd-cli, not as leaky local friction (the #99 session-stop lesson). (2) core.hooksPath binding is per-clone and untracked; a fresh clone loses it (the iCloud re-clone proved it). #96 rebound it manually + documented the per-clone requirement in methodology-enforcement.md; a durable auto-bind (a setup step / crosslink-init integration) is the real fix. (3) The optional cold multi-lens review of methodology.md/methodology-enforcement.md per their own §3.",
+          "created_at": "2026-08-10T12:43:47.253977Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA5nsk+w8WhFjkHOeHSKrfCOdu5RBDVojGuojZFUo38kG8lxxI2pTaTYMVuLOBs1QZLzCb1wemxiZaTTEiEso/AQ=="
+        }
+      }
     },
     "4dd99e1d-a2be-43b8-b748-53449ce44113": {
       "uuid": "4dd99e1d-a2be-43b8-b748-53449ce44113",
@@ -7206,8 +7217,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-08-10T12:43:40.154777Z",
+    "timestamp": "2026-08-10T12:43:47.268705Z",
     "agent_id": "79Ig",
-    "agent_seq": 885
+    "agent_seq": 886
   }
 }
