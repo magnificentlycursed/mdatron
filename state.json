@@ -1,6 +1,6 @@
 {
   "next_display_id": 175,
-  "next_comment_id": 467,
+  "next_comment_id": 468,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -2030,7 +2030,7 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-08-10T12:43:34.794950Z",
-      "updated_at": "2026-08-10T12:43:53.846223Z",
+      "updated_at": "2026-09-19T03:52:57.188397Z",
       "labels": [
         "process"
       ],
@@ -2038,6 +2038,15 @@
         "2881253a-3641-4d7b-a6c1-e09cbbd2d140"
       ],
       "comments": {
+        "7e981647-d8ff-4de6-a7ae-b7c2e3e73188": {
+          "display_id": 467,
+          "author": "79Ig",
+          "content": "DISPOSITIONS (operator asked to address what's addressable, 2026-09-19): (1) routing-before-fix-close + round-result parity seams — STAY DEFERRED, genuinely blocked on vsdd-cli process-integrity queries (the #99 leaky-local-friction lesson holds). (2) durable core.hooksPath auto-bind — upstream feature request FILED: Corvidae-Coding-Projects/crosslink#99 (crosslink init/hydrate binds a repo-declared hooks path; note the upstream repo moved orgs from dollspace-gay — redirect observed). In-repo state stays: documented per-clone step + CI-seed backstop. (3) methodology-docs cold multi-lens review — RUNNING NOW (cold reviewer, TW + methodology-consistency + falsifiability lenses over methodology.md + methodology-enforcement.md); findings will be routed/fixed on this issue. After (3) lands and is dispositioned, this issue narrows to item (1) only — the pure vsdd-cli-boundary remainder.",
+          "created_at": "2026-09-19T03:52:57.172665Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAbqGUDGk4pBN6iKzjGyhfufU6YS9OgO8s6wjaAK5qRoh2wjNHr+kC1Hm4suuaY1DF1+28kbeu2rARJm/s0UJtCA=="
+        },
         "9fd4c506-8d99-40fc-8d2b-8a76d0333430": {
           "display_id": 454,
           "author": "79Ig",
@@ -7407,8 +7416,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-19T03:46:57.312977Z",
+    "timestamp": "2026-09-19T03:52:57.188397Z",
     "agent_id": "79Ig",
-    "agent_seq": 923
+    "agent_seq": 924
   }
 }
