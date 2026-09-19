@@ -210,13 +210,10 @@ pub fn check(
                 let bytes = c.bytes();
                 let actual = match &pin.section {
                     None => sha256_hex(bytes),
-                    // Section pin (#146): hash only the heading-delimited span. A
-                    // non-UTF8 file or a missing heading cannot be located → E0063.
-                    Some(section) => match c
-                        .text()
-                        .and_then(|s| crate::markup::section_span(s, section))
-                    {
-                        Some(span) => sha256_hex(span.as_bytes()),
+                    // Section pin (#146): hash only the heading-delimited span(s).
+                    // A non-UTF8 file or a missing heading cannot be located → E0063.
+                    Some(section) => match c.text().and_then(|s| pin_section_bytes(s, section)) {
+                        Some(span_bytes) => sha256_hex(&span_bytes),
                         None => {
                             findings.push(section_not_found(&pins_path, pin, section));
                             continue;
@@ -372,14 +369,15 @@ pub fn update(project_root: &Path, dry_run: bool) -> Result<Vec<(String, String,
         }
         let actual = match &entry.section {
             None => sha256_hex(&bytes),
-            // Section pin (#146): recompute over the span only. A missing heading
+            // Section pin (#146): recompute over the span(s) only — the SAME
+            // extraction the check runs (`pin_section_bytes`). A missing heading
             // is left untouched (verify reports E0063) — recompute never invents
             // a hash for a section it cannot locate.
             Some(section) => match std::str::from_utf8(&bytes)
                 .ok()
-                .and_then(|s| crate::markup::section_span(s, section))
+                .and_then(|s| pin_section_bytes(s, section))
             {
-                Some(span) => sha256_hex(span.as_bytes()),
+                Some(span_bytes) => sha256_hex(&span_bytes),
                 None => continue,
             },
         };
@@ -407,6 +405,31 @@ pub fn update(project_root: &Path, dry_run: bool) -> Result<Vec<(String, String,
     crate::atomic::write(&path, body.as_bytes())
         .map_err(|e| Error::Config(format!("cannot write pins: {e}")))?;
     Ok(changed)
+}
+
+/// The bytes a section pin hashes (GH #48 lane G): FRONTMATTER IS STRIPPED
+/// first — a `# x` comment line inside frontmatter YAML is not a heading and
+/// must not capture the span (the marker family's strip, mirrored) — then
+/// EVERY span matching the heading spec (level + exact text, `markup::
+/// section_spans`) is concatenated in document order, so content under a
+/// duplicate same-level/same-text heading cannot evade the pin (the evasion
+/// lane A closed for section rules). `None` when no heading matches (E0063).
+/// Both the check and `pin --update` hash through this ONE extraction, so they
+/// cannot diverge.
+fn pin_section_bytes(content: &str, section: &str) -> Option<Vec<u8>> {
+    let body = match crate::frontmatter::parse(content) {
+        Ok(Some((_, b))) => b,
+        _ => content,
+    };
+    let spans = crate::markup::section_spans(body, section);
+    if spans.is_empty() {
+        return None;
+    }
+    let mut bytes = Vec::with_capacity(spans.iter().map(|s| s.len()).sum());
+    for span in &spans {
+        bytes.extend_from_slice(span.as_bytes());
+    }
+    Some(bytes)
 }
 
 fn target_unopenable(pins_path: &Path, pin: &Pin) -> Finding {

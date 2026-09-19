@@ -96,6 +96,30 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedCatalogs>, Error> {
     let raw: RawCatalogs = serde_yaml_ng::from_str(&content)
         .map_err(|e| Error::Config(format!("cannot parse '{}': {e}", path.display())))?;
 
+    // GH #48 lane G (config-integrity refusals): an EMPTY namespace makes the
+    // detector match nothing — a declared-but-inert catalog while the families
+    // report says active (the fail-open class); and two catalogs claiming ONE
+    // prefix is ambiguous authority (which `codes:` list is the closed legal
+    // set?). Both are statically knowable → refused at load.
+    let mut seen_namespaces: HashSet<&str> = HashSet::new();
+    for c in &raw.catalogs {
+        if c.namespace.is_empty() {
+            return Err(Error::Config(
+                "a code catalog's namespace must be non-empty; an empty \
+                 namespace can never match a token, so the catalog would be \
+                 silently inert"
+                    .into(),
+            ));
+        }
+        if !seen_namespaces.insert(&c.namespace) {
+            return Err(Error::Config(format!(
+                "duplicate code-catalog namespace '{}': two catalogs claiming \
+                 one prefix is ambiguous authority — merge them into one",
+                c.namespace
+            )));
+        }
+    }
+
     let catalogs = raw
         .catalogs
         .into_iter()

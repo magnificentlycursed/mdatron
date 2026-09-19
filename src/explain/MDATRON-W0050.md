@@ -21,8 +21,10 @@ narrowed, or a typo in the compared literal.
 
 This is a **warning**, not a gate: the rule is well-formed and the types match
 (a wrong-*type* literal is `MDATRON-E0022` instead). It is conservative — it
-fires only when the field declares a scalar `enum` under a closed object and
-the same-typed literal is provably outside it. mdatron deliberately does not
+fires only when the field is reachable through declared `properties` at every
+level, declares a scalar `enum`, and the same-typed literal is provably
+outside it (object openness plays no part — the closed-object gate belongs to
+E0021's existence check). mdatron deliberately does not
 attempt value-level reasoning across clauses (e.g. `x == "a" and x == "b"`);
 only schema-decidable enum membership is checked.
 

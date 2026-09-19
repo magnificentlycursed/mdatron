@@ -123,10 +123,14 @@ fn insert_html_anchors(html: &str, slugs: &mut HashSet<String>) {
     // an `id=`/`name=` inside `<!-- … -->` does not register a phantom target.
     let scanned = strip_html_comments(html);
     // A `name=`/`id=` attribute (boundary-anchored so `grid=` does not match)
-    // with a single- or double-quoted value.
-    let re = regex_lite::Regex::new(r#"(?:^|[\s"'])(?:name|id)\s*=\s*["']([^"']+)["']"#)
-        .expect("engine html-anchor detector compiles");
-    for caps in re.captures_iter(&scanned) {
+    // with a single- or double-quoted value. Compiled once (GH #48 lane G):
+    // this runs per HTML event per anchor-bearing file — a per-call compile
+    // taxed the hot path (the cite DETECTOR's idiom).
+    static ANCHOR_ATTR: std::sync::LazyLock<regex_lite::Regex> = std::sync::LazyLock::new(|| {
+        regex_lite::Regex::new(r#"(?:^|[\s"'])(?:name|id)\s*=\s*["']([^"']+)["']"#)
+            .expect("engine html-anchor detector compiles")
+    });
+    for caps in ANCHOR_ATTR.captures_iter(&scanned) {
         let id = caps.get(1).expect("id group").as_str();
         slugs.insert(id.to_string());
         let slug = slugify(id);
@@ -313,6 +317,11 @@ pub(crate) fn list_item_bold_name(line: &str) -> Option<&str> {
 /// follows. `None` if the heading is not found. Fence-aware (a `#` inside a code
 /// fence is not a heading). Used by the pin family to hash one section (#146),
 /// and the raw-span twin of the marker family's section gating.
+// In-tree production consumers migrated to the plural `section_spans` (GH #48
+// lanes A/G closed the duplicate-heading evasion for section rules and pins);
+// the singular first-occurrence resolver is kept — semantics deliberately
+// untouched — and remains exercised by tests.
+#[cfg_attr(not(test), allow(dead_code))]
 pub(crate) fn section_span<'a>(content: &'a str, heading_spec: &str) -> Option<&'a str> {
     let (want_level, want_text) = atx_heading(heading_spec)?;
     let mut start: Option<usize> = None;

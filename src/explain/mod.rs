@@ -201,12 +201,19 @@ pub fn is_mdatron_namespace(code: &str) -> bool {
 /// The published code catalog as `(code, summary)` pairs, sorted by code (#117,
 /// vsdd W4 — powers `mdatron explain --list`). Sourced from the golden
 /// `schema/code-catalog.json` so the list can never drift from the contract the
-/// tripwires enforce.
-pub fn catalog() -> Vec<(String, String)> {
+/// tripwires enforce. A malformed embedded catalog is an `Err` (GH #48 lane G):
+/// the caller reports it LOUDLY (stderr, non-zero exit) — a silently empty
+/// `--list` would read as "no codes exist".
+pub fn catalog() -> Result<Vec<(String, String)>, String> {
     const CODE_CATALOG_JSON: &str = include_str!("../../schema/code-catalog.json");
-    let map: std::collections::BTreeMap<String, String> =
-        serde_json::from_str(CODE_CATALOG_JSON).unwrap_or_default();
-    map.into_iter().collect()
+    let map: std::collections::BTreeMap<String, String> = serde_json::from_str(CODE_CATALOG_JSON)
+        .map_err(|e| {
+        format!(
+            "the embedded code catalog is malformed ({e}) — an engine build \
+             defect, not a usage error; please report it upstream"
+        )
+    })?;
+    Ok(map.into_iter().collect())
 }
 
 /// Migration-note pairs surfaced when an operator searches for a code

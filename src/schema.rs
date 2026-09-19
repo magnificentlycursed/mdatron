@@ -108,10 +108,13 @@ impl Schema {
     }
 
     /// Walk `path` to its declared schema node, or `None` if any segment is
-    /// undecidable (open object, non-object level, missing `properties`,
-    /// `$ref`/combinator) — the same conservative closed-property walk
-    /// [`field_path_status`](Self::field_path_status) performs, sharing its
-    /// no-false-positive discipline.
+    /// undecidable (an undeclared segment, a level without `properties` — which
+    /// covers `$ref`/combinator/non-object levels). This is a DECLARED-property
+    /// walk: object openness plays no part (GH #48 lane G docs-align) — unlike
+    /// [`field_path_status`](Self::field_path_status), whose closed-object gate
+    /// serves E0021's *existence* check, where an open object could
+    /// legitimately carry the undeclared field. It shares the no-false-positive
+    /// discipline: every undecidable shape yields `None`.
     fn field_path_node(&self, path: &[String]) -> Option<&JsonValue> {
         let mut cur = &self.raw;
         for seg in path {
@@ -122,7 +125,7 @@ impl Schema {
     }
 
     /// The single declared JSON-Schema `type` of a `$self.<path>` field (#156),
-    /// or `None` when undecidable — an open/undeclared path, a node with no
+    /// or `None` when undecidable — an undeclared path, a node with no
     /// `type`, or a MULTI-type node (`["string","null"]`), all of which are
     /// left unchecked so the type comparison cannot false-positive. Returns the
     /// canonical type string (`"string"`, `"integer"`, `"number"`, `"boolean"`,

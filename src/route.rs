@@ -267,8 +267,54 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
             },
         };
 
+        // GH #48 lane G: `link_root` only affects HOW the link check resolves —
+        // without `links: true` it configures a check that never runs, a dead
+        // config knob. Statically knowable → refused at load (the branch's
+        // dead-config posture, superseding GH #37's silent-inertness ruling).
+        if entry.link_root && !entry.links {
+            return Err(Error::Config(
+                "route sets link_root: true without links: true; link_root only \
+                 affects how the link check resolves, so it requires links: true \
+                 on the same route"
+                    .into(),
+            ));
+        }
+
         let mut marker_rules = Vec::with_capacity(entry.marker_rules.len());
         for rule in entry.marker_rules {
+            // GH #48 lane G: the target_doc's LEXICAL confinement is decided on
+            // path text alone, so it is knowable at load — a violating rule is
+            // dropped fail-closed with its finding here (the route-entry
+            // confinement posture), instead of reporting per run at the first
+            // governed file. The symlink refusal (E0012) stays check-time — it
+            // needs the snapshot.
+            if let Err(v) = confine_lexically(Path::new(&rule.target_doc)) {
+                let (code, summary) = match v {
+                    LexicalViolation::Absolute => ("MDATRON-E0010", "absolute-path-refused"),
+                    LexicalViolation::ParentSegment => ("MDATRON-E0011", "parent-segment-refused"),
+                };
+                findings.push(Finding {
+                    code: code.into(),
+                    severity: Severity::Error,
+                    summary: summary.into(),
+                    message: "a marker rule's target_doc escapes the governed \
+                              tree; the rule is dropped (fail-closed)"
+                        .into(),
+                    help: Some(
+                        "marker target_doc paths are relative to the project \
+                         root and may not carry parent segments or absolute \
+                         prefixes"
+                            .into(),
+                    ),
+                    location: Location::whole_file(&path),
+                    explain_ref: Some(code.to_string()),
+                    quoted: vec![QuotedRegion {
+                        label: "target_doc".into(),
+                        content: rule.target_doc.clone(),
+                    }],
+                });
+                continue; // dropped: fail-closed
+            }
             let pattern = match regex_lite::Regex::new(&rule.pattern) {
                 Ok(r) => r,
                 Err(e) => {
@@ -435,8 +481,8 @@ pub fn links_enabled(routes: &[Route], rel: &Path) -> bool {
 }
 
 /// True when a link-checked route claiming `rel` also enables root-relative
-/// link resolution (GH #37). Gated on `links` too, so `link_root` without
-/// `links` is inert (the flag only affects how the link check resolves).
+/// link resolution (GH #37). Load refuses `link_root` without `links` (GH #48
+/// lane G — a dead config knob); the `links` gate here is defensive.
 pub fn link_root_enabled(routes: &[Route], rel: &Path) -> bool {
     routes
         .iter()

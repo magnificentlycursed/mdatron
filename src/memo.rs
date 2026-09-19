@@ -53,17 +53,33 @@ impl MarkerKey {
     }
 }
 
+/// The resolution outcome of one marker rule key (GH #48 lane G): the member
+/// set when the target parsed, or one of two non-set states the per-line scan
+/// maps onto its own findings.
+pub enum MarkerMembers {
+    /// The target parsed; references resolve against this set.
+    Resolved(HashSet<String>),
+    /// The rule is disabled — its target_doc failed confinement, its
+    /// target_section heading is absent, or the target was never captured. A
+    /// rule-level finding was emitted; the rule's lines are skipped.
+    Disabled,
+    /// The target document is PRESENT but unverifiable (non-UTF8 content, or
+    /// opened-but-unreadable): the check cannot run, which is not the same as
+    /// "the reference resolves to nothing" — each matching line reports
+    /// `W0048` (reference-target-unverified), never a false-dead `E0112`.
+    Unverifiable,
+}
+
 /// The per-run reference-target memo. One instance per `run()` invocation,
 /// created before the per-file walk and threaded `&mut` through it.
 #[derive(Default)]
 pub struct RefMemo {
-    /// Marker member sets by rule key. `None` = the rule is disabled (its
-    /// target_doc failed confinement, its target_section heading is absent, or
-    /// the target was never captured). Key PRESENCE doubles as the
+    /// Marker member states by rule key. Key PRESENCE doubles as the
     /// reported-marker: the rule-level findings are emitted exactly when the
     /// entry is first inserted (a memo miss), so a present key means they were
-    /// already reported this run.
-    pub marker_members: HashMap<MarkerKey, Option<HashSet<String>>>,
+    /// already reported this run. Per-line findings (E0112, and the W0048 of
+    /// the Unverifiable state) are never deduped by the memo.
+    pub marker_members: HashMap<MarkerKey, MarkerMembers>,
     /// Link anchor slug sets by resolved root-relative target path. `None` =
     /// the target exists but is not anchor-checkable (non-UTF8), so fragments
     /// into it are not resolved — the same value semantics the per-file cache

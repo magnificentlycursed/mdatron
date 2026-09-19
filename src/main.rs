@@ -732,12 +732,22 @@ fn print_pipeline_error(e: &VerifyError, roots: &[&Path]) {
 }
 
 fn cmd_explain(code: Option<&str>, list: bool, json: bool, compact: bool) -> ExitCode {
-    // `--list` enumerates the catalog and exits (#117, vsdd W4).
+    // `--list` enumerates the catalog and exits (#117, vsdd W4). A malformed
+    // embedded catalog is LOUD (GH #48 lane G) — a silently empty list would
+    // read as "no codes exist".
     if list {
-        for (c, summary) in explain::catalog() {
-            println!("{c} — {summary}");
+        match explain::catalog() {
+            Ok(entries) => {
+                for (c, summary) in entries {
+                    println!("{c} — {summary}");
+                }
+                return ExitCode::from(0);
+            }
+            Err(e) => {
+                eprintln!("error[MDATRON-E0080]: explain --list failed\n   = note: {e}");
+                return ExitCode::from(2);
+            }
         }
-        return ExitCode::from(0);
     }
     // clap's `required_unless_present = "list"` guarantees a code here.
     let code = code.expect("a code is required unless --list");

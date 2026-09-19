@@ -133,15 +133,40 @@ pub fn check_file(
         match snapshot.get(confined.as_path()) {
             Some(Captured::Content(c)) => {
                 let Some(target) = c.text() else {
-                    // Non-UTF8 target: verified for existence only; line
-                    // ranges are not checkable against bytes we cannot
-                    // line-split, and a citation into such a file is not
-                    // rejected on that basis.
+                    // Non-UTF8 target: PRESENT but unverifiable — the line-range
+                    // check cannot run against bytes we cannot line-split, and a
+                    // skipped check is LOUD (W0048, GH #48 lane G), never a
+                    // silent pass a fabricated range could hide behind.
+                    findings.push(unverifiable_target(path, content, at, &token));
                     continue;
                 };
                 let line_count = target.lines().count() as u64;
                 let last = end_line.unwrap_or(start_line);
-                if start_line == 0 || last > line_count || start_line > last {
+                // Three distinct defects, three distinct engine messages
+                // (GH #48 lane G): line 0 (a 1-based-ness error), an inverted
+                // range, and a range genuinely past the target's end.
+                if start_line == 0 {
+                    findings.push(cite_finding(
+                        path,
+                        content,
+                        at,
+                        "MDATRON-E0101",
+                        "citation-line-out-of-range",
+                        "the citation names line 0; citation lines are 1-based",
+                        &token,
+                    ));
+                } else if start_line > last {
+                    findings.push(cite_finding(
+                        path,
+                        content,
+                        at,
+                        "MDATRON-E0101",
+                        "citation-line-out-of-range",
+                        "the citation's range start exceeds its end; an inverted \
+                         range names no content",
+                        &token,
+                    ));
+                } else if last > line_count {
                     findings.push(cite_finding(
                         path,
                         content,
@@ -156,11 +181,13 @@ pub fn check_file(
                     ));
                 }
             }
-            // Opened but unreadable (non-UTF8, FIFO, directory): the target
-            // EXISTS; existence is verified and the line range is not
-            // checkable against bytes we cannot line-split — the pre-#103
-            // posture, unchanged and quiet by necessity.
-            Some(Captured::OpenedUnreadable { .. }) => {}
+            // Opened but unreadable (read failure past the open, FIFO,
+            // directory): the target EXISTS but its line range could not be
+            // checked — loud (W0048, GH #48 lane G), matching the other
+            // present-but-unverifiable states.
+            Some(Captured::OpenedUnreadable { .. }) => {
+                findings.push(unverifiable_target(path, content, at, &token));
+            }
             // Over the size budget: the target exists and COULD be verified —
             // the check was skipped by budget, not necessity, so the
             // degradation is loud (W0048): a fabricated or out-of-range
@@ -230,6 +257,24 @@ pub fn check_file(
             }
         }
     }
+}
+
+/// The W0048 for a citation into a PRESENT-but-unverifiable target (non-UTF8
+/// content, or opened-but-unreadable): the line-range check was skipped, which
+/// is loud, never a silent pass (GH #48 lane G).
+fn unverifiable_target(path: &Path, content: &str, at: usize, token: &str) -> Finding {
+    let mut f = cite_finding(
+        path,
+        content,
+        at,
+        "MDATRON-W0048",
+        "reference-target-unverified",
+        "this citation's target is present but unverifiable (its bytes cannot \
+         be read as text), so its line range was NOT verified — existence only",
+        token,
+    );
+    f.severity = Severity::Warning;
+    f
 }
 
 fn cite_finding(
