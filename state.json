@@ -1,6 +1,6 @@
 {
   "next_display_id": 181,
-  "next_comment_id": 493,
+  "next_comment_id": 494,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -3038,11 +3038,20 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-19T22:04:21.969915Z",
-      "updated_at": "2026-09-19T23:32:38.648173Z",
+      "updated_at": "2026-09-19T23:40:42.666102Z",
       "labels": [
         "enhancement"
       ],
       "comments": {
+        "27cde904-6109-44f8-9c3a-4bc0f9eeb61f": {
+          "display_id": 493,
+          "author": "79Ig",
+          "content": "COLD REVIEW round 2 (e989b82+7b97c32): R1/R2/R3/R5 verified CLOSED (independent byte-exact recomputation of a live fingerprint; injective netstring confirmed incl. trailing ordinal). 2 new minors: R6 — clap waives requires-json when --compact (conflicts_with json) is present, so --timings --compact still silently no-ops (the R4 failure mode through a different door); R7 — E0110's quoted (os error, io::Error Display) prose participates in fingerprint identity, splitting the same dead link's print across unix/Windows (strerror vs FormatMessage). Fix round 2 dispatched: conflicts_with=compact + red-gate; QuotedRegion provenance marker (serde-skipped, envelope shape unchanged) excluding platform-variant engine prose from identity, sweep of all io::Error-quoting sites. 15 candidates refuted.",
+          "created_at": "2026-09-19T23:40:42.650557Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAgloyO9D5V1MSRuufTUPQsmlaO1/2vQI3wYlP8/zi3hcPCv9tlz3A9xU3oaFtMvnbiABYTt1y0XVs8ZAep0bbDA=="
+        },
         "ad8ad3fd-1515-4b6e-bad0-076b5a86d2f9": {
           "display_id": 491,
           "author": "79Ig",
@@ -7747,8 +7756,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-19T23:32:38.648173Z",
+    "timestamp": "2026-09-19T23:40:42.666102Z",
     "agent_id": "79Ig",
-    "agent_seq": 969
+    "agent_seq": 970
   }
 }
