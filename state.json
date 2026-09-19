@@ -1,6 +1,6 @@
 {
   "next_display_id": 180,
-  "next_comment_id": 475,
+  "next_comment_id": 476,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -2949,11 +2949,20 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-19T22:04:21.969915Z",
-      "updated_at": "2026-09-19T22:06:31.638340Z",
+      "updated_at": "2026-09-19T22:14:28.178381Z",
       "labels": [
         "enhancement"
       ],
       "comments": {
+        "c778f9d3-4b46-4eac-b777-f0d3cee8fe54": {
+          "display_id": 475,
+          "author": "79Ig",
+          "content": "vsdd-cli value: RANK 3 of the post-cut set — their GH#33 'latency is a dimension on the same record' + the Slice-4 wall-clock-budget SLI consume this, but they can approximate externally by timing the invocation; fingerprints/lineage they cannot.",
+          "created_at": "2026-09-19T22:14:28.154266Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAX7/xKp4XGKye1v/B9PwXbI7/7aTO2lurFn/7dp9fy6jsy4T4pCBMf/sM5LYT6RW25eCjM+mGTd456RF0fQFQCw=="
+        },
         "f6d3595f-1bf8-45a7-84f9-eeb2180cad0a": {
           "display_id": 471,
           "author": "79Ig",
@@ -7557,8 +7566,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-19T22:14:18.692191Z",
+    "timestamp": "2026-09-19T22:14:28.178381Z",
     "agent_id": "79Ig",
-    "agent_seq": 945
+    "agent_seq": 946
   }
 }
