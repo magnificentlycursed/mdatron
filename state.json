@@ -1,6 +1,6 @@
 {
   "next_display_id": 181,
-  "next_comment_id": 484,
+  "next_comment_id": 485,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -2193,11 +2193,20 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-09-19T22:15:11.079839Z",
-      "updated_at": "2026-09-19T22:23:39.350870Z",
+      "updated_at": "2026-09-19T22:26:45.681671Z",
       "labels": [
         "enhancement"
       ],
       "comments": {
+        "994b7386-5911-4e01-9a58-c0445c92964a": {
+          "display_id": 484,
+          "author": "79Ig",
+          "content": "PROMOTION (operator challenge, 2026-09-19): the three CLI discovery items go PRE-CUT — same test as the envelope fields (cheap, additive, direct first-consumer value: vsdd's capability page is built by parsing explain --list; the binary is the artifact every consumer has). Sequence on the pre-cut branch: envelope lane -> docs pass (P0-P2 + #179) -> CLI trio: (1) explain --list honors --json (machine-readable catalog dump; today silently ignored), (2) clap long_about/after_help with a worked invocation per subcommand + pointers, (3) mdatron docs subcommand embedding the just-written dsl-reference + config reference (include_str at compile time; note the package-allowlist interaction). MCP/LSP REMAIN DEFERRED on the architectural grounds (shell-equipped consumers; served-process security posture; LSP is a different product) — revisit on a concrete demand signal only.",
+          "created_at": "2026-09-19T22:26:45.623186Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAhI6J96YFZ0NRVNtQ2ObazefxZIuWafnLjiO1BcsRi5UA6i4aXiyHuRWpxFwp6aJghV7ZQ0Cuk9nKKYjbyvwlCA=="
+        },
         "9faf7526-e2ff-4db9-9aa3-55a3edfbb09b": {
           "display_id": 483,
           "author": "79Ig",
@@ -7670,8 +7679,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-19T22:23:39.350870Z",
+    "timestamp": "2026-09-19T22:26:45.681671Z",
     "agent_id": "79Ig",
-    "agent_seq": 959
+    "agent_seq": 960
   }
 }
