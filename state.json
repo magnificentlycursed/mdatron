@@ -7287,11 +7287,12 @@
       "uuid": "feac2c79-d47f-49ea-907c-6d3068232dd7",
       "display_id": 174,
       "title": "GH #48 lane G: residue — codecat/link_root/marker-load config integrity, unverifiable-vs-dead posture (W0048), pin dup-span+frontmatter hashing, E0101/E0110 wording, drive-path scheme, regex compile-once, explain --list",
-      "status": "open",
+      "status": "closed",
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-19T02:28:04.863960Z",
-      "updated_at": "2026-09-19T03:04:45.618016Z",
+      "updated_at": "2026-09-19T03:45:54.010170Z",
+      "closed_at": "2026-09-19T03:45:54.010162Z",
       "labels": [
         "bug"
       ],
@@ -7406,8 +7407,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-19T03:45:47.345473Z",
+    "timestamp": "2026-09-19T03:45:54.010170Z",
     "agent_id": "79Ig",
-    "agent_seq": 920
+    "agent_seq": 921
   }
 }
