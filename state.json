@@ -1,6 +1,6 @@
 {
   "next_display_id": 175,
-  "next_comment_id": 470,
+  "next_comment_id": 471,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -5294,7 +5294,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-08-06T22:36:50.992780Z",
-      "updated_at": "2026-08-07T00:10:49.918640Z",
+      "updated_at": "2026-09-19T04:22:52.119849Z",
       "labels": [
         "security"
       ],
@@ -5319,6 +5319,15 @@
           "kind": "plan",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAQWIfKal8+0X1rBgDvJgShVNVr/g+DqVMtL2Tti6a6QAvvtN4HKYN/NIqOjCtP00+q9XUCbHvQpgvinKEAPcfAw=="
+        },
+        "e97c6421-d29e-4aa3-b519-655e2c227145": {
+          "display_id": 470,
+          "author": "79Ig",
+          "content": "PHASE-3 MVR (with #168, one branch, 2 rounds). Round-1 review PROVED the claims (engine renders byte-identical vs parent binary across tty/compact/json; interpolator fuzz-probed at multibyte boundaries; init red-gate revert-proven; all 40+ main.rs print sites walked; schema type-string route refuted as unreachable) and found 2 should-fixes — the SAME missed corner at two boundaries: U+2028/U+2029 (Zl/Zp, the #125 forged-line class) pass through escape_path_text (is_control-only) and E0050's compact() (serde leaves Zl/Zp raw, legal JSON). Both hexdump-proven, both FIXED round 2: escape_path_text predicate extended to the full partition (every boundary now shares it); compact() wrapped in escape_inline. Red-gates: init case smuggles ESC+U+2028 (both inert); E0050 enum with U+2028 renders \\x2028. The reserved-codes tripwire also caught the first fixture draft (out-of-range MDATRON literal) — the gates policing the gate-work. 536 lib green, self-val clean under --deny-warnings. Also the round-1 implementation itself caught a THIRD head-line surface beyond the routed finding (explain_ref renders the adopter code too) — closed. Branch feature/167-168-marking-followups ready for operator push.",
+          "created_at": "2026-09-19T04:22:52.101298Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAnk14m7Urj7A88iTseGjjmVmPK5IqDdd3rBMpDHXaPTb55qABm14TSmDYoBuXL6Z9UvrIHlMQKRwPDDtWujlKBQ=="
         }
       }
     },
@@ -7438,8 +7447,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-19T04:03:47.948819Z",
+    "timestamp": "2026-09-19T04:22:52.119849Z",
     "agent_id": "79Ig",
-    "agent_seq": 927
+    "agent_seq": 928
   }
 }
