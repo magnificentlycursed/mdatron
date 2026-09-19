@@ -1,6 +1,6 @@
 {
   "next_display_id": 179,
-  "next_comment_id": 472,
+  "next_comment_id": 473,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -369,10 +369,21 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-19T22:04:38.508776Z",
-      "updated_at": "2026-09-19T22:04:46.261098Z",
+      "updated_at": "2026-09-19T22:06:41.139169Z",
       "labels": [
         "enhancement"
-      ]
+      ],
+      "comments": {
+        "ccf68a06-b6b2-4cd7-b29b-51e40fdc533c": {
+          "display_id": 472,
+          "author": "79Ig",
+          "content": "FIELD VOCABULARY from Ch6 (build-info table, pp 89-90): ruleset digest + source ref; OMIT age-style fields (non-deterministic). RATIONALE STRENGTHENED by Ch32: if the ruleset is the durable commitment artifact ('documents become cache', p574), lineage in every output is system-of-record provenance. Scope includes the sarif-audit $schema pin + per-field descriptions in the published schema (Ch21 imputed-meaning lesson).",
+          "created_at": "2026-09-19T22:06:41.105586Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAKiPreRN1SyLC/+UWHZ72rGSmiVVIU0AKa6HD0xrmDsmzDjE/Ksz91izMZaE0r2WAWxY5qzUU5HNlndeGDAO2CQ=="
+        }
+      }
     },
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": {
       "uuid": "1198bf2d-1428-40e0-8e18-cbf40d2df45d",
@@ -7512,8 +7523,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-19T22:06:31.638340Z",
+    "timestamp": "2026-09-19T22:06:41.139169Z",
     "agent_id": "79Ig",
-    "agent_seq": 940
+    "agent_seq": 941
   }
 }
