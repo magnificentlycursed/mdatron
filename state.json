@@ -1,6 +1,6 @@
 {
   "next_display_id": 181,
-  "next_comment_id": 487,
+  "next_comment_id": 488,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -383,7 +383,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-19T22:04:38.508776Z",
-      "updated_at": "2026-09-19T22:14:38.008427Z",
+      "updated_at": "2026-09-19T22:47:30.711814Z",
       "labels": [
         "enhancement"
       ],
@@ -405,6 +405,15 @@
           "kind": "plan",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAKiPreRN1SyLC/+UWHZ72rGSmiVVIU0AKa6HD0xrmDsmzDjE/Ksz91izMZaE0r2WAWxY5qzUU5HNlndeGDAO2CQ=="
+        },
+        "da043e92-0d1c-42b7-b049-5b4abfaedca7": {
+          "display_id": 487,
+          "author": "79Ig",
+          "content": "RESULT: shipped in e989b82. REQUIRED envelope_schema (schema $id verbatim, third lockstep leg) + REQUIRED inputs lineage (sha256 of the bytes the loaders read, hooked at load; schemas/patterns as aggregate digests; keys present only when loaded — live probe on this repo: config/pins/routes/schemas/vocabulary exactly). Schema: per-property descriptions everywhere, stale 2.1.0 description fixed. Cold review dispatched.",
+          "created_at": "2026-09-19T22:47:30.700034Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAdMVffkd+Kdh4aUHIq7o5SogrhnrysyH4xTb7ZA27oblYf4rzsqNEBuBwMewWDXL0r04/ZSJlRnidmQHIby0HBw=="
         }
       }
     },
@@ -7697,8 +7706,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-19T22:47:24.312829Z",
+    "timestamp": "2026-09-19T22:47:30.711814Z",
     "agent_id": "79Ig",
-    "agent_seq": 962
+    "agent_seq": 963
   }
 }
