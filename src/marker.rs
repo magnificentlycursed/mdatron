@@ -71,9 +71,24 @@ pub fn check_file(
                 continue;
             };
             // The first capture group is the referenced name. Route load refuses
-            // a pattern with no capture group (GH #48 finding 2 — it was a
-            // silent no-op); this skip is defensive for a hand-built rule.
+            // a pattern with NO capture group (GH #48 finding 2), but a
+            // load-accepted OPTIONAL group (`^Provenance:( .+)?$`) can still
+            // match a line without participating — that was a silent per-line
+            // skip; it is now a loud E0112 (GH #48 round 2): the line matched a
+            // marker pattern but names nothing to resolve.
             let Some(name_match) = caps.get(1) else {
+                findings.push(marker_finding(
+                    path,
+                    content,
+                    body_offset + line_start,
+                    "MDATRON-E0112",
+                    "dead-marker-reference",
+                    "the marker pattern matched this line but its capture group \
+                     captured no name, so the reference cannot be resolved; \
+                     check the pattern for an optional capture group",
+                    "pattern",
+                    rule.pattern.as_str(),
+                ));
                 continue;
             };
             let name = name_match.as_str();

@@ -341,8 +341,15 @@ routes:
 of a `- ` list item (`- **Slice 1 — …the guardrail.**` ← `Provenance: Slice 1 —
 …the guardrail`); `heading` resolves against heading text. Resolution is
 name-equality, a trailing `.` on the target tolerated (not slug-based). A
-reference that resolves to nothing blocks (`E0112`); the `target_doc` is
-project-root-relative and confined (`E0010`/`E0011`/`E0012`).
+reference that resolves to nothing blocks (`E0112`) — as does a matched line
+whose capture group captured nothing (an optional group that didn't
+participate); the `target_doc` is project-root-relative and confined
+(`E0010`/`E0011`/`E0012`). A `target_section` whose heading is absent from the
+target doc blocks once per governed file (`E0114`, marker-target-section-not-
+found) and the rule's lines are skipped there — a renamed target heading never
+mass-flags healthy references. Two misconfigs are refused at load: a `pattern`
+with no capture group (nothing to resolve), and a `target_section` that is not
+a full ATX heading line with non-empty text.
 
 **Code catalogs** (`code-catalogs.yaml`) — the adopter-side twin of mdatron's
 own every-code-resolves-in-explain: declare your code namespace and every code
@@ -397,7 +404,13 @@ asserts the `count` predicate (`>= 1`, `== 1`, …); a violation is `E0120`. A
 section's declared element and asserts the two sets share none; an overlap is
 `E0121`. Ids come **only** from the declared element (H3 heading text, or a
 bullet's bold lead), never surrounding prose — so a body mention of an id
-doesn't cause a false overlap.
+doesn't cause a false overlap. A `section` spec that matches no heading in the
+document blocks (`E0122`, section-not-found; matching is exact on level and
+text) instead of silently passing, and the assertion is not evaluated; when a
+heading occurs more than once, the rule evaluates over **all** matching spans
+(counts sum, ids union), so content under a duplicate heading can't evade the
+gate. A spec that is not a full ATX heading line with non-empty text is
+refused at load.
 
 Every family code has an explain page: `mdatron explain MDATRON-E0061`.
 

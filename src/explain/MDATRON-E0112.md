@@ -20,6 +20,13 @@ a `- ` list item (`list-item-bold-name`) — optionally scoped to a
 config, project-root-relative and held to the confinement contract. Marker
 checking is per-route opt-in.
 
+A second shape of this finding (GH #48): the pattern **matched a line but its
+capture group captured no name** — an optional capture group
+(`^Provenance:( .+)?$`) that did not participate in the match. Such a line
+names nothing to resolve, which previously was a silent skip; it now reports
+here, with the rule's pattern quoted. (A pattern with **no** capture group at
+all is refused at route load.)
+
 ## How to fix
 
 - **The reference is a typo.** Correct the name to match the target element
@@ -30,3 +37,7 @@ checking is per-route opt-in.
   that section's span — widen the section, or move the target element into it.
 - **Wrong element class or target doc.** Confirm the rule's `element`
   (`heading` vs `list-item-bold-name`) and `target_doc` name the right place.
+- **The capture group captured nothing.** If the finding says the pattern
+  matched but captured no name, the pattern has an optional capture group —
+  make it mandatory (`^Provenance: (.+)$`), or fix the line so the group
+  participates.

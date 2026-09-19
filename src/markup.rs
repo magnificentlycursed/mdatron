@@ -261,6 +261,42 @@ pub(crate) fn section_span<'a>(content: &'a str, heading_spec: &str) -> Option<&
     start.map(|s| &content[s..])
 }
 
+/// EVERY heading-delimited span of `content` named by `heading_spec`, in
+/// document order — the plural sibling of [`section_span`] with the SAME
+/// matching semantics (exact heading-line equality: level AND text; fence-
+/// aware). Used by the section-structural family (GH #48 round 2) so content
+/// under a DUPLICATE same-level/same-text heading cannot evade a count or
+/// disjointness gate — the first-occurrence [`section_span`] is deliberately
+/// left unchanged (the pin family depends on its semantics; the pin
+/// duplicate-binding question is routed separately). Empty when no heading
+/// matches.
+pub(crate) fn section_spans<'a>(content: &'a str, heading_spec: &str) -> Vec<&'a str> {
+    let Some((want_level, want_text)) = atx_heading(heading_spec) else {
+        return Vec::new();
+    };
+    let mut spans = Vec::new();
+    let mut start: Option<usize> = None;
+    for (offset, line) in non_fenced_lines(content) {
+        if let Some((level, text)) = atx_heading(line) {
+            if let Some(s) = start {
+                if level <= want_level {
+                    spans.push(&content[s..offset]); // next same/higher heading ends it
+                    start = None;
+                }
+            }
+            // An adjacent duplicate both ends the previous span and starts the
+            // next one, so the two arms are sequential, not exclusive.
+            if start.is_none() && level == want_level && text == want_text {
+                start = Some(offset); // include the heading line itself
+            }
+        }
+    }
+    if let Some(s) = start {
+        spans.push(&content[s..]);
+    }
+    spans
+}
+
 /// The byte ranges of `line` covered by inline code spans (backtick-delimited),
 /// including the delimiters. A code span opens with a run of N backticks and
 /// closes at the next run of **exactly** N backticks (CommonMark); an opener
@@ -423,6 +459,29 @@ mod tests {
         // The last section runs to end of document.
         let b = section_span(doc, "## B").unwrap();
         assert!(b.starts_with("## B") && b.contains("bee"));
+    }
+
+    // GH #48 round 2: the plural resolver returns EVERY matching span in
+    // document order (same matching semantics as section_span), so content
+    // under a duplicate heading cannot evade a section-structural gate.
+    #[test]
+    fn section_spans_returns_every_matching_span() {
+        let doc = "## A\n\none\n\n## B\n\nbee\n\n## A\n\ntwo\n";
+        let spans = section_spans(doc, "## A");
+        assert_eq!(spans.len(), 2, "both `## A` spans resolve");
+        assert!(spans[0].contains("one") && !spans[0].contains("bee"));
+        assert!(spans[1].contains("two"), "the last span runs to end of doc");
+        // The first span equals the singular resolver's (semantics agree).
+        assert_eq!(spans[0], section_span(doc, "## A").unwrap());
+        // Adjacent duplicates: the second heading both ends span 1 and opens span 2.
+        let adj = "## A\n\nfirst\n\n## A\n\nsecond\n";
+        let spans = section_spans(adj, "## A");
+        assert_eq!(spans.len(), 2);
+        assert!(spans[0].contains("first") && !spans[0].contains("second"));
+        assert!(spans[1].contains("second"));
+        // No match → empty; a fenced `## A` is not a heading.
+        assert!(section_spans(doc, "## Nope").is_empty());
+        assert!(section_spans("```\n## A\n```\n", "## A").is_empty());
     }
 
     #[test]

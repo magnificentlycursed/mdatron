@@ -5225,6 +5225,79 @@ pattern:
         );
     }
 
+    // RED GATE (GH #48 round 2 nit): a target_section of bare `"##"` parses as
+    // a heading but has EMPTY text — it can never usefully match; refused at
+    // route load like a bare spec.
+    #[test]
+    fn marker_target_section_with_empty_heading_text_is_a_load_error() {
+        let routes = r###"routes:
+- files: "docs/**/*.md"
+  governed_by: GOVERNING.md
+  marker_rules:
+    - pattern: "^Provenance: (.+)$"
+      element: list-item-bold-name
+      target_doc: refs/contract.md
+      target_section: "##"
+"###;
+        let proj = marker_project("marker-empty-section-spec", "prose\n", routes);
+        let err = match crate::route::load(&proj.0) {
+            Err(e) => e,
+            Ok(_) => panic!("an empty-text target_section spec must be refused at load"),
+        };
+        assert!(
+            format!("{err}").contains("non-empty"),
+            "the error demands non-empty heading text; got {err}"
+        );
+    }
+
+    // RED GATE (GH #48 round 2): a load-accepted OPTIONAL capture group that
+    // does not participate on a matched line is a loud E0112 (the pattern
+    // matched, but captured no name) — not a silent per-line skip. A sibling
+    // line where the group participates still checks normally.
+    #[test]
+    fn non_participating_capture_group_is_a_loud_e0112() {
+        let routes = r#"routes:
+- files: "docs/**/*.md"
+  governed_by: GOVERNING.md
+  marker_rules:
+    - pattern: "^Provenance:( .+)?$"
+      element: list-item-bold-name
+      target_doc: refs/contract.md
+"#;
+        // Line 1: the group does not participate (nothing captured). Line 3: it
+        // participates with a leading space — ` Slice 2 — First guardrail`
+        // resolves (normalize_name trims), proving the rule still checks.
+        let proj = marker_project(
+            "marker-optional-group",
+            "Provenance:\n\nProvenance: Slice 2 — First guardrail\n",
+            routes,
+        );
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        let e0112: Vec<_> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0112")
+            .collect();
+        assert_eq!(
+            e0112.len(),
+            1,
+            "exactly the captured-nothing line flags; got {findings:?}"
+        );
+        let f = e0112[0];
+        assert!(
+            f.message.contains("captured no name"),
+            "the captured-nothing shape has its own engine-authored message: {:?}",
+            f.message
+        );
+        assert!(
+            f.quoted
+                .iter()
+                .any(|q| q.label == "pattern" && q.content == "^Provenance:( .+)?$"),
+            "the pattern rides in quoted[]; got {:?}",
+            f.quoted
+        );
+        assert_eq!(f.location.line, 1, "located at the captured-nothing line");
+    }
+
     // RED GATE (GH #48 finding 2): a marker pattern with no capture group can
     // never name a reference — previously every matching line was a silent
     // per-line no-op; now refused at route load.

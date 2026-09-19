@@ -291,15 +291,16 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
                 )));
             }
             // GH #48 finding 3 (load-time leg): a target_section spec that does
-            // not parse as an ATX heading can never match any heading — the
-            // member set would be permanently empty and every healthy reference
+            // not parse as an ATX heading — or parses with EMPTY heading text
+            // (`"##"`) — can never usefully match any heading; the member set
+            // would be permanently empty and every healthy reference
             // mass-flagged E0112. Refused at load, like a non-compiling pattern.
             if let Some(spec) = &rule.target_section {
-                if crate::markup::atx_heading(spec).is_none() {
+                if !matches!(crate::markup::atx_heading(spec), Some((_, t)) if !t.is_empty()) {
                     return Err(Error::Config(format!(
                         "route marker_rules target_section '{spec}' is not a \
                          heading; a section spec must be the full ATX heading \
-                         line (e.g. '## Requirements')"
+                         line with non-empty heading text (e.g. '## Requirements')"
                     )));
                 }
             }

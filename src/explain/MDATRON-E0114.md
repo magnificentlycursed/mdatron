@@ -13,8 +13,10 @@ resolved. The engine emits one finding per governed file the rule applies to,
 and skips the rule's marker lines in that file. The heading is matched exactly
 the way member resolution matches it: by **level and name-equality** (a
 trailing `.` on the heading tolerated), and a `#` inside a fenced code block is
-not a heading. This fires when the heading was renamed in the target document,
-its level changed, or the spec was mistyped.
+not a heading. When several headings match, members from **all** matching
+spans resolve — a duplicate heading cannot hide members. This fires when the
+heading was renamed in the target document, its level changed, or the spec was
+mistyped.
 
 Before this code existed the failure mode was worse than silent: a renamed or
 unmatched `target_section` left the member set permanently empty, so **every**
