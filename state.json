@@ -1,6 +1,6 @@
 {
   "next_display_id": 174,
-  "next_comment_id": 464,
+  "next_comment_id": 465,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -3588,7 +3588,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-09-19T01:15:30.097942Z",
-      "updated_at": "2026-09-19T01:33:10.789712Z",
+      "updated_at": "2026-09-19T01:58:57.628746Z",
       "labels": [
         "bug"
       ],
@@ -3613,6 +3613,15 @@
           "kind": "result",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA5RFuzVyw9C0DJ4rCN2KJsNIzSFwUESXVg+ol/tj8GW/0bdA0+A5tcMzmy59OVLUd3GtUo5vIZjVHYq0HHVa3AA=="
+        },
+        "e9400180-6dd1-4117-9da5-847578aabf7d": {
+          "display_id": 464,
+          "author": "79Ig",
+          "content": "PHASE-3 lanes B-E: round 1 review (cedf1df) — vacuity PROVEN by revert on all 4 probes; runtime-confirmed cap boundary, DEF5 parity, docs claims, CHANGELOG merge lossless. Findings F1 (plural strip made declared s-terminal codes uncitable — as-written-first fix), F2 (2 raw interpolations on pin::update's own error path — escaped), F3-F5 nits (stale section refs, platform-unqualified UNC claim, Unicode-whitespace heading indent) ALL FIXED + red-gated in the round-2 commit. Accepted-risk noted by reviewer: unclosed stray indented fence masks doc tail from vocab/codecat (pre-existing direction, CommonMark-consistent, section/marker stay loud) — lane G watch item. Lanes B-E at MVR. Lane F next.",
+          "created_at": "2026-09-19T01:58:57.615648Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAE5RLwnGodOb7NAI4Hvr+OsMnU3cIW9mmryFRcBr9wi5IOmpLp8ZLEmGB6qkVMtzDXRRVt5hzK4w1V7xM8UUUBw=="
         }
       }
     },
@@ -7361,8 +7370,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-19T01:33:10.789712Z",
+    "timestamp": "2026-09-19T01:58:57.628746Z",
     "agent_id": "79Ig",
-    "agent_seq": 909
+    "agent_seq": 910
   }
 }
