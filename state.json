@@ -1,5 +1,5 @@
 {
-  "next_display_id": 180,
+  "next_display_id": 181,
   "next_comment_id": 478,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -55,6 +55,7 @@
     "49197eb8-d2b6-4462-9185-1e9065d2d847": 3,
     "4ca77036-160b-443f-9480-bef7a625d82f": 170,
     "4dd99e1d-a2be-43b8-b748-53449ce44113": 152,
+    "4ebc561b-c68f-472e-8fee-f763332bf311": 180,
     "4fe1ca8e-6b24-4d43-86c1-7a29b108f3ac": 126,
     "52ecc683-68d9-47ce-934f-0d9b43c371f4": 70,
     "571fe228-1e58-4ec0-8edf-6ebced31ecd8": 155,
@@ -2151,6 +2152,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAQ6llIrAZiuqZJGIPbRDUFXrT7g2EAW8Z/inu9OlZamZdA/Qyd79WP7fc7saUbaJ5dZfGlyRUnItNKaLyHnRYDQ=="
         }
       }
+    },
+    "4ebc561b-c68f-472e-8fee-f763332bf311": {
+      "uuid": "4ebc561b-c68f-472e-8fee-f763332bf311",
+      "display_id": 180,
+      "title": "documentation coverage + discoverability: audit and close the 0.6.0 gaps (README/docs vs shipped surface; machine-discovery incl. the MCP/LSP question)",
+      "status": "open",
+      "priority": "high",
+      "created_by": "79Ig",
+      "created_at": "2026-09-19T22:15:11.079839Z",
+      "updated_at": "2026-09-19T22:15:11.079839Z"
     },
     "4fe1ca8e-6b24-4d43-86c1-7a29b108f3ac": {
       "uuid": "4fe1ca8e-6b24-4d43-86c1-7a29b108f3ac",
@@ -7584,8 +7595,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-19T22:14:47.511064Z",
+    "timestamp": "2026-09-19T22:15:11.079839Z",
     "agent_id": "79Ig",
-    "agent_seq": 948
+    "agent_seq": 949
   }
 }
