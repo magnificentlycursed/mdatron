@@ -1,6 +1,6 @@
 {
   "next_display_id": 181,
-  "next_comment_id": 478,
+  "next_comment_id": 479,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -2095,7 +2095,7 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-08-10T12:43:34.794950Z",
-      "updated_at": "2026-09-19T04:00:39.809466Z",
+      "updated_at": "2026-09-19T22:17:31.047536Z",
       "labels": [
         "process"
       ],
@@ -2111,6 +2111,15 @@
           "kind": "observation",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAGLIuXRczOMMm/OcTOSJjcX4+fyrsnwAhYvIfSyJaSpEHiF2hmkv22AcUzJ14fDlso+fqZwPNIpI2w6MDGr7lBQ=="
+        },
+        "436df9d5-c5b9-4b5e-8042-e0d30b626f4e": {
+          "display_id": 478,
+          "author": "79Ig",
+          "content": "PR #51 MERGED — the methodology-docs review cycle is complete: all 11 findings fixed (docs match mechanisms; the amendment range scan is live in the REQUIRED Self-validation job — its maiden run passed on the PR itself). This issue now holds ONLY the vsdd-cli-boundary remainder: the two crosslink-querying seams (routing-before-fix-close, round-result parity — build WITH vsdd-cli, the #99 lesson) + watching upstream crosslink#99 for the durable hooksPath auto-bind. Two operator decisions remain parked here: add Test to main's required checks; comment_discipline encouraged->required.",
+          "created_at": "2026-09-19T22:17:31.026751Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAYBya6vr5rxyw3EYQDTNbQzpRQQwxWM76s2bBaLa3qQLaIEjF9gFuWj7Tv0vovIVFyceZOow8VmXczAcvGcQHCQ=="
         },
         "7e981647-d8ff-4de6-a7ae-b7c2e3e73188": {
           "display_id": 467,
@@ -7602,8 +7611,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-19T22:15:26.046160Z",
+    "timestamp": "2026-09-19T22:17:31.047536Z",
     "agent_id": "79Ig",
-    "agent_seq": 951
+    "agent_seq": 952
   }
 }
