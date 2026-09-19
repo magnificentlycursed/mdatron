@@ -1,6 +1,6 @@
 {
   "next_display_id": 181,
-  "next_comment_id": 488,
+  "next_comment_id": 489,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -5277,11 +5277,20 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-09-19T22:04:55.795826Z",
-      "updated_at": "2026-09-19T22:14:47.511064Z",
+      "updated_at": "2026-09-19T22:47:36.774334Z",
       "labels": [
         "enhancement"
       ],
       "comments": {
+        "42bc0b5e-ab79-43ee-a724-8aa800ac3024": {
+          "display_id": 488,
+          "author": "79Ig",
+          "content": "RESULT: shipped in e989b82. REQUIRED per-finding fingerprint v1:<32hex> over code/fwd-slashed-relpath/summary/quoted-regions/occurrence-ordinal, line-col excluded (survives line churn); computed at envelope-build via field-order-preserving serializer mirror; additionalProperties:false tripwire guards mirror drift. Ordinal identity-transfer-to-survivor tradeoff documented (SARIF posture). Cold review dispatched.",
+          "created_at": "2026-09-19T22:47:36.762483Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAtIhaPr3HPa0M30oZxpaKJ+ngfBXC9HE1H/zy2QCK9VgbSGATkfkC+tj9PUvEcqsARO3qA542mWYWnGKuYaq2DQ=="
+        },
         "52a436ba-0a83-466a-9237-a8908dcc4b33": {
           "display_id": 473,
           "author": "79Ig",
@@ -7706,8 +7715,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-19T22:47:30.711814Z",
+    "timestamp": "2026-09-19T22:47:36.774334Z",
     "agent_id": "79Ig",
-    "agent_seq": 963
+    "agent_seq": 964
   }
 }
