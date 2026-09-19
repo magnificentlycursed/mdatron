@@ -378,6 +378,7 @@ fn resolve_link(
                 dest,
             );
             f.quoted.push(QuotedRegion {
+                platform_variant: true,
                 label: "os error".into(),
                 content: error.clone(),
             });
@@ -594,6 +595,7 @@ fn link_finding(
         },
         explain_ref: Some(code.to_string()),
         quoted: vec![QuotedRegion {
+            platform_variant: false,
             label: "link".into(),
             content: dest.into(),
         }],

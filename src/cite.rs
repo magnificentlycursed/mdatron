@@ -300,6 +300,7 @@ fn cite_finding(
         },
         explain_ref: Some(code.to_string()),
         quoted: vec![QuotedRegion {
+            platform_variant: false,
             label: "citation".into(),
             content: token.into(),
         }],

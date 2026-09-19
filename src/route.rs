@@ -228,6 +228,7 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
                         location: Location::whole_file(&path),
                         explain_ref: Some("MDATRON-E0012".into()),
                         quoted: vec![QuotedRegion {
+                            platform_variant: false,
                             label: "governed_by".into(),
                             content: entry.governed_by.clone(),
                         }],
@@ -250,6 +251,7 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
                         location: Location::whole_file(&path),
                         explain_ref: Some("MDATRON-E0031".into()),
                         quoted: vec![QuotedRegion {
+                            platform_variant: false,
                             label: "governed_by".into(),
                             content: entry.governed_by.clone(),
                         }],
@@ -312,6 +314,7 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
                     location: Location::whole_file(&path),
                     explain_ref: Some(code.to_string()),
                     quoted: vec![QuotedRegion {
+                        platform_variant: false,
                         label: "target_doc".into(),
                         content: rule.target_doc.clone(),
                     }],
@@ -440,10 +443,12 @@ pub fn check_file(routes: &[Route], rel: &Path, abs: &Path, findings: &mut Vec<F
                         explain_ref: Some("MDATRON-W0041".into()),
                         quoted: vec![
                             QuotedRegion {
+                                platform_variant: false,
                                 label: "name".into(),
                                 content: name,
                             },
                             QuotedRegion {
+                                platform_variant: false,
                                 label: "naming grammar".into(),
                                 content: naming.as_str().to_string(),
                             },
@@ -467,6 +472,7 @@ pub fn check_file(routes: &[Route], rel: &Path, abs: &Path, findings: &mut Vec<F
             quoted: claims
                 .iter()
                 .map(|r| QuotedRegion {
+                    platform_variant: false,
                     label: "route".into(),
                     content: r.files.as_str().to_string(),
                 })
@@ -543,6 +549,7 @@ fn confinement_finding(
         location: Location::whole_file(routes_path),
         explain_ref: Some(code.to_string()),
         quoted: vec![QuotedRegion {
+            platform_variant: false,
             label: field.to_string(),
             content: value.to_string(),
         }],

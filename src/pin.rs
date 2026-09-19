@@ -148,6 +148,7 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedPins>, Error> {
                 location: Location::whole_file(&path),
                 explain_ref: Some("MDATRON-W0042".into()),
                 quoted: vec![QuotedRegion {
+                    platform_variant: false,
                     label: "file".into(),
                     content: t.file.clone(),
                 }],
@@ -167,14 +168,17 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedPins>, Error> {
                 explain_ref: Some("MDATRON-L0001".into()),
                 quoted: vec![
                     QuotedRegion {
+                        platform_variant: false,
                         label: "file".into(),
                         content: t.file.clone(),
                     },
                     QuotedRegion {
+                        platform_variant: false,
                         label: "reason".into(),
                         content: t.reason.clone(),
                     },
                     QuotedRegion {
+                        platform_variant: false,
                         label: "owner".into(),
                         content: t.owner.clone(),
                     },
@@ -249,18 +253,22 @@ pub fn check(
                         explain_ref: Some("MDATRON-E0061".into()),
                         quoted: vec![
                             QuotedRegion {
+                                platform_variant: false,
                                 label: "file".into(),
                                 content: pin.file.clone(),
                             },
                             QuotedRegion {
+                                platform_variant: false,
                                 label: "governing".into(),
                                 content: pin.governing.clone(),
                             },
                             QuotedRegion {
+                                platform_variant: false,
                                 label: "recorded".into(),
                                 content: crate::init::short(&pin.sha256).to_string(),
                             },
                             QuotedRegion {
+                                platform_variant: false,
                                 label: "found".into(),
                                 content: crate::init::short(&actual).to_string(),
                             },
@@ -280,6 +288,7 @@ pub fn check(
                     location: Location::whole_file(&pins_path),
                     explain_ref: Some("MDATRON-E0012".into()),
                     quoted: vec![QuotedRegion {
+                        platform_variant: false,
                         label: "file".into(),
                         content: pin.file.clone(),
                     }],
@@ -307,6 +316,7 @@ pub fn check(
                     location: Location::whole_file(&pins_path),
                     explain_ref: Some("MDATRON-E0080".into()),
                     quoted: vec![QuotedRegion {
+                        platform_variant: false,
                         label: "file".into(),
                         content: pin.file.clone(),
                     }],
@@ -456,10 +466,12 @@ fn target_unopenable(pins_path: &Path, pin: &Pin) -> Finding {
         explain_ref: Some("MDATRON-E0062".into()),
         quoted: vec![
             QuotedRegion {
+                platform_variant: false,
                 label: "file".into(),
                 content: pin.file.clone(),
             },
             QuotedRegion {
+                platform_variant: false,
                 label: "governing".into(),
                 content: pin.governing.clone(),
             },
@@ -488,10 +500,12 @@ fn section_not_found(pins_path: &Path, pin: &Pin, section: &str) -> Finding {
         explain_ref: Some("MDATRON-E0063".into()),
         quoted: vec![
             QuotedRegion {
+                platform_variant: false,
                 label: "file".into(),
                 content: pin.file.clone(),
             },
             QuotedRegion {
+                platform_variant: false,
                 label: "section".into(),
                 content: section.to_string(),
             },
@@ -525,6 +539,7 @@ fn confinement_finding(
         location: Location::whole_file(pins_path),
         explain_ref: Some(code.to_string()),
         quoted: vec![QuotedRegion {
+            platform_variant: false,
             label: field.to_string(),
             content: value.to_string(),
         }],

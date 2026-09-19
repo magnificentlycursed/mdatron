@@ -701,6 +701,7 @@ fn run_inner(
                     },
                     explain_ref: Some(code.into()),
                     quoted: vec![QuotedRegion {
+                        platform_variant: false,
                         label: "escaping-path".into(),
                         content: rel.to_string_lossy().into_owned(),
                     }],
@@ -748,6 +749,7 @@ fn run_inner(
                     },
                     explain_ref: Some("MDATRON-E0012".into()),
                     quoted: vec![QuotedRegion {
+                        platform_variant: false,
                         label: "component".into(),
                         content: component,
                     }],
@@ -1114,6 +1116,7 @@ fn run_inner(
                 },
                 explain_ref: Some("MDATRON-W0046".into()),
                 quoted: vec![QuotedRegion {
+                    platform_variant: false,
                     label: "glob".into(),
                     content: pattern.clone(),
                 }],
@@ -1151,6 +1154,7 @@ fn run_inner(
                 },
                 explain_ref: Some("MDATRON-W0051".into()),
                 quoted: vec![QuotedRegion {
+                    platform_variant: false,
                     label: "glob".into(),
                     content: pat.as_str().to_string(),
                 }],
@@ -1403,6 +1407,7 @@ fn unreadable_body_finding(path: &Path, cause: &str) -> Finding {
         },
         explain_ref: Some("MDATRON-E0003".into()),
         quoted: vec![QuotedRegion {
+            platform_variant: true,
             label: "cause".into(),
             content: cause.into(),
         }],
@@ -1446,14 +1451,17 @@ fn index_source_degraded_finding(project_root: &Path, d: &crate::dsl::DegradedSo
         explain_ref: Some("MDATRON-W0049".into()),
         quoted: vec![
             QuotedRegion {
+                platform_variant: false,
                 label: "index".into(),
                 content: d.key_name.clone(),
             },
             QuotedRegion {
+                platform_variant: false,
                 label: "source".into(),
                 content: d.source_display.clone(),
             },
             QuotedRegion {
+                platform_variant: true,
                 label: "reason".into(),
                 content: d.reason.clone(),
             },
@@ -2180,18 +2188,22 @@ fn comparison_type_finding(
         explain_ref: Some("MDATRON-E0022".to_string()),
         quoted: vec![
             QuotedRegion {
+                platform_variant: false,
                 label: "pattern".into(),
                 content: pattern_id.into(),
             },
             QuotedRegion {
+                platform_variant: false,
                 label: "rule".into(),
                 content: rule.id.clone(),
             },
             QuotedRegion {
+                platform_variant: false,
                 label: "left".into(),
                 content: left.0.into(),
             },
             QuotedRegion {
+                platform_variant: false,
                 label: "right".into(),
                 content: right.0.into(),
             },
@@ -2224,18 +2236,22 @@ fn dead_clause_finding(
         explain_ref: Some("MDATRON-W0050".to_string()),
         quoted: vec![
             QuotedRegion {
+                platform_variant: false,
                 label: "pattern".into(),
                 content: pattern_id.into(),
             },
             QuotedRegion {
+                platform_variant: false,
                 label: "rule".into(),
                 content: rule.id.clone(),
             },
             QuotedRegion {
+                platform_variant: false,
                 label: "field".into(),
                 content: field.into(),
             },
             QuotedRegion {
+                platform_variant: false,
                 label: "literal".into(),
                 content: literal.into(),
             },
@@ -2272,22 +2288,27 @@ fn field_ref_finding(
         explain_ref: Some("MDATRON-E0021".to_string()),
         quoted: vec![
             QuotedRegion {
+                platform_variant: false,
                 label: "pattern".into(),
                 content: pattern_id.into(),
             },
             QuotedRegion {
+                platform_variant: false,
                 label: "rule".into(),
                 content: rule.id.clone(),
             },
             QuotedRegion {
+                platform_variant: false,
                 label: "reference".into(),
                 content: dotted,
             },
             QuotedRegion {
+                platform_variant: false,
                 label: "undeclared property".into(),
                 content: path.last().cloned().unwrap_or_default(),
             },
             QuotedRegion {
+                platform_variant: false,
                 label: "schema".into(),
                 content: schema_class.to_string(),
             },
@@ -2353,6 +2374,7 @@ fn verify_file(
                 },
                 explain_ref: Some("MDATRON-E0001".into()),
                 quoted: vec![QuotedRegion {
+                    platform_variant: false,
                     label: "parse error".into(),
                     content: e.to_string(),
                 }],
@@ -2593,6 +2615,7 @@ fn verify_file(
                 },
                 explain_ref: Some("MDATRON-W0045".into()),
                 quoted: vec![QuotedRegion {
+                    platform_variant: false,
                     label: "schema_class".into(),
                     content: schema_class.clone(),
                 }],
@@ -2770,6 +2793,7 @@ fn interpolate_message(
                 out.push_str(&label);
                 out.push(']');
                 quoted.push(QuotedRegion {
+                    platform_variant: false,
                     label,
                     content: format_value(&value),
                 });

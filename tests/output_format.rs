@@ -505,31 +505,44 @@ fn stdout_under_json_contains_only_the_output_object() {
     );
 }
 
-// RED GATE (#175 cold-review R4): `--timings` rides ONLY in the JSON envelope,
-// so without `--json` it would silently do nothing — clap refuses the
-// combination loudly instead (a usage error naming the requirement).
+// RED GATE (#175 cold-review R4 + R6): `--timings` rides ONLY in the JSON
+// envelope, so any non-JSON combination would silently do nothing — clap
+// refuses each loudly instead. R6 pinned the `--compact` leak specifically:
+// clap 4.5 WAIVES an arg's `requires` when another present arg conflicts the
+// required arg away (`compact` conflicts with `json`), so `--timings
+// --compact` was accepted and silently dropped timings; the explicit
+// `conflicts_with = "compact"` on the timings arg closes it.
 #[test]
 fn timings_without_json_is_a_usage_error() {
     let proj = TempProject::new("timings-nojson");
     proj.seed_minimal();
     proj.seed_clean_md("post.md");
 
-    let out = Command::new(mdatron_bin())
-        .args(["verify", "--project-root"])
-        .arg(proj.path())
-        .arg("--timings")
-        .output()
-        .expect("mdatron binary executes");
-    assert!(
-        !out.status.success(),
-        "--timings without --json must be refused; got success with stdout: {:?}",
-        String::from_utf8_lossy(&out.stdout)
-    );
-    let stderr = String::from_utf8_lossy(&out.stderr);
-    assert!(
-        stderr.contains("--json"),
-        "the usage error names the missing --json requirement; got {stderr:?}"
-    );
+    for (extra, expect_in_err) in [
+        (None, "--json"),
+        // R6: the requires-waiver leak — must be a loud conflict error.
+        (Some("--compact"), "--compact"),
+    ] {
+        let mut cmd = Command::new(mdatron_bin());
+        cmd.args(["verify", "--project-root"])
+            .arg(proj.path())
+            .arg("--timings");
+        if let Some(flag) = extra {
+            cmd.arg(flag);
+        }
+        let out = cmd.output().expect("mdatron binary executes");
+        assert!(
+            !out.status.success(),
+            "--timings {} must be refused; got success with stdout: {:?}",
+            extra.unwrap_or("(bare)"),
+            String::from_utf8_lossy(&out.stdout)
+        );
+        let stderr = String::from_utf8_lossy(&out.stderr);
+        assert!(
+            stderr.contains(expect_in_err),
+            "the usage error names {expect_in_err}; got {stderr:?}"
+        );
+    }
 }
 
 #[test]

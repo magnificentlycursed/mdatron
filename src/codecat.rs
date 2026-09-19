@@ -264,6 +264,7 @@ fn orphan_finding(path: &Path, content: &str, offset: usize, token: &str) -> Fin
         },
         explain_ref: Some("MDATRON-E0113".into()),
         quoted: vec![QuotedRegion {
+            platform_variant: false,
             label: "code".into(),
             content: token.into(),
         }],

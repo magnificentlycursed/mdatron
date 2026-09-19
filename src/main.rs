@@ -78,10 +78,14 @@ enum Command {
         /// Include run-phase wall-clock timings in the JSON envelope (#175):
         /// an optional `timings` object with `total_ms`/`load_ms`/`capture_ms`/
         /// `check_ms`. Requires --json — timings ride ONLY in the envelope, so
-        /// without it the flag would silently do nothing (cold-review R4). Off
-        /// by default so the default envelope stays deterministic (timings are
-        /// its sole non-deterministic zone).
-        #[arg(long = "timings", requires = "json")]
+        /// without it the flag would silently do nothing (cold-review R4). The
+        /// explicit --compact conflict closes clap's requires-waiver (R6:
+        /// `compact` conflicts with `json`, and clap 4.5 waives an arg's
+        /// `requires` when another present arg conflicts the required arg away
+        /// — so `--timings --compact` was accepted and silently dropped
+        /// timings). Off by default so the default envelope stays
+        /// deterministic (timings are its sole non-deterministic zone).
+        #[arg(long = "timings", requires = "json", conflicts_with = "compact")]
         timings: bool,
     },
 
@@ -796,6 +800,7 @@ fn pipeline_error_finding(e: &VerifyError, roots: &[&Path]) -> Finding {
         },
         explain_ref: None,
         quoted: vec![QuotedRegion {
+            platform_variant: true,
             label: "detail".into(),
             content: relativize_root_prefix(e.to_string(), roots),
         }],

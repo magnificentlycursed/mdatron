@@ -234,6 +234,7 @@ pub fn registry_findings(vocab: &LoadedVocab, vocab_path: &Path, findings: &mut 
             },
             explain_ref: Some("MDATRON-W0044".into()),
             quoted: vec![QuotedRegion {
+                platform_variant: false,
                 label: "term".into(),
                 content: term.clone(),
             }],
@@ -274,6 +275,7 @@ pub fn check_file(
                      (draft-status terms are exempt; register the coinage or \
                      unbold the emphasis)",
                     vec![QuotedRegion {
+                        platform_variant: false,
                         label: "term".into(),
                         content: term.clone(),
                     }],
@@ -295,6 +297,7 @@ pub fn check_file(
                      held for a registered future sense, not usable — the use \
                      is surfaced for review",
                     vec![QuotedRegion {
+                        platform_variant: false,
                         label: "term".into(),
                         content: term.clone(),
                     }],
@@ -341,6 +344,7 @@ pub fn check_file(
                      scheme; invented schemes proliferate faster than review \
                      can police them",
                     vec![QuotedRegion {
+                        platform_variant: false,
                         label: "cluster".into(),
                         content: cluster.to_string(),
                     }],
@@ -366,10 +370,12 @@ pub fn check_file(
                 "prose matches a listed register anti-pattern",
                 vec![
                     QuotedRegion {
+                        platform_variant: false,
                         label: "matched".into(),
                         content: m.as_str().to_string(),
                     },
                     QuotedRegion {
+                        platform_variant: false,
                         label: "register".into(),
                         content: register.clone(),
                     },
@@ -414,10 +420,12 @@ pub fn check_file(
                             ),
                             vec![
                                 QuotedRegion {
+                                    platform_variant: false,
                                     label: "claim".into(),
                                     content: line.trim().to_string(),
                                 },
                                 QuotedRegion {
+                                    platform_variant: false,
                                     label: "field".into(),
                                     content: field.clone(),
                                 },

@@ -197,6 +197,7 @@ fn describe(e: &jsonschema::ValidationError) -> (String, Vec<QuotedRegion>) {
     // The failing document value, compactly serialized, as a quoted region.
     let found = || {
         vec![QuotedRegion {
+            platform_variant: false,
             label: "found".into(),
             content: serde_json::to_string(e.instance())
                 .unwrap_or_else(|_| "<unserializable value>".into()),
@@ -213,6 +214,7 @@ fn describe(e: &jsonschema::ValidationError) -> (String, Vec<QuotedRegion>) {
             (
                 format!("unexpected {plural} not permitted by the schema{at}"),
                 vec![QuotedRegion {
+                    platform_variant: false,
                     label: "unexpected".into(),
                     content: unexpected.join("\n"),
                 }],

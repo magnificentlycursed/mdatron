@@ -283,21 +283,27 @@ pub struct Output {
 /// The `v1` per-finding fingerprints for a run's findings, positionally aligned
 /// (#177): `sha256` over an INJECTIVE, netstring-style encoding of — in order —
 /// the finding's `code`, its FORWARD-SLASHED project-root-relative file path,
-/// its `summary` (each as `{byte_len}:{bytes}`), the quoted-region COUNT (as
-/// `{n};`), each region's label then content (each `{byte_len}:{bytes}`), and
-/// finally the 0-based occurrence ordinal among findings with an
-/// otherwise-identical input in the same run; truncated to 16 bytes (32
-/// lowercase hex chars) and prefixed `v1:` (a future algorithm change mints
-/// `v2`). Every field is length-prefixed and the region list is
+/// its `summary` (each as `{byte_len}:{bytes}`), the IDENTITY-BEARING
+/// quoted-region COUNT (as `{n};`), each such region's label then content
+/// (each `{byte_len}:{bytes}`), and finally the 0-based occurrence ordinal
+/// among findings with an otherwise-identical input in the same run; truncated
+/// to 16 bytes (32 lowercase hex chars) and prefixed `v1:` (a future algorithm
+/// change mints `v2`). Every field is length-prefixed and the region list is
 /// count-prefixed, so no adopter-controlled byte (a YAML `"\0"` escape in a
 /// rule id or document value) can shift a field or region boundary — two
-/// distinct inputs always encode to distinct byte strings. Line/column are
-/// EXCLUDED by design — the fingerprint survives line churn, which is its
-/// purpose (cross-run identity for a consumer trending envelopes across
-/// regenerated documents). The ordinal disambiguates byte-identical siblings
-/// (two identical dead links in one file get distinct prints); removing the
-/// first transfers its identity to the survivor — the standard SARIF-style
-/// tradeoff.
+/// distinct inputs always encode to distinct byte strings; the count covers
+/// the FILTERED list, so the layout stays injective over it. Identity-bearing
+/// means adopter-content regions (the default); a region marked
+/// `platform_variant` — engine prose quoting platform/environment-variant text
+/// such as an `io::Error` (strerror on unix, FormatMessage on Windows) — is
+/// EXCLUDED (cold-review R7), or the same defect would fingerprint differently
+/// per platform and split the cross-run trend identity, the same class the
+/// forward-slashed path rule closes. Line/column are likewise EXCLUDED by
+/// design — the fingerprint survives line churn, which is its purpose
+/// (cross-run identity for a consumer trending envelopes across regenerated
+/// documents). The ordinal disambiguates byte-identical siblings (two
+/// identical dead links in one file get distinct prints); removing the first
+/// transfers its identity to the survivor — the standard SARIF-style tradeoff.
 pub fn fingerprints(findings: &[Finding]) -> Vec<String> {
     use std::fmt::Write;
     let mut seen: std::collections::HashMap<String, u32> = std::collections::HashMap::new();
@@ -315,8 +321,11 @@ pub fn fingerprints(findings: &[Finding]) -> Vec<String> {
                 &crate::diagnostic::to_forward_slash(&f.location.file),
             );
             field(&mut identity, &f.summary);
-            let _ = write!(identity, "{};", f.quoted.len());
-            for q in &f.quoted {
+            // R7: only identity-bearing regions participate — the count is of
+            // the filtered list, keeping the netstring layout injective over it.
+            let in_identity: Vec<_> = f.quoted.iter().filter(|q| !q.platform_variant).collect();
+            let _ = write!(identity, "{};", in_identity.len());
+            for q in in_identity {
                 field(&mut identity, &q.label);
                 field(&mut identity, &q.content);
             }
@@ -605,6 +614,7 @@ mod tests {
         errf.help = Some("fix it".into());
         errf.explain_ref = Some("MDATRON-E0050".into());
         errf.quoted = vec![crate::diagnostic::QuotedRegion {
+            platform_variant: false,
             label: "found".into(),
             content: "\"bogus\"".into(),
         }];
@@ -810,6 +820,7 @@ mod tests {
     fn fingerprint_changes_with_quoted_content_and_path() {
         let mut a = f_at("MDATRON-E0110", "docs/a.md", 1);
         a.quoted = vec![crate::diagnostic::QuotedRegion {
+            platform_variant: false,
             label: "link".into(),
             content: "gone.md".into(),
         }];
@@ -841,6 +852,7 @@ mod tests {
         let mut a = f_at("T-E0001", "docs/a.md", 1);
         a.summary = "s".into();
         a.quoted = vec![crate::diagnostic::QuotedRegion {
+            platform_variant: false,
             label: "l".into(),
             content: "SECRET".into(),
         }];
@@ -860,6 +872,7 @@ mod tests {
     #[test]
     fn fingerprint_encoding_resists_region_splicing() {
         let region = |label: &str, content: &str| crate::diagnostic::QuotedRegion {
+            platform_variant: false,
             label: label.into(),
             content: content.into(),
         };
@@ -871,6 +884,49 @@ mod tests {
             fingerprints(&[spliced])[0],
             fingerprints(&[honest])[0],
             "one spliced region must not collide with two honest regions"
+        );
+    }
+
+    // RED GATE (#177 cold-review R7): a region marked platform_variant —
+    // engine prose quoting platform-variant text (an io::Error: strerror on
+    // unix, FormatMessage on Windows) — is EXCLUDED from the identity, so the
+    // SAME dead link fingerprints identically across platforms; an
+    // adopter-content region's bytes still participate.
+    #[test]
+    fn fingerprint_excludes_platform_variant_regions_only() {
+        let base = || {
+            let mut f = f_at("MDATRON-E0110", "docs/a.md", 1);
+            f.quoted = vec![
+                crate::diagnostic::QuotedRegion {
+                    platform_variant: false,
+                    label: "link".into(),
+                    content: "gone.md".into(),
+                },
+                crate::diagnostic::QuotedRegion {
+                    platform_variant: true,
+                    label: "os error".into(),
+                    content: "No such file or directory (os error 2)".into(),
+                },
+            ];
+            f
+        };
+        // The desired platform invariance: only the os-error prose differs.
+        let unix = base();
+        let mut windows = base();
+        windows.quoted[1].content =
+            "The system cannot find the file specified. (os error 2)".into();
+        assert_eq!(
+            fingerprints(&[unix.clone()])[0],
+            fingerprints(&[windows])[0],
+            "platform-variant engine prose must not split the identity"
+        );
+        // Adopter content still participates.
+        let mut other_link = base();
+        other_link.quoted[0].content = "other.md".into();
+        assert_ne!(
+            fingerprints(&[unix])[0],
+            fingerprints(&[other_link])[0],
+            "adopter-content regions stay identity-bearing"
         );
     }
 
