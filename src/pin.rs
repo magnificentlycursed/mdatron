@@ -86,6 +86,9 @@ pub struct Pin {
 pub struct LoadedPins {
     pub pins: Vec<Pin>,
     pub findings: Vec<Finding>,
+    /// sha256 (lowercase hex) of the exact `pins.yaml` bytes `load` read
+    /// (#176, the envelope's input lineage).
+    pub digest: String,
 }
 
 /// Load `.mdatron/pins.yaml`. `Ok(None)` when absent (family inactive); `Err`
@@ -180,7 +183,11 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedPins>, Error> {
         }
     }
 
-    Ok(Some(LoadedPins { pins, findings }))
+    Ok(Some(LoadedPins {
+        pins,
+        findings,
+        digest: crate::init::sha256_hex(content.as_bytes()),
+    }))
 }
 
 /// Verify every active pin against the captured snapshot (#103): the pinned

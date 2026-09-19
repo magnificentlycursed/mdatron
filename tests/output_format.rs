@@ -77,10 +77,15 @@ fn mdatron_bin() -> PathBuf {
 }
 
 fn run_verify_json(proj: &TempProject) -> Output {
+    run_verify_json_with(proj, &[])
+}
+
+fn run_verify_json_with(proj: &TempProject, extra: &[&str]) -> Output {
     Command::new(mdatron_bin())
         .args(["verify", "--project-root"])
         .arg(proj.path())
         .arg("--json")
+        .args(extra)
         .output()
         .expect("mdatron binary executes")
 }
@@ -224,6 +229,178 @@ fn output_top_level_shape_is_complete() {
             "summary missing non-negative integer field: {count_field}"
         );
     }
+}
+
+// RED GATE (#175): `--timings` adds the optional `timings` object with the
+// four flat millisecond keys and sane values; WITHOUT the flag the key is
+// absent entirely — flag-gating is the determinism guardrail (timings are the
+// envelope's sole non-deterministic zone), so the default envelope on an
+// unchanged tree stays byte-identical across runs.
+#[test]
+fn timings_are_flag_gated_and_sane() {
+    let proj = TempProject::new("timings");
+    proj.seed_minimal();
+    proj.seed_clean_md("post.md");
+
+    let default_env = parse_output(&run_verify_json(&proj));
+    assert!(
+        default_env.get("timings").is_none(),
+        "no --timings, no timings key; got {default_env}"
+    );
+    // Determinism: two default runs on an unchanged tree emit identical bytes.
+    let a = run_verify_json(&proj).stdout;
+    let b = run_verify_json(&proj).stdout;
+    assert_eq!(a, b, "the default envelope is byte-identical across runs");
+
+    let timed = parse_output(&run_verify_json_with(&proj, &["--timings"]));
+    let t = timed
+        .get("timings")
+        .and_then(|v| v.as_object())
+        .expect("--timings emits the timings object");
+    let ms = |k: &str| {
+        t.get(k)
+            .and_then(|v| v.as_u64())
+            .unwrap_or_else(|| panic!("{k} is u64"))
+    };
+    let (total, load, capture, check) = (
+        ms("total_ms"),
+        ms("load_ms"),
+        ms("capture_ms"),
+        ms("check_ms"),
+    );
+    assert!(
+        total >= load && total >= capture && total >= check,
+        "total covers each phase: total={total} load={load} capture={capture} check={check}"
+    );
+    assert_eq!(t.len(), 4, "flat fixed keys only; got {t:?}");
+}
+
+// RED GATE (#176): the envelope carries the governance-input lineage — each
+// input the run read, keyed to a sha256 of those bytes; digests are stable
+// across runs on an unchanged tree, change when an input changes, and inputs
+// that were never loaded carry no key.
+#[test]
+fn inputs_lineage_is_stable_keyed_and_change_sensitive() {
+    let proj = TempProject::new("inputs");
+    proj.seed_minimal();
+    proj.seed_clean_md("post.md");
+
+    let env1 = parse_output(&run_verify_json(&proj));
+    let inputs1 = env1.get("inputs").and_then(|v| v.as_object()).unwrap();
+    for key in ["config.yaml", "schemas"] {
+        let d = inputs1
+            .get(key)
+            .and_then(|v| v.as_str())
+            .unwrap_or_else(|| panic!("loaded input {key} carries a digest; got {inputs1:?}"));
+        assert!(
+            d.starts_with("sha256:") && d.len() == 7 + 64,
+            "digest form: {d}"
+        );
+    }
+    // Never-loaded inputs carry no key (this fixture has none of these).
+    for key in [
+        "routes.yaml",
+        "vocabulary.yaml",
+        "pins.yaml",
+        "code-catalogs.yaml",
+        "patterns",
+    ] {
+        assert!(
+            inputs1.get(key).is_none(),
+            "unloaded input {key} must be absent; got {inputs1:?}"
+        );
+    }
+
+    // Byte-identical across two runs on an unchanged tree.
+    let env2 = parse_output(&run_verify_json(&proj));
+    assert_eq!(
+        env1.get("inputs"),
+        env2.get("inputs"),
+        "lineage is deterministic"
+    );
+
+    // A config change moves config.yaml's digest; a routes.yaml appearance
+    // adds its key.
+    proj.write(
+        ".mdatron/config.yaml",
+        "file_globs:\n  - \"**/*.md\"\n# a comment changes the bytes\n",
+    );
+    proj.write(
+        ".mdatron/routes.yaml",
+        "routes:\n- files: \"**/*.md\"\n  governed_by: GOVERNING.md\n",
+    );
+    proj.write("GOVERNING.md", "# gov\n");
+    let env3 = parse_output(&run_verify_json(&proj));
+    let inputs3 = env3.get("inputs").and_then(|v| v.as_object()).unwrap();
+    assert_ne!(
+        inputs1.get("config.yaml"),
+        inputs3.get("config.yaml"),
+        "an input change moves its digest"
+    );
+    assert!(
+        inputs3
+            .get("routes.yaml")
+            .and_then(|v| v.as_str())
+            .is_some_and(|d| d.starts_with("sha256:")),
+        "a newly present input gains its key; got {inputs3:?}"
+    );
+}
+
+// #176: an ad-hoc `--files` run reads no config.yaml — the lineage reflects
+// what was actually loaded (schemas here; no config key). And the envelope
+// pins its exact contract via envelope_schema (lockstep with the schema $id is
+// unit-tripwired; this pins the end-to-end emission).
+#[test]
+fn ad_hoc_files_run_emits_only_loaded_inputs() {
+    let proj = TempProject::new("inputs-adhoc");
+    proj.seed_minimal();
+    proj.seed_clean_md("post.md");
+    let out = Command::new(mdatron_bin())
+        .args(["verify", "--project-root"])
+        .arg(proj.path())
+        .args(["--files", "**/*.md", "--json"])
+        .output()
+        .expect("mdatron binary executes");
+    let env = parse_output(&out);
+    let inputs = env.get("inputs").and_then(|v| v.as_object()).unwrap();
+    assert!(
+        inputs.get("config.yaml").is_none(),
+        "an ad-hoc --files run reads no config.yaml; got {inputs:?}"
+    );
+    assert!(inputs.get("schemas").is_some(), "schemas were loaded");
+    assert!(
+        env.get("envelope_schema")
+            .and_then(|v| v.as_str())
+            .is_some_and(|s| s.ends_with("/3.0.0")),
+        "the envelope pins its schema $id; got {env}"
+    );
+}
+
+// RED GATE (#177, end-to-end): every emitted finding carries a v1 fingerprint,
+// and the fingerprint survives line churn — the same violation moved to a
+// different line across two runs keeps its identity (that is its purpose).
+#[test]
+fn finding_fingerprints_survive_line_churn_across_runs() {
+    let proj = TempProject::new("fingerprint");
+    proj.seed_minimal();
+    proj.seed_failing_md("bad.md");
+    let env1 = parse_output(&run_verify_json(&proj));
+    let f1 = env1["findings"].as_array().unwrap();
+    assert!(!f1.is_empty());
+    let fp1 = f1[0]["fingerprint"].as_str().expect("fingerprint present");
+    assert!(fp1.starts_with("v1:") && fp1.len() == 35, "shape: {fp1}");
+
+    // Regenerate the document around the SAME violation (body content added;
+    // code/path/summary/quoted all unchanged): the fingerprint must hold.
+    proj.write(
+        "bad.md",
+        "---\nschema_class: blog\nextra: not allowed\n---\n\nnew body line\n",
+    );
+    let env2 = parse_output(&run_verify_json(&proj));
+    let fp2 = env2["findings"].as_array().unwrap()[0]["fingerprint"]
+        .as_str()
+        .unwrap();
+    assert_eq!(fp1, fp2, "the identity survives document churn");
 }
 
 #[test]

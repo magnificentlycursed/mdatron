@@ -99,6 +99,9 @@ pub struct LoadedVocab {
     /// Terms declared both `registered` and `draft` (#95). They resolve to
     /// draft (the permissive status); each names a `MDATRON-W0044` warning.
     draft_conflicts: Vec<String>,
+    /// sha256 (lowercase hex) of the exact `vocabulary.yaml` bytes `load` read
+    /// (#176, the envelope's input lineage).
+    pub digest: String,
 }
 
 /// Structured reference-ID schemes exempt from the `E0091` invented-label-scheme
@@ -206,6 +209,7 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedVocab>, Error> {
         cluster: regex_lite::Regex::new(r"\b[A-Z]{1,7}(?:-[A-Z]{0,7})?[0-9]{1,4}\b")
             .expect("engine cluster detector compiles"),
         draft_conflicts,
+        digest: crate::init::sha256_hex(content.as_bytes()),
     }))
 }
 

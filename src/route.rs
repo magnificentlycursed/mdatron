@@ -121,6 +121,9 @@ pub enum ElementClass {
 pub struct LoadedRoutes {
     pub routes: Vec<Route>,
     pub findings: Vec<Finding>,
+    /// sha256 (lowercase hex) of the exact `routes.yaml` bytes `load` read
+    /// (#176, the envelope's input lineage).
+    pub digest: String,
 }
 
 /// A compiled, active route entry.
@@ -377,7 +380,11 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
             section_rules,
         });
     }
-    Ok(Some(LoadedRoutes { routes, findings }))
+    Ok(Some(LoadedRoutes {
+        routes,
+        findings,
+        digest: crate::init::sha256_hex(content.as_bytes()),
+    }))
 }
 
 /// Route checks for one walked file (root-relative path). Emits `E0030` when

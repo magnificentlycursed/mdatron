@@ -74,6 +74,13 @@ enum Command {
         /// `1`, a clean run `0`, and a pipeline failure `2`, unchanged.
         #[arg(long = "deny-warnings", visible_alias = "strict")]
         deny_warnings: bool,
+
+        /// Include run-phase wall-clock timings in the JSON envelope (#175):
+        /// an optional `timings` object with `total_ms`/`load_ms`/`capture_ms`/
+        /// `check_ms`. Off by default so the default envelope stays
+        /// deterministic (timings are its sole non-deterministic zone).
+        #[arg(long = "timings")]
+        timings: bool,
     },
 
     /// Show extended documentation for an error code (rustc --explain pattern).
@@ -199,6 +206,7 @@ fn main() -> ExitCode {
             quiet,
             changed,
             deny_warnings,
+            timings,
         } => cmd_verify(
             project_root,
             schemas,
@@ -209,6 +217,7 @@ fn main() -> ExitCode {
             quiet,
             changed,
             deny_warnings,
+            timings,
         ),
         Command::Explain {
             code,
@@ -468,6 +477,7 @@ fn cmd_verify(
     quiet: bool,
     changed: Option<PathBuf>,
     deny_warnings: bool,
+    timings: bool,
 ) -> ExitCode {
     use mdatron::output::{Families, Output, PipelineError, PipelineStatus};
 
@@ -497,23 +507,25 @@ fn cmd_verify(
         c.file_globs = files;
         Ok(c)
     };
-    let (mut findings, families, files_checked, pipeline_status, pipeline_err) = match config_result
-    {
-        Err(e) => (
-            Vec::new(),
-            Families::all_inactive(),
-            0,
-            PipelineStatus::Failed,
-            Some(VerifyError::Config(e.to_string())),
-        ),
-        Ok(mut config) => {
-            if let Some(s) = schemas {
-                config.schemas_dir = s;
-            }
-            if let Some(p) = patterns {
-                config.patterns_dir = p;
-            }
-            let result = match &changed {
+    let (mut findings, families, files_checked, pipeline_status, pipeline_err, inputs, run_timings) =
+        match config_result {
+            Err(e) => (
+                Vec::new(),
+                Families::all_inactive(),
+                0,
+                PipelineStatus::Failed,
+                Some(VerifyError::Config(e.to_string())),
+                std::collections::BTreeMap::new(),
+                None,
+            ),
+            Ok(mut config) => {
+                if let Some(s) = schemas {
+                    config.schemas_dir = s;
+                }
+                if let Some(p) = patterns {
+                    config.patterns_dir = p;
+                }
+                let result = match &changed {
                 // Incremental (#102): verify the changed file + dependents and
                 // emit the visited-file trace to stderr (control-escaped so an
                 // adverse filename cannot inject trace lines). A .mdatron/ change
@@ -550,25 +562,30 @@ fn cmd_verify(
                 }),
                 None => verify_report(&config),
             };
-            match result {
-                Ok(r) => (
-                    r.findings,
-                    r.families,
-                    r.files_checked,
-                    PipelineStatus::Ok,
-                    None,
-                ),
-                // A failed pipeline reports no family as invoked.
-                Err(e) => (
-                    Vec::new(),
-                    Families::all_inactive(),
-                    0,
-                    PipelineStatus::Failed,
-                    Some(e),
-                ),
+                match result {
+                    Ok(r) => (
+                        r.findings,
+                        r.families,
+                        r.files_checked,
+                        PipelineStatus::Ok,
+                        None,
+                        r.inputs,
+                        Some(r.timings),
+                    ),
+                    // A failed pipeline reports no family as invoked (and loaded
+                    // no attestable inputs; #176 lineage stays empty).
+                    Err(e) => (
+                        Vec::new(),
+                        Families::all_inactive(),
+                        0,
+                        PipelineStatus::Failed,
+                        Some(e),
+                        std::collections::BTreeMap::new(),
+                        None,
+                    ),
+                }
             }
-        }
-    };
+        };
 
     // #113 (vsdd item 7): advertise `mdatron explain <code>` only when a page
     // actually resolves. A pattern-rule finding carries an adopter-defined code
@@ -624,7 +641,12 @@ fn cmd_verify(
         pipeline_error,
         families,
         env!("CARGO_PKG_VERSION"),
-    );
+    )
+    .with_inputs(inputs)
+    // #175: timings are the envelope's sole non-deterministic zone — emitted
+    // only under --timings, so the default envelope stays byte-identical
+    // across runs on an unchanged tree.
+    .with_timings(if timings { run_timings } else { None });
 
     // BC-5 stream contract: --json puts the output on stdout; otherwise diagnostics
     // are rustc-shaped on stderr.

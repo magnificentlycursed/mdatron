@@ -21,6 +21,10 @@ pub const CONFIG_NAME: &str = "config.yaml";
 /// can grow without breaking older engines.
 #[derive(Debug, Clone, Deserialize)]
 pub struct ProjectConfig {
+    /// sha256 (lowercase hex) of the exact bytes `load` read (#176, input
+    /// lineage) — set post-parse, never deserialized from the file itself.
+    #[serde(skip)]
+    pub(crate) digest: String,
     /// Globs (relative to the project root) of files mdatron validates.
     #[serde(default)]
     pub file_globs: Vec<String>,
@@ -60,8 +64,10 @@ pub fn load(project_root: &Path) -> Result<Option<ProjectConfig>, Error> {
             )))
         }
     };
-    let cfg: ProjectConfig = serde_yaml_ng::from_str(&content)
+    let mut cfg: ProjectConfig = serde_yaml_ng::from_str(&content)
         .map_err(|e| Error::Config(format!("cannot parse '{}': {e}", path.display())))?;
+    // #176 input lineage: digest the SAME bytes this load read (no re-read).
+    cfg.digest = crate::init::sha256_hex(content.as_bytes());
     Ok(Some(cfg))
 }
 

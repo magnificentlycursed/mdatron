@@ -36,10 +36,29 @@ use crate::diagnostic::{Finding, Severity};
 /// breaking change; the same bump makes `families` forward-extensible (additional
 /// members of the `FamilyActivity` shape are allowed) so future families are
 /// additive/minor. This is the last families-driven major.
+/// Also folded into the still-unpublished 3.0.0 (the pre-cut envelope batch,
+/// operator-ruled — one contract snapshot for the first consumer):
+/// - `envelope_schema` (REQUIRED, #176): the published schema's `$id`, so a
+///   consumer can pin/fetch the exact contract (the SARIF `$schema` posture).
+/// - `inputs` (REQUIRED, #176): governance-input lineage — a map of the config
+///   inputs this run consumed to `sha256:<hex>` digests of the bytes it read.
+/// - per-finding `fingerprint` (REQUIRED on findings, #177): a `v1:`-prefixed
+///   line-churn-stable identity for cross-run trending.
+/// - `timings` (OPTIONAL, #175): flag-gated run-phase wall-clock; omitted by
+///   default so the default envelope stays deterministic.
+///
 /// Must move in lockstep with the published schema
 /// (`schema/mdatron-output.schema.json`); the `envelope_version_matches_published_schema`
 /// tripwire enforces it.
 pub const OUTPUT_VERSION: &str = "3.0.0";
+
+/// The published envelope schema's `$id` (#176) — emitted verbatim as the
+/// envelope's `envelope_schema` field so a consumer can pin the exact contract
+/// an envelope was produced under (the sarif-envelope-audit `$schema`-pin gap).
+/// An identifier, not a fetch target (DEF6); kept in lockstep with
+/// [`OUTPUT_VERSION`] and the schema's own `$id` by the version tripwire.
+pub const ENVELOPE_SCHEMA_ID: &str =
+    "https://github.com/magnificentlycursed/mdatron/schema/mdatron-output/3.0.0";
 
 /// The published output-envelope JSON Schema, embedded so `mdatron schema` can
 /// print it to stdout for a binary-only (`cargo install`) consumer that has no
@@ -165,6 +184,22 @@ pub struct PipelineError {
     pub message: String,
 }
 
+/// Run-phase wall-clock timings in milliseconds (#175), emitted under the
+/// envelope's OPTIONAL `timings` field only when `verify --timings` is passed.
+/// Flat fixed keys: `load` covers config/schema/pattern/route/pin/vocabulary/
+/// catalog loading; `capture` the governed walk + snapshot build through the
+/// capture-complete seam; `check` the per-file loop and cross-file checks;
+/// `total` the whole `run()`. Timings are the envelope's sole non-deterministic
+/// zone — flag-gating keeps the DEFAULT envelope byte-identical across runs on
+/// an unchanged tree (the DEF4/determinism guardrail).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Timings {
+    pub total_ms: u64,
+    pub load_ms: u64,
+    pub capture_ms: u64,
+    pub check_ms: u64,
+}
+
 /// Per-severity finding counts emitted under the output object's `summary` field.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Summary {
@@ -198,16 +233,23 @@ impl Summary {
 
 /// Top-level output output object emitted on stdout by `mdatron verify --json`.
 ///
-/// Field order per BC-2:
+/// Field order per BC-2 (extended by the pre-cut envelope batch, #175–#177):
 /// 1. `mdatron_output_version` (semver)
-/// 2. `mdatron_version` (mdatron's own crate version)
-/// 3. `pipeline_status` ("ok" / "failed")
-/// 4. `summary` (per-severity counts + files_checked)
-/// 5. `families` (per-family activity; #90)
-/// 6. `findings` (array of Finding objects)
+/// 2. `envelope_schema` (the published schema's `$id`; #176)
+/// 3. `mdatron_version` (mdatron's own crate version)
+/// 4. `pipeline_status` ("ok" / "failed")
+/// 5. `summary` (per-severity counts + files_checked)
+/// 6. `families` (per-family activity; #90)
+/// 7. `inputs` (governance-input lineage digests; #176)
+/// 8. `timings` (OPTIONAL, flag-gated; #175)
+/// 9. `findings` (array of Finding objects, each carrying a `fingerprint`; #177)
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Output {
     pub mdatron_output_version: String,
+    /// The published envelope schema's `$id` (#176) — the exact contract this
+    /// envelope was produced under, pinnable by a consumer.
+    #[serde(default)]
+    pub envelope_schema: String,
     pub mdatron_version: String,
     pub pipeline_status: PipelineStatus,
     /// Present only on a failed pipeline (#112). Omitted entirely on success, so
@@ -216,7 +258,109 @@ pub struct Output {
     pub pipeline_error: Option<PipelineError>,
     pub summary: Summary,
     pub families: Families,
+    /// Governance-input lineage (#176): each input the run consumed —
+    /// `config.yaml`, `routes.yaml`, `vocabulary.yaml`, `pins.yaml`,
+    /// `code-catalogs.yaml` (present only when found and read), plus one
+    /// aggregate digest each for the `schemas` and `patterns` directories —
+    /// mapped to a `sha256:<lowercase-hex>` digest of the same bytes the run
+    /// read. Deterministic (sorted map, forward-slashed names inside the
+    /// aggregates); empty when the pipeline failed before loading anything.
+    #[serde(default)]
+    pub inputs: std::collections::BTreeMap<String, String>,
+    /// Run-phase timings (#175) — present only under `verify --timings`, so
+    /// the default envelope stays deterministic.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub timings: Option<Timings>,
+    /// Serialized with a per-finding `fingerprint` attached (#177) — computed
+    /// at envelope-build time over the whole list (the occurrence ordinal
+    /// needs sibling context), never stored on the Finding itself.
+    #[serde(serialize_with = "serialize_findings_with_fingerprints")]
     pub findings: Vec<Finding>,
+}
+
+/// The `v1` per-finding fingerprints for a run's findings, positionally aligned
+/// (#177): `sha256` over — in order, NUL-separated — the finding's `code`, its
+/// FORWARD-SLASHED project-root-relative file path, its `summary`, each quoted
+/// region's label then content in order, and finally the 0-based occurrence
+/// ordinal among findings with an otherwise-identical input in the same run;
+/// truncated to 16 bytes (32 lowercase hex chars) and prefixed `v1:` (a future
+/// algorithm change mints `v2`). Line/column are EXCLUDED by design — the
+/// fingerprint survives line churn, which is its purpose (cross-run identity
+/// for a consumer trending envelopes across regenerated documents). The
+/// ordinal disambiguates byte-identical siblings (two identical dead links in
+/// one file get distinct prints); removing the first transfers its identity to
+/// the survivor — the standard SARIF-style tradeoff.
+pub fn fingerprints(findings: &[Finding]) -> Vec<String> {
+    let mut seen: std::collections::HashMap<String, u32> = std::collections::HashMap::new();
+    findings
+        .iter()
+        .map(|f| {
+            let mut identity = String::new();
+            identity.push_str(&f.code);
+            identity.push('\0');
+            identity.push_str(&crate::diagnostic::to_forward_slash(&f.location.file));
+            identity.push('\0');
+            identity.push_str(&f.summary);
+            identity.push('\0');
+            for q in &f.quoted {
+                identity.push_str(&q.label);
+                identity.push('\0');
+                identity.push_str(&q.content);
+                identity.push('\0');
+            }
+            let n = seen.entry(identity.clone()).or_insert(0);
+            let ordinal = *n;
+            *n += 1;
+            use std::fmt::Write;
+            let _ = write!(identity, "{ordinal}");
+            let hex = crate::init::sha256_hex(identity.as_bytes());
+            format!("v1:{}", &hex[..32])
+        })
+        .collect()
+}
+
+/// Serialize the findings array with each finding's `fingerprint` attached
+/// (#177). A field-order-preserving MIRROR of [`Finding`]'s serialized shape
+/// plus the trailing `fingerprint` — the envelope-validates tripwire (schema
+/// `additionalProperties: false` on findings) fails if this row and the
+/// `Finding` struct drift apart.
+fn serialize_findings_with_fingerprints<S: serde::Serializer>(
+    findings: &[Finding],
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    use crate::diagnostic::{Location, QuotedRegion};
+    use serde::ser::SerializeSeq;
+
+    #[derive(Serialize)]
+    struct Row<'a> {
+        code: &'a str,
+        severity: Severity,
+        summary: &'a str,
+        message: &'a str,
+        help: &'a Option<String>,
+        location: &'a Location,
+        explain_ref: &'a Option<String>,
+        #[serde(skip_serializing_if = "<[QuotedRegion]>::is_empty")]
+        quoted: &'a [QuotedRegion],
+        fingerprint: &'a str,
+    }
+
+    let prints = fingerprints(findings);
+    let mut seq = serializer.serialize_seq(Some(findings.len()))?;
+    for (f, fp) in findings.iter().zip(&prints) {
+        seq.serialize_element(&Row {
+            code: &f.code,
+            severity: f.severity,
+            summary: &f.summary,
+            message: &f.message,
+            help: &f.help,
+            location: &f.location,
+            explain_ref: &f.explain_ref,
+            quoted: &f.quoted,
+            fingerprint: fp,
+        })?;
+    }
+    seq.end()
 }
 
 impl Output {
@@ -238,13 +382,30 @@ impl Output {
         let summary = Summary::from_findings(&findings, files_checked);
         Self {
             mdatron_output_version: OUTPUT_VERSION.to_string(),
+            envelope_schema: ENVELOPE_SCHEMA_ID.to_string(),
             mdatron_version: mdatron_version.to_string(),
             pipeline_status,
             pipeline_error,
             summary,
             families,
+            inputs: std::collections::BTreeMap::new(),
+            timings: None,
             findings,
         }
+    }
+
+    /// Attach the run's governance-input lineage (#176). Chainable; `build`
+    /// starts with an empty map (a failed pipeline loaded nothing).
+    pub fn with_inputs(mut self, inputs: std::collections::BTreeMap<String, String>) -> Self {
+        self.inputs = inputs;
+        self
+    }
+
+    /// Attach run-phase timings (#175). Chainable; pass `None` (the default)
+    /// to keep the deterministic envelope — only `verify --timings` sets it.
+    pub fn with_timings(mut self, timings: Option<Timings>) -> Self {
+        self.timings = timings;
+        self
     }
 
     /// Derive the BC-4 exit code from the output object's pipeline status + error count.
@@ -522,6 +683,9 @@ mod tests {
     // TRIPWIRE (#90): the schema's declared const version equals OUTPUT_VERSION.
     // A struct-shape change bumps OUTPUT_VERSION, which forces the schema const
     // to move (else validation above breaks) — shape and version stay locked.
+    // Extended by #176: ENVELOPE_SCHEMA_ID is the third leg of the lockstep —
+    // it must equal the schema's own `$id`, equal the schema's declared
+    // `envelope_schema` const, and carry OUTPUT_VERSION as its version segment.
     #[test]
     fn published_schema_version_matches_output_version() {
         let schema: serde_json::Value = serde_json::from_str(PUBLISHED_SCHEMA).unwrap();
@@ -532,12 +696,21 @@ mod tests {
             declared, OUTPUT_VERSION,
             "published schema version must equal OUTPUT_VERSION"
         );
-        assert!(
-            schema["$id"]
+        assert_eq!(
+            schema["$id"].as_str().unwrap_or(""),
+            ENVELOPE_SCHEMA_ID,
+            "the emitted envelope_schema const must equal the schema's own $id"
+        );
+        assert_eq!(
+            schema["properties"]["envelope_schema"]["const"]
                 .as_str()
-                .unwrap_or("")
-                .ends_with(OUTPUT_VERSION),
-            "schema $id should carry the version"
+                .unwrap_or(""),
+            ENVELOPE_SCHEMA_ID,
+            "the schema pins envelope_schema to its own $id"
+        );
+        assert!(
+            ENVELOPE_SCHEMA_ID.ends_with(OUTPUT_VERSION),
+            "ENVELOPE_SCHEMA_ID must carry OUTPUT_VERSION as its version segment"
         );
     }
 
@@ -563,6 +736,150 @@ mod tests {
                 f.format_compact().contains(&f.code),
                 "compact form drops {}",
                 f.code
+            );
+        }
+    }
+
+    // ── the pre-cut envelope batch (#175–#177) ──────────────────────────────
+
+    fn f_at(code: &str, file: &str, line: u32) -> Finding {
+        let mut f = err_finding(code);
+        f.location.file = PathBuf::from(file);
+        f.location.line = line;
+        f
+    }
+
+    // RED GATE (#177): the fingerprint is line-churn-STABLE — the same finding
+    // at a different line keeps its identity (line/column excluded by design).
+    #[test]
+    fn fingerprint_survives_line_churn() {
+        let a = fingerprints(&[f_at("MDATRON-E0110", "docs/a.md", 10)]);
+        let b = fingerprints(&[f_at("MDATRON-E0110", "docs/a.md", 99)]);
+        assert_eq!(a, b, "line churn must not change the fingerprint");
+        assert!(
+            a[0].starts_with("v1:") && a[0].len() == 3 + 32,
+            "v1-prefixed 32-hex form: {:?}",
+            a[0]
+        );
+        assert!(
+            a[0][3..]
+                .chars()
+                .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()),
+            "lowercase hex: {:?}",
+            a[0]
+        );
+    }
+
+    // RED GATE (#177): two byte-identical findings in one run get DISTINCT
+    // fingerprints via the occurrence ordinal, and the ordinal is positional —
+    // removing the first transfers its identity to the survivor (the SARIF-
+    // style tradeoff, documented).
+    #[test]
+    fn fingerprint_ordinal_distinguishes_identical_siblings() {
+        let one = f_at("MDATRON-E0110", "docs/a.md", 3);
+        let two = f_at("MDATRON-E0110", "docs/a.md", 7);
+        let prints = fingerprints(&[one.clone(), two]);
+        assert_ne!(
+            prints[0], prints[1],
+            "identical siblings are disambiguated by ordinal"
+        );
+        let survivor = fingerprints(&[one]);
+        assert_eq!(
+            prints[0], survivor[0],
+            "removing the first transfers identity to the survivor"
+        );
+    }
+
+    // #177: the identity is sensitive to what it claims to cover — quoted
+    // content (and code/path/summary) change it.
+    #[test]
+    fn fingerprint_changes_with_quoted_content_and_path() {
+        let mut a = f_at("MDATRON-E0110", "docs/a.md", 1);
+        a.quoted = vec![crate::diagnostic::QuotedRegion {
+            label: "link".into(),
+            content: "gone.md".into(),
+        }];
+        let mut b = a.clone();
+        b.quoted[0].content = "other.md".into();
+        assert_ne!(
+            fingerprints(&[a.clone()])[0],
+            fingerprints(&[b])[0],
+            "quoted content participates in the identity"
+        );
+        let mut c = a.clone();
+        c.location.file = PathBuf::from("docs/b.md");
+        assert_ne!(
+            fingerprints(&[a])[0],
+            fingerprints(&[c])[0],
+            "the file path participates in the identity"
+        );
+    }
+
+    // #177: the path is fingerprinted FORWARD-SLASHED, so the identity cannot
+    // split across platforms on the separator.
+    #[cfg(windows)]
+    #[test]
+    fn fingerprint_path_is_forward_slashed() {
+        let back = f_at("MDATRON-E0110", "docs\\a.md", 1);
+        let fwd = f_at("MDATRON-E0110", "docs/a.md", 1);
+        assert_eq!(fingerprints(&[back])[0], fingerprints(&[fwd])[0]);
+    }
+
+    // RED GATE (#175/#176/#177 envelope shape): the serialized envelope carries
+    // envelope_schema (the schema's $id), the inputs map, a fingerprint on
+    // every finding — and NO timings key by default (the determinism
+    // guardrail); with_timings emits the four flat keys and both shapes
+    // validate against the published schema.
+    #[test]
+    fn envelope_carries_the_precut_fields_and_validates() {
+        let inputs = std::collections::BTreeMap::from([(
+            "config.yaml".to_string(),
+            format!("sha256:{}", "0".repeat(64)),
+        )]);
+        let default_env = representative_envelope().with_inputs(inputs.clone());
+        let json = serde_json::to_value(&default_env).unwrap();
+        assert_eq!(json["envelope_schema"], ENVELOPE_SCHEMA_ID);
+        assert_eq!(
+            json["inputs"]["config.yaml"],
+            format!("sha256:{}", "0".repeat(64))
+        );
+        assert!(
+            json.get("timings").is_none(),
+            "no --timings, no timings key (byte-compat guardrail); got {json}"
+        );
+        for f in json["findings"].as_array().unwrap() {
+            let fp = f["fingerprint"]
+                .as_str()
+                .expect("every finding carries a fingerprint");
+            assert!(fp.starts_with("v1:"), "algorithm-versioned: {fp}");
+        }
+
+        let timed_env = representative_envelope()
+            .with_inputs(inputs)
+            .with_timings(Some(Timings {
+                total_ms: 12,
+                load_ms: 3,
+                capture_ms: 4,
+                check_ms: 5,
+            }));
+        let timed = serde_json::to_value(&timed_env).unwrap();
+        for key in ["total_ms", "load_ms", "capture_ms", "check_ms"] {
+            assert!(
+                timed["timings"][key].is_u64(),
+                "timings carries flat u64 {key}; got {timed}"
+            );
+        }
+
+        let compiled = compile_published();
+        for env_json in [json, timed] {
+            let errs: Vec<String> = compiled
+                .iter_errors(&env_json)
+                .map(|e| format!("{e} at {}", e.instance_path()))
+                .collect();
+            assert!(
+                errs.is_empty(),
+                "pre-cut envelope failed the published schema:\n{}",
+                errs.join("\n")
             );
         }
     }

@@ -51,6 +51,10 @@ pub struct VerifyConfig {
     /// Globs whose matching files the vocabulary family scans (#97). Empty
     /// falls back to every walked file (prior behavior).
     pub vocabulary_globs: Vec<String>,
+    /// sha256 (lowercase hex) of the `.mdatron/config.yaml` bytes
+    /// `from_project` read (#176, the envelope's input lineage). `None` for an
+    /// ad-hoc `--files`/`new` config, which reads no config file.
+    pub config_digest: Option<String>,
 }
 
 impl VerifyConfig {
@@ -64,6 +68,7 @@ impl VerifyConfig {
             file_globs: vec!["**/*.md".to_string()],
             require_frontmatter: Vec::new(),
             vocabulary_globs: Vec::new(),
+            config_digest: None,
         }
     }
 
@@ -111,6 +116,7 @@ impl VerifyConfig {
         cfg.file_globs = pc.file_globs;
         cfg.require_frontmatter = pc.require_frontmatter;
         cfg.vocabulary_globs = pc.vocabulary_globs;
+        cfg.config_digest = Some(pc.digest);
         Ok(cfg)
     }
 }
@@ -266,6 +272,22 @@ pub struct VerifyReport {
     /// happened to produce findings (#105). A clean run over N files reports N;
     /// an empty jurisdiction reports 0.
     pub files_checked: u32,
+    /// Run-phase wall-clock timings (#175) — always measured (four `Instant`
+    /// reads); the CLI emits them into the envelope only under `--timings`, so
+    /// the default envelope stays deterministic.
+    pub timings: crate::output::Timings,
+    /// Governance-input lineage (#176): the inputs this run consumed, each
+    /// mapped to a `sha256:<lowercase-hex>` digest of the bytes it read.
+    pub inputs: BTreeMap<String, String>,
+}
+
+/// The run-level metadata `run_inner` collects alongside its findings (#175/
+/// #176): phase timings and the input-lineage digests. Owned by the wrapper so
+/// direct-drive test call sites of [`run`] stay untouched.
+#[derive(Default)]
+struct RunMeta {
+    timings: crate::output::Timings,
+    inputs: BTreeMap<String, String>,
 }
 
 /// A completed incremental run (#102): the report plus the observable
@@ -299,11 +321,14 @@ pub fn verify(config: &VerifyConfig) -> Result<Vec<Finding>, VerifyError> {
 /// when its data was supplied and it ran this pass — independent of whether it
 /// produced findings.
 pub fn verify_report(config: &VerifyConfig) -> Result<VerifyReport, VerifyError> {
-    let (findings, families, _visited, files_checked) = run(config, None, None)?;
+    let mut meta = RunMeta::default();
+    let (findings, families, _visited, files_checked) = run_inner(config, None, None, &mut meta)?;
     Ok(VerifyReport {
         findings,
         families,
         files_checked,
+        timings: meta.timings,
+        inputs: meta.inputs,
     })
 }
 
@@ -316,15 +341,36 @@ pub fn verify_incremental(
     config: &VerifyConfig,
     changed: &Path,
 ) -> Result<IncrementalReport, VerifyError> {
-    let (findings, families, visited, files_checked) = run(config, Some(changed), None)?;
+    let mut meta = RunMeta::default();
+    let (findings, families, visited, files_checked) =
+        run_inner(config, Some(changed), None, &mut meta)?;
     Ok(IncrementalReport {
         report: VerifyReport {
             findings,
             families,
             files_checked,
+            timings: meta.timings,
+            inputs: meta.inputs,
         },
         visited,
     })
+}
+
+/// [`run_inner`] with the run metadata discarded — the direct-drive test
+/// surface (seam callbacks, family probes) that predates #175/#176 and does
+/// not consult timings or input lineage.
+#[cfg(test)]
+fn run(
+    config: &VerifyConfig,
+    changed: Option<&Path>,
+    on_capture_complete: Option<&dyn Fn()>,
+) -> RunResult {
+    run_inner(
+        config,
+        changed,
+        on_capture_complete,
+        &mut RunMeta::default(),
+    )
 }
 
 /// The verification pipeline. `changed == None` runs whole-tree; `Some(path)`
@@ -332,11 +378,22 @@ pub fn verify_incremental(
 /// only the findings located in that scope, so the result equals the whole-tree
 /// result filtered to the scope. A `.mdatron/` change forces whole-tree.
 /// Returns `(findings, families, visited)`; `visited` is `None` for whole-tree.
-fn run(
+/// `meta` collects the run's phase timings (#175, `Instant`s at the natural
+/// phase boundaries: load → capture at the governed walk, capture → check at
+/// the capture-complete seam) and the input-lineage digests (#176).
+fn run_inner(
     config: &VerifyConfig,
     changed: Option<&Path>,
     on_capture_complete: Option<&dyn Fn()>,
+    meta: &mut RunMeta,
 ) -> RunResult {
+    let t_run = std::time::Instant::now();
+    // #176 input lineage: the config digest was captured when from_project
+    // read the file (ad-hoc --files configs read none).
+    if let Some(d) = &config.config_digest {
+        meta.inputs
+            .insert("config.yaml".into(), format!("sha256:{d}"));
+    }
     // BC-4 pipeline-fail detection: refuse to proceed when neither schemas nor patterns
     // directories exist. A project without either has nothing to validate against; this
     // is a configuration error, not a clean run with zero findings.
@@ -352,8 +409,16 @@ fn run(
     // surfaced as W0047 on a whole-tree pass. A present-but-empty dir is a
     // deliberate opt-out, not drift, so only true absence is flagged.
     let schemas_dir_missing = !config.schemas_dir.is_dir();
-    let schemas = load_schemas(&config.schemas_dir)?;
-    let (patterns, rule_locations) = load_patterns(&config.patterns_dir)?;
+    let (schemas, schemas_digest) = load_schemas(&config.schemas_dir)?;
+    let (patterns, rule_locations, patterns_digest) = load_patterns(&config.patterns_dir)?;
+    // #176 input lineage: one aggregate digest per input directory (sorted
+    // names + per-file content digests), keyed only when the dir held files.
+    if let Some(d) = schemas_digest {
+        meta.inputs.insert("schemas".into(), format!("sha256:{d}"));
+    }
+    if let Some(d) = patterns_digest {
+        meta.inputs.insert("patterns".into(), format!("sha256:{d}"));
+    }
 
     // Canonicalize the project root so globs joined against it produce absolute
     // patterns. This avoids cwd ambiguity when callers pass a relative root.
@@ -459,6 +524,24 @@ fn run(
         Ok(c) => c,
         Err(e) => return Err(VerifyError::Config(e.to_string())),
     };
+    // #176 input lineage: each present-and-read governance file's digest, from
+    // the very bytes its loader read (absent inputs carry no key).
+    if let Some(r) = &routes {
+        meta.inputs
+            .insert("routes.yaml".into(), format!("sha256:{}", r.digest));
+    }
+    if let Some(p) = &pin_data {
+        meta.inputs
+            .insert("pins.yaml".into(), format!("sha256:{}", p.digest));
+    }
+    if let Some(v) = &vocab {
+        meta.inputs
+            .insert("vocabulary.yaml".into(), format!("sha256:{}", v.digest));
+    }
+    if let Some(c) = &catalogs {
+        meta.inputs
+            .insert("code-catalogs.yaml".into(), format!("sha256:{}", c.digest));
+    }
     // Capture data-presence per family BEFORE the Options are consumed (#90);
     // the tri-state families object (#107) is built after the walk, since
     // vocabulary's `inert` state needs the scope-hit count.
@@ -535,6 +618,10 @@ fn run(
     // rather than walking fewer files than the adopter declared, silently. The
     // dead-glob test is per disk match, not per newly-inserted file — a glob that
     // only re-matches an already-collected file is redundant, not dead.
+    // Phase boundary (#175): loading ends here; the governed walk + snapshot
+    // build (the capture phase) begins.
+    meta.timings.load_ms = t_run.elapsed().as_millis() as u64;
+    let t_capture = std::time::Instant::now();
     let mut governed: Vec<(PathBuf, PathBuf)> = Vec::new();
     let mut seen: BTreeSet<PathBuf> = BTreeSet::new();
     let mut dead_globs: Vec<String> = Vec::new();
@@ -871,6 +958,9 @@ fn run(
         }
     }
 
+    // Phase boundary (#175): capture ends at the seam (measured BEFORE the
+    // test callback below, so a parked seam never inflates capture time).
+    meta.timings.capture_ms = t_capture.elapsed().as_millis() as u64;
     // Capture-complete seam (#103): the snapshot is sealed — every input this
     // run will consult is captured, and a later capture is an engine error,
     // not a silent filesystem reopen. A test injects a mutation here to prove
@@ -879,6 +969,9 @@ fn run(
     if let Some(cb) = on_capture_complete {
         cb();
     }
+    // Phase (#175): the per-file loop + cross-file checks, through the end of
+    // the run (sorting/relativization included).
+    let t_check = std::time::Instant::now();
 
     // #98: track whether a scoped register matched any walked file. Whole-tree
     // only — W0043 is `.mdatron/`-located (never in an incremental scope) and
@@ -1241,6 +1334,9 @@ fn run(
             .cmp(&b.location.file)
             .then_with(|| a.code.cmp(&b.code))
     });
+    // Phase close (#175).
+    meta.timings.check_ms = t_check.elapsed().as_millis() as u64;
+    meta.timings.total_ms = t_run.elapsed().as_millis() as u64;
     Ok((findings, families, scope, files_checked))
 }
 
@@ -1434,10 +1530,15 @@ fn confine_and_compile_globs(globs: &[String], field: &str) -> Result<FileScope,
 
 // ── Schema + pattern loading ───────────────────────────────────────────────────
 
-fn load_schemas(dir: &Path) -> Result<BTreeMap<String, Schema>, VerifyError> {
+/// Load the schemas directory. Also returns the #176 aggregate lineage digest
+/// — sha256 over the sorted relative filenames and each file's content digest
+/// (`Some` only when at least one schema file was read; deterministic across
+/// platforms — sorted names, no path separators inside a flat dir).
+fn load_schemas(dir: &Path) -> Result<(BTreeMap<String, Schema>, Option<String>), VerifyError> {
     let mut out = BTreeMap::new();
+    let mut digests: Vec<(String, String)> = Vec::new();
     if !dir.is_dir() {
-        return Ok(out);
+        return Ok((out, None));
     }
     for entry in std::fs::read_dir(dir).map_err(|e| VerifyError::Io {
         path: dir.to_string_lossy().into_owned(),
@@ -1472,9 +1573,34 @@ fn load_schemas(dir: &Path) -> Result<BTreeMap<String, Schema>, VerifyError> {
             path: path.to_string_lossy().into_owned(),
             error: e.to_string(),
         })?;
+        let name = path
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        digests.push((name, crate::init::sha256_hex(content.as_bytes())));
         out.insert(schema_class, schema);
     }
-    Ok(out)
+    Ok((out, aggregate_digest(digests)))
+}
+
+/// The #176 aggregate digest of one input directory: each `(relative filename,
+/// content sha256)` pair, sorted by filename, folded as `"{name}\n{sha}\n"`
+/// into one sha256. `None` when the directory held no files (absent/empty dirs
+/// omit their lineage key). Filenames in these flat dirs carry no separators,
+/// so the forward-slash requirement is trivially met.
+fn aggregate_digest(mut entries: Vec<(String, String)>) -> Option<String> {
+    if entries.is_empty() {
+        return None;
+    }
+    entries.sort();
+    let mut acc = String::new();
+    for (name, sha) in &entries {
+        acc.push_str(name);
+        acc.push('\n');
+        acc.push_str(sha);
+        acc.push('\n');
+    }
+    Some(crate::init::sha256_hex(acc.as_bytes()))
 }
 
 /// Per-rule source locations, parallel to the `Vec<PatternFile>` returned
@@ -1494,11 +1620,14 @@ fn load_schemas(dir: &Path) -> Result<BTreeMap<String, Schema>, VerifyError> {
 /// pinpoint it.
 type RuleLocations = Vec<Vec<Location>>;
 
-fn load_patterns(dir: &Path) -> Result<(Vec<PatternFile>, RuleLocations), VerifyError> {
+fn load_patterns(
+    dir: &Path,
+) -> Result<(Vec<PatternFile>, RuleLocations, Option<String>), VerifyError> {
     let mut out = Vec::new();
     let mut locations: RuleLocations = Vec::new();
+    let mut digests: Vec<(String, String)> = Vec::new();
     if !dir.is_dir() {
-        return Ok((out, locations));
+        return Ok((out, locations, None));
     }
     for entry in std::fs::read_dir(dir).map_err(|e| VerifyError::Io {
         path: dir.to_string_lossy().into_owned(),
@@ -1522,9 +1651,14 @@ fn load_patterns(dir: &Path) -> Result<(Vec<PatternFile>, RuleLocations), Verify
             error: e.to_string(),
         })?;
         locations.push(resolve_file_rule_locations(&content, &path, &pf));
+        let name = path
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        digests.push((name, crate::init::sha256_hex(content.as_bytes())));
         out.push(pf);
     }
-    Ok((out, locations))
+    Ok((out, locations, aggregate_digest(digests)))
 }
 
 /// Resolve one [`Location`] per rule in `pf`, positionally aligned to
