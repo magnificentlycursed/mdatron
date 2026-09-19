@@ -14,10 +14,15 @@ name: CI
 
 on:
   push:
-    # main plus the working-branch namespaces; crosslink/** tracker branches
-    # (hub, knowledge, agents, ...) are intentionally excluded — they carry no
-    # buildable source.
-    branches: [main, "feature/**", "chore/**", "docs/**"]
+    # main ONLY (#178, observability-engineering-audit input 4): a working
+    # branch under PR used to get BOTH a push run and a pull_request run in the
+    # same concurrency group — they cancelled each other, stranding required
+    # contexts as CANCELLED, and every PR of the 0.6.0 cycle needed a manual
+    # rerun before merge (Ch18's "retries are a tail-latency tax", live). A PR
+    # branch now gets exactly ONE run (pull_request); push-CI verifies merges
+    # to main. A branch that wants CI before its PR exists opens a draft PR.
+    # crosslink/** tracker branches stay excluded — no buildable source.
+    branches: [main]
   pull_request:
     branches: [main]
 
