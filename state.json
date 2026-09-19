@@ -1,6 +1,6 @@
 {
   "next_display_id": 175,
-  "next_comment_id": 469,
+  "next_comment_id": 470,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -2039,7 +2039,7 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-08-10T12:43:34.794950Z",
-      "updated_at": "2026-09-19T03:52:57.188397Z",
+      "updated_at": "2026-09-19T04:00:39.809466Z",
       "labels": [
         "process"
       ],
@@ -2047,6 +2047,15 @@
         "2881253a-3641-4d7b-a6c1-e09cbbd2d140"
       ],
       "comments": {
+        "0cc7b6c3-2d7c-4828-b47f-c4a41ed1c7ce": {
+          "display_id": 469,
+          "author": "79Ig",
+          "content": "METHODOLOGY-DOCS COLD REVIEW (multi-lens: TW + consistency + falsifiability) — 2 BLOCKER-class doc-truth findings + 6 should-fix + 3 nits. F1: 'CI-backed block' is FALSE at the merge gate — the live main ruleset requires ONLY Self-validation; the Test job running methodology_seams.rs is unrequired, so red seams merge (grade-1 detection masquerading as grade-3; the exact #99 failure class the doc warns about). F2: 'an unbound clone loses the nudge, not the guarantee' is FALSE — no CI step scans the pushed range for uncited DESIGN commits; the seeds only verify the checker script in a throwaway repo, so an unbound clone pollutes history with seeds green. F3: docs say the work-check hook 'enforces' comment discipline; live config is 'encouraged' + agent-relaxed, and practice confirms (#172/#174 closed with zero result comments). F4: escape rows 70-72 name planned/soft catches as if bound (violating the corpus preamble). F5: forged-record row overclaims keyword friction (the word 'ratified' + any issue number passes; residual needs naming per row 74's pattern). F6: 'phases are crosslink milestones' contradicts practice (2 milestone rows ever). F7: guardrail table not total over SS1-5 (S1 phase discipline + S4 owner/validator have NO row). F8: 'bound (naming register)' covers only letter+number clusters — S5's coined-labels + all-caps bans are mechanized by nothing. F9-F11 nits (S4 mis-citation, self-refuting all-caps ban, untracked review-log parenthetical). FIX PLAN: doc-truth edits (F4-F11 + F1/F2/F3 claim downgrades where the mechanism stays absent) + a CI range-scan step for uncited DESIGN commits inside the REQUIRED Self-validation job (makes the F2 guarantee real at grade-3). Two OPERATOR decisions surfaced separately: (a) add the Test job to the ruleset's required checks (makes F1's claim true instead of downgraded); (b) comment_discipline encouraged->required. Practice checks that came back clean: recent DESIGN commits all carry ratified-basis citations; seeds drive the real hook; per-clone note consistent.",
+          "created_at": "2026-09-19T04:00:39.794610Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAGLIuXRczOMMm/OcTOSJjcX4+fyrsnwAhYvIfSyJaSpEHiF2hmkv22AcUzJ14fDlso+fqZwPNIpI2w6MDGr7lBQ=="
+        },
         "7e981647-d8ff-4de6-a7ae-b7c2e3e73188": {
           "display_id": 467,
           "author": "79Ig",
@@ -7425,8 +7434,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-19T03:55:22.125729Z",
+    "timestamp": "2026-09-19T04:00:39.809466Z",
     "agent_id": "79Ig",
-    "agent_seq": 925
+    "agent_seq": 926
   }
 }
