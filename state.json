@@ -1,5 +1,5 @@
 {
-  "next_display_id": 174,
+  "next_display_id": 175,
   "next_comment_id": 466,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -174,6 +174,7 @@
     "fbaae8f9-41ac-498e-ae2e-019a69bd0b14": 55,
     "fd19315f-a56d-4b81-a131-e8a697a3a77b": 84,
     "fea9b536-a072-4342-afe0-0a87fe5ca8bd": 48,
+    "feac2c79-d47f-49ea-907c-6d3068232dd7": 174,
     "fed9ad06-769e-4cef-b2e3-be7041de17bc": 52
   },
   "locks": {
@@ -7283,6 +7284,16 @@
         }
       }
     },
+    "feac2c79-d47f-49ea-907c-6d3068232dd7": {
+      "uuid": "feac2c79-d47f-49ea-907c-6d3068232dd7",
+      "display_id": 174,
+      "title": "GH #48 lane G: residue — codecat/link_root/marker-load config integrity, unverifiable-vs-dead posture (W0048), pin dup-span+frontmatter hashing, E0101/E0110 wording, drive-path scheme, regex compile-once, explain --list",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-09-19T02:28:04.863960Z",
+      "updated_at": "2026-09-19T02:28:04.863960Z"
+    },
     "fed9ad06-769e-4cef-b2e3-be7041de17bc": {
       "uuid": "fed9ad06-769e-4cef-b2e3-be7041de17bc",
       "display_id": 52,
@@ -7379,8 +7390,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-19T02:21:59.226869Z",
+    "timestamp": "2026-09-19T02:28:04.863960Z",
     "agent_id": "79Ig",
-    "agent_seq": 911
+    "agent_seq": 912
   }
 }
