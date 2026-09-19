@@ -1,6 +1,6 @@
 {
   "next_display_id": 181,
-  "next_comment_id": 479,
+  "next_comment_id": 480,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -840,10 +840,21 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-19T22:05:07.907628Z",
-      "updated_at": "2026-09-19T22:05:14.757378Z",
+      "updated_at": "2026-09-19T22:19:05.135952Z",
       "labels": [
         "process"
-      ]
+      ],
+      "comments": {
+        "f50e514f-a2ed-4611-9f5d-834d63d75bbc": {
+          "display_id": 479,
+          "author": "79Ig",
+          "content": "PROMOTED TO PRE-CUT (operator challenge, 2026-09-19): no reason to wait — a tiny workflow change with zero release risk that removes the manual-rerun tax from the docs PR and the release PR themselves. Rides the #180 pre-cut polish branch as its own commit.",
+          "created_at": "2026-09-19T22:19:05.101578Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA12uevBGFkCDrDartDcrMUwOzFhSegNZtOKIpVulHThAK4Ba8Lrdo5hteYkTuf8vB7OzdMGWnInyPxTthSVbjCQ=="
+        }
+      }
     },
     "1f89fa15-980c-4d2d-ac43-108f45c87c2e": {
       "uuid": "1f89fa15-980c-4d2d-ac43-108f45c87c2e",
@@ -7611,8 +7622,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-19T22:17:31.047536Z",
+    "timestamp": "2026-09-19T22:19:05.135952Z",
     "agent_id": "79Ig",
-    "agent_seq": 952
+    "agent_seq": 953
   }
 }
