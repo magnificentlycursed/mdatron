@@ -1,6 +1,6 @@
 {
   "next_display_id": 181,
-  "next_comment_id": 490,
+  "next_comment_id": 491,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -383,7 +383,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-19T22:04:38.508776Z",
-      "updated_at": "2026-09-19T22:47:30.711814Z",
+      "updated_at": "2026-09-19T23:04:30.410249Z",
       "labels": [
         "enhancement"
       ],
@@ -414,6 +414,15 @@
           "kind": "result",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAdMVffkd+Kdh4aUHIq7o5SogrhnrysyH4xTb7ZA27oblYf4rzsqNEBuBwMewWDXL0r04/ZSJlRnidmQHIby0HBw=="
+        },
+        "e377e3a3-f53e-4200-bedc-df2a9c9632df": {
+          "display_id": 490,
+          "author": "79Ig",
+          "content": "COLD REVIEW round 1 (e989b82): 2 minors on lineage — (R2) aggregate_digest folds {name}\\n{sha}\\n and \\n is a legal unix filename byte: crafted filename collides two different schemas dirs to one digest (verified live); fix = NUL framing. (R3) 'empty when failed before loading anything' misdescribes mid-run failures (config+schemas digested then dropped); reword to 'always empty on a failed pipeline (partial lineage deliberately not attested)' in schema/output.rs/CHANGELOG/main.rs. Behavior unchanged.",
+          "created_at": "2026-09-19T23:04:30.398571Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAxgli002dL5jdQt0Yd6RNyDxPbraUiu8bE1x61xIpwa56C7icV0+Jj6g+p2QxpxGZ2KRYaVD3/Iu7m9zA0vjZCQ=="
         }
       }
     },
@@ -7724,8 +7733,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-19T23:04:24.185337Z",
+    "timestamp": "2026-09-19T23:04:30.410249Z",
     "agent_id": "79Ig",
-    "agent_seq": 965
+    "agent_seq": 966
   }
 }
