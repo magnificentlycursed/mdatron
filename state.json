@@ -1,6 +1,6 @@
 {
   "next_display_id": 181,
-  "next_comment_id": 486,
+  "next_comment_id": 487,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -3024,7 +3024,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-19T22:04:21.969915Z",
-      "updated_at": "2026-09-19T22:14:28.178381Z",
+      "updated_at": "2026-09-19T22:47:24.312829Z",
       "labels": [
         "enhancement"
       ],
@@ -3037,6 +3037,15 @@
           "kind": "observation",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAX7/xKp4XGKye1v/B9PwXbI7/7aTO2lurFn/7dp9fy6jsy4T4pCBMf/sM5LYT6RW25eCjM+mGTd456RF0fQFQCw=="
+        },
+        "d9d635b5-d61e-495e-8059-b8b710a62ca5": {
+          "display_id": 486,
+          "author": "79Ig",
+          "content": "RESULT: shipped in e989b82 (feature/pre-cut-envelope-and-docs). verify --timings emits OPTIONAL flat timings{total_ms,load_ms,capture_ms,check_ms}; measured unconditionally at the pipeline's phase boundaries, emitted only under the flag; default envelope byte-identity red-gated (raw-byte comparison across two runs). Independent verify: full gate battery green + live probes (timings shape sane 31+43+56<=131; byte-identity confirmed). Cold review dispatched.",
+          "created_at": "2026-09-19T22:47:24.297729Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAaBnIM8v77JlohNILzhuhZyx/TWOJXdjfBYDW74zw/R5jQPwrPGzvNV/dtqqbjaeftj/YvtWAH6gYZoJds3vHAQ=="
         },
         "f6d3595f-1bf8-45a7-84f9-eeb2180cad0a": {
           "display_id": 471,
@@ -7688,8 +7697,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-19T22:26:53.081316Z",
+    "timestamp": "2026-09-19T22:47:24.312829Z",
     "agent_id": "79Ig",
-    "agent_seq": 961
+    "agent_seq": 962
   }
 }
