@@ -1,6 +1,6 @@
 {
   "next_display_id": 175,
-  "next_comment_id": 466,
+  "next_comment_id": 467,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -7297,13 +7297,24 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-19T02:28:04.863960Z",
-      "updated_at": "2026-09-19T02:28:28.924965Z",
+      "updated_at": "2026-09-19T03:04:45.618016Z",
       "labels": [
         "bug"
       ],
       "related": [
         "8f2ce112-7179-4ad2-b03e-130070f8a37c"
-      ]
+      ],
+      "comments": {
+        "ece213af-32f0-4591-ab91-d7a83f9db143": {
+          "display_id": 466,
+          "author": "79Ig",
+          "content": "LANE G MVR (2 rounds). Round-1 review: both headline risks EMPIRICALLY DISPROVEN (A/B binary experiments — single-heading pin hashes byte-identical; G1 refusals break no working config); marker E0112->W0048 judged defensible (DESIGN reported-not-error posture, old E0112 was a false claim, E0003 covers in-walk targets) with a REAL residue: our own CI ran bare verify. Round 2: CI self-validation now takes --deny-warnings (+ README gate guidance names W0048); pin-compat red-gate added; OpenIo absent-vs-refused residue documented at marker+E0112 page+CHANGELOG scoping. ALL SEVEN GH #48 LANES AT MVR — the branch closes the entire review. Ready for operator push + the consolidated PR.",
+          "created_at": "2026-09-19T03:04:45.604257Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAHe290LgdyDku6d3ZzNxdvJOP4xqyWn9oIkvYWPP/riOYXpG+7D7MQ7ahr/KEKTdBwCoap7b5+pqolDKsQktuAg=="
+        }
+      }
     },
     "fed9ad06-769e-4cef-b2e3-be7041de17bc": {
       "uuid": "fed9ad06-769e-4cef-b2e3-be7041de17bc",
@@ -7401,8 +7412,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-19T02:28:28.924965Z",
+    "timestamp": "2026-09-19T03:04:45.618016Z",
     "agent_id": "79Ig",
-    "agent_seq": 915
+    "agent_seq": 916
   }
 }
