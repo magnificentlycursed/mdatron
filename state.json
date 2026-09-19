@@ -1,5 +1,5 @@
 {
-  "next_display_id": 178,
+  "next_display_id": 179,
   "next_comment_id": 471,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -19,6 +19,7 @@
     "1ba1bc71-1b50-4f6c-b672-1524a61a3096": 116,
     "1cafa0f3-dcdd-491b-b455-52af79c6c85d": 122,
     "1da67425-f44d-40d6-8ba1-2d2ed768de38": 97,
+    "1f3bc3ea-d9a5-4d3f-b230-b2ca1b8f9697": 178,
     "1f89fa15-980c-4d2d-ac43-108f45c87c2e": 146,
     "1f95ee99-22a5-437e-9132-00d7744e0eef": 172,
     "1ff675c3-889e-4de4-84da-352debc4b1f7": 5,
@@ -804,6 +805,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAhz7vBxtSi4vYiC4LBR64ebNoHG6Oo4A1FYkicKqlD/jK9QJ0G6Tj7C0HOrCxz5XFYbg9vntlIi1omB3NfAknCA=="
         }
       }
+    },
+    "1f3bc3ea-d9a5-4d3f-b230-b2ca1b8f9697": {
+      "uuid": "1f3bc3ea-d9a5-4d3f-b230-b2ca1b8f9697",
+      "display_id": 178,
+      "title": "ci: stop the push/pull_request double-run concurrency-cancel tax (every 0.6.0-cycle PR needed a manual rerun; observability-engineering-audit input 4)",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-09-19T22:05:07.907628Z",
+      "updated_at": "2026-09-19T22:05:07.907628Z"
     },
     "1f89fa15-980c-4d2d-ac43-108f45c87c2e": {
       "uuid": "1f89fa15-980c-4d2d-ac43-108f45c87c2e",
@@ -7487,8 +7498,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-19T22:05:01.602280Z",
+    "timestamp": "2026-09-19T22:05:07.907628Z",
     "agent_id": "79Ig",
-    "agent_seq": 937
+    "agent_seq": 938
   }
 }
