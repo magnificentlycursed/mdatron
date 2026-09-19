@@ -336,8 +336,12 @@ pub fn update(project_root: &Path, dry_run: bool) -> Result<Vec<(String, String,
 
     let mut changed = Vec::new();
     for entry in &mut raw.pins {
-        let confined = confine_lexically(Path::new(&entry.file))
-            .map_err(|v| Error::Config(format!("pin file '{}' escapes: {v:?}", entry.file)))?;
+        let confined = confine_lexically(Path::new(&entry.file)).map_err(|v| {
+            // Adopter path escaped before it rides an error the CLI prints raw
+            // to stderr (#165 marking discipline; lanes-B-E review F2).
+            let escaped = crate::diagnostic::escape_path_text(&entry.file);
+            Error::Config(format!("pin file '{escaped}' escapes: {v:?}"))
+        })?;
         let handle = match open_confined(project_root, &confined) {
             Ok(h) => h,
             Err(_) => continue, // unreadable: leave the record; verify reports E0062
@@ -353,7 +357,10 @@ pub fn update(project_root: &Path, dry_run: bool) -> Result<Vec<(String, String,
         handle
             .take(limit as u64 + 1)
             .read_to_end(&mut bytes)
-            .map_err(|e| Error::Config(format!("cannot read '{}': {e}", entry.file)))?;
+            .map_err(|e| {
+                let escaped = crate::diagnostic::escape_path_text(&entry.file);
+                Error::Config(format!("cannot read '{escaped}': {e}"))
+            })?;
         if bytes.len() > limit {
             let escaped = crate::diagnostic::escape_path_text(&entry.file);
             return Err(Error::Config(format!(
@@ -561,6 +568,34 @@ mod tests {
         assert_eq!(
             before, after,
             "an over-limit target never rewrites the record"
+        );
+    }
+
+    // Lanes-B-E review F2: the update path's OWN error strings ride raw to the
+    // CLI's stderr, so an adopter-authored `file:` carrying a control byte must
+    // be escaped in them too (the lane-C sweep originally missed these two
+    // neighbors of the escaped over-limit message).
+    #[test]
+    fn update_confinement_error_escapes_adopter_path() {
+        let proj = TempPinProject::new("escape-err", "content\n");
+        // YAML forbids a RAW control byte even double-quoted, so the hostile
+        // record uses YAML's `\x1b` escape — the parser DECODES it to a raw ESC
+        // in the parsed `file` string (exactly how an adopter record smuggles
+        // a control byte past the YAML layer).
+        std::fs::write(
+            proj.0.join(".mdatron").join("pins.yaml"),
+            "pins:\n- file: \"../esc\\x1b[31mRED.md\"\n  governing: GOVERNING.md\n  sha256: abc\n",
+        )
+        .unwrap();
+        let err = update(&proj.0, true).unwrap_err();
+        let msg = format!("{err}");
+        assert!(
+            !msg.contains('\u{1b}'),
+            "no raw ESC in the update error: {msg:?}"
+        );
+        assert!(
+            msg.contains("\\x1B") && msg.contains("escapes"),
+            "the escaped path still names the refusal: {msg:?}"
         );
     }
 

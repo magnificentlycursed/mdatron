@@ -145,12 +145,24 @@ pub fn check_file(
             // real citation (vsdd's live `VSDD-W0070` orphan is backticked). So a
             // backticked code still resolves-or-orphans.
             for (at_in_line, token) in candidate_tokens(line, &cat.namespace) {
-                if !cat.tokens.contains(token) {
+                // The token resolves AS WRITTEN first (GH #48 lanes-B-E review
+                // F1): the catalog is the legal grammar, and it may declare an
+                // s-terminal code (`K8s`) — stripping before the membership
+                // check would make such a code uncitable. Only when the full
+                // token does not resolve is a single trailing lowercase `s`
+                // after a digit treated as an English plural ("both
+                // VSDD-E0016s were fixed") and the stripped token checked —
+                // resolving or orphaning on its own merits.
+                if cat.tokens.contains(token) {
+                    continue;
+                }
+                let checked = plural_stripped(token).unwrap_or(token);
+                if !cat.tokens.contains(checked) {
                     findings.push(orphan_finding(
                         path,
                         content,
                         body_offset + line_start + at_in_line,
-                        token,
+                        checked,
                     ));
                 }
             }
@@ -161,9 +173,9 @@ pub fn check_file(
 /// Find candidate code tokens for `namespace` on `line`: each occurrence of the
 /// prefix on a word boundary, followed by an alphanumeric run that contains at
 /// least one digit (so ordinary prose after the prefix is not read as a code).
-/// A single trailing lowercase `s` immediately after a digit is an English
-/// plural, not part of the code, and is stripped from the token (GH #48
-/// promoted triage #5). Returns `(byte offset in line, full token)`.
+/// Returns `(byte offset in line, the FULL token as written)`; the English-
+/// plural tolerance is applied by `check_file` only after an as-written
+/// membership check (GH #48 promoted triage #5 + lanes-B-E review F1).
 /// Conservative pending the exact grammar (vsdd-cli#27).
 fn candidate_tokens<'a>(line: &'a str, namespace: &str) -> Vec<(usize, &'a str)> {
     let mut out = Vec::new();
@@ -181,27 +193,28 @@ fn candidate_tokens<'a>(line: &'a str, namespace: &str) -> Vec<(usize, &'a str)>
         while run_end < line.len() && bytes[run_end].is_ascii_alphanumeric() {
             run_end += 1;
         }
-        // Plural tolerance (GH #48 promoted triage #5): prose pluralizes a
-        // code token — "both VSDD-E0016s were fixed" — and the trailing run
-        // would otherwise mint the non-code token `VSDD-E0016s`, hard-gating
-        // E0113 on ordinary English. Exactly ONE trailing lowercase `s`
-        // immediately preceded by a digit is grammar, not code: strip it, and
-        // the stripped token resolves or orphans on its own merits (a mistyped
-        // class like `VSDD-X0016` is still caught; `VSDD-E9999s` still orphans
-        // as `VSDD-E9999`; `…16ss` keeps both — the second `s` is not
-        // digit-preceded, so nothing strips).
-        let mut end = run_end;
-        if end - body_start >= 2 && bytes[end - 1] == b's' && bytes[end - 2].is_ascii_digit() {
-            end -= 1;
-        }
-        let body = &line[body_start..end];
+        // The FULL alphanumeric run is the candidate. Plural tolerance (GH #48
+        // promoted triage #5) lives in `check_file`, AFTER an as-written
+        // membership check — stripping here made a legally-declared s-terminal
+        // code (`K8s`) uncitable (lanes-B-E review F1).
+        let body = &line[body_start..run_end];
         if boundary && !body.is_empty() && body.bytes().any(|b| b.is_ascii_digit()) {
-            out.push((start, &line[start..end]));
+            out.push((start, &line[start..run_end]));
         }
-        // Advance past this match, stripped plural `s` included (never stall).
+        // Advance past this match (never stall).
         from = run_end.max(start + namespace.len());
     }
     out
+}
+
+/// The token with an English-plural `s` removed: `Some(stripped)` when the
+/// token ends in exactly one lowercase `s` immediately preceded by a digit
+/// ("both VSDD-E0016s were fixed" cites `VSDD-E0016`), else `None`. `…16ss`
+/// and an uppercase `S` are not plural-shaped; nothing strips.
+fn plural_stripped(token: &str) -> Option<&str> {
+    let bytes = token.as_bytes();
+    let n = bytes.len();
+    (n >= 2 && bytes[n - 1] == b's' && bytes[n - 2].is_ascii_digit()).then(|| &token[..n - 1])
 }
 
 fn orphan_finding(path: &Path, content: &str, offset: usize, token: &str) -> Finding {
@@ -308,6 +321,28 @@ mod tests {
     // Pre-fix the detector extended the token through the trailing `s`,
     // minting `VSDD-E0016s`, absent from every catalog → an E0113 hard-gate
     // error on ordinary English.
+    #[test]
+    fn declared_s_terminal_code_stays_citable() {
+        // Lanes-B-E review F1: the catalog is the legal grammar and may declare
+        // an s-terminal code (`K8s`). The as-written membership check runs
+        // BEFORE the plural strip, so citing it exactly must resolve — the
+        // pre-fix unconditional strip minted `TOOL-K8` and hard-orphaned a
+        // declared code.
+        let catalogs = [cat("TOOL-", true, &["K8s"])];
+        let mut f = Vec::new();
+        check_file(
+            &catalogs,
+            Path::new("d.md"),
+            "Deployed via TOOL-K8s today.\n",
+            0,
+            &mut f,
+        );
+        assert!(
+            f.is_empty(),
+            "a declared s-terminal code cites clean: {f:?}"
+        );
+    }
+
     #[test]
     fn plural_of_a_declared_code_resolves() {
         let catalogs = [cat("VSDD-", true, &["E0016"])];

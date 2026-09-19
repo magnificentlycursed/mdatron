@@ -273,7 +273,11 @@ pub(crate) fn atx_heading(line: &str) -> Option<(usize, &str)> {
             return None;
         }
     }
-    let t = line.trim_start();
+    // Slice at the counted SPACE indent — never trim_start(), which swallows
+    // any Unicode whitespace and would let a form-feed/NBSP-prefixed `#` line
+    // parse as a heading (GH #48 lanes-B-E review F5: only 0-3 literal spaces
+    // are heading indentation; anything else before `#` makes paragraph text).
+    let t = &line[indent..];
     let level = t.chars().take_while(|&c| c == '#').count();
     if level == 0 || level > 6 {
         return None;
@@ -527,6 +531,12 @@ mod tests {
             None,
             "a tab anywhere in the indent is code"
         );
+        // Lanes-B-E review F5: only literal SPACES are heading indentation —
+        // exotic whitespace before `#` is paragraph text (the old trim_start
+        // swallowed any Unicode whitespace after the space count).
+        assert_eq!(atx_heading("\u{0c}# x"), None, "form feed is not indent");
+        assert_eq!(atx_heading("\u{a0}# x"), None, "NBSP is not indent");
+        assert_eq!(atx_heading(" \u{a0}# x"), None, "space then NBSP is text");
     }
 
     // GH #48 finding 5 (lane B, sibling minor): a fence indented 1–3 spaces is a

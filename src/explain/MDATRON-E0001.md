@@ -30,7 +30,7 @@ to surface the precise parse error.
 
 ## See also
 
-- the mdatron design reference, § Five check families (in the project repository)
+- the mdatron design reference, § Nine check families (in the project repository)
   — frontmatter format + parsing rules
 
 ## Related codes

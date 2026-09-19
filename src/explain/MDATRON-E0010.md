@@ -30,7 +30,10 @@ Two postures apply, depending on who authors the path:
   remedy: set `link_root: true` on the link-checked route in
   `.mdatron/routes.yaml`, and the destination resolves from the project root
   instead of being refused — the static-site convention, opt-in per route. A
-  drive/UNC prefix stays refused even under `link_root`.
+  drive/UNC prefix stays refused even under `link_root` on platforms whose
+  paths carry such prefixes (Windows); on Unix a `C:\...` destination is not
+  an absolute path at all — it resolves as an ordinary relative name and
+  surfaces as a missing target (`MDATRON-E0110`) instead.
 
 ## How to fix
 
