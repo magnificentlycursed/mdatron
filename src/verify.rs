@@ -1288,10 +1288,13 @@ fn unreadable_body_finding(path: &Path, cause: &str) -> Finding {
         code: "MDATRON-E0003".into(),
         severity: Severity::Error,
         summary: "governed-file-unreadable".into(),
-        message: format!(
-            "this governed file's content cannot be verified ({cause}); \
-             nothing validated it"
-        ),
+        // #167: the cause is an OS io::Error string — not adopter data, but the
+        // one remaining non-engine string that rode inline in a Finding message;
+        // it now rides a quoted region like every other non-engine value, so the
+        // message field is fully engine-authored across the codebase.
+        message: "this governed file's content cannot be verified; nothing \
+                  validated it"
+            .into(),
         help: Some(
             "re-encode the file as UTF-8 (or repair its readability); a file \
              that cannot be read cannot be governed"
@@ -1303,7 +1306,10 @@ fn unreadable_body_finding(path: &Path, cause: &str) -> Finding {
             column: 0,
         },
         explain_ref: Some("MDATRON-E0003".into()),
-        quoted: Vec::new(),
+        quoted: vec![QuotedRegion {
+            label: "cause".into(),
+            content: cause.into(),
+        }],
     }
 }
 
@@ -2609,7 +2615,14 @@ fn interpolate_message(
                 // and numbers a collision/repeat so each pointer resolves to one
                 // block (the fallback vsdd reserved for shared labels).
                 let base_label = expr_str.strip_prefix("$self.").unwrap_or(expr_str);
-                let mut label = base_label.to_string();
+                // #168: the label is derived from the adopter's expression text
+                // and lands INLINE in the message (`[see: <label>]`) as well as
+                // on the block's label — escape it once, here, so both carriers
+                // hold the same inert form (escape_label at render is idempotent
+                // on already-escaped text; a parsed expression rarely carries a
+                // control char, but a string literal inside one can).
+                let base_label = crate::diagnostic::escape_label(base_label);
+                let mut label = base_label.clone();
                 let mut n = 2;
                 while quoted.iter().any(|q: &QuotedRegion| q.label == label) {
                     label = format!("{base_label} [{n}]");
@@ -2626,8 +2639,22 @@ fn interpolate_message(
                 continue;
             }
         }
-        out.push(bytes[i] as char);
-        i += 1;
+        // Copy one CHAR, not one byte (#168): `bytes[i] as char` mojibake'd
+        // every multibyte char ('é' → 'Ã©') and minted raw C1 code points
+        // (U+0080–U+00BF) into the message. `i` is always a char boundary (it
+        // starts at 0 and advances by len_utf8, or to just past an ASCII "}}").
+        // The template is adopter-authored, so control-capable chars are
+        // escaped to inert `\xNN` as they are copied (the escape_label
+        // predicate: Cc ∪ {U+2028, U+2029}) — values already ride `[see:]`
+        // quoted regions; this closes the template-TEXT channel.
+        let ch = template[i..].chars().next().expect("i is a char boundary");
+        if ch.is_control() || matches!(ch, '\u{2028}' | '\u{2029}') {
+            use std::fmt::Write;
+            let _ = write!(out, "\\x{:02X}", ch as u32);
+        } else {
+            out.push(ch);
+        }
+        i += ch.len_utf8();
     }
     Ok((out, quoted))
 }
@@ -8266,6 +8293,80 @@ pattern:
         let (message, quoted) = interpolate_message("no interpolation markers here", &ctx).unwrap();
         assert_eq!(message, "no interpolation markers here");
         assert!(quoted.is_empty());
+    }
+
+    // RED GATE (#168): the template scanner copies CHARS, not bytes — the old
+    // `bytes[i] as char` mojibake'd every multibyte char ('é' → 'Ã©') and
+    // minted raw C1 code points (U+0080–U+00BF) into the message.
+    #[test]
+    fn interpolate_message_preserves_multibyte_template_chars() {
+        let self_v = Value::Object(BTreeMap::from([("x".to_string(), Value::Str("v".into()))]));
+        let file_v = Value::Null;
+        let project_v = Value::Null;
+        let ctx = EvalContext::new(&self_v, &file_v, &project_v);
+        let (message, _) = interpolate_message("é is {{$self.x}} — ok", &ctx).unwrap();
+        assert_eq!(message, "é is [see: x] — ok");
+        assert!(
+            !message.contains('Ã') && !message.contains('\u{0080}'),
+            "no mojibake, no raw C1 code points: {message:?}"
+        );
+    }
+
+    // RED GATE (#168): the template TEXT is adopter-authored (pattern YAML) —
+    // a control-capable char smuggled into it (YAML `\x1b`) is escaped to the
+    // inert `\xNN` form as it is copied into the message (values already ride
+    // `[see:]` quoted regions; this closes the template-text channel).
+    #[test]
+    fn interpolate_message_escapes_template_control_chars() {
+        let self_v = Value::Null;
+        let file_v = Value::Null;
+        let project_v = Value::Null;
+        let ctx = EvalContext::new(&self_v, &file_v, &project_v);
+        let (message, _) = interpolate_message("bad \u{1b}[31m here\u{2028}too", &ctx).unwrap();
+        assert!(
+            !message.contains('\u{1b}') && !message.contains('\u{2028}'),
+            "no raw control/separator byte: {message:?}"
+        );
+        assert!(
+            message.contains("\\x1B") && message.contains("\\x2028"),
+            "the inert escaped forms are present: {message:?}"
+        );
+    }
+
+    // RED GATE (#167, end-to-end): a FIRING DSL rule's finding carries the
+    // adopter's pattern-YAML `code`/`id` as the finding's code/summary — a
+    // YAML-`\x1b`-smuggled ESC in them must not reach the TTY or compact
+    // render raw (the head line is the injection surface; the JSON envelope is
+    // serde-escaped independently).
+    #[test]
+    fn firing_rule_with_esc_bearing_code_and_id_renders_inert() {
+        let proj = TempProject::new("esc-code-fires");
+        proj.write(
+            ".mdatron/patterns/p.yaml",
+            "mdatron_dsl_version: 1\npattern:\n  id: p\n  rules:\n    - id: \"r\\u001b[31mred\"\n      context: \"**/*.md\"\n      assert: \"false\"\n      code: \"T-E\\u001b[2J0001\"\n      message: \"fires on every doc\"\n",
+        );
+        proj.write("doc.md", "---\nfoo: bar\n---\n");
+        let cfg = VerifyConfig::new(&proj.0);
+        let findings = verify(&cfg).unwrap();
+        let f = findings
+            .iter()
+            .find(|f| f.code.starts_with("T-E"))
+            .unwrap_or_else(|| panic!("the rule fires; got {findings:?}"));
+        assert!(
+            f.code.contains('\u{1b}') && f.summary.contains('\u{1b}'),
+            "the STORED code/summary carry the raw adopter bytes (the JSON \
+             envelope serde-escapes them); escaping happens at render"
+        );
+        for rendered in [f.format_tty(), f.format_compact()] {
+            assert!(
+                !rendered.contains('\u{1b}'),
+                "no raw ESC in the render: {rendered:?}"
+            );
+            assert!(
+                rendered.contains("\\x1B"),
+                "the inert escaped form is present: {rendered:?}"
+            );
+        }
     }
 
     // ── Rule field-reference validation red gate (#156) ─────────────────────────

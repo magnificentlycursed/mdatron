@@ -183,6 +183,65 @@ fn pipeline_failure_json_quiet_carries_structured_reason() {
     );
 }
 
+// RED GATE (#167): the raw main.rs stderr notes route through the print-
+// boundary escape. An init manifest whose managed entry smuggles an ESC into
+// its path via YAML's `\x1b` escape — missing on disk, with no engine-known
+// content to redeploy — surfaces as an InitError::Io naming that path in the
+// `init failed` note; the rendered stderr must carry the inert `\x1B`, never
+// the raw byte. A malformed manifest (ManifestParse names the ABSOLUTE
+// manifest path) additionally must not leak the host layout (DEF4): the
+// resolved root is stripped from the note.
+#[test]
+fn init_failure_note_escapes_adopter_manifest_bytes_and_strips_the_root() {
+    // Case 1: ESC-smuggling managed path -> Io error naming it.
+    let proj = TempProject::new("init-esc-note");
+    proj.write(
+        ".mdatron/manifest.yaml",
+        "version: 2\nmanaged:\n  - path: \"no-such\\u001b[31m.json\"\n    sha256: \"00\"\n",
+    );
+    let out = Command::new(mdatron_bin())
+        .args(["init", "--project-root"])
+        .arg(proj.path())
+        .output()
+        .expect("mdatron binary executes");
+    assert_eq!(
+        out.status.code(),
+        Some(2),
+        "init fails loudly; stderr={:?}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        !out.stderr.contains(&0x1b),
+        "no raw ESC on stderr: {stderr:?}"
+    );
+    assert!(
+        stderr.contains("\\x1B"),
+        "the inert escaped form is present: {stderr:?}"
+    );
+
+    // Case 2: a malformed manifest -> ManifestParse naming the manifest's
+    // absolute path; the note strips the resolved root (DEF4).
+    let proj2 = TempProject::new("init-root-note");
+    proj2.write(".mdatron/manifest.yaml", "version: [not, a, number\n");
+    let out2 = Command::new(mdatron_bin())
+        .args(["init", "--project-root"])
+        .arg(proj2.path())
+        .output()
+        .expect("mdatron binary executes");
+    assert_eq!(out2.status.code(), Some(2));
+    let stderr2 = String::from_utf8_lossy(&out2.stderr);
+    let root_str = proj2.path().to_string_lossy();
+    assert!(
+        !stderr2.contains(root_str.as_ref()),
+        "the note must not leak the absolute project root; stderr={stderr2:?}"
+    );
+    assert!(
+        stderr2.contains("init failed"),
+        "the failure is still named: {stderr2:?}"
+    );
+}
+
 // #165 marking-discipline sweep: a pipeline error (E0080) renders to the
 // agent-facing forms via `pipeline_error_finding`; an adopter-controlled token (a
 // pattern id) carrying a control byte must NOT reach the rendered output raw — the

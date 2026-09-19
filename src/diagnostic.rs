@@ -184,7 +184,11 @@ pub fn render_quoted(content: &str, prefix: &str) -> String {
 /// unprefixed line on the `= <label>:` intro line — the one rendered field that
 /// does not already pass through `render_quoted`/`safe_display`. Matches the
 /// `safe_display` predicate (Cc ∪ {U+2028, U+2029}) so a label cannot break a line.
-fn escape_label(label: &str) -> String {
+/// Also applied at the head-line render boundary to `code`/`summary` (#167 —
+/// DSL-rule findings carry adopter-authored values there) and by the DSL
+/// message interpolator to adopter template text (#168) — `pub(crate)` for
+/// those call sites; engine-authored ASCII passes through byte-identical.
+pub(crate) fn escape_label(label: &str) -> String {
     let mut out = String::with_capacity(label.len());
     for ch in label.chars() {
         if ch.is_control() || matches!(ch, '\u{2028}' | '\u{2029}') {
@@ -282,8 +286,17 @@ impl Finding {
     /// - Optional `   = explain: mdatron explain <explain_ref>` line when `explain_ref` is `Some`
     pub fn format_tty(&self) -> String {
         use std::fmt::Write;
-        // Header: `<label>[<code>]: <summary>`
-        let mut output = format!("{}[{}]: {}", self.severity.label(), self.code, self.summary);
+        // Header: `<label>[<code>]: <summary>`. Code and summary are escaped at
+        // this RENDER boundary (#167): DSL-rule findings carry the adopter's
+        // pattern-YAML `code`/`id` here, and YAML's `\x1b` escape smuggles a raw
+        // ESC past every construction-site sweep. Engine-authored codes and
+        // summaries are ASCII, so their rendering is byte-identical.
+        let mut output = format!(
+            "{}[{}]: {}",
+            self.severity.label(),
+            escape_label(&self.code),
+            escape_label(&self.summary)
+        );
         // Source-span arrow only when the location is a real file:line —
         // line == 0 marks "no location applicable" (e.g., pipeline-orchestration
         // findings whose failure precedes any per-file processing).
@@ -333,7 +346,14 @@ impl Finding {
             }
         }
         if let Some(explain) = &self.explain_ref {
-            let _ = write!(output, "\n   = explain: mdatron explain {explain}");
+            // #167 (found by the end-to-end red gate): DSL-rule findings carry
+            // the adopter rule code in `explain_ref` too — same render-boundary
+            // escape as the head line.
+            let _ = write!(
+                output,
+                "\n   = explain: mdatron explain {}",
+                escape_label(explain)
+            );
         }
         output
     }
@@ -361,8 +381,11 @@ impl Finding {
             Severity::Lint => 'L',
         };
         // Essential identity — code, location, summary. Always retained (elided
-        // only if it alone exceeds the limit). Adopter content never rides here.
-        let mut essential = format!("{sev}[{}] ", self.code);
+        // only if it alone exceeds the limit). Code and summary are escaped at
+        // this RENDER boundary (#167): DSL-rule findings put the adopter's
+        // pattern-YAML `code`/`id` here (engine-authored values are ASCII and
+        // render byte-identical).
+        let mut essential = format!("{sev}[{}] ", escape_label(&self.code));
         if self.location.line > 0 {
             let _ = write!(
                 essential,
@@ -375,7 +398,7 @@ impl Finding {
             }
             essential.push(' ');
         }
-        let _ = write!(essential, "{}", self.summary);
+        let _ = write!(essential, "{}", escape_label(&self.summary));
         // Oversized identity: elide at a char boundary and stop (rare — a code +
         // location + summary over the whole budget leaves no room for the rest).
         if essential.len() > COMPACT_FINDING_LIMIT {
@@ -1039,6 +1062,35 @@ mod tests {
         assert_eq!(loc.file, PathBuf::from("docs/example.md"));
         assert_eq!(loc.line, 1);
         assert_eq!(loc.column, 0);
+    }
+
+    // RED GATE (#167): the head line renders `code` and `summary` through the
+    // escape boundary — DSL-rule findings carry the adopter's pattern-YAML
+    // `code`/`id` in those fields, and YAML's `\x1b` escape smuggles a raw ESC
+    // past any construction-site sweep. Engine-authored codes/summaries are
+    // ASCII, so their renders are byte-identical.
+    #[test]
+    fn head_line_escapes_adopter_code_and_summary() {
+        let f = Finding {
+            code: "T-E\u{1b}[31m0001".into(),
+            severity: Severity::Error,
+            summary: "rule\u{2028}id".into(),
+            message: "an engine-authored message".into(),
+            help: None,
+            location: Location::whole_file("d.md"),
+            explain_ref: None,
+            quoted: Vec::new(),
+        };
+        for rendered in [f.format_tty(), f.format_compact()] {
+            assert!(
+                !rendered.contains('\u{1b}') && !rendered.contains('\u{2028}'),
+                "no raw control/separator byte in the render: {rendered:?}"
+            );
+            assert!(
+                rendered.contains("\\x1B") && rendered.contains("\\x2028"),
+                "the inert escaped forms are present: {rendered:?}"
+            );
+        }
     }
 
     #[test]
