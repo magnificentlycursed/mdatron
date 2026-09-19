@@ -1,6 +1,6 @@
 {
   "next_display_id": 173,
-  "next_comment_id": 461,
+  "next_comment_id": 462,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -829,11 +829,20 @@
       "priority": "critical",
       "created_by": "79Ig",
       "created_at": "2026-09-19T00:21:56.638913Z",
-      "updated_at": "2026-09-19T00:52:53.192087Z",
+      "updated_at": "2026-09-19T01:12:47.195545Z",
       "labels": [
         "bug"
       ],
       "comments": {
+        "4e9993ab-a9a0-4dad-bdb2-001f5f09498a": {
+          "display_id": 461,
+          "author": "79Ig",
+          "content": "PHASE-3 MVR: round-2 confirm pass verified section_spans byte-identical to section_span across 17 adversarial docs, sum/union semantics, captured-nothing E0112 non-misfire, empty-heading refusals, docs accuracy — 1 should-fix (marker extract_members hid members under an ADJACENT duplicate heading: close arm ran before re-open check → false-positive E0112, and the round-2 docs overclaimed) + 1 nit (E0120 singular wording under summed spans). Round 3 fixes both exactly as the reviewer prescribed (wanted-heading check first, mirroring section_spans; wording neutralized), red-gate test added. 3 rounds total; final delta implements the reviewer's own remedy + full gates green (499 lib). Ready for operator push.",
+          "created_at": "2026-09-19T01:12:47.182227Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAqayE292Mr6FJ1iytuNH2gCHsDZRlkAwkbt5dpWU8ceNrpnOVUAWCYVF0DtTGFUWiBqUv2J4D91U1Vk5WBuxqCQ=="
+        },
         "c96e19c4-0b86-4855-94cd-37fa53d5a366": {
           "display_id": 460,
           "author": "79Ig",
@@ -7308,8 +7317,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-19T00:52:53.192087Z",
+    "timestamp": "2026-09-19T01:12:47.195545Z",
     "agent_id": "79Ig",
-    "agent_seq": 902
+    "agent_seq": 903
   }
 }
