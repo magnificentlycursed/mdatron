@@ -1,5 +1,5 @@
 {
-  "next_display_id": 179,
+  "next_display_id": 180,
   "next_comment_id": 474,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -83,6 +83,7 @@
     "7d222949-0302-4dc4-9859-143cf7da11fb": 80,
     "7d3f3244-2166-4727-a6f5-233882cd4457": 49,
     "7f91651e-0b4e-4a0d-aa3e-567f6ebaea4a": 24,
+    "81ede3c0-97f1-43d6-b336-5018865cf29a": 179,
     "82cb584a-cbc0-4ddd-9c36-0bd7a641a7a5": 114,
     "8368834a-bc3c-4500-a10a-7dad88e1c9ff": 94,
     "85c72705-2c55-4332-bb4d-9616e2ffef82": 78,
@@ -3155,6 +3156,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAxxmmTECpeD2Y1gIh0MMFRGhYNFX38zTXh3hzVNegRt56iWh9GCheg3xKLKxw4qQDi7XcbsoMJ0w00BHpwOt1BQ=="
         }
       }
+    },
+    "81ede3c0-97f1-43d6-b336-5018865cf29a": {
+      "uuid": "81ede3c0-97f1-43d6-b336-5018865cf29a",
+      "display_id": 179,
+      "title": "docs: README/DESIGN positioning from the Ch32 thesis (documents become cache; the guardrail framing; the can-an-agent-validate-it test)",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-09-19T22:06:59.731270Z",
+      "updated_at": "2026-09-19T22:06:59.731270Z"
     },
     "82cb584a-cbc0-4ddd-9c36-0bd7a641a7a5": {
       "uuid": "82cb584a-cbc0-4ddd-9c36-0bd7a641a7a5",
@@ -7534,8 +7545,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-19T22:06:50.388552Z",
+    "timestamp": "2026-09-19T22:06:59.731270Z",
     "agent_id": "79Ig",
-    "agent_seq": 942
+    "agent_seq": 943
   }
 }
