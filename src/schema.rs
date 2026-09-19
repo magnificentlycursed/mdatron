@@ -320,7 +320,12 @@ fn escape_inline(s: &str) -> String {
 /// Compact one-line JSON rendering of schema-side data (allowed options, limits,
 /// expected constants). Schema content is adopter *config*, not document content.
 fn compact(v: &JsonValue) -> String {
-    serde_json::to_string(v).unwrap_or_else(|_| "<?>".into())
+    // serde_json escapes Cc controls but Zl/Zp (U+2028/U+2029) are LEGAL raw in
+    // JSON strings — and this output lands inline in E0050 messages rendered
+    // unescaped, so an adopter enum/const value carrying U+2028 forged a line
+    // (#167 review; the same class escape_inline already closes for `pattern`
+    // and pointers, roast round-3 B). Escape the serialized form too.
+    escape_inline(&serde_json::to_string(v).unwrap_or_else(|_| "<?>".into()))
 }
 
 /// Convert a `serde_yaml_ng::Value` to a `serde_json::Value` via serde's interconversion.

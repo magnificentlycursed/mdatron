@@ -243,7 +243,11 @@ fn cmd_pin(project_root: Option<PathBuf>, update: bool, dry_run: bool, quiet: bo
         Ok(r) => r,
         Err(e) => {
             if !quiet {
-                eprintln!("error[MDATRON-E0070]: cannot resolve project root: {e}");
+                // #167: no resolved root here — escape only.
+                eprintln!(
+                    "error[MDATRON-E0070]: cannot resolve project root: {}",
+                    stderr_safe(&e, &[])
+                );
             }
             return ExitCode::from(2);
         }
@@ -274,7 +278,13 @@ fn cmd_pin(project_root: Option<PathBuf>, update: bool, dry_run: bool, quiet: bo
             }
             Err(e) => {
                 if !quiet {
-                    eprintln!("error[MDATRON-E0080]: pin update failed\n   = note: {e}");
+                    // #167: pin errors interpolate adopter pins.yaml values —
+                    // escape at the print boundary and strip the resolved root
+                    // (DEF4) from the rendered note.
+                    eprintln!(
+                        "error[MDATRON-E0080]: pin update failed\n   = note: {}",
+                        stderr_safe(&e, &[root.as_path()])
+                    );
                 }
                 ExitCode::from(2)
             }
@@ -314,7 +324,8 @@ fn cmd_pin(project_root: Option<PathBuf>, update: bool, dry_run: bool, quiet: bo
                                 );
                                 if !quiet {
                                     eprintln!(
-                                        "error[MDATRON-E0080]: pin check failed\n   = note: {e}"
+                                        "error[MDATRON-E0080]: pin check failed\n   = note: {}",
+                                        stderr_safe(&e, &[root.as_path()])
                                     );
                                 }
                                 return ExitCode::from(2);
@@ -323,7 +334,8 @@ fn cmd_pin(project_root: Option<PathBuf>, update: bool, dry_run: bool, quiet: bo
                             Err(e) => {
                                 if !quiet {
                                     eprintln!(
-                                        "error[MDATRON-E0080]: pin check failed\n   = note: {e}"
+                                        "error[MDATRON-E0080]: pin check failed\n   = note: {}",
+                                        stderr_safe(&e, &[root.as_path()])
                                     );
                                 }
                                 return ExitCode::from(2);
@@ -354,7 +366,12 @@ fn cmd_pin(project_root: Option<PathBuf>, update: bool, dry_run: bool, quiet: bo
             }
             Err(e) => {
                 if !quiet {
-                    eprintln!("error[MDATRON-E0080]: pin check failed\n   = note: {e}");
+                    // #167: pin::load errors interpolate the pins.yaml path —
+                    // root-relativize (DEF4) + escape at the print boundary.
+                    eprintln!(
+                        "error[MDATRON-E0080]: pin check failed\n   = note: {}",
+                        stderr_safe(&e, &[root.as_path()])
+                    );
                 }
                 ExitCode::from(2)
             }
@@ -369,7 +386,11 @@ fn cmd_init(project_root: Option<PathBuf>, quiet: bool) -> ExitCode {
         Ok(r) => r,
         Err(e) => {
             if !quiet {
-                eprintln!("error[MDATRON-E0070]: cannot resolve project root: {e}");
+                // #167: no resolved root here — escape only.
+                eprintln!(
+                    "error[MDATRON-E0070]: cannot resolve project root: {}",
+                    stderr_safe(&e, &[])
+                );
             }
             return ExitCode::from(2);
         }
@@ -383,7 +404,9 @@ fn cmd_init(project_root: Option<PathBuf>, quiet: bool) -> ExitCode {
                     created.len()
                 );
                 for p in &created {
-                    eprintln!("  + {p}");
+                    // #167 audit find: a repaired MANAGED path echoes the
+                    // manifest's (adopter-editable) entry text — escape it.
+                    eprintln!("  + {}", stderr_safe(p, &[]));
                 }
             }
             ExitCode::SUCCESS
@@ -408,7 +431,12 @@ fn cmd_init(project_root: Option<PathBuf>, quiet: bool) -> ExitCode {
         }
         Err(e) => {
             if !quiet {
-                eprintln!("error[MDATRON-E0080]: init failed\n   = note: {e}");
+                // #167: InitError::Io/ManifestParse interpolate manifest-derived
+                // paths — root-relativize (DEF4) + escape at the print boundary.
+                eprintln!(
+                    "error[MDATRON-E0080]: init failed\n   = note: {}",
+                    stderr_safe(&e, &[root.as_path()])
+                );
             }
             ExitCode::from(2)
         }
@@ -447,7 +475,11 @@ fn cmd_verify(
         Ok(r) => r,
         Err(e) => {
             if !quiet {
-                eprintln!("error[MDATRON-E0070]: cannot resolve project root: {e}");
+                // #167: no resolved root here — escape only.
+                eprintln!(
+                    "error[MDATRON-E0070]: cannot resolve project root: {}",
+                    stderr_safe(&e, &[])
+                );
             }
             return ExitCode::from(2);
         }
@@ -601,7 +633,13 @@ fn cmd_verify(
             Ok(line) => println!("{line}"),
             Err(e) => {
                 if !quiet {
-                    eprintln!("error[MDATRON-E0080]: output serialization failed\n   = note: {e}");
+                    // #167: a serde error's Display can echo data bytes —
+                    // escape + root-strip at the print boundary like every
+                    // other non-Finding stderr note.
+                    eprintln!(
+                        "error[MDATRON-E0080]: output serialization failed\n   = note: {}",
+                        stderr_safe(&e, &[root.as_path(), canonical_root.as_path()])
+                    );
                 }
                 return ExitCode::from(2);
             }
@@ -683,6 +721,17 @@ fn relativize_root_prefix(mut msg: String, roots: &[&Path]) -> String {
     msg
 }
 
+/// Render a non-Finding error (or any value that can carry adopter/OS bytes)
+/// for a raw stderr line (#167): strip the resolved project root(s) so the
+/// note does not leak the host layout (the DEF4 contract, #134), then escape
+/// control bytes to inert `\xNN` at the PRINT boundary (#165 marking
+/// discipline — no construction-site sweep can be complete). Pass no roots
+/// where none is resolved (the E0070 sites). Finding-rendered lines never come
+/// through here — `format_tty`/`format_compact` are safe by construction.
+fn stderr_safe(text: impl std::fmt::Display, roots: &[&Path]) -> String {
+    mdatron::diagnostic::escape_path_text(&relativize_root_prefix(text.to_string(), roots))
+}
+
 /// Construct the Finding for a pipeline error so every output form renders it
 /// through the same single-source-of-truth paths (format_tty / format_compact /
 /// JSON envelope). Per crosslink #13 SE/F5.
@@ -744,7 +793,12 @@ fn cmd_explain(code: Option<&str>, list: bool, json: bool, compact: bool) -> Exi
                 return ExitCode::from(0);
             }
             Err(e) => {
-                eprintln!("error[MDATRON-E0080]: explain --list failed\n   = note: {e}");
+                // #167: routed through the print-boundary escape for
+                // uniformity (no resolved root in this command).
+                eprintln!(
+                    "error[MDATRON-E0080]: explain --list failed\n   = note: {}",
+                    stderr_safe(&e, &[])
+                );
                 return ExitCode::from(2);
             }
         }
@@ -764,7 +818,10 @@ fn cmd_explain(code: Option<&str>, list: bool, json: bool, compact: bool) -> Exi
                     return ExitCode::from(0);
                 }
                 Err(e) => {
-                    eprintln!("error[MDATRON-E0080]: output serialization failed\n   = note: {e}");
+                    eprintln!(
+                        "error[MDATRON-E0080]: output serialization failed\n   = note: {}",
+                        stderr_safe(&e, &[])
+                    );
                     return ExitCode::from(2);
                 }
             }
@@ -784,7 +841,10 @@ fn cmd_explain(code: Option<&str>, list: bool, json: bool, compact: bool) -> Exi
         }
         return ExitCode::from(0);
     }
-    if explain::is_mdatron_namespace(code) {
+    // #167 audit find: `code` is operator argv echoed to stderr — escape it at
+    // the print boundary like every other non-engine interpolation.
+    let code = stderr_safe(code, &[]);
+    if explain::is_mdatron_namespace(&code) {
         eprintln!(
             "error[MDATRON-E0080]: no explain page found for {code}\n   \
              = note: the explain catalog grows by one entry per emitted code; \
