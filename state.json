@@ -1,6 +1,6 @@
 {
   "next_display_id": 174,
-  "next_comment_id": 465,
+  "next_comment_id": 466,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -3588,7 +3588,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-09-19T01:15:30.097942Z",
-      "updated_at": "2026-09-19T01:58:57.628746Z",
+      "updated_at": "2026-09-19T02:21:59.226869Z",
       "labels": [
         "bug"
       ],
@@ -3604,6 +3604,15 @@
           "kind": "plan",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAznGWWIv0HBZk3CII8NfH+GvUb+JEkoJ/wqkfMAOu/5pVXix5VTaswaUJduqE85ZlUQfBrD2ZqYP3a/ycohsNBw=="
+        },
+        "04576a2c-ec3e-4d61-ae76-c9342a3c2b72": {
+          "display_id": 465,
+          "author": "79Ig",
+          "content": "LANE F MVR: cold review probed cache-poisoning (none — marker values snapshot-only, link key is the collapsed+decoded ConfinedPath so variants converge), incremental isolation (memo is a run() local; scoped run still fires the rule-level finding), per-reference preservation (E0112/E0111/W0048 per file per line, W0048 structurally uncached), revert-proofs on both one-per-run tests + the parse-count probe. F1 fixed: direct-drive link probe pins the run-level hoist (memo.link_slugs.len()==1; a re-localized cache fails it). Nit fixed: E0114 page states per-KEY dedup. ALL SIX PRE-CUT LANES AT MVR — branch ready for operator push + the consolidated PR.",
+          "created_at": "2026-09-19T02:21:59.209870Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA4m+OaHzVbA3sTgK6qYL3AdpOJZtJ+/I7IkH2ySXSrxAJxEpUN1ti1WxdKY4lxZe82VmK2DZXxY5I0ImKIR0QBA=="
         },
         "a4811d9d-dac4-41a3-acc1-fa6e56b75281": {
           "display_id": 463,
@@ -7370,8 +7379,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-19T01:58:57.628746Z",
+    "timestamp": "2026-09-19T02:21:59.226869Z",
     "agent_id": "79Ig",
-    "agent_seq": 910
+    "agent_seq": 911
   }
 }
