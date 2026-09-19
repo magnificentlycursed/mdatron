@@ -1,5 +1,5 @@
 {
-  "next_display_id": 175,
+  "next_display_id": 176,
   "next_comment_id": 471,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -76,6 +76,7 @@
     "74744f3a-fbb8-424a-897e-d4f2b2ed77ff": 40,
     "7515ecfd-31f2-4e53-bbb7-0e50c7cce064": 6,
     "7644da20-a049-4664-bd8e-38565ad23e9c": 169,
+    "77a19061-d782-4ef5-9203-8010f6762888": 175,
     "77c6f57d-8b51-4b19-b179-8d083cb0e5a4": 158,
     "7d222949-0302-4dc4-9859-143cf7da11fb": 80,
     "7d3f3244-2166-4727-a6f5-233882cd4457": 49,
@@ -2898,6 +2899,16 @@
       "labels": [
         "enhancement"
       ]
+    },
+    "77a19061-d782-4ef5-9203-8010f6762888": {
+      "uuid": "77a19061-d782-4ef5-9203-8010f6762888",
+      "display_id": 175,
+      "title": "envelope run telemetry: duration dimensions (closes the DESIGN latency-measurement deferral; observability-engineering-audit input 1)",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-09-19T22:04:21.969915Z",
+      "updated_at": "2026-09-19T22:04:21.969915Z"
     },
     "77c6f57d-8b51-4b19-b179-8d083cb0e5a4": {
       "uuid": "77c6f57d-8b51-4b19-b179-8d083cb0e5a4",
@@ -7445,8 +7456,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-19T18:44:08.189482Z",
+    "timestamp": "2026-09-19T22:04:21.969915Z",
     "agent_id": "79Ig",
-    "agent_seq": 931
+    "agent_seq": 932
   }
 }
