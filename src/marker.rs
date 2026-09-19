@@ -25,9 +25,10 @@
 //! anchor resolver). A reference that resolves to nothing is `MDATRON-E0112`
 //! (dead-marker-reference). A `target_section` whose heading is never matched
 //! in the target document is `MDATRON-E0114` (marker-target-section-not-found,
-//! GH #48): one finding per (rule, governed file), and the rule's lines are
-//! skipped for that file — never mass-flagged E0112 for a rule misconfig or a
-//! renamed target heading.
+//! GH #48): one finding **per run** per rule key (located at the first governed
+//! file the walk encounters for the rule — GH #48 finding 8's memoization), and
+//! the rule's lines are skipped — never mass-flagged E0112 for a rule misconfig
+//! or a renamed target heading.
 
 use std::collections::HashSet;
 use std::path::Path;
@@ -35,19 +36,23 @@ use std::path::Path;
 use crate::confine::{confine_lexically, LexicalViolation};
 use crate::diagnostic::{Finding, Location, QuotedRegion, Severity};
 use crate::markup::{atx_heading, list_item_bold_name, non_fenced_lines};
+use crate::memo::{MarkerKey, RefMemo};
 use crate::route::{ElementClass, MarkerRule};
 use crate::snapshot::{Captured, Snapshot};
 
 /// Scan one opted-in file's body for marker-line references and resolve each
 /// against its rule's target doc. `content` is the whole file; `body_offset` is
 /// where the prose body begins. `rules` are the marker rules active for this
-/// file (every rule on every route claiming it).
+/// file (every rule on every route claiming it). `memo` is the RUN-level
+/// reference memo (GH #48 finding 8): target parsing and rule-level findings
+/// happen once per run per rule key, not once per governed file.
 pub fn check_file(
     snapshot: &Snapshot,
     path: &Path,
     content: &str,
     body_offset: usize,
     rules: &[&MarkerRule],
+    memo: &mut RefMemo,
     findings: &mut Vec<Finding>,
 ) {
     if rules.is_empty() {
@@ -55,13 +60,29 @@ pub fn check_file(
     }
     let body = &content[body_offset..];
 
-    // Resolve each rule's target member-set once. `None` = the rule is disabled
-    // because its target_doc failed confinement or its target_section heading is
-    // absent from the target (a finding was emitted); its matching lines are
-    // then skipped rather than spuriously flagged E0112.
-    let member_sets: Vec<Option<HashSet<String>>> = rules
+    // Resolve each rule's target member-set through the run-level memo. On a
+    // key MISS the target is resolved exactly as before AND the rule-level
+    // findings (target_doc confinement E0010/E0011/E0012, E0114, the E0080
+    // never-captured defect) are emitted, located at THIS file — the first the
+    // walk encountered for the rule; a HIT returns the cached set and emits
+    // nothing, so a rule-level defect reports once per run instead of once per
+    // governed file. `None` = the rule is disabled (a finding was emitted); its
+    // matching lines are skipped rather than spuriously flagged E0112. The
+    // per-LINE findings below (E0112, captured-nothing E0112) are never deduped.
+    let keys: Vec<MarkerKey> = rules.iter().map(|rule| MarkerKey::of(rule)).collect();
+    for (rule, key) in rules.iter().zip(&keys) {
+        if !memo.marker_members.contains_key(key) {
+            #[cfg(test)]
+            {
+                memo.marker_resolves += 1;
+            }
+            let members = resolve_members(snapshot, path, rule, findings);
+            memo.marker_members.insert(key.clone(), members);
+        }
+    }
+    let member_sets: Vec<Option<&HashSet<String>>> = keys
         .iter()
-        .map(|rule| resolve_members(snapshot, path, rule, findings))
+        .map(|key| memo.marker_members[key].as_ref())
         .collect();
 
     for (line_start, line) in non_fenced_lines(body) {
@@ -116,7 +137,8 @@ pub fn check_file(
 /// named `target_section` heading is absent from the target (a finding was
 /// emitted — `E0114` for the latter, GH #48). A missing/unreadable target
 /// yields an empty set, so its references surface loudly as `E0112` rather
-/// than degrading silently.
+/// than degrading silently. Called only on a memo MISS (GH #48 finding 8), so
+/// the findings it pushes are emitted once per run per rule key.
 fn resolve_members(
     snapshot: &Snapshot,
     path: &Path,
@@ -207,8 +229,8 @@ fn resolve_members(
         // the target's body (renamed, or a misconfigured spec). Previously the
         // member set stayed permanently empty and EVERY matching line in the
         // governed file was mass-flagged E0112, blaming healthy references. One
-        // E0114 per (rule, governed file) instead, and the rule's lines are
-        // skipped for this file.
+        // E0114 per run per rule key instead (the memo gates this call, GH #48
+        // finding 8), and the rule's lines are skipped.
         None => {
             findings.push(marker_finding(
                 path,
@@ -218,7 +240,7 @@ fn resolve_members(
                 "marker-target-section-not-found",
                 "a marker rule's target_section names a heading that is not \
                  present in the rule's target document, so its references cannot \
-                 be resolved; the rule is skipped for this file",
+                 be resolved; the rule's marker lines are skipped",
                 "target_section",
                 rule.target_section.as_deref().unwrap_or_default(),
             ));

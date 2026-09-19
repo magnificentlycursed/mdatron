@@ -891,6 +891,12 @@ fn run(
     // an unserved Layer-1 request (W0047) even where W0045's has-infra gate stays
     // its hand.
     let mut any_unrouted_schema_class = false;
+    // The RUN-level reference memo (GH #48 finding 8): one per run() invocation
+    // — created here, dropped at return, so incremental runs share no cross-run
+    // state. Cross-file targets (marker member sets, link anchor slugs) are
+    // parsed once per run instead of once per referring file, and marker
+    // rule-level findings report once per run per rule key.
+    let mut memo = crate::memo::RefMemo::default();
     for (path, rel) in &governed {
         // Incremental: skip files outside the scope.
         if let Some(scope) = &scope {
@@ -967,6 +973,7 @@ fn run(
             &patterns,
             &registry,
             schemas_dir_missing,
+            &mut memo,
             &mut findings,
         )?;
         // A validated file (#105): the audit signal counts files the per-file
@@ -2162,6 +2169,7 @@ fn verify_file(
     patterns: &[PatternFile],
     registry: &IndexRegistry,
     schemas_dir_missing: bool,
+    memo: &mut crate::memo::RefMemo,
     findings: &mut Vec<Finding>,
 ) -> Result<bool, VerifyError> {
     // Content comes from the immutable snapshot (#103): every governed file is
@@ -2229,10 +2237,11 @@ fn verify_file(
                     content,
                     0,
                     link_root,
+                    memo,
                     findings,
                 );
             }
-            crate::marker::check_file(snapshot, path, content, 0, marker_rules, findings);
+            crate::marker::check_file(snapshot, path, content, 0, marker_rules, memo, findings);
             crate::codecat::check_file(code_catalogs, path, content, 0, findings);
             crate::section::check_file(section_rules, path, content, 0, findings);
             let rel = path.strip_prefix(project_root).unwrap_or(path);
@@ -2291,12 +2300,21 @@ fn verify_file(
             content,
             body_offset,
             link_root,
+            memo,
             findings,
         );
     }
     {
         let body_offset = content.len() - body_len;
-        crate::marker::check_file(snapshot, path, content, body_offset, marker_rules, findings);
+        crate::marker::check_file(
+            snapshot,
+            path,
+            content,
+            body_offset,
+            marker_rules,
+            memo,
+            findings,
+        );
         crate::codecat::check_file(code_catalogs, path, content, body_offset, findings);
         crate::section::check_file(section_rules, path, content, body_offset, findings);
     }
@@ -5246,6 +5264,200 @@ pattern:
         );
     }
 
+    // RED GATE (GH #48 finding 8, crosslink #173): rule-level marker findings
+    // report ONCE PER RUN per rule key, not once per governed file — TWO
+    // governed files on a route whose target_section heading is renamed yield
+    // exactly ONE E0114 (pre-memo: two, one per file), located at the first
+    // file the walk encounters.
+    #[test]
+    fn renamed_target_section_reports_one_e0114_per_run_across_files() {
+        let routes = r###"routes:
+- files: "docs/**/*.md"
+  governed_by: GOVERNING.md
+  marker_rules:
+    - pattern: "^Provenance: (.+)$"
+      element: list-item-bold-name
+      target_doc: refs/contract.md
+      target_section: "## Decomposition (phase 1c)"
+"###;
+        let proj = marker_project(
+            "memo-e0114-once",
+            "Provenance: Slice 1 — Live self-governance: the tracker join\n",
+            routes,
+        );
+        proj.write(
+            "docs/second-plan.md",
+            "Provenance: Slice 2 — First guardrail\n",
+        );
+        proj.write(
+            "refs/contract.md",
+            "# Contract\n\n## Decomposition (renamed)\n\n\
+             - **Slice 1 — Live self-governance: the tracker join.** first\n\
+             - **Slice 2 — First guardrail.** second\n",
+        );
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        let e0114: Vec<_> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0114")
+            .collect();
+        assert_eq!(
+            e0114.len(),
+            1,
+            "one E0114 per run per rule key, not per governed file; got {findings:?}"
+        );
+        assert!(
+            e0114[0].location.file.ends_with("docs/build-plan.md"),
+            "located at the first encountering file in walk order; got {:?}",
+            e0114[0].location.file
+        );
+        assert!(
+            findings.iter().all(|f| f.code != "MDATRON-E0112"),
+            "no mass-flagging in either file; got {findings:?}"
+        );
+    }
+
+    // RED GATE (GH #48 finding 8): a confinement-escaping target_doc reports
+    // its E0011 once per run, not once per governed file.
+    #[test]
+    fn escaping_target_doc_reports_one_e0011_per_run_across_files() {
+        let routes = r#"routes:
+- files: "docs/**/*.md"
+  governed_by: GOVERNING.md
+  marker_rules:
+    - pattern: "^Provenance: (.+)$"
+      element: list-item-bold-name
+      target_doc: ../../outside.md
+"#;
+        let proj = marker_project("memo-e0011-once", "Provenance: Anything\n", routes);
+        proj.write("docs/second-plan.md", "Provenance: Something Else\n");
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        assert_eq!(
+            codes_of(&findings, "MDATRON-E0011"),
+            1,
+            "one confinement finding per run per rule key; got {findings:?}"
+        );
+    }
+
+    // GH #48 finding 8 correctness: the memoized member set serving the SECOND
+    // file equals a fresh resolution — healthy references in both files stay
+    // clean, and a dead reference in file 2 still fires E0112 AT FILE 2 (the
+    // per-line finding is never deduped, and the cached set is not stale).
+    #[test]
+    fn memoized_second_file_resolution_matches_fresh() {
+        let both_healthy = marker_project(
+            "memo-both-clean",
+            "Provenance: Slice 1 — Live self-governance: the tracker join\n",
+            MARKER_ROUTE_OPTIN,
+        );
+        both_healthy.write(
+            "docs/second-plan.md",
+            "Provenance: Slice 2 — First guardrail\n",
+        );
+        let clean = verify(&VerifyConfig::from_project(&both_healthy.0).unwrap()).unwrap();
+        assert!(
+            clean.iter().all(|f| f.code != "MDATRON-E0112"),
+            "healthy references in both files resolve via the memoized set; got {clean:?}"
+        );
+
+        let dead_in_second = marker_project(
+            "memo-dead-second",
+            "Provenance: Slice 1 — Live self-governance: the tracker join\n",
+            MARKER_ROUTE_OPTIN,
+        );
+        dead_in_second.write("docs/second-plan.md", "Provenance: No Such Slice\n");
+        let findings = verify(&VerifyConfig::from_project(&dead_in_second.0).unwrap()).unwrap();
+        let e0112: Vec<_> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0112")
+            .collect();
+        assert_eq!(
+            e0112.len(),
+            1,
+            "only the dead reference flags; got {findings:?}"
+        );
+        assert!(
+            e0112[0].location.file.ends_with("docs/second-plan.md"),
+            "the per-line finding stays at file 2; got {:?}",
+            e0112[0].location.file
+        );
+    }
+
+    // RED GATE (GH #48 finding 8, parse-count probe): a shared target_doc is
+    // parsed ONCE for two referring files — the second check_file call is a
+    // memo hit. Driven directly so the memo is observable.
+    #[test]
+    fn marker_target_parses_once_for_two_referring_files() {
+        let proj = TempProject::new("memo-parse-once");
+        proj.write("refs/contract.md", MARKER_TARGET);
+        let mut snapshot = crate::snapshot::Snapshot::new(MAX_FILE_BYTES, MAX_FILE_BYTES);
+        let confined = crate::confine::confine_lexically(Path::new("refs/contract.md")).unwrap();
+        snapshot.capture(&proj.0, &confined).unwrap();
+
+        let rule = crate::route::MarkerRule {
+            pattern: regex_lite::Regex::new("^Provenance: (.+)$").unwrap(),
+            element: crate::route::ElementClass::ListItemBoldName,
+            target_doc: "refs/contract.md".into(),
+            target_section: None,
+        };
+        let mut memo = crate::memo::RefMemo::default();
+        let mut findings = Vec::new();
+        crate::marker::check_file(
+            &snapshot,
+            Path::new("docs/a.md"),
+            "Provenance: Slice 1 — Live self-governance: the tracker join\n",
+            0,
+            &[&rule],
+            &mut memo,
+            &mut findings,
+        );
+        crate::marker::check_file(
+            &snapshot,
+            Path::new("docs/b.md"),
+            "Provenance: Slice 2 — First guardrail\n",
+            0,
+            &[&rule],
+            &mut memo,
+            &mut findings,
+        );
+        assert!(
+            findings.is_empty(),
+            "both references resolve; got {findings:?}"
+        );
+        assert_eq!(
+            memo.marker_resolves, 1,
+            "the shared target resolves once; the second file is a memo hit"
+        );
+    }
+
+    // GH #48 finding 8, link leg: the anchor/slug cache is run-level — the
+    // second referring FILE is served from the cache, and its per-reference
+    // findings still fire (a dead anchor in file 2 is caught).
+    #[test]
+    fn link_anchor_cache_serves_second_file_and_still_flags() {
+        let proj = link_project("memo-link-slugs", "Good [a](target.md#real-heading).\n");
+        proj.write(
+            "docs/2026-07-28-doc.md",
+            "---\nschema_class: phase-primer\nphase: phase-1a\nrelevant_domains: [se]\n---\n\
+             Bad [b](target.md#no-such-heading).\n",
+        );
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        let e0111: Vec<_> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0111")
+            .collect();
+        assert_eq!(
+            e0111.len(),
+            1,
+            "the good anchor resolves, the dead anchor in the second file \
+             still flags off the cached slug set; got {findings:?}"
+        );
+        assert!(
+            e0111[0].location.file.ends_with("docs/2026-07-28-doc.md"),
+            "the per-reference finding stays at its own file; got {:?}",
+            e0111[0].location.file
+        );
+    }
+
     // RED GATE (GH #48 finding 3, load-time leg): a target_section spec written
     // without the ATX heading marker can never match any heading — refused at
     // route load, never shipped as a mass-flagging misconfig.
@@ -6746,6 +6958,7 @@ pattern:
         let empty = crate::snapshot::Snapshot::new(64, 4096);
 
         let mut findings = Vec::new();
+        let mut memo = crate::memo::RefMemo::default();
         crate::link::check_file(
             &empty,
             Path::new("/no-root"),
@@ -6753,6 +6966,7 @@ pattern:
             "See [t](t2.md#a).\n",
             0,
             false,
+            &mut memo,
             &mut findings,
         );
         assert_eq!(codes_of(&findings, "MDATRON-E0080"), 1, "{findings:?}");
@@ -6765,12 +6979,14 @@ pattern:
             target_section: None,
         };
         let mut findings = Vec::new();
+        let mut memo = crate::memo::RefMemo::default();
         crate::marker::check_file(
             &empty,
             Path::new("docs/plan.md"),
             "Provenance: Slice 1\n",
             0,
             &[&rule],
+            &mut memo,
             &mut findings,
         );
         assert_eq!(codes_of(&findings, "MDATRON-E0080"), 1, "{findings:?}");

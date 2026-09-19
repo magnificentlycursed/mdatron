@@ -106,7 +106,7 @@ struct RawMarkerRule {
 /// The element class a marker reference resolves against (#147). Configurable
 /// per vsdd GH#22's "generic cut"; `frontmatter-key` is reserved for a later
 /// cut.
-#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "kebab-case")]
 pub enum ElementClass {
     /// A markdown heading, resolved by its text (name-equality).

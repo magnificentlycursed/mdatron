@@ -9,8 +9,9 @@
 A marker rule (`marker_rules` on a route) sets a `target_section`, but that
 heading is not present in the rule's target document — so the section that
 scopes resolution cannot be located, and none of the rule's references can be
-resolved. The engine emits one finding per governed file the rule applies to,
-and skips the rule's marker lines in that file. The heading is matched exactly
+resolved. The engine emits the finding **once per run** for the rule (located
+at the first governed file the walk encounters for it), and skips the rule's
+marker lines in every file it governs. The heading is matched exactly
 the way member resolution matches it: by **level and name-equality** (a
 trailing `.` on the heading tolerated), and a `#` inside a fenced code block is
 not a heading. When several headings match, members from **all** matching

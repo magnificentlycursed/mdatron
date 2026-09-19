@@ -56,6 +56,7 @@ use std::path::{Component, Path, PathBuf};
 use crate::confine::{confine_lexically, ConfinedPath};
 use crate::diagnostic::{Finding, Location, QuotedRegion, Severity};
 use crate::markup::{body_links, heading_slugs, slugify};
+use crate::memo::RefMemo;
 use crate::snapshot::{Captured, Snapshot};
 
 /// The confinement-accepted link targets of one file's body — the paths target
@@ -108,6 +109,7 @@ pub fn check_file(
     content: &str,
     body_offset: usize,
     root_relative: bool,
+    memo: &mut RefMemo,
     findings: &mut Vec<Finding>,
 ) {
     // The containing file's directory, root-relative — the base every
@@ -122,11 +124,12 @@ pub fn check_file(
     // This file's own heading slugs, for same-document `#fragment` links.
     let own_slugs = heading_slugs(body);
 
-    // Cache of a target file's heading slugs (None = target exists but is not
-    // anchor-checkable — non-markdown, or unreadable — so its fragment is not
-    // resolved), keyed by resolved root-relative path. Avoids re-reading a
-    // target linked from several places.
-    let mut target_slugs: HashMap<PathBuf, Option<HashSet<String>>> = HashMap::new();
+    // The target-slug cache (None = target exists but is not anchor-checkable —
+    // non-markdown, or unreadable — so its fragment is not resolved), keyed by
+    // resolved root-relative path, lives in the RUN-level memo (GH #48 finding
+    // 8): a target linked from several FILES is parsed once per run, not once
+    // per referring file. Only the parsed slug set is cached — every
+    // per-reference finding (E0110/E0111/W0048) still fires per reference.
 
     // One CommonMark parse yields every inline / reference-style / image link's
     // destination with its byte offset. Destinations inside a code span or a
@@ -143,7 +146,7 @@ pub fn check_file(
             &link.dest,
             &own_slugs,
             root_relative,
-            &mut target_slugs,
+            &mut memo.link_slugs,
             findings,
         );
     }
