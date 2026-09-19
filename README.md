@@ -109,16 +109,18 @@ a contract limit) for agent-context consumers; add `--quiet` to silence the
 stderr rendering (and, under `--json`, to keep stdout the only stream).
 
 The `--json` envelope is a published, versioned contract (`mdatron_output_version`,
-currently `2.1.0`). The load-bearing fields for a machine consumer:
+currently `3.0.0`). The load-bearing fields for a machine consumer:
 
 - `pipeline_status` — `"ok"` or `"failed"`; on failure, `pipeline_error`
   `{code, kind, message}` carries the reason **in-band** (it survives `--quiet`),
   `kind` disambiguating the failure class (`config`, `io`, `bound_exceeded`, …).
 - `summary.files_checked` — the true count of files **validated** (a clean run
   over N reports N, not 0).
-- `families` — each of the five check families as `{state, reason}` (`active` /
-  `inert` / `inactive`), so "checked N, all clean" is distinguishable from
-  "checked nothing".
+- `families` — each of the nine check families (schema, route, pin,
+  vocabulary, citation, link, marker, code_catalog, section) as
+  `{state, reason}` (`active` / `inert` / `inactive`), so "checked N, all
+  clean" is distinguishable from "checked nothing"; the object is
+  forward-extensible, so a consumer must tolerate unknown family keys.
 - `findings[].code` / `.severity` / `.location`; and `findings[].quoted[]`,
   which carries adopter-derived text marked `origin: "adopter"`, `trusted: false`
   so a consumer never mistakes document content for engine output.
@@ -237,9 +239,9 @@ out of scope.
 
 ## Conformance families (Layer 2 data)
 
-The schema family (Layer 1) is the first of **five** check families. Beyond it,
-four generic Layer-2 engines activate on adopter data under `.mdatron/` — each
-inactive until its file exists, each strict-parsed, every path confined to the
+The schema family (Layer 1) is the first of **nine** check families. Beyond it,
+eight generic Layer-2 engines activate on adopter data under `.mdatron/` — each
+inactive until its data exists, each strict-parsed, every path confined to the
 governed tree:
 
 **Routes** (`routes.yaml`) — the closed-world allowlist:
@@ -462,7 +464,7 @@ is deferred to adopter evidence per the absorption ledger — see
 ## Where to go next
 
 - [`DESIGN.md`](./DESIGN.md) — the standing design: behavioral contracts,
-  the five check families, output marking discipline, path confinement,
+  the nine check families, output marking discipline, path confinement,
   governance-data governance
 - [`docs/dsl-reference.md`](./docs/dsl-reference.md) — the complete Layer 2
   construct inventory with evaluation semantics; validated by a cold-context

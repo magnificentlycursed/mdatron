@@ -382,10 +382,13 @@ pub fn drift_findings(project_root: &Path, drifts: &[Drift]) -> Vec<Finding> {
 }
 
 /// Truncate a hash for display to at most 12 CHARS, char-boundary-safe (#165
-/// review). Shared by init (E0060) and pin (E0061): an adopter/manifest `sha256`
-/// field is not validated as hex, so a multibyte char could straddle byte 12 and
-/// panic a naive byte slice. One tested copy (`tests::short_truncates_char_boundary_safe`).
-pub(crate) fn short(hash: &str) -> &str {
+/// review). Shared by init (E0060), pin (E0061), and the BIN crate's `pin`
+/// subcommand renderer (GH #48 finding 4 — `pub`, not `pub(crate)`, precisely
+/// so the binary's old/new hash lines cannot regress to a naive byte slice):
+/// an adopter/manifest `sha256` field is not validated as hex, so a multibyte
+/// char could straddle byte 12 and panic a naive byte slice. One tested copy
+/// (`tests::short_truncates_char_boundary_safe`).
+pub fn short(hash: &str) -> &str {
     match hash.char_indices().nth(12) {
         Some((idx, _)) => &hash[..idx],
         None => hash,

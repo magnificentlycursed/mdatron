@@ -9,7 +9,10 @@
 //!
 //! - [`non_fenced_lines`] — the body's live (non-code-fence) lines with byte
 //!   offsets, so a token inside a ``` block is an example, not a live reference.
-//! - [`fence_marker`] — recognize a fenced-code toggle line.
+//! - [`fence_marker`] — recognize a fenced-code toggle line (CommonMark 0–3
+//!   indent rule).
+//! - [`fenced_ranges`] — the byte ranges covered by fenced blocks, for a
+//!   scanner that matches over the whole body at once (the vocabulary family).
 //! - [`atx_heading`] — parse an ATX heading's level+text.
 //! - [`section_span`] — the byte span of one heading-delimited section (pin #146).
 //! - [`heading_slugs`] / [`slugify`] — a body's heading anchors (ATX + setext,
@@ -188,21 +191,88 @@ pub(crate) fn body_links(body: &str) -> Vec<BodyLink> {
 }
 
 /// If `line` opens or closes a fenced code block, return its `(fence char, run
-/// length)`. A fence is a leading run of at least three backticks or tildes.
+/// length)`. A fence is a run of at least three backticks or tildes indented by
+/// at most three spaces (CommonMark's 0–3 rule, GH #48 finding 5's sibling
+/// minor): one to three leading spaces still open/close a fence, while four or
+/// more — or a leading tab, which reaches the 4-space code indent — make the
+/// line indented code, not a fence.
 pub(crate) fn fence_marker(line: &str) -> Option<(char, usize)> {
-    let first = line.chars().next()?;
+    let mut rest = line;
+    let mut indent = 0usize;
+    while let Some(r) = rest.strip_prefix(' ') {
+        indent += 1;
+        if indent > 3 {
+            return None;
+        }
+        rest = r;
+    }
+    let first = rest.chars().next()?;
     if first != '`' && first != '~' {
         return None;
     }
-    let run = line.chars().take_while(|&c| c == first).count();
+    let run = rest.chars().take_while(|&c| c == first).count();
     (run >= 3).then_some((first, run))
+}
+
+/// The byte ranges of `content` covered by fenced code blocks — each range runs
+/// from the start of the opening fence-marker line through the end of the
+/// closing marker line (or end of input when unclosed), so a match starting
+/// anywhere inside the block, markers included, is inside a range. Fence
+/// recognition is [`fence_marker`] (CommonMark 0–3 indent rule), the same logic
+/// [`non_fenced_lines`] applies — this is the whole-body companion for a scanner
+/// that regex-matches over the raw body at once (the vocabulary family's
+/// `find_iter`, GH #48 finding 6) and so cannot use the line iterator without
+/// losing legitimate multi-line matches.
+pub(crate) fn fenced_ranges(content: &str) -> Vec<std::ops::Range<usize>> {
+    let mut out = Vec::new();
+    let mut fence: Option<(char, usize)> = None;
+    let mut open_at = 0usize;
+    let mut cursor = 0usize;
+    for raw_line in content.split_inclusive('\n') {
+        let line = raw_line.trim_end_matches(['\n', '\r']);
+        let line_start = cursor;
+        cursor += raw_line.len();
+        if let Some(marker) = fence_marker(line) {
+            match fence {
+                None => {
+                    fence = Some(marker);
+                    open_at = line_start;
+                }
+                Some((fc, flen)) => {
+                    if marker.0 == fc && marker.1 >= flen {
+                        fence = None;
+                        out.push(open_at..cursor);
+                    }
+                }
+            }
+        }
+    }
+    if fence.is_some() {
+        out.push(open_at..content.len());
+    }
+    out
 }
 
 /// An ATX heading's `(level, text)` — the number of leading `#` (1–6, followed
 /// by a space or end of line) and the trimmed heading text (any closing `#`
 /// sequence removed), or `None` if `line` is not an ATX heading. `#foo` (no
-/// space) is a paragraph, not a heading. Leading indentation is tolerated.
+/// space) is a paragraph, not a heading. Leading indentation of up to three
+/// spaces is tolerated (CommonMark's 0–3 rule, GH #48 finding 5); four or more
+/// spaces — or any leading tab, which reaches the 4-space code indent — make
+/// the line indented CODE, never a heading, so `    # install deps` inside a
+/// pinned section cannot silently truncate the section's span.
 pub(crate) fn atx_heading(line: &str) -> Option<(usize, &str)> {
+    let mut indent = 0usize;
+    for c in line.chars() {
+        match c {
+            '\t' => return None,
+            ' ' => indent += 1,
+            _ => break,
+        }
+        if indent >= 4 {
+            return None;
+        }
+    }
     let t = line.trim_start();
     let level = t.chars().take_while(|&c| c == '#').count();
     if level == 0 || level > 6 {
@@ -431,6 +501,114 @@ mod tests {
             list_item_bold_name("  * **Indented.** x"),
             Some("Indented.")
         );
+    }
+
+    // GH #48 finding 5 (lane B): CommonMark's 0–3 indent rule. A 4+-space (or
+    // tab) indented `# line` is CODE, not a heading — pre-fix the unbounded
+    // trim_start read `    # install deps` as an H1, silently truncating any
+    // section span (hence any section pin's hashed bytes) above it.
+    #[test]
+    fn atx_heading_honors_commonmark_indent_bound() {
+        assert_eq!(
+            atx_heading("   # x"),
+            Some((1, "x")),
+            "1–3 spaces still parse"
+        );
+        assert_eq!(atx_heading("  ## y"), Some((2, "y")));
+        assert_eq!(atx_heading("    # x"), None, "4 spaces = indented code");
+        assert_eq!(atx_heading("      # x"), None);
+        assert_eq!(
+            atx_heading("\t# x"),
+            None,
+            "a leading tab reaches the code indent"
+        );
+        assert_eq!(
+            atx_heading(" \t# x"),
+            None,
+            "a tab anywhere in the indent is code"
+        );
+    }
+
+    // GH #48 finding 5 (lane B, sibling minor): a fence indented 1–3 spaces is a
+    // fence (CommonMark); 4+ spaces (or a tab) is indented code, not a fence.
+    #[test]
+    fn fence_marker_honors_commonmark_indent_bound() {
+        assert_eq!(fence_marker("```"), Some(('`', 3)));
+        assert_eq!(
+            fence_marker("  ```sh"),
+            Some(('`', 3)),
+            "2-space indent toggles"
+        );
+        assert_eq!(fence_marker("   ~~~~"), Some(('~', 4)));
+        assert_eq!(fence_marker("    ```"), None, "4-space indent is code");
+        assert_eq!(fence_marker("\t```"), None, "tab indent is code");
+        // A heading inside a 2-space-indented fence is not a heading: the fence
+        // toggles, so the fenced line never reaches the heading scanner.
+        let body = "# Real\n  ```\n# fenced\n  ```\nafter\n";
+        let lines: Vec<&str> = non_fenced_lines(body).into_iter().map(|(_, l)| l).collect();
+        assert_eq!(
+            lines,
+            vec!["# Real", "after"],
+            "the fenced '# fenced' is masked"
+        );
+    }
+
+    // GH #48 finding 5 (lane B): a section containing an indented `# comment`
+    // (a shell snippet) runs to the REAL next heading — pre-fix the span
+    // terminated at the snippet, so a section pin hashed only the bytes above
+    // it and edits below never went stale.
+    #[test]
+    fn section_span_is_not_truncated_by_indented_code_comment() {
+        let doc = "\
+# Top\n\n## Contract\n\nintro\n\n    # install deps\n    make install\n\n\
+below the snippet\n\n## Next\n\ntail\n";
+        let span = section_span(doc, "## Contract").unwrap();
+        assert!(
+            span.contains("below the snippet"),
+            "the span includes the lines below the indented snippet; got {span:?}"
+        );
+        assert!(
+            span.contains("# install deps"),
+            "the snippet itself is inside"
+        );
+        assert!(
+            !span.contains("## Next"),
+            "the real next heading still ends it"
+        );
+        // The plural resolver agrees (same scanner).
+        assert_eq!(section_spans(doc, "## Contract"), vec![span]);
+    }
+
+    // GH #48 finding 6 (lane D): fenced-block byte ranges over a whole body,
+    // marker lines included, unclosed fence running to end of input, 1–3-space
+    // indented fences recognized.
+    #[test]
+    fn fenced_ranges_covers_blocks_including_markers() {
+        let body = "before\n```yaml\nlayer: chassis\n```\nafter\n  ~~~\nx\n";
+        let ranges = fenced_ranges(body);
+        assert_eq!(
+            ranges.len(),
+            2,
+            "one closed + one unclosed block: {ranges:?}"
+        );
+        let inside = body.find("layer").unwrap();
+        let marker = body.find("```yaml").unwrap();
+        let after = body.find("after").unwrap();
+        assert!(ranges[0].contains(&inside), "fenced content is covered");
+        assert!(
+            ranges[0].contains(&marker),
+            "the opening marker line is covered"
+        );
+        assert!(
+            !ranges.iter().any(|r| r.contains(&after)),
+            "prose between blocks is not"
+        );
+        let x = body.rfind('x').unwrap();
+        assert!(
+            ranges[1].contains(&x),
+            "an unclosed fence runs to end of input"
+        );
+        assert!(fenced_ranges("no fences here\n").is_empty());
     }
 
     #[test]

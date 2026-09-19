@@ -18,7 +18,11 @@ a comprehensive catalog, a cited token that is not declared is a dangling
 reference (the motivating evidence: nine orphaned codes across six live files
 after doc sunsets). A token detected in prose is a namespace prefix on a word
 boundary followed by a code body; tokens inside fenced code blocks are examples,
-not citations.
+not citations. English plurals are tolerated: a single trailing lowercase `s`
+immediately after the code's final digit ("both `VSDD-E0016s` were fixed") is
+read as grammar, not as part of the code — the token resolves (or orphans)
+as the singular. Any other trailing run stays part of the token, so a
+mistyped class or suffix is still caught by the resolver.
 
 ## How to fix
 

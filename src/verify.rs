@@ -3126,6 +3126,53 @@ mod tests {
         );
     }
 
+    // RED GATE (GH #48 finding 5, lane B): a pinned section containing an
+    // indented `# comment` (a shell snippet — indented CODE per CommonMark)
+    // hashes its FULL span. Pre-fix, the unbounded-trim heading scanner read
+    // the snippet's `    # comment` as an H1 that terminated the span, so the
+    // recorded hash covered only the bytes above it and an edit BELOW the
+    // snippet silently passed (and `pin --update` re-recorded the same
+    // truncated hash).
+    #[test]
+    fn section_pin_covers_span_past_an_indented_code_comment() {
+        let content = "# Governed\n\n## Contract\n\nintro\n\n    # install deps\n    \
+                       make install\n\nbelow the snippet\n\n## Next\n\ntail\n";
+        let proj = section_pinned_project("pin-indented-code", content, "## Contract");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        assert!(
+            verify(&cfg)
+                .unwrap()
+                .iter()
+                .all(|f| !f.code.starts_with("MDATRON-E006")),
+            "fresh pin over the full span is clean"
+        );
+        // Edit BELOW the indented snippet, still inside the pinned section.
+        proj.write(
+            "governed.md",
+            "# Governed\n\n## Contract\n\nintro\n\n    # install deps\n    \
+             make install\n\nbelow the snippet CHANGED\n\n## Next\n\ntail\n",
+        );
+        let findings = verify(&cfg).unwrap();
+        assert!(
+            findings.iter().any(|f| f.code == "MDATRON-E0061"),
+            "an edit below the indented snippet trips the section pin; got {findings:?}"
+        );
+        // An edit OUTSIDE the section (under ## Next) still does not trip it.
+        crate::pin::update(&proj.0, false).unwrap();
+        proj.write(
+            "governed.md",
+            "# Governed\n\n## Contract\n\nintro\n\n    # install deps\n    \
+             make install\n\nbelow the snippet CHANGED\n\n## Next\n\ntail CHANGED\n",
+        );
+        assert!(
+            verify(&cfg)
+                .unwrap()
+                .iter()
+                .all(|f| f.code != "MDATRON-E0061"),
+            "the real next heading still bounds the span"
+        );
+    }
+
     // RED GATE (#146): a section pin whose named heading is gone (renamed / mistyped)
     // is E0063 — the pinned section cannot be located, loud rather than silent.
     #[test]

@@ -79,9 +79,11 @@ impl Serialize for Location {
 /// surface (`DESIGN.md` § Agents are the first consumer): a raw control byte
 /// in a source path or matched filename could inject ANSI controls or
 /// splitters into the agent-facing message. Printable text is unchanged, so
-/// ordinary paths render as-is. Shared by the index build and the snapshot's
-/// bound diagnostics.
-pub(crate) fn escape_path_text(s: &str) -> String {
+/// ordinary paths render as-is. Shared by the index build, the snapshot's
+/// bound diagnostics, and the BIN crate's `pin` subcommand stderr lines (GH
+/// #48 finding 4 — `pub`, not `pub(crate)`, so the binary renders adopter
+/// `pins.yaml` values under the same #165 marking discipline as findings).
+pub fn escape_path_text(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for ch in s.chars() {
         if ch.is_control() {

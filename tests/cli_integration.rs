@@ -547,6 +547,57 @@ fn pin_update_repins_and_dry_run_does_not_write() {
     assert!(!record.contains("stale"), "hash rewritten: {record}");
 }
 
+// GH #48 finding 4 (lane C): the pin subcommand renders adopter-authored
+// pins.yaml values safely. (a) A recorded sha with a multibyte char straddling
+// byte 12 must not panic the truncation (the #165 byte-slice class, previously
+// closed everywhere but main.rs's pin renderer); (b) a control byte embedded
+// in the `file` field must reach stderr only as an inert `\xNN` escape.
+#[test]
+fn pin_dry_run_survives_multibyte_sha_and_escapes_control_bytes() {
+    let proj = TempProject::new("pin-hostile");
+    std::fs::create_dir_all(proj.path().join(".mdatron/schemas")).unwrap();
+    proj.write("GOVERNING.md", "# gov\n");
+    // A pinned file whose NAME embeds a raw ESC byte (legal in unix filenames).
+    let hostile = "governed-\u{1b}[31mred.md";
+    proj.write(hostile, "content\n");
+    // `\x1b` is the YAML double-quoted escape for the same ESC byte; the sha
+    // is stale (so the entry re-pins and the stderr line renders) and carries
+    // 'é' straddling byte 12 — a naive `&old[..12]` panics.
+    proj.write(
+        ".mdatron/pins.yaml",
+        "pins:\n- governing: GOVERNING.md\n  file: \"governed-\\x1b[31mred.md\"\n  sha256: \"0123456789a\u{e9}0stale\"\n",
+    );
+    let out = Command::new(mdatron_bin())
+        .args(["pin", "--project-root"])
+        .arg(proj.path())
+        .args(["--update", "--dry-run"])
+        .output()
+        .expect("mdatron binary executes");
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "no panic on a multibyte sha; stderr: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        stderr.contains("would re-pin 1"),
+        "the hostile entry re-pins: {stderr}"
+    );
+    assert!(
+        !out.stderr.contains(&0x1b_u8),
+        "no raw ESC byte reaches stderr: {stderr:?}"
+    );
+    assert!(
+        stderr.contains("\\x1B"),
+        "the control byte renders as an inert escape: {stderr}"
+    );
+    assert!(
+        stderr.contains("0123456789a\u{e9}"),
+        "the old sha truncates char-boundary-safe: {stderr}"
+    );
+}
+
 fn run_verify_tty(proj: &TempProject) -> Output {
     Command::new(mdatron_bin())
         .args(["verify", "--project-root"])

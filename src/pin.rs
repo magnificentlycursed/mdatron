@@ -317,11 +317,20 @@ pub fn check(
 /// `(file, old_sha256, new_sha256)` for each entry that changed. Entries whose
 /// target cannot be read are left untouched and reported by the caller's next
 /// verify (`E0062`); recompute never invents a hash for an unreadable file.
-/// With `dry_run`, the diffs are computed and returned but nothing is written.
+/// A target exceeding the declared per-file input bound
+/// ([`crate::verify::MAX_FILE_BYTES`]) is a LOUD error naming the bound —
+/// verify aborts on such a file (`bound_exceeded`), so re-pinning it would
+/// mint a pin verify refuses to check (GH #48 finding 4). With `dry_run`, the
+/// diffs are computed and returned but nothing is written.
 pub fn update(project_root: &Path, dry_run: bool) -> Result<Vec<(String, String, String)>, Error> {
     let path = project_root.join(".mdatron").join(PINS_NAME);
     let content = std::fs::read_to_string(&path)
         .map_err(|e| Error::Config(format!("cannot read '{}': {e}", path.display())))?;
+    // DEF5 (#131): the update path runs the same input-format probe the load
+    // path does (GH #48 finding 4 closed the asymmetry) — an unsupported
+    // future-format pins.yaml is a legible refusal here too, never a silent
+    // rewrite under a format this mdatron does not understand.
+    crate::format_version::check_input_format_version(&content, PINS_NAME, false)?;
     let mut raw: RawPins = serde_yaml_ng::from_str(&content)
         .map_err(|e| Error::Config(format!("cannot parse '{}': {e}", path.display())))?;
 
@@ -329,15 +338,31 @@ pub fn update(project_root: &Path, dry_run: bool) -> Result<Vec<(String, String,
     for entry in &mut raw.pins {
         let confined = confine_lexically(Path::new(&entry.file))
             .map_err(|v| Error::Config(format!("pin file '{}' escapes: {v:?}", entry.file)))?;
-        let mut handle = match open_confined(project_root, &confined) {
+        let handle = match open_confined(project_root, &confined) {
             Ok(h) => h,
             Err(_) => continue, // unreadable: leave the record; verify reports E0062
         };
         use std::io::Read;
+        // Bounded read, aligned with verify's declared per-file cap (GH #48
+        // finding 4): the check path aborts an oversized pinned file
+        // (`bound_exceeded`, max-input-size-per-file), so re-pinning one here
+        // would mint a pin the bounded verify path refuses to check — an
+        // uncheckable attestation. The over-limit file fails LOUDLY instead.
+        let limit = crate::verify::MAX_FILE_BYTES;
         let mut bytes = Vec::new();
         handle
+            .take(limit as u64 + 1)
             .read_to_end(&mut bytes)
             .map_err(|e| Error::Config(format!("cannot read '{}': {e}", entry.file)))?;
+        if bytes.len() > limit {
+            let escaped = crate::diagnostic::escape_path_text(&entry.file);
+            return Err(Error::Config(format!(
+                "cannot re-pin '{escaped}': the file exceeds the {limit}-byte \
+                 per-file limit (max-input-size-per-file) — verify refuses to \
+                 check a pin over an out-of-bounds file, so recording one would \
+                 mint an uncheckable pin"
+            )));
+        }
         let actual = match &entry.section {
             None => sha256_hex(&bytes),
             // Section pin (#146): recompute over the span only. A missing heading
@@ -466,5 +491,93 @@ fn confinement_finding(
             label: field.to_string(),
             content: value.to_string(),
         }],
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A temp project with `.mdatron/pins.yaml` pinning `governed.md` at its
+    /// current hash, removed on drop. Self-contained (no verify-pipeline
+    /// scaffolding): these tests exercise `pin::update` alone.
+    struct TempPinProject(std::path::PathBuf);
+
+    impl TempPinProject {
+        fn new(label: &str, content: &str) -> Self {
+            let nanos = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos();
+            let root = std::env::temp_dir().join(format!("mdatron-pin-{label}-{nanos}"));
+            std::fs::create_dir_all(root.join(".mdatron")).unwrap();
+            std::fs::write(root.join("GOVERNING.md"), "# gov\n").unwrap();
+            std::fs::write(root.join("governed.md"), content).unwrap();
+            let sha = sha256_hex(content.as_bytes());
+            std::fs::write(
+                root.join(".mdatron").join(PINS_NAME),
+                format!(
+                    "pins:\n- governing: GOVERNING.md\n  file: governed.md\n  sha256: \"{sha}\"\n"
+                ),
+            )
+            .unwrap();
+            Self(root)
+        }
+
+        fn record_path(&self) -> std::path::PathBuf {
+            self.0.join(".mdatron").join(PINS_NAME)
+        }
+    }
+
+    impl Drop for TempPinProject {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    // RED GATE (GH #48 finding 4, lane C): `pin --update` refuses a pinned file
+    // exceeding the declared per-file bound, LOUDLY, naming the bound — pre-fix
+    // it read unbounded and happily hashed what verify then refused
+    // (`bound_exceeded`), minting an uncheckable pin.
+    #[test]
+    fn update_refuses_an_over_limit_target() {
+        let limit = crate::verify::MAX_FILE_BYTES;
+        let proj = TempPinProject::new("overlimit", "small\n");
+        let mut big = String::with_capacity(limit + 64);
+        while big.len() <= limit {
+            big.push_str("0123456789abcdef\n");
+        }
+        std::fs::write(proj.0.join("governed.md"), &big).unwrap();
+        // Dry-run and real update both refuse.
+        let err = update(&proj.0, true).unwrap_err();
+        let msg = format!("{err}");
+        assert!(
+            msg.contains("max-input-size-per-file"),
+            "the refusal names the bound: {msg}"
+        );
+        let before = std::fs::read_to_string(proj.record_path()).unwrap();
+        update(&proj.0, false).unwrap_err();
+        let after = std::fs::read_to_string(proj.record_path()).unwrap();
+        assert_eq!(
+            before, after,
+            "an over-limit target never rewrites the record"
+        );
+    }
+
+    // GH #48 finding 4 (lane C): the update path runs the same DEF5
+    // input-format probe the load path does — a future-format pins.yaml is a
+    // legible refusal, never silently rewritten under an unsupported format.
+    #[test]
+    fn update_refuses_a_future_format_record() {
+        let proj = TempPinProject::new("future-format", "content\n");
+        let record = std::fs::read_to_string(proj.record_path()).unwrap();
+        std::fs::write(
+            proj.record_path(),
+            format!("mdatron_format_version: 99\n{record}"),
+        )
+        .unwrap();
+        let err = update(&proj.0, true).unwrap_err();
+        let msg = format!("{err}");
+        assert!(msg.contains("supports up to"), "legible refusal: {msg}");
     }
 }

@@ -161,8 +161,10 @@ pub fn check_file(
 /// Find candidate code tokens for `namespace` on `line`: each occurrence of the
 /// prefix on a word boundary, followed by an alphanumeric run that contains at
 /// least one digit (so ordinary prose after the prefix is not read as a code).
-/// Returns `(byte offset in line, full token)`. Conservative pending the exact
-/// grammar (vsdd-cli#27).
+/// A single trailing lowercase `s` immediately after a digit is an English
+/// plural, not part of the code, and is stripped from the token (GH #48
+/// promoted triage #5). Returns `(byte offset in line, full token)`.
+/// Conservative pending the exact grammar (vsdd-cli#27).
 fn candidate_tokens<'a>(line: &'a str, namespace: &str) -> Vec<(usize, &'a str)> {
     let mut out = Vec::new();
     if namespace.is_empty() {
@@ -175,16 +177,29 @@ fn candidate_tokens<'a>(line: &'a str, namespace: &str) -> Vec<(usize, &'a str)>
         // Require a word boundary before the prefix so `xVSDD-1` is not a hit.
         let boundary = start == 0 || !bytes[start - 1].is_ascii_alphanumeric();
         let body_start = start + namespace.len();
-        let mut end = body_start;
-        while end < line.len() && bytes[end].is_ascii_alphanumeric() {
-            end += 1;
+        let mut run_end = body_start;
+        while run_end < line.len() && bytes[run_end].is_ascii_alphanumeric() {
+            run_end += 1;
+        }
+        // Plural tolerance (GH #48 promoted triage #5): prose pluralizes a
+        // code token — "both VSDD-E0016s were fixed" — and the trailing run
+        // would otherwise mint the non-code token `VSDD-E0016s`, hard-gating
+        // E0113 on ordinary English. Exactly ONE trailing lowercase `s`
+        // immediately preceded by a digit is grammar, not code: strip it, and
+        // the stripped token resolves or orphans on its own merits (a mistyped
+        // class like `VSDD-X0016` is still caught; `VSDD-E9999s` still orphans
+        // as `VSDD-E9999`; `…16ss` keeps both — the second `s` is not
+        // digit-preceded, so nothing strips).
+        let mut end = run_end;
+        if end - body_start >= 2 && bytes[end - 1] == b's' && bytes[end - 2].is_ascii_digit() {
+            end -= 1;
         }
         let body = &line[body_start..end];
         if boundary && !body.is_empty() && body.bytes().any(|b| b.is_ascii_digit()) {
             out.push((start, &line[start..end]));
         }
-        // Advance past this match (never stall).
-        from = end.max(start + namespace.len());
+        // Advance past this match, stripped plural `s` included (never stall).
+        from = run_end.max(start + namespace.len());
     }
     out
 }
@@ -286,6 +301,70 @@ mod tests {
         assert_eq!(f.len(), 1);
         assert_eq!(f[0].code, "MDATRON-E0113");
         assert!(f[0].quoted.iter().any(|q| q.content == "VSDD-X0016"));
+    }
+
+    // RED GATE (GH #48 promoted triage #5, lane D): a prose PLURAL of a code —
+    // "Both VSDD-E0016s were fixed" — resolves against the singular entry.
+    // Pre-fix the detector extended the token through the trailing `s`,
+    // minting `VSDD-E0016s`, absent from every catalog → an E0113 hard-gate
+    // error on ordinary English.
+    #[test]
+    fn plural_of_a_declared_code_resolves() {
+        let catalogs = [cat("VSDD-", true, &["E0016"])];
+        let mut f = Vec::new();
+        check_file(
+            &catalogs,
+            Path::new("d.md"),
+            "Both VSDD-E0016s were fixed.\n",
+            0,
+            &mut f,
+        );
+        assert!(
+            f.is_empty(),
+            "the plural of a declared code is clean: {f:?}"
+        );
+    }
+
+    // The plural strip is a TOLERANCE, not a loosening: a plural of an
+    // UNdeclared code still orphans — quoting the STRIPPED token — and a
+    // trailing run that is not exactly digit-then-one-`s` keeps its bytes
+    // (so non-plural behavior is unchanged).
+    #[test]
+    fn plural_of_an_undeclared_code_orphans_as_the_stripped_token() {
+        let catalogs = [cat("VSDD-", true, &["E0016"])];
+        let mut f = Vec::new();
+        check_file(
+            &catalogs,
+            Path::new("d.md"),
+            "old VSDD-E9999s linger\n",
+            0,
+            &mut f,
+        );
+        assert_eq!(f.len(), 1);
+        assert_eq!(f[0].code, "MDATRON-E0113");
+        assert!(
+            f[0].quoted
+                .iter()
+                .any(|q| q.content == format!("VSDD-{}", "E9999")),
+            "the finding quotes the stripped token: {:?}",
+            f[0].quoted
+        );
+        // A double `s` is not a plural (the second `s` is not digit-preceded):
+        // the full run stays the token and orphans as-is. Tokens are built at
+        // runtime so the source carries no literal VSDD-E code (the cross-repo
+        // namespace-separation lint, tests/output_format.rs).
+        let toks: Vec<_> = candidate_tokens("see VSDD-E0016ss here", "VSDD-")
+            .into_iter()
+            .map(|(_, t)| t.to_string())
+            .collect();
+        assert_eq!(toks, vec![format!("VSDD-{}", "E0016ss")]);
+        // An uppercase `S` is not stripped (codes are uppercase; the plural
+        // tolerance is lowercase-only).
+        let toks: Vec<_> = candidate_tokens("see VSDD-E0016S here", "VSDD-")
+            .into_iter()
+            .map(|(_, t)| t.to_string())
+            .collect();
+        assert_eq!(toks, vec![format!("VSDD-{}", "E0016S")]);
     }
 
     #[test]
