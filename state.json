@@ -835,11 +835,12 @@
       "uuid": "1f95ee99-22a5-437e-9132-00d7744e0eef",
       "display_id": 172,
       "title": "GH #48 lane A (CRITICAL): section/marker gate families fail open — E0122/E0114 section-not-found + load-time validation",
-      "status": "open",
+      "status": "closed",
       "priority": "critical",
       "created_by": "79Ig",
       "created_at": "2026-09-19T00:21:56.638913Z",
-      "updated_at": "2026-09-19T01:15:49.993844Z",
+      "updated_at": "2026-09-19T03:45:26.394861Z",
+      "closed_at": "2026-09-19T03:45:26.394339Z",
       "labels": [
         "bug"
       ],
@@ -7412,8 +7413,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-19T03:04:45.618016Z",
+    "timestamp": "2026-09-19T03:45:26.394861Z",
     "agent_id": "79Ig",
-    "agent_seq": 916
+    "agent_seq": 917
   }
 }
