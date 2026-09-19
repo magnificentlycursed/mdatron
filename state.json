@@ -1,6 +1,6 @@
 {
   "next_display_id": 179,
-  "next_comment_id": 471,
+  "next_comment_id": 472,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -2937,10 +2937,21 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-19T22:04:21.969915Z",
-      "updated_at": "2026-09-19T22:04:29.835457Z",
+      "updated_at": "2026-09-19T22:06:31.638340Z",
       "labels": [
         "enhancement"
-      ]
+      ],
+      "comments": {
+        "f6d3595f-1bf8-45a7-84f9-eeb2180cad0a": {
+          "display_id": 471,
+          "author": "79Ig",
+          "content": "SHAPE from the mdatron-side Ch6 read ([[observability-engineering-mdatron-chapters]]): timings as FLAT named fields on the run summary (parse/rules/total), never per-file nesting (p97). DETERMINISM GUARDRAIL: timings are the sole non-deterministic zone in a DEF4 byte-identical envelope — either document the exclusion from the byte-identity guarantee or emit only under a --timings flag so the default envelope stays byte-identical. Decide the flag-vs-documented-exclusion question at 1a.",
+          "created_at": "2026-09-19T22:06:31.602662Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAytpviN641bwYFW5tOGqXk25GR0/epD/CjT2ejHLQn04hdClDRFOKdk6Kd5CBVLdOEboZq7XtCjhjamw9NKt8Aw=="
+        }
+      }
     },
     "77c6f57d-8b51-4b19-b179-8d083cb0e5a4": {
       "uuid": "77c6f57d-8b51-4b19-b179-8d083cb0e5a4",
@@ -7501,8 +7512,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-19T22:05:14.757378Z",
+    "timestamp": "2026-09-19T22:06:31.638340Z",
     "agent_id": "79Ig",
-    "agent_seq": 939
+    "agent_seq": 940
   }
 }
