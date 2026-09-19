@@ -249,13 +249,21 @@ fn extract_members(
     for (_, line) in non_fenced_lines(body) {
         if let Some((level, text)) = atx_heading(line) {
             if let Some((want_lvl, want_text)) = want {
-                if !in_section {
-                    if level == want_lvl && normalize_name(text) == normalize_name(want_text) {
-                        in_section = true;
-                        section_matched = true;
-                    }
+                // The wanted heading opens the section — or RE-opens it when an
+                // adjacent duplicate is also the heading that would have closed
+                // it (GH #48 lane-A round 3: the close arm must not swallow a
+                // re-open, mirroring `markup::section_spans`' sequential arms —
+                // else members under a back-to-back duplicate are hidden and
+                // their references false-flag E0112).
+                if level == want_lvl && normalize_name(text) == normalize_name(want_text) {
+                    in_section = true;
+                    section_matched = true;
                     continue; // the section header itself is not a member
-                } else if level <= want_lvl {
+                }
+                if !in_section {
+                    continue;
+                }
+                if level <= want_lvl {
                     in_section = false; // a same-or-higher heading ends the section
                     continue;
                 }
@@ -324,6 +332,22 @@ mod tests {
         assert_eq!(normalize_name("Slice 1 — self gov."), "Slice 1 — self gov");
         assert_eq!(normalize_name("Slice 1 — self gov"), "Slice 1 — self gov");
         assert_eq!(normalize_name("  Name.  "), "Name");
+    }
+
+    // GH #48 lane-A round 3: a back-to-back duplicate heading both closes the
+    // previous span and re-opens the next — members under the second occurrence
+    // must resolve (pre-fix they were hidden, so their references false-flagged
+    // E0112). Separated duplicates (`## A … ## B … ## A`) already merged; this
+    // pins the adjacent case the close arm used to swallow.
+    #[test]
+    fn extract_members_merges_adjacent_duplicate_sections() {
+        let body = "# T\n\n## A\n\n- **First.** x\n\n## A\n\n- **Second.** y\n";
+        let members = extract_members(body, ElementClass::ListItemBoldName, Some("## A"))
+            .expect("the section matches");
+        assert!(
+            members.contains("First") && members.contains("Second"),
+            "members under an adjacent duplicate heading must resolve: {members:?}"
+        );
     }
 
     #[test]

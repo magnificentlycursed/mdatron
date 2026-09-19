@@ -321,9 +321,13 @@ pub fn check_file(
                             "section-count-violation",
                             // #165: the section name is adopter-derived — it rides in
                             // the quoted region, not inline in the message.
+                            // Round 3 wording: the count sums over EVERY span of
+                            // the named section (a duplicated heading has several),
+                            // so the message must not imply a single region.
                             &format!(
-                                "a section has {count} matching h{level} heading(s); the \
-                                 rule requires the count {}",
+                                "the named section has {count} matching h{level} \
+                                 heading(s) across its matching span(s); the rule \
+                                 requires the count {}",
                                 pred.describe()
                             ),
                             vec![QuotedRegion {
