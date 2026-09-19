@@ -1,6 +1,6 @@
 {
   "next_display_id": 179,
-  "next_comment_id": 473,
+  "next_comment_id": 474,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -5150,10 +5150,21 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-09-19T22:04:55.795826Z",
-      "updated_at": "2026-09-19T22:05:01.602280Z",
+      "updated_at": "2026-09-19T22:06:50.388552Z",
       "labels": [
         "enhancement"
-      ]
+      ],
+      "comments": {
+        "52a436ba-0a83-466a-9237-a8908dcc4b33": {
+          "display_id": 473,
+          "author": "79Ig",
+          "content": "RATIONALE (Ch32 p577, verbatim fit): what consumers fear is 'undetected behavior change... caused by unobserved change, not by newness' — fingerprints are how an agent observes change across regenerations. Ch6: instance identity complements, never replaces, the low-cardinality codes. sarif-envelope-audit partialFingerprints is the mechanism reference.",
+          "created_at": "2026-09-19T22:06:50.352496Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABADsTK3Uizg6kJQ2BdmTNM0JIji8MzJ7fJhhHxApbU3oDHzDKza2OPnITXZ1FbxM1EIu2eiazmaBHAnL50w54uCw=="
+        }
+      }
     },
     "bb606be0-b0ed-44b7-b34f-dfb31aabeede": {
       "uuid": "bb606be0-b0ed-44b7-b34f-dfb31aabeede",
@@ -7523,8 +7534,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-19T22:06:41.139169Z",
+    "timestamp": "2026-09-19T22:06:50.388552Z",
     "agent_id": "79Ig",
-    "agent_seq": 941
+    "agent_seq": 942
   }
 }
