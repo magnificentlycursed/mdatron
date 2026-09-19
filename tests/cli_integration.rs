@@ -193,11 +193,14 @@ fn pipeline_failure_json_quiet_carries_structured_reason() {
 // resolved root is stripped from the note.
 #[test]
 fn init_failure_note_escapes_adopter_manifest_bytes_and_strips_the_root() {
-    // Case 1: ESC-smuggling managed path -> Io error naming it.
+    // Case 1: a managed path smuggling BOTH an ESC (Cc) and a U+2028 line
+    // separator (Zl) -> Io error naming it. The Zl half is the #167 review's
+    // catch: escape_path_text's old is_control()-only predicate let U+2028
+    // forge a stderr line (the #125 class every sibling boundary closes).
     let proj = TempProject::new("init-esc-note");
     proj.write(
         ".mdatron/manifest.yaml",
-        "version: 2\nmanaged:\n  - path: \"no-such\\u001b[31m.json\"\n    sha256: \"00\"\n",
+        "version: 2\nmanaged:\n  - path: \"no-such\\u001b[31m\\u2028forged.json\"\n    sha256: \"00\"\n",
     );
     let out = Command::new(mdatron_bin())
         .args(["init", "--project-root"])
@@ -218,6 +221,14 @@ fn init_failure_note_escapes_adopter_manifest_bytes_and_strips_the_root() {
     assert!(
         stderr.contains("\\x1B"),
         "the inert escaped form is present: {stderr:?}"
+    );
+    assert!(
+        !stderr.contains('\u{2028}'),
+        "no raw U+2028 line separator on stderr (the forged-line class): {stderr:?}"
+    );
+    assert!(
+        stderr.contains("\\x2028"),
+        "the separator renders as its inert escape: {stderr:?}"
     );
 
     // Case 2: a malformed manifest -> ManifestParse naming the manifest's

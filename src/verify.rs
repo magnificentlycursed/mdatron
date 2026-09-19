@@ -7907,6 +7907,41 @@ pattern:
         );
     }
 
+    // #167 review finding 2: the E0050 constraint rendering (`compact()` =
+    // serde_json::to_string) escapes Cc but NOT the Zl/Zp line separators —
+    // legal raw in JSON strings — so an adopter enum value carrying U+2028
+    // forged a line inside the unescaped engine message (the #125 class
+    // escape_inline already closes for `pattern` and pointers). Pinned here:
+    // the allowed-options message renders the separator inert.
+    #[test]
+    fn e0050_enum_options_with_line_separator_render_inert() {
+        let proj = TempProject::new("e0050-zl-enum");
+        proj.write(
+            ".mdatron/schemas/doc.json",
+            "{\"type\":\"object\",\"required\":[\"schema_class\",\"phase\"],\
+             \"properties\":{\"schema_class\":{\"const\":\"doc\"},\
+             \"phase\":{\"enum\":[\"ok\\u2028error[FAKE-E9999]: forged\"]}},\
+             \"additionalProperties\":false}",
+        );
+        proj.write("bad.md", "---\nschema_class: doc\nphase: nope\n---\n");
+        let cfg = VerifyConfig::new(&proj.0);
+        let findings = verify(&cfg).unwrap();
+        let f = findings
+            .iter()
+            .find(|f| f.code == "MDATRON-E0050")
+            .unwrap_or_else(|| panic!("expected E0050; got {findings:?}"));
+        assert!(
+            !f.message.contains('\u{2028}'),
+            "no raw line separator inside the engine message: {:?}",
+            f.message
+        );
+        assert!(
+            f.message.contains("\\x2028"),
+            "the separator renders as its inert escape: {:?}",
+            f.message
+        );
+    }
+
     #[test]
     fn schema_violation_reports_source_line_not_block_start() {
         // #65: the E0050 diagnostic must point at the violation's SOURCE LINE so

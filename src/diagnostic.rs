@@ -83,10 +83,14 @@ impl Serialize for Location {
 /// bound diagnostics, and the BIN crate's `pin` subcommand stderr lines (GH
 /// #48 finding 4 — `pub`, not `pub(crate)`, so the binary renders adopter
 /// `pins.yaml` values under the same #165 marking discipline as findings).
+/// The predicate is the full SPLIT/escape partition — `Cc` PLUS the Zl/Zp
+/// line separators U+2028/U+2029 (#167 review: `is_control()` alone let a
+/// U+2028 in an adopter path forge a line on the stderr boundary, the #125
+/// class every sibling boundary already closes).
 pub fn escape_path_text(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for ch in s.chars() {
-        if ch.is_control() {
+        if ch.is_control() || matches!(ch, '\u{2028}' | '\u{2029}') {
             use std::fmt::Write;
             let _ = write!(out, "\\x{:02X}", ch as u32);
         } else {
