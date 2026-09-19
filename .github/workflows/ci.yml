@@ -126,6 +126,35 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # Full history: the amendment-citation range scan below walks
+          # origin/main..HEAD (a depth-1 clone has no range to walk).
+          fetch-depth: 0
+
+      # Grade-3 leg of the amendment seam (#96, #170 methodology-docs review
+      # F2): re-derive, over server-synced state, that every DESIGN.md-touching
+      # commit in the pushed range carries an authorizing issue reference AND a
+      # ratification citation — the same two greps `.githooks/commit-msg`
+      # applies at commit time (merge commits skipped, mirroring the hook's
+      # integration-merge scope). This is what catches history written by an
+      # UNBOUND clone: a fresh clone silently drops the local core.hooksPath
+      # binding, and the seam seeds only prove the checker script's integrity —
+      # they never look at the commits themselves. This job is a required
+      # status check, so an uncited amendment cannot merge.
+      - name: Amendment citations hold over the pushed range (methodology §3)
+        run: |
+          base=$(git merge-base origin/main HEAD)
+          bad=0
+          for c in $(git rev-list --no-merges "$base"..HEAD -- DESIGN.md); do
+            msg=$(git log -1 --format=%B "$c")
+            if ! { echo "$msg" | grep -qE '#[0-9]+' \
+                && echo "$msg" | grep -qiE 'ratif|operator (ruling|decision)|cold review|review-log|§[0-9]|decision'; }; then
+              echo "::error::DESIGN.md amendment $c lacks an issue reference and/or ratification citation (methodology §3)"
+              git log -1 --format='%h %s' "$c"
+              bad=1
+            fi
+          done
+          exit $bad
 
       - name: Install Rust toolchain (pinned to the project MSRV)
         uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master

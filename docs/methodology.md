@@ -13,8 +13,11 @@ declared composition and cold review, with operator ratification as the exit
 
 ### 1. Phase discipline
 
-Each layer of work runs the phases, which are crosslink milestones; a phase
-exit is a boundary commit plus a typed result comment on the issue:
+Each layer of work runs the phases, recorded as crosslink **issue lanes** — a
+phase exit is a boundary commit plus a typed result comment on the issue (a
+milestone row is cut only where a layer warrants one; the record since #96
+shows issue lanes are the working vehicle — #170 review finding 6 aligned this
+sentence with practice):
 
 - **1a design** — the increment's contract, with the internal spec-review loop.
 - **1b verification architecture** — how it will be proven (the seams/gates).
@@ -53,8 +56,13 @@ it.
 
 No coined labels, letter-clusters, or all-caps tokens in prose or identifiers.
 Plain names. A durable term is a registration act (it enters a registry), not a
-self-serve coinage. mdatron's own vocabulary family enforces this class for
-governed artifacts; the same discipline applies to mdatron's development.
+self-serve coinage. Two exemptions the rule always intended (#170 review finding 10
+wrote them down — as stated before, the rule refuted itself): file-name
+shorthand for a real file (`DESIGN` for `DESIGN.md`) and standard initialisms
+in general use (`CI`, `YAML`, `OS`) are references, not coinages. mdatron's own
+vocabulary family mechanizes the letter-plus-number-cluster slice of this for
+governed artifacts (the rest holds as conduct — see the enforcement table); the
+same discipline applies to mdatron's development.
 
 ## Honest boundary
 
@@ -68,11 +76,16 @@ not wait on the tool for the rest.
 
 ## Enforcement, in one line
 
-Conduct alone drifts. The disciplines above are bound by grade — mdatron's own
-engine over the governed markdown, git-hook friction at the act, and a CI-backed
-block as the durable leg (the escape corpus's regression seeds run in CI and
-re-derive integrity over the checkers' own wiring) — so that a deviation
-produces compiler-shaped feedback at the act, not a latent record. A
+Conduct alone drifts. The disciplines above are **bound or explicitly deferred
+by grade** — mdatron's own engine over the governed markdown, git-hook friction
+at the act, and the required self-validation CI job as the durable leg (it
+re-derives the register and the amendment citations over the pushed range; the
+escape-corpus seeds additionally pin the checkers' own wiring, in a job that is
+not yet a required check — see the enforcement doc's mechanisms note) — so
+that a deviation produces compiler-shaped feedback at the act, not a latent
+record. Every §-discipline has a row in the enforcement table stating its
+grade, its planned tracking issue, or its honest-boundary deferral; a
+discipline with none of the three would be the corpus's first escape. A
 runtime-harness session-stop hook is not one of the legs: it is in-repo code
 that cannot self-protect, so it would assert enforcement it cannot deliver
 (#99). The escape corpus (`docs/methodology-enforcement.md`) is the
