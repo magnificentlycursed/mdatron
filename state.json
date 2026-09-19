@@ -1,6 +1,6 @@
 {
   "next_display_id": 181,
-  "next_comment_id": 485,
+  "next_comment_id": 486,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -7196,11 +7196,20 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-08-10T12:56:45.901952Z",
-      "updated_at": "2026-09-19T22:20:39.277762Z",
+      "updated_at": "2026-09-19T22:26:53.081316Z",
       "labels": [
         "release"
       ],
       "comments": {
+        "025817ae-ee96-4c78-9eeb-b1d3370428b7": {
+          "display_id": 485,
+          "author": "79Ig",
+          "content": "CHECKLIST UPDATE: #180's CLI discovery trio (explain --list --json, richer --help, mdatron docs subcommand) PROMOTED pre-cut per operator (consumer-value test applied consistently). The pre-cut branch now carries: #178 CI fix (done) -> #175/#176/#177 envelope lane (in implementation) -> #179/#180 docs pass -> CLI trio -> consolidated review + PR -> cut. MCP/LSP stay deferred (architectural).",
+          "created_at": "2026-09-19T22:26:53.021635Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAc3MU+zuQgOC5c7Gk43WRt7sJF6hm2xWinf68qvNwK179HfDaTaWrfXIO56v31kFJxfYkeMWdx0G9F/Mxvl7MBQ=="
+        },
         "2da47b09-6c62-4af2-9f95-cd0460d8b664": {
           "display_id": 474,
           "author": "79Ig",
@@ -7679,8 +7688,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-19T22:26:45.681671Z",
+    "timestamp": "2026-09-19T22:26:53.081316Z",
     "agent_id": "79Ig",
-    "agent_seq": 960
+    "agent_seq": 961
   }
 }
