@@ -1,6 +1,6 @@
 {
   "next_display_id": 181,
-  "next_comment_id": 491,
+  "next_comment_id": 492,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -3042,11 +3042,20 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-19T22:04:21.969915Z",
-      "updated_at": "2026-09-19T22:47:24.312829Z",
+      "updated_at": "2026-09-19T23:04:36.767846Z",
       "labels": [
         "enhancement"
       ],
       "comments": {
+        "ad8ad3fd-1515-4b6e-bad0-076b5a86d2f9": {
+          "display_id": 491,
+          "author": "79Ig",
+          "content": "COLD REVIEW round 1 (e989b82): 5 real findings total (1 major on #177, 2 minor on #176, 1 minor here, 1 minor mirror-tripwire). Here: --timings silently no-ops under TTY/--compact — fix = clap requires=json + red-gate. Also R5: schema quoted gains minItems:1 + absence-when-empty assertion so the mirror-drift claim holds on the skip axis. 11 candidate findings refuted with evidence (ordinal splice, HashMap order, TOCTOU, seam placement, determinism, lockstep legs, TTY regression...). Fix round dispatched to implementer; round-2 cold review to follow.",
+          "created_at": "2026-09-19T23:04:36.755281Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABADYZ3TkvWaAFXFKSpzV4oEjSSDsGEDK4IlDsNzruNET2234EIpX81uAN03+CVgTYoyh3AM2edR1Kgsl20EoWVAw=="
+        },
         "c778f9d3-4b46-4eac-b777-f0d3cee8fe54": {
           "display_id": 475,
           "author": "79Ig",
@@ -7733,8 +7742,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-19T23:04:30.410249Z",
+    "timestamp": "2026-09-19T23:04:36.767846Z",
     "agent_id": "79Ig",
-    "agent_seq": 966
+    "agent_seq": 967
   }
 }
