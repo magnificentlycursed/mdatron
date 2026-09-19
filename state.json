@@ -1,6 +1,6 @@
 {
   "next_display_id": 181,
-  "next_comment_id": 482,
+  "next_comment_id": 483,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -7168,7 +7168,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-08-10T12:56:45.901952Z",
-      "updated_at": "2026-09-19T22:19:20.782140Z",
+      "updated_at": "2026-09-19T22:20:39.277762Z",
       "labels": [
         "release"
       ],
@@ -7190,6 +7190,15 @@
           "kind": "blocker",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAea2bfTncta+7ku4DdNK8TqYYlZ0XEkzdQuA2amKxezEBnJ6/H+QPa3Dv477Bok6c983LQJdhfLrmXJ4pdcg5Bg=="
+        },
+        "62b3a7c1-129c-44e0-b8f4-9b3799236faa": {
+          "display_id": 482,
+          "author": "79Ig",
+          "content": "SUPERSEDING RULING (operator, 2026-09-19): ALL of #175-#179 land PRE-CUT. Rationale: envelope 3.0.0 is unpublished, so the three envelope additions (timings, input lineage + schema pin, fingerprints) fold into the same MAJOR — the first consumer gets one complete contract snapshot at 0.6.0. Execution: one consolidated branch — commit 1 = #178 CI triggers (removes the rerun tax from this very PR); then the envelope lane (#175/#176/#177, one design, one roast); then the docs pass (#179/#180) once the audit returns, documenting the new fields in the same sweep. Then the cut.",
+          "created_at": "2026-09-19T22:20:39.244592Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAim51Y4N2M9dKKstIC/lcyuToW86SCAtPSXmJrVjSO4eHqd+TjDAwOIbges9SN16//6Wj2G4Eags08MiR2ZlGDw=="
         },
         "b60bb6b0-9724-416d-9451-c7f3a3f94457": {
           "display_id": 459,
@@ -7642,8 +7651,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-19T22:19:20.782140Z",
+    "timestamp": "2026-09-19T22:20:39.277762Z",
     "agent_id": "79Ig",
-    "agent_seq": 955
+    "agent_seq": 956
   }
 }
