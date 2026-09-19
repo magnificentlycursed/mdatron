@@ -28,13 +28,16 @@ is walked — not as a runtime surprise.
 
 Like E0021 this is a **hard gate** (error, exit 1) and therefore
 **conservative by construction** — it fires only when BOTH operands are
-statically decidable: a scalar literal, or a `$self.<field>` whose schema
-declares a single concrete type under a closed object (`additionalProperties:
-false`). Every undecidable shape passes unflagged — an open object, a
-multi-type/nullable field (`["string","null"]`), a field with no declared
-`type`, an array/object level, a `$ref` or combinator, or a non-`$self`
-operand. `integer` and `number` are treated as compatible (an integer is a
-valid number).
+statically decidable: a scalar literal, or a `$self.<field>` reachable through
+**declared `properties` at every level** whose leaf declares a **single
+concrete type**. Object openness plays no part here — a declared, single-typed
+property is decidable whether or not its object sets `additionalProperties:
+false` (the closed-object gate belongs to E0021's *existence* check, where an
+open object could legitimately carry the undeclared field). Every undecidable
+shape passes unflagged — an undeclared path segment, a multi-type/nullable
+field (`["string","null"]`), a field with no declared `type`, a `$ref` or
+combinator level, or a non-`$self` operand. `integer` and `number` are treated
+as compatible (an integer is a valid number).
 
 ## How to fix
 

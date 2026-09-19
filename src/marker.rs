@@ -23,7 +23,15 @@
 //! Resolution is **name-equality** with a trailing `.` tolerated on the target
 //! (vsdd GH#22 Q2) — deliberately NOT slug-based (the divergence from the link
 //! anchor resolver). A reference that resolves to nothing is `MDATRON-E0112`
-//! (dead-marker-reference).
+//! (dead-marker-reference); a reference into a target that is PRESENT but
+//! unverifiable (non-UTF8 / unreadable content) is `MDATRON-W0048` per line —
+//! the check was skipped, which is loud, never a false "dead" (GH #48 lane G).
+//! A `target_section` whose heading is never matched
+//! in the target document is `MDATRON-E0114` (marker-target-section-not-found,
+//! GH #48): one finding **per run** per rule key (located at the first governed
+//! file the walk encounters for the rule — GH #48 finding 8's memoization), and
+//! the rule's lines are skipped — never mass-flagged E0112 for a rule misconfig
+//! or a renamed target heading.
 
 use std::collections::HashSet;
 use std::path::Path;
@@ -31,19 +39,23 @@ use std::path::Path;
 use crate::confine::{confine_lexically, LexicalViolation};
 use crate::diagnostic::{Finding, Location, QuotedRegion, Severity};
 use crate::markup::{atx_heading, list_item_bold_name, non_fenced_lines};
+use crate::memo::{MarkerKey, MarkerMembers, RefMemo};
 use crate::route::{ElementClass, MarkerRule};
 use crate::snapshot::{Captured, Snapshot};
 
 /// Scan one opted-in file's body for marker-line references and resolve each
 /// against its rule's target doc. `content` is the whole file; `body_offset` is
 /// where the prose body begins. `rules` are the marker rules active for this
-/// file (every rule on every route claiming it).
+/// file (every rule on every route claiming it). `memo` is the RUN-level
+/// reference memo (GH #48 finding 8): target parsing and rule-level findings
+/// happen once per run per rule key, not once per governed file.
 pub fn check_file(
     snapshot: &Snapshot,
     path: &Path,
     content: &str,
     body_offset: usize,
     rules: &[&MarkerRule],
+    memo: &mut RefMemo,
     findings: &mut Vec<Finding>,
 ) {
     if rules.is_empty() {
@@ -51,55 +63,123 @@ pub fn check_file(
     }
     let body = &content[body_offset..];
 
-    // Resolve each rule's target member-set once. `None` = the rule is disabled
-    // because its target_doc failed confinement (a finding was emitted); its
-    // matching lines are then skipped rather than spuriously flagged E0112.
-    let member_sets: Vec<Option<HashSet<String>>> = rules
-        .iter()
-        .map(|rule| resolve_members(snapshot, path, rule, findings))
-        .collect();
+    // Resolve each rule's target member-state through the run-level memo. On a
+    // key MISS the target is resolved exactly as before AND the rule-level
+    // findings (target_doc confinement E0012, E0114, the E0080 never-captured
+    // defect) are emitted, located at THIS file — the first the walk
+    // encountered for the rule; a HIT returns the cached state and emits
+    // nothing, so a rule-level defect reports once per run instead of once per
+    // governed file. `Disabled` = the rule is skipped (a finding was emitted);
+    // `Unverifiable` = the target is present but its bytes cannot be read as
+    // text, so each matching line reports W0048 instead of a false-dead E0112
+    // (GH #48 lane G). The per-LINE findings below (E0112 in both shapes,
+    // W0048) are never deduped.
+    let keys: Vec<MarkerKey> = rules.iter().map(|rule| MarkerKey::of(rule)).collect();
+    for (rule, key) in rules.iter().zip(&keys) {
+        if !memo.marker_members.contains_key(key) {
+            #[cfg(test)]
+            {
+                memo.marker_resolves += 1;
+            }
+            let members = resolve_members(snapshot, path, rule, findings);
+            memo.marker_members.insert(key.clone(), members);
+        }
+    }
+    let member_states: Vec<&MarkerMembers> =
+        keys.iter().map(|key| &memo.marker_members[key]).collect();
 
     for (line_start, line) in non_fenced_lines(body) {
-        for (rule, members) in rules.iter().zip(&member_sets) {
-            let Some(members) = members else { continue };
+        for (rule, state) in rules.iter().zip(&member_states) {
+            if matches!(state, MarkerMembers::Disabled) {
+                continue;
+            }
             let Some(caps) = rule.pattern.captures(line) else {
                 continue;
             };
-            // The first capture group is the referenced name. A pattern with no
-            // capture group cannot name a reference — skip it.
+            // The first capture group is the referenced name. Route load refuses
+            // a pattern with NO capture group (GH #48 finding 2), but a
+            // load-accepted OPTIONAL group (`^Provenance:( .+)?$`) can still
+            // match a line without participating — that was a silent per-line
+            // skip; it is now a loud E0112 (GH #48 round 2): the line matched a
+            // marker pattern but names nothing to resolve.
             let Some(name_match) = caps.get(1) else {
-                continue;
-            };
-            let name = name_match.as_str();
-            if !members.contains(&normalize_name(name)) {
                 findings.push(marker_finding(
                     path,
                     content,
                     body_offset + line_start,
                     "MDATRON-E0112",
                     "dead-marker-reference",
-                    "this marker line names a reference that resolves to no element \
-                     in the rule's target document (name-equality, a trailing `.` on \
-                     the target tolerated)",
-                    "marker",
-                    name,
+                    "the marker pattern matched this line but its capture group \
+                     captured no name, so the reference cannot be resolved; \
+                     check the pattern for an optional capture group",
+                    "pattern",
+                    rule.pattern.as_str(),
                 ));
+                continue;
+            };
+            let name = name_match.as_str();
+            match state {
+                MarkerMembers::Disabled => unreachable!("skipped above"),
+                // Present-but-unverifiable target (GH #48 lane G): the check
+                // was skipped, which is loud (W0048) — never a false "resolves
+                // to nothing" E0112 blaming a healthy reference.
+                MarkerMembers::Unverifiable => {
+                    let mut f = marker_finding(
+                        path,
+                        content,
+                        body_offset + line_start,
+                        "MDATRON-W0048",
+                        "reference-target-unverified",
+                        "this marker rule's target document is present but \
+                         unverifiable (its bytes cannot be read as text), so \
+                         this reference was NOT checked — existence of the \
+                         target only",
+                        "marker",
+                        name,
+                    );
+                    f.severity = Severity::Warning;
+                    findings.push(f);
+                }
+                MarkerMembers::Resolved(members) => {
+                    if !members.contains(&normalize_name(name)) {
+                        findings.push(marker_finding(
+                            path,
+                            content,
+                            body_offset + line_start,
+                            "MDATRON-E0112",
+                            "dead-marker-reference",
+                            "this marker line names a reference that resolves to no element \
+                             in the rule's target document (name-equality, a trailing `.` on \
+                             the target tolerated)",
+                            "marker",
+                            name,
+                        ));
+                    }
+                }
             }
         }
     }
 }
 
 /// A rule's target document from the captured snapshot (#103), scoped to
-/// `target_section` if named, as the set of normalized member names for the
-/// rule's element class. `None` means the target failed confinement (a finding
-/// was emitted). A missing/unreadable target yields an empty set, so its
-/// references surface loudly as `E0112` rather than degrading silently.
+/// `target_section` if named, as a [`MarkerMembers`] state: the normalized
+/// member-name set when the target parses; `Disabled` when the target failed
+/// confinement or the named `target_section` heading is absent (a finding was
+/// emitted — `E0114` for the latter, GH #48); `Unverifiable` when the target
+/// is PRESENT but its bytes cannot be read as text (the per-line scan reports
+/// `W0048`, never a false-dead `E0112` — GH #48 lane G). A missing target
+/// yields an empty set, so its references surface loudly as `E0112` rather
+/// than degrading silently. Called only on a memo MISS (GH #48 finding 8), so
+/// the findings it pushes are emitted once per run per rule key.
 fn resolve_members(
     snapshot: &Snapshot,
     path: &Path,
     rule: &MarkerRule,
     findings: &mut Vec<Finding>,
-) -> Option<HashSet<String>> {
+) -> MarkerMembers {
+    // DEFENSIVE ONLY (GH #48 lane G): route load confines every marker rule's
+    // target_doc lexically and drops a violating rule fail-closed, so this arm
+    // is unreachable for load-validated rules — it guards a hand-built rule.
     let confined = match confine_lexically(Path::new(&rule.target_doc)) {
         Ok(c) => c,
         Err(v) => {
@@ -117,7 +197,7 @@ fn resolve_members(
                 "target_doc",
                 &rule.target_doc,
             ));
-            return None;
+            return MarkerMembers::Disabled;
         }
     };
 
@@ -128,14 +208,16 @@ fn resolve_members(
     let target: &str = match snapshot.get(confined.as_path()) {
         Some(Captured::Content(c)) => match c.text() {
             Some(text) => text,
-            // Unreadable (non-UTF8) target: empty member set → references fail.
-            None => return Some(HashSet::new()),
+            // Non-UTF8 target: PRESENT but unverifiable — the per-line scan
+            // reports W0048 per reference; an empty set here would false-flag
+            // every healthy reference as dead (GH #48 lane G).
+            None => return MarkerMembers::Unverifiable,
         },
-        // Unreadable, or (defensively) over the size cap — config-scoped
-        // discovery escalates TooLarge before the seam, but if one reaches
-        // here the empty set keeps its references loud (E0112), not silent.
+        // Opened-but-unreadable, or (defensively) over the size cap — config-
+        // scoped discovery escalates TooLarge before the seam, but if one
+        // reaches here it is likewise present-but-unverifiable, not dead.
         Some(Captured::OpenedUnreadable { .. }) | Some(Captured::TooLarge { .. }) => {
-            return Some(HashSet::new())
+            return MarkerMembers::Unverifiable
         }
         Some(Captured::SymlinkRefused { .. }) => {
             findings.push(marker_finding(
@@ -149,10 +231,15 @@ fn resolve_members(
                 "target_doc",
                 &rule.target_doc,
             ));
-            return None;
+            return MarkerMembers::Disabled;
         }
         // Missing target: empty set → references surface as E0112 (loud, not silent).
-        Some(Captured::OpenIo { .. }) => return Some(HashSet::new()),
+        // Accepted residue (#103 phase-3 R2I-6, same as cite's): OpenIo
+        // conflates absent with open-refused (EACCES), so a permission-denied
+        // target reports its references as dead (E0112) rather than
+        // unverifiable — matching pre-#103 behavior; splitting the state is
+        // future work. An absent target IS dead: empty set → E0112 per line.
+        Some(Captured::OpenIo { .. }) => return MarkerMembers::Resolved(HashSet::new()),
         // Never captured: an ENGINE defect in target discovery — report it as
         // one and disable the rule rather than flag healthy references.
         None => {
@@ -168,7 +255,7 @@ fn resolve_members(
                 "target_doc",
                 &rule.target_doc,
             ));
-            return None;
+            return MarkerMembers::Disabled;
         }
     };
 
@@ -178,33 +265,69 @@ fn resolve_members(
         Ok(Some((_, b))) => b,
         _ => target,
     };
-    Some(extract_members(
-        doc_body,
-        rule.element,
-        rule.target_section.as_deref(),
-    ))
+    match extract_members(doc_body, rule.element, rule.target_section.as_deref()) {
+        Some(members) => MarkerMembers::Resolved(members),
+        // GH #48 finding 3: the named target_section heading is never matched in
+        // the target's body (renamed, or a misconfigured spec). Previously the
+        // member set stayed permanently empty and EVERY matching line in the
+        // governed file was mass-flagged E0112, blaming healthy references. One
+        // E0114 per run per rule key instead (the memo gates this call, GH #48
+        // finding 8), and the rule's lines are skipped.
+        None => {
+            findings.push(marker_finding(
+                path,
+                "",
+                0,
+                "MDATRON-E0114",
+                "marker-target-section-not-found",
+                "a marker rule's target_section names a heading that is not \
+                 present in the rule's target document, so its references cannot \
+                 be resolved; the rule's marker lines are skipped",
+                "target_section",
+                rule.target_section.as_deref().unwrap_or_default(),
+            ));
+            MarkerMembers::Disabled
+        }
+    }
 }
 
 /// The normalized member names of `body` for `element`, optionally scoped to the
 /// span of the heading named by `section` (until the next heading of the same or
-/// higher level).
-fn extract_members(body: &str, element: ElementClass, section: Option<&str>) -> HashSet<String> {
+/// higher level). Returns `None` when a section IS named but its heading is
+/// never matched in `body` (GH #48 — loud absence, decided by the SAME matching
+/// logic the member scan uses: level equality + [`normalize_name`] equality);
+/// with no `section` it always returns `Some`.
+fn extract_members(
+    body: &str,
+    element: ElementClass,
+    section: Option<&str>,
+) -> Option<HashSet<String>> {
     let mut members = HashSet::new();
 
     // Section gating: when a section is named, collect only between its heading
     // and the next heading of the same-or-higher level.
     let want = section.and_then(atx_heading);
     let mut in_section = section.is_none();
+    let mut section_matched = section.is_none();
 
     for (_, line) in non_fenced_lines(body) {
         if let Some((level, text)) = atx_heading(line) {
             if let Some((want_lvl, want_text)) = want {
-                if !in_section {
-                    if level == want_lvl && normalize_name(text) == normalize_name(want_text) {
-                        in_section = true;
-                    }
+                // The wanted heading opens the section — or RE-opens it when an
+                // adjacent duplicate is also the heading that would have closed
+                // it (GH #48 lane-A round 3: the close arm must not swallow a
+                // re-open, mirroring `markup::section_spans`' sequential arms —
+                // else members under a back-to-back duplicate are hidden and
+                // their references false-flag E0112).
+                if level == want_lvl && normalize_name(text) == normalize_name(want_text) {
+                    in_section = true;
+                    section_matched = true;
                     continue; // the section header itself is not a member
-                } else if level <= want_lvl {
+                }
+                if !in_section {
+                    continue;
+                }
+                if level <= want_lvl {
                     in_section = false; // a same-or-higher heading ends the section
                     continue;
                 }
@@ -223,7 +346,7 @@ fn extract_members(body: &str, element: ElementClass, section: Option<&str>) -> 
             }
         }
     }
-    members
+    section_matched.then_some(members)
 }
 
 /// Normalize a name for equality: trim surrounding whitespace and tolerate a
@@ -275,16 +398,57 @@ mod tests {
         assert_eq!(normalize_name("  Name.  "), "Name");
     }
 
+    // GH #48 lane-A round 3: a back-to-back duplicate heading both closes the
+    // previous span and re-opens the next — members under the second occurrence
+    // must resolve (pre-fix they were hidden, so their references false-flagged
+    // E0112). Separated duplicates (`## A … ## B … ## A`) already merged; this
+    // pins the adjacent case the close arm used to swallow.
+    #[test]
+    fn extract_members_merges_adjacent_duplicate_sections() {
+        let body = "# T\n\n## A\n\n- **First.** x\n\n## A\n\n- **Second.** y\n";
+        let members = extract_members(body, ElementClass::ListItemBoldName, Some("## A"))
+            .expect("the section matches");
+        assert!(
+            members.contains("First") && members.contains("Second"),
+            "members under an adjacent duplicate heading must resolve: {members:?}"
+        );
+    }
+
     #[test]
     fn extract_members_scopes_to_section() {
         let body = "# T\n\n## A\n\n- **In A.** x\n\n## B\n\n- **In B.** y\n";
-        let in_a = extract_members(body, ElementClass::ListItemBoldName, Some("## A"));
+        let in_a = extract_members(body, ElementClass::ListItemBoldName, Some("## A"))
+            .expect("## A is present, the scan resolves");
         assert!(in_a.contains("In A"));
         assert!(
             !in_a.contains("In B"),
             "a member under ## B is out of section A"
         );
-        let whole = extract_members(body, ElementClass::ListItemBoldName, None);
+        let whole = extract_members(body, ElementClass::ListItemBoldName, None)
+            .expect("no section named: always Some");
         assert!(whole.contains("In A") && whole.contains("In B"));
+    }
+
+    // RED GATE (GH #48 finding 3): a named target_section whose heading is never
+    // matched in the body is `None` (→ E0114 upstream), decided by the SAME
+    // matcher the member scan uses — level equality + normalize_name equality
+    // (trailing `.` tolerated) — never by a different detector.
+    #[test]
+    fn extract_members_is_none_when_named_section_never_matches() {
+        let body = "# T\n\n## Renamed\n\n- **In A.** x\n";
+        assert!(
+            extract_members(body, ElementClass::ListItemBoldName, Some("## A")).is_none(),
+            "a renamed heading must not yield a silently-empty member set"
+        );
+        // Level mismatch is a non-match too: `### A` does not satisfy `## A`.
+        let deeper = "# T\n\n### A\n\n- **In A.** x\n";
+        assert!(extract_members(deeper, ElementClass::ListItemBoldName, Some("## A")).is_none());
+        // normalize_name tolerance: a trailing `.` on the heading still matches.
+        let dotted = "# T\n\n## A.\n\n- **In A.** x\n";
+        assert!(
+            extract_members(dotted, ElementClass::ListItemBoldName, Some("## A"))
+                .expect("normalize_name equality matches the dotted heading")
+                .contains("In A")
+        );
     }
 }

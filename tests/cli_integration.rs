@@ -547,6 +547,94 @@ fn pin_update_repins_and_dry_run_does_not_write() {
     assert!(!record.contains("stale"), "hash rewritten: {record}");
 }
 
+// GH #48 finding 4 (lane C): the pin subcommand renders adopter-authored
+// pins.yaml values safely. (a) A recorded sha with a multibyte char straddling
+// byte 12 must not panic the truncation (the #165 byte-slice class, previously
+// closed everywhere but main.rs's pin renderer); (b) a control byte embedded
+// in the `file` field must reach stderr only as an inert `\xNN` escape.
+#[test]
+fn pin_dry_run_survives_multibyte_sha_and_escapes_control_bytes() {
+    // Platform-neutral half (runs on the Windows CI matrix too): the recorded
+    // sha carries 'é' straddling byte 12, so a naive `&old[..12]` panics — the
+    // stale entry must re-pin with a char-boundary-safe truncation. The
+    // control-byte FILENAME half lives in the cfg(unix) sibling below: a raw
+    // ESC in a file NAME is legal on unix and refused by Windows itself, so
+    // that fixture cannot exist there (found by the windows-latest matrix on
+    // the GH #48 branch).
+    let proj = TempProject::new("pin-hostile-sha");
+    std::fs::create_dir_all(proj.path().join(".mdatron/schemas")).unwrap();
+    proj.write("GOVERNING.md", "# gov\n");
+    proj.write("governed.md", "content\n");
+    proj.write(
+        ".mdatron/pins.yaml",
+        "pins:\n- governing: GOVERNING.md\n  file: governed.md\n  sha256: \"0123456789a\u{e9}0stale\"\n",
+    );
+    let out = Command::new(mdatron_bin())
+        .args(["pin", "--project-root"])
+        .arg(proj.path())
+        .args(["--update", "--dry-run"])
+        .output()
+        .expect("mdatron binary executes");
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "no panic on a multibyte sha; stderr: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        stderr.contains("would re-pin 1"),
+        "the stale entry re-pins: {stderr}"
+    );
+    assert!(
+        stderr.contains("0123456789a\u{e9}"),
+        "the old sha truncates char-boundary-safe: {stderr}"
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn pin_dry_run_escapes_control_bytes_in_file_names() {
+    // Unix-only: a pinned file whose NAME embeds a raw ESC byte (legal in unix
+    // filenames; Windows refuses to create it). The recorded `file` field
+    // smuggles the same byte via YAML's `\x1b` escape; the rendered stderr
+    // line must carry the inert `\x1B` form, never the raw byte (#165 marking
+    // discipline on the pin subcommand, GH #48 lane C).
+    let proj = TempProject::new("pin-hostile-name");
+    std::fs::create_dir_all(proj.path().join(".mdatron/schemas")).unwrap();
+    proj.write("GOVERNING.md", "# gov\n");
+    proj.write("governed-\u{1b}[31mred.md", "content\n");
+    proj.write(
+        ".mdatron/pins.yaml",
+        "pins:\n- governing: GOVERNING.md\n  file: \"governed-\\x1b[31mred.md\"\n  sha256: \"0123456789a\u{e9}0stale\"\n",
+    );
+    let out = Command::new(mdatron_bin())
+        .args(["pin", "--project-root"])
+        .arg(proj.path())
+        .args(["--update", "--dry-run"])
+        .output()
+        .expect("mdatron binary executes");
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "no panic; stderr: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        stderr.contains("would re-pin 1"),
+        "the hostile entry re-pins: {stderr}"
+    );
+    assert!(
+        !out.stderr.contains(&0x1b_u8),
+        "no raw ESC byte reaches stderr: {stderr:?}"
+    );
+    assert!(
+        stderr.contains("\\x1B"),
+        "the control byte renders as an inert escape: {stderr}"
+    );
+}
+
 fn run_verify_tty(proj: &TempProject) -> Output {
     Command::new(mdatron_bin())
         .args(["verify", "--project-root"])

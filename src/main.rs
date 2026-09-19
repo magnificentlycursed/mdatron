@@ -255,11 +255,18 @@ fn cmd_pin(project_root: Option<PathBuf>, update: bool, dry_run: bool, quiet: bo
                 if !quiet {
                     let verb = if dry_run { "would re-pin" } else { "re-pinned" };
                     eprintln!("mdatron pin: {verb} {} entr(ies)", changed.len());
+                    // GH #48 finding 4: `file` and the recorded sha are adopter-
+                    // authored (pins.yaml, not validated as hex or printable) —
+                    // truncate char-boundary-safe (the #165 byte-slice panic
+                    // class) and escape control bytes before stderr, the same
+                    // marking discipline the finding renderer applies.
+                    use mdatron::diagnostic::escape_path_text;
                     for (file, old, new) in &changed {
                         eprintln!(
-                            "  {file}: {} -> {}",
-                            &old[..old.len().min(12)],
-                            &new[..new.len().min(12)]
+                            "  {}: {} -> {}",
+                            escape_path_text(file),
+                            escape_path_text(mdatron::init::short(old)),
+                            escape_path_text(mdatron::init::short(new))
                         );
                     }
                 }
@@ -725,12 +732,22 @@ fn print_pipeline_error(e: &VerifyError, roots: &[&Path]) {
 }
 
 fn cmd_explain(code: Option<&str>, list: bool, json: bool, compact: bool) -> ExitCode {
-    // `--list` enumerates the catalog and exits (#117, vsdd W4).
+    // `--list` enumerates the catalog and exits (#117, vsdd W4). A malformed
+    // embedded catalog is LOUD (GH #48 lane G) — a silently empty list would
+    // read as "no codes exist".
     if list {
-        for (c, summary) in explain::catalog() {
-            println!("{c} — {summary}");
+        match explain::catalog() {
+            Ok(entries) => {
+                for (c, summary) in entries {
+                    println!("{c} — {summary}");
+                }
+                return ExitCode::from(0);
+            }
+            Err(e) => {
+                eprintln!("error[MDATRON-E0080]: explain --list failed\n   = note: {e}");
+                return ExitCode::from(2);
+            }
         }
-        return ExitCode::from(0);
     }
     // clap's `required_unless_present = "list"` guarantees a code here.
     let code = code.expect("a code is required unless --list");

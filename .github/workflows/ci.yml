@@ -145,8 +145,11 @@ jobs:
         run: cargo run -q -p mdatron --locked -- init --project-root .
 
       # The gate: every review-log entry must satisfy schemas/review-entry.json.
+      # --deny-warnings: the gate takes its own documented escalation (GH #48
+      # lane-G review) — a warnings-only run (e.g. W0048, a reference check
+      # skipped over an unverifiable target) must fail this gate, not pass it.
       - name: Verify this repo against its own .mdatron/ config
-        run: cargo run -q -p mdatron --locked -- verify --project-root .
+        run: cargo run -q -p mdatron --locked -- verify --project-root . --deny-warnings
 
   package:
     # Publish rehearsal (#123, roast SHO3): green code-CI says nothing about what
@@ -174,6 +177,9 @@ jobs:
           files="$(cargo package --list --locked)"
           echo "$files"
           echo "$files" | grep -qx 'LICENSE' || { echo '::error::LICENSE missing from package payload'; exit 1; }
+          # docs/limits.md is hard-required by a SHIPPED test (limits::docs_limits_table_matches_shipped);
+          # without it, `cargo test` from the published crate fails (GH #48 lane E).
+          echo "$files" | grep -qx 'docs/limits.md' || { echo '::error::docs/limits.md missing from package payload — a shipped test reads it'; exit 1; }
           if echo "$files" | grep -Eq '^(\.claude/|\.crosslink/|review-log/|\.vsdd/|\.mdatron/|REPLACE$|BOOTSTRAP-|dsl-falsifiability)'; then
             echo '::error::internal apparatus leaked into the crate payload — tighten Cargo.toml include'
             exit 1

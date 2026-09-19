@@ -301,17 +301,28 @@ pub fn check_file(
 
     // A term backticked in prose is a CITATION, not a use (a historical commit
     // subject, or naming a deprecated term as `chassis` to reference it) — the
-    // register/coinage prose checks skip inline code spans, reusing the same
-    // masking the link check applies (#158, vsdd GH#28 Gap 2). Computed once for
-    // both E0091 and E0093. (A code token in a code-catalog citation stays a real
-    // reference — see codecat's deliberate non-masking — but a vocabulary term
-    // in code is a reference, not a use, exactly like a link.)
+    // register/coinage prose checks skip inline code spans (#158, vsdd GH#28
+    // Gap 2) AND fenced code blocks (GH #48 finding 6: a migration doc quoting
+    // old config in a ```yaml fence is an example the author cannot reword).
+    // Both masks are computed once for E0091 and E0093. NOTE the mechanism is
+    // NOT the link check's: links are masked structurally by the CommonMark
+    // parse in `body_links` (#155), while these scans regex-match the RAW body
+    // (`find_iter`, deliberately — an adopter pattern may legitimately match
+    // across lines), so code must be masked by range: inline spans via
+    // `body_inline_code_ranges`, fenced blocks via `fenced_ranges` (the same
+    // `fence_marker` logic the line scanners share). A match is masked when
+    // its START falls in a masked range. (A code token in a code-catalog
+    // citation stays a real reference when backticked — see codecat's
+    // deliberate non-masking — but a vocabulary term in code is a reference,
+    // not a use, exactly like a link.)
     let code_ranges = crate::markup::body_inline_code_ranges(body);
+    let fenced = crate::markup::fenced_ranges(body);
+    let in_fenced = |pos: usize| fenced.iter().any(|r| r.contains(&pos));
 
     // ── invented label schemes (label_schemes section supplied) ───────────
     if let Some(allow) = &vocab.label_allow {
         for m in vocab.cluster.find_iter(body) {
-            if crate::markup::in_code_span(&code_ranges, m.start()) {
+            if crate::markup::in_code_span(&code_ranges, m.start()) || in_fenced(m.start()) {
                 continue;
             }
             let cluster = m.as_str();
@@ -337,7 +348,7 @@ pub fn check_file(
     // ── register anti-patterns ─────────────────────────────────────────────
     for (pattern, register) in &vocab.anti {
         for m in pattern.find_iter(body) {
-            if crate::markup::in_code_span(&code_ranges, m.start()) {
+            if crate::markup::in_code_span(&code_ranges, m.start()) || in_fenced(m.start()) {
                 continue;
             }
             findings.push(prose_finding(
@@ -625,6 +636,67 @@ mod tests {
             e0091_clusters(vocab, body, "extend"),
             vec!["W0070".to_string()],
             "consumer pattern exempts C-ids; coinage still flagged"
+        );
+    }
+
+    // ── GH #48 finding 6 (lane D): fenced blocks mask the raw-body scans ────
+
+    /// The codes flagged in `body` under `vocab_yaml`, for the fence-masking
+    /// gates below.
+    fn codes_in(vocab_yaml: &str, body: &str, label: &str) -> Vec<String> {
+        let proj = TempProj::new(label, vocab_yaml);
+        let vocab = load(&proj.0).expect("vocab loads").expect("vocab present");
+        let mut findings = Vec::new();
+        check_file(&vocab, Path::new("doc.md"), body, 0, None, &mut findings);
+        findings.into_iter().map(|f| f.code).collect()
+    }
+
+    // RED GATE: a listed anti-pattern quoted inside a ```yaml fence is an
+    // example (a migration doc quoting old config the author cannot reword),
+    // not a use — pre-fix the E0093 scan ran `find_iter` over the RAW body
+    // with only inline code spans masked, so the fenced example hard-errored.
+    #[test]
+    fn anti_pattern_inside_a_fence_is_masked_outside_still_fires() {
+        let vocab =
+            "anti_patterns:\n- pattern: \"layer: chassis\"\n  register: deprecated-config\n";
+        let fenced = "Migration doc.\n\n```yaml\nlayer: chassis\n```\n\nDone.\n";
+        assert_eq!(
+            codes_in(vocab, fenced, "anti-fenced"),
+            Vec::<String>::new(),
+            "a fenced anti-pattern example is masked"
+        );
+        let live = "Migration doc.\n\nlayer: chassis\n\nDone.\n";
+        assert_eq!(
+            codes_in(vocab, live, "anti-live"),
+            vec!["MDATRON-E0093".to_string()],
+            "the same text outside the fence still fires"
+        );
+    }
+
+    // RED GATE: an E0091 cluster inside a fence is clean; the same cluster in
+    // prose still flags. (A 2-space-indented fence counts — lane B's
+    // CommonMark 0–3 rule reaches this masking through `fence_marker`.)
+    #[test]
+    fn cluster_inside_a_fence_is_masked() {
+        let vocab = "label_schemes:\n  allow:\n    - '^FOO-\\d+$'\n";
+        assert_eq!(
+            e0091_clusters(vocab, "```\nW0070 in a fence\n```\n", "cluster-fenced"),
+            Vec::<String>::new(),
+            "a fenced cluster is an example"
+        );
+        assert_eq!(
+            e0091_clusters(
+                vocab,
+                "  ```\nW0070 in an indented fence\n  ```\n",
+                "cluster-indented"
+            ),
+            Vec::<String>::new(),
+            "a 1–3-space-indented fence masks too"
+        );
+        assert_eq!(
+            e0091_clusters(vocab, "W0070 in prose\n", "cluster-live"),
+            vec!["W0070".to_string()],
+            "the live cluster still flags"
         );
     }
 

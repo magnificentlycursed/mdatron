@@ -106,7 +106,7 @@ struct RawMarkerRule {
 /// The element class a marker reference resolves against (#147). Configurable
 /// per vsdd GH#22's "generic cut"; `frontmatter-key` is reserved for a later
 /// cut.
-#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "kebab-case")]
 pub enum ElementClass {
     /// A markdown heading, resolved by its text (name-equality).
@@ -267,8 +267,54 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
             },
         };
 
+        // GH #48 lane G: `link_root` only affects HOW the link check resolves —
+        // without `links: true` it configures a check that never runs, a dead
+        // config knob. Statically knowable → refused at load (the branch's
+        // dead-config posture, superseding GH #37's silent-inertness ruling).
+        if entry.link_root && !entry.links {
+            return Err(Error::Config(
+                "route sets link_root: true without links: true; link_root only \
+                 affects how the link check resolves, so it requires links: true \
+                 on the same route"
+                    .into(),
+            ));
+        }
+
         let mut marker_rules = Vec::with_capacity(entry.marker_rules.len());
         for rule in entry.marker_rules {
+            // GH #48 lane G: the target_doc's LEXICAL confinement is decided on
+            // path text alone, so it is knowable at load — a violating rule is
+            // dropped fail-closed with its finding here (the route-entry
+            // confinement posture), instead of reporting per run at the first
+            // governed file. The symlink refusal (E0012) stays check-time — it
+            // needs the snapshot.
+            if let Err(v) = confine_lexically(Path::new(&rule.target_doc)) {
+                let (code, summary) = match v {
+                    LexicalViolation::Absolute => ("MDATRON-E0010", "absolute-path-refused"),
+                    LexicalViolation::ParentSegment => ("MDATRON-E0011", "parent-segment-refused"),
+                };
+                findings.push(Finding {
+                    code: code.into(),
+                    severity: Severity::Error,
+                    summary: summary.into(),
+                    message: "a marker rule's target_doc escapes the governed \
+                              tree; the rule is dropped (fail-closed)"
+                        .into(),
+                    help: Some(
+                        "marker target_doc paths are relative to the project \
+                         root and may not carry parent segments or absolute \
+                         prefixes"
+                            .into(),
+                    ),
+                    location: Location::whole_file(&path),
+                    explain_ref: Some(code.to_string()),
+                    quoted: vec![QuotedRegion {
+                        label: "target_doc".into(),
+                        content: rule.target_doc.clone(),
+                    }],
+                });
+                continue; // dropped: fail-closed
+            }
             let pattern = match regex_lite::Regex::new(&rule.pattern) {
                 Ok(r) => r,
                 Err(e) => {
@@ -278,6 +324,32 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
                     )))
                 }
             };
+            // GH #48 finding 2: a pattern with no capture group can never name a
+            // reference — every matching line was a silent no-op. Refused at
+            // load (captures_len counts group 0, the whole match, so >= 2 means
+            // at least one real capture group).
+            if pattern.captures_len() < 2 {
+                return Err(Error::Config(format!(
+                    "route marker_rules pattern '{}' has no capture group; a \
+                     marker pattern must have a capture group for the referenced \
+                     <name>",
+                    rule.pattern
+                )));
+            }
+            // GH #48 finding 3 (load-time leg): a target_section spec that does
+            // not parse as an ATX heading — or parses with EMPTY heading text
+            // (`"##"`) — can never usefully match any heading; the member set
+            // would be permanently empty and every healthy reference
+            // mass-flagged E0112. Refused at load, like a non-compiling pattern.
+            if let Some(spec) = &rule.target_section {
+                if !matches!(crate::markup::atx_heading(spec), Some((_, t)) if !t.is_empty()) {
+                    return Err(Error::Config(format!(
+                        "route marker_rules target_section '{spec}' is not a \
+                         heading; a section spec must be the full ATX heading \
+                         line with non-empty heading text (e.g. '## Requirements')"
+                    )));
+                }
+            }
             marker_rules.push(MarkerRule {
                 pattern,
                 element: rule.element,
@@ -409,8 +481,8 @@ pub fn links_enabled(routes: &[Route], rel: &Path) -> bool {
 }
 
 /// True when a link-checked route claiming `rel` also enables root-relative
-/// link resolution (GH #37). Gated on `links` too, so `link_root` without
-/// `links` is inert (the flag only affects how the link check resolves).
+/// link resolution (GH #37). Load refuses `link_root` without `links` (GH #48
+/// lane G — a dead config knob); the `links` gate here is defensive.
 pub fn link_root_enabled(routes: &[Route], rel: &Path) -> bool {
     routes
         .iter()

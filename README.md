@@ -109,16 +109,18 @@ a contract limit) for agent-context consumers; add `--quiet` to silence the
 stderr rendering (and, under `--json`, to keep stdout the only stream).
 
 The `--json` envelope is a published, versioned contract (`mdatron_output_version`,
-currently `2.1.0`). The load-bearing fields for a machine consumer:
+currently `3.0.0`). The load-bearing fields for a machine consumer:
 
 - `pipeline_status` — `"ok"` or `"failed"`; on failure, `pipeline_error`
   `{code, kind, message}` carries the reason **in-band** (it survives `--quiet`),
   `kind` disambiguating the failure class (`config`, `io`, `bound_exceeded`, …).
 - `summary.files_checked` — the true count of files **validated** (a clean run
   over N reports N, not 0).
-- `families` — each of the five check families as `{state, reason}` (`active` /
-  `inert` / `inactive`), so "checked N, all clean" is distinguishable from
-  "checked nothing".
+- `families` — each of the nine check families (schema, route, pin,
+  vocabulary, citation, link, marker, code_catalog, section) as
+  `{state, reason}` (`active` / `inert` / `inactive`), so "checked N, all
+  clean" is distinguishable from "checked nothing"; the object is
+  forward-extensible, so a consumer must tolerate unknown family keys.
 - `findings[].code` / `.severity` / `.location`; and `findings[].quoted[]`,
   which carries adopter-derived text marked `origin: "adopter"`, `trusted: false`
   so a consumer never mistakes document content for engine output.
@@ -156,7 +158,10 @@ mdatron verify
 `mdatron verify` exits `0` when clean, `1` on findings, and `2` on a pipeline
 failure (see First run). Add `--deny-warnings` (alias `--strict`) to also fail a
 warnings-only run (exit `0 → 1`) — the switch a hard CI gate wants when warnings
-must block. The wrapper above blocks on all three of a missing
+must block. In particular, `MDATRON-W0048` (a reference check *skipped* over a
+present-but-unverifiable target — non-UTF8, unreadable, oversized) is a warning
+by design; a gate that must not pass an unverified reference needs this switch
+(this repo's own self-validation CI job uses it). The wrapper above blocks on all three of a missing
 binary, findings, and pipeline failure. Reserve `git commit --no-verify` for a
 deliberate, visible bypass rather than letting a missing checker pass unseen.
 
@@ -237,9 +242,9 @@ out of scope.
 
 ## Conformance families (Layer 2 data)
 
-The schema family (Layer 1) is the first of **five** check families. Beyond it,
-four generic Layer-2 engines activate on adopter data under `.mdatron/` — each
-inactive until its file exists, each strict-parsed, every path confined to the
+The schema family (Layer 1) is the first of **nine** check families. Beyond it,
+eight generic Layer-2 engines activate on adopter data under `.mdatron/` — each
+inactive until its data exists, each strict-parsed, every path confined to the
 governed tree:
 
 **Routes** (`routes.yaml`) — the closed-world allowlist:
@@ -341,8 +346,15 @@ routes:
 of a `- ` list item (`- **Slice 1 — …the guardrail.**` ← `Provenance: Slice 1 —
 …the guardrail`); `heading` resolves against heading text. Resolution is
 name-equality, a trailing `.` on the target tolerated (not slug-based). A
-reference that resolves to nothing blocks (`E0112`); the `target_doc` is
-project-root-relative and confined (`E0010`/`E0011`/`E0012`).
+reference that resolves to nothing blocks (`E0112`) — as does a matched line
+whose capture group captured nothing (an optional group that didn't
+participate); the `target_doc` is project-root-relative and confined
+(`E0010`/`E0011`/`E0012`). A `target_section` whose heading is absent from the
+target doc blocks once per governed file (`E0114`, marker-target-section-not-
+found) and the rule's lines are skipped there — a renamed target heading never
+mass-flags healthy references. Two misconfigs are refused at load: a `pattern`
+with no capture group (nothing to resolve), and a `target_section` that is not
+a full ATX heading line with non-empty text.
 
 **Code catalogs** (`code-catalogs.yaml`) — the adopter-side twin of mdatron's
 own every-code-resolves-in-explain: declare your code namespace and every code
@@ -397,7 +409,13 @@ asserts the `count` predicate (`>= 1`, `== 1`, …); a violation is `E0120`. A
 section's declared element and asserts the two sets share none; an overlap is
 `E0121`. Ids come **only** from the declared element (H3 heading text, or a
 bullet's bold lead), never surrounding prose — so a body mention of an id
-doesn't cause a false overlap.
+doesn't cause a false overlap. A `section` spec that matches no heading in the
+document blocks (`E0122`, section-not-found; matching is exact on level and
+text) instead of silently passing, and the assertion is not evaluated; when a
+heading occurs more than once, the rule evaluates over **all** matching spans
+(counts sum, ids union), so content under a duplicate heading can't evade the
+gate. A spec that is not a full ATX heading line with non-empty text is
+refused at load.
 
 Every family code has an explain page: `mdatron explain MDATRON-E0061`.
 
@@ -449,7 +467,7 @@ is deferred to adopter evidence per the absorption ledger — see
 ## Where to go next
 
 - [`DESIGN.md`](./DESIGN.md) — the standing design: behavioral contracts,
-  the five check families, output marking discipline, path confinement,
+  the nine check families, output marking discipline, path confinement,
   governance-data governance
 - [`docs/dsl-reference.md`](./docs/dsl-reference.md) — the complete Layer 2
   construct inventory with evaluation semantics; validated by a cold-context

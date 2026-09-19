@@ -9,7 +9,10 @@
 //!
 //! - [`non_fenced_lines`] — the body's live (non-code-fence) lines with byte
 //!   offsets, so a token inside a ``` block is an example, not a live reference.
-//! - [`fence_marker`] — recognize a fenced-code toggle line.
+//! - [`fence_marker`] — recognize a fenced-code toggle line (CommonMark 0–3
+//!   indent rule).
+//! - [`fenced_ranges`] — the byte ranges covered by fenced blocks, for a
+//!   scanner that matches over the whole body at once (the vocabulary family).
 //! - [`atx_heading`] — parse an ATX heading's level+text.
 //! - [`section_span`] — the byte span of one heading-delimited section (pin #146).
 //! - [`heading_slugs`] / [`slugify`] — a body's heading anchors (ATX + setext,
@@ -120,10 +123,14 @@ fn insert_html_anchors(html: &str, slugs: &mut HashSet<String>) {
     // an `id=`/`name=` inside `<!-- … -->` does not register a phantom target.
     let scanned = strip_html_comments(html);
     // A `name=`/`id=` attribute (boundary-anchored so `grid=` does not match)
-    // with a single- or double-quoted value.
-    let re = regex_lite::Regex::new(r#"(?:^|[\s"'])(?:name|id)\s*=\s*["']([^"']+)["']"#)
-        .expect("engine html-anchor detector compiles");
-    for caps in re.captures_iter(&scanned) {
+    // with a single- or double-quoted value. Compiled once (GH #48 lane G):
+    // this runs per HTML event per anchor-bearing file — a per-call compile
+    // taxed the hot path (the cite DETECTOR's idiom).
+    static ANCHOR_ATTR: std::sync::LazyLock<regex_lite::Regex> = std::sync::LazyLock::new(|| {
+        regex_lite::Regex::new(r#"(?:^|[\s"'])(?:name|id)\s*=\s*["']([^"']+)["']"#)
+            .expect("engine html-anchor detector compiles")
+    });
+    for caps in ANCHOR_ATTR.captures_iter(&scanned) {
         let id = caps.get(1).expect("id group").as_str();
         slugs.insert(id.to_string());
         let slug = slugify(id);
@@ -188,22 +195,93 @@ pub(crate) fn body_links(body: &str) -> Vec<BodyLink> {
 }
 
 /// If `line` opens or closes a fenced code block, return its `(fence char, run
-/// length)`. A fence is a leading run of at least three backticks or tildes.
+/// length)`. A fence is a run of at least three backticks or tildes indented by
+/// at most three spaces (CommonMark's 0–3 rule, GH #48 finding 5's sibling
+/// minor): one to three leading spaces still open/close a fence, while four or
+/// more — or a leading tab, which reaches the 4-space code indent — make the
+/// line indented code, not a fence.
 pub(crate) fn fence_marker(line: &str) -> Option<(char, usize)> {
-    let first = line.chars().next()?;
+    let mut rest = line;
+    let mut indent = 0usize;
+    while let Some(r) = rest.strip_prefix(' ') {
+        indent += 1;
+        if indent > 3 {
+            return None;
+        }
+        rest = r;
+    }
+    let first = rest.chars().next()?;
     if first != '`' && first != '~' {
         return None;
     }
-    let run = line.chars().take_while(|&c| c == first).count();
+    let run = rest.chars().take_while(|&c| c == first).count();
     (run >= 3).then_some((first, run))
+}
+
+/// The byte ranges of `content` covered by fenced code blocks — each range runs
+/// from the start of the opening fence-marker line through the end of the
+/// closing marker line (or end of input when unclosed), so a match starting
+/// anywhere inside the block, markers included, is inside a range. Fence
+/// recognition is [`fence_marker`] (CommonMark 0–3 indent rule), the same logic
+/// [`non_fenced_lines`] applies — this is the whole-body companion for a scanner
+/// that regex-matches over the raw body at once (the vocabulary family's
+/// `find_iter`, GH #48 finding 6) and so cannot use the line iterator without
+/// losing legitimate multi-line matches.
+pub(crate) fn fenced_ranges(content: &str) -> Vec<std::ops::Range<usize>> {
+    let mut out = Vec::new();
+    let mut fence: Option<(char, usize)> = None;
+    let mut open_at = 0usize;
+    let mut cursor = 0usize;
+    for raw_line in content.split_inclusive('\n') {
+        let line = raw_line.trim_end_matches(['\n', '\r']);
+        let line_start = cursor;
+        cursor += raw_line.len();
+        if let Some(marker) = fence_marker(line) {
+            match fence {
+                None => {
+                    fence = Some(marker);
+                    open_at = line_start;
+                }
+                Some((fc, flen)) => {
+                    if marker.0 == fc && marker.1 >= flen {
+                        fence = None;
+                        out.push(open_at..cursor);
+                    }
+                }
+            }
+        }
+    }
+    if fence.is_some() {
+        out.push(open_at..content.len());
+    }
+    out
 }
 
 /// An ATX heading's `(level, text)` — the number of leading `#` (1–6, followed
 /// by a space or end of line) and the trimmed heading text (any closing `#`
 /// sequence removed), or `None` if `line` is not an ATX heading. `#foo` (no
-/// space) is a paragraph, not a heading. Leading indentation is tolerated.
+/// space) is a paragraph, not a heading. Leading indentation of up to three
+/// spaces is tolerated (CommonMark's 0–3 rule, GH #48 finding 5); four or more
+/// spaces — or any leading tab, which reaches the 4-space code indent — make
+/// the line indented CODE, never a heading, so `    # install deps` inside a
+/// pinned section cannot silently truncate the section's span.
 pub(crate) fn atx_heading(line: &str) -> Option<(usize, &str)> {
-    let t = line.trim_start();
+    let mut indent = 0usize;
+    for c in line.chars() {
+        match c {
+            '\t' => return None,
+            ' ' => indent += 1,
+            _ => break,
+        }
+        if indent >= 4 {
+            return None;
+        }
+    }
+    // Slice at the counted SPACE indent — never trim_start(), which swallows
+    // any Unicode whitespace and would let a form-feed/NBSP-prefixed `#` line
+    // parse as a heading (GH #48 lanes-B-E review F5: only 0-3 literal spaces
+    // are heading indentation; anything else before `#` makes paragraph text).
+    let t = &line[indent..];
     let level = t.chars().take_while(|&c| c == '#').count();
     if level == 0 || level > 6 {
         return None;
@@ -239,6 +317,11 @@ pub(crate) fn list_item_bold_name(line: &str) -> Option<&str> {
 /// follows. `None` if the heading is not found. Fence-aware (a `#` inside a code
 /// fence is not a heading). Used by the pin family to hash one section (#146),
 /// and the raw-span twin of the marker family's section gating.
+// In-tree production consumers migrated to the plural `section_spans` (GH #48
+// lanes A/G closed the duplicate-heading evasion for section rules and pins);
+// the singular first-occurrence resolver is kept — semantics deliberately
+// untouched — and remains exercised by tests.
+#[cfg_attr(not(test), allow(dead_code))]
 pub(crate) fn section_span<'a>(content: &'a str, heading_spec: &str) -> Option<&'a str> {
     let (want_level, want_text) = atx_heading(heading_spec)?;
     let mut start: Option<usize> = None;
@@ -259,6 +342,42 @@ pub(crate) fn section_span<'a>(content: &'a str, heading_spec: &str) -> Option<&
         }
     }
     start.map(|s| &content[s..])
+}
+
+/// EVERY heading-delimited span of `content` named by `heading_spec`, in
+/// document order — the plural sibling of [`section_span`] with the SAME
+/// matching semantics (exact heading-line equality: level AND text; fence-
+/// aware). Used by the section-structural family (GH #48 round 2) so content
+/// under a DUPLICATE same-level/same-text heading cannot evade a count or
+/// disjointness gate — the first-occurrence [`section_span`] is deliberately
+/// left unchanged (the pin family depends on its semantics; the pin
+/// duplicate-binding question is routed separately). Empty when no heading
+/// matches.
+pub(crate) fn section_spans<'a>(content: &'a str, heading_spec: &str) -> Vec<&'a str> {
+    let Some((want_level, want_text)) = atx_heading(heading_spec) else {
+        return Vec::new();
+    };
+    let mut spans = Vec::new();
+    let mut start: Option<usize> = None;
+    for (offset, line) in non_fenced_lines(content) {
+        if let Some((level, text)) = atx_heading(line) {
+            if let Some(s) = start {
+                if level <= want_level {
+                    spans.push(&content[s..offset]); // next same/higher heading ends it
+                    start = None;
+                }
+            }
+            // An adjacent duplicate both ends the previous span and starts the
+            // next one, so the two arms are sequential, not exclusive.
+            if start.is_none() && level == want_level && text == want_text {
+                start = Some(offset); // include the heading line itself
+            }
+        }
+    }
+    if let Some(s) = start {
+        spans.push(&content[s..]);
+    }
+    spans
 }
 
 /// The byte ranges of `line` covered by inline code spans (backtick-delimited),
@@ -397,6 +516,120 @@ mod tests {
         );
     }
 
+    // GH #48 finding 5 (lane B): CommonMark's 0–3 indent rule. A 4+-space (or
+    // tab) indented `# line` is CODE, not a heading — pre-fix the unbounded
+    // trim_start read `    # install deps` as an H1, silently truncating any
+    // section span (hence any section pin's hashed bytes) above it.
+    #[test]
+    fn atx_heading_honors_commonmark_indent_bound() {
+        assert_eq!(
+            atx_heading("   # x"),
+            Some((1, "x")),
+            "1–3 spaces still parse"
+        );
+        assert_eq!(atx_heading("  ## y"), Some((2, "y")));
+        assert_eq!(atx_heading("    # x"), None, "4 spaces = indented code");
+        assert_eq!(atx_heading("      # x"), None);
+        assert_eq!(
+            atx_heading("\t# x"),
+            None,
+            "a leading tab reaches the code indent"
+        );
+        assert_eq!(
+            atx_heading(" \t# x"),
+            None,
+            "a tab anywhere in the indent is code"
+        );
+        // Lanes-B-E review F5: only literal SPACES are heading indentation —
+        // exotic whitespace before `#` is paragraph text (the old trim_start
+        // swallowed any Unicode whitespace after the space count).
+        assert_eq!(atx_heading("\u{0c}# x"), None, "form feed is not indent");
+        assert_eq!(atx_heading("\u{a0}# x"), None, "NBSP is not indent");
+        assert_eq!(atx_heading(" \u{a0}# x"), None, "space then NBSP is text");
+    }
+
+    // GH #48 finding 5 (lane B, sibling minor): a fence indented 1–3 spaces is a
+    // fence (CommonMark); 4+ spaces (or a tab) is indented code, not a fence.
+    #[test]
+    fn fence_marker_honors_commonmark_indent_bound() {
+        assert_eq!(fence_marker("```"), Some(('`', 3)));
+        assert_eq!(
+            fence_marker("  ```sh"),
+            Some(('`', 3)),
+            "2-space indent toggles"
+        );
+        assert_eq!(fence_marker("   ~~~~"), Some(('~', 4)));
+        assert_eq!(fence_marker("    ```"), None, "4-space indent is code");
+        assert_eq!(fence_marker("\t```"), None, "tab indent is code");
+        // A heading inside a 2-space-indented fence is not a heading: the fence
+        // toggles, so the fenced line never reaches the heading scanner.
+        let body = "# Real\n  ```\n# fenced\n  ```\nafter\n";
+        let lines: Vec<&str> = non_fenced_lines(body).into_iter().map(|(_, l)| l).collect();
+        assert_eq!(
+            lines,
+            vec!["# Real", "after"],
+            "the fenced '# fenced' is masked"
+        );
+    }
+
+    // GH #48 finding 5 (lane B): a section containing an indented `# comment`
+    // (a shell snippet) runs to the REAL next heading — pre-fix the span
+    // terminated at the snippet, so a section pin hashed only the bytes above
+    // it and edits below never went stale.
+    #[test]
+    fn section_span_is_not_truncated_by_indented_code_comment() {
+        let doc = "\
+# Top\n\n## Contract\n\nintro\n\n    # install deps\n    make install\n\n\
+below the snippet\n\n## Next\n\ntail\n";
+        let span = section_span(doc, "## Contract").unwrap();
+        assert!(
+            span.contains("below the snippet"),
+            "the span includes the lines below the indented snippet; got {span:?}"
+        );
+        assert!(
+            span.contains("# install deps"),
+            "the snippet itself is inside"
+        );
+        assert!(
+            !span.contains("## Next"),
+            "the real next heading still ends it"
+        );
+        // The plural resolver agrees (same scanner).
+        assert_eq!(section_spans(doc, "## Contract"), vec![span]);
+    }
+
+    // GH #48 finding 6 (lane D): fenced-block byte ranges over a whole body,
+    // marker lines included, unclosed fence running to end of input, 1–3-space
+    // indented fences recognized.
+    #[test]
+    fn fenced_ranges_covers_blocks_including_markers() {
+        let body = "before\n```yaml\nlayer: chassis\n```\nafter\n  ~~~\nx\n";
+        let ranges = fenced_ranges(body);
+        assert_eq!(
+            ranges.len(),
+            2,
+            "one closed + one unclosed block: {ranges:?}"
+        );
+        let inside = body.find("layer").unwrap();
+        let marker = body.find("```yaml").unwrap();
+        let after = body.find("after").unwrap();
+        assert!(ranges[0].contains(&inside), "fenced content is covered");
+        assert!(
+            ranges[0].contains(&marker),
+            "the opening marker line is covered"
+        );
+        assert!(
+            !ranges.iter().any(|r| r.contains(&after)),
+            "prose between blocks is not"
+        );
+        let x = body.rfind('x').unwrap();
+        assert!(
+            ranges[1].contains(&x),
+            "an unclosed fence runs to end of input"
+        );
+        assert!(fenced_ranges("no fences here\n").is_empty());
+    }
+
     #[test]
     fn atx_heading_reports_level_and_text() {
         assert_eq!(
@@ -423,6 +656,29 @@ mod tests {
         // The last section runs to end of document.
         let b = section_span(doc, "## B").unwrap();
         assert!(b.starts_with("## B") && b.contains("bee"));
+    }
+
+    // GH #48 round 2: the plural resolver returns EVERY matching span in
+    // document order (same matching semantics as section_span), so content
+    // under a duplicate heading cannot evade a section-structural gate.
+    #[test]
+    fn section_spans_returns_every_matching_span() {
+        let doc = "## A\n\none\n\n## B\n\nbee\n\n## A\n\ntwo\n";
+        let spans = section_spans(doc, "## A");
+        assert_eq!(spans.len(), 2, "both `## A` spans resolve");
+        assert!(spans[0].contains("one") && !spans[0].contains("bee"));
+        assert!(spans[1].contains("two"), "the last span runs to end of doc");
+        // The first span equals the singular resolver's (semantics agree).
+        assert_eq!(spans[0], section_span(doc, "## A").unwrap());
+        // Adjacent duplicates: the second heading both ends span 1 and opens span 2.
+        let adj = "## A\n\nfirst\n\n## A\n\nsecond\n";
+        let spans = section_spans(adj, "## A");
+        assert_eq!(spans.len(), 2);
+        assert!(spans[0].contains("first") && !spans[0].contains("second"));
+        assert!(spans[1].contains("second"));
+        // No match → empty; a fenced `## A` is not a heading.
+        assert!(section_spans(doc, "## Nope").is_empty());
+        assert!(section_spans("```\n## A\n```\n", "## A").is_empty());
     }
 
     #[test]

@@ -40,6 +40,7 @@ pub mod limits;
 pub mod link;
 pub mod marker;
 pub(crate) mod markup;
+pub mod memo;
 pub mod output;
 pub mod pin;
 pub mod route;

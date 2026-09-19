@@ -56,6 +56,7 @@ use std::path::{Component, Path, PathBuf};
 use crate::confine::{confine_lexically, ConfinedPath};
 use crate::diagnostic::{Finding, Location, QuotedRegion, Severity};
 use crate::markup::{body_links, heading_slugs, slugify};
+use crate::memo::RefMemo;
 use crate::snapshot::{Captured, Snapshot};
 
 /// The confinement-accepted link targets of one file's body — the paths target
@@ -108,6 +109,7 @@ pub fn check_file(
     content: &str,
     body_offset: usize,
     root_relative: bool,
+    memo: &mut RefMemo,
     findings: &mut Vec<Finding>,
 ) {
     // The containing file's directory, root-relative — the base every
@@ -122,11 +124,12 @@ pub fn check_file(
     // This file's own heading slugs, for same-document `#fragment` links.
     let own_slugs = heading_slugs(body);
 
-    // Cache of a target file's heading slugs (None = target exists but is not
-    // anchor-checkable — non-markdown, or unreadable — so its fragment is not
-    // resolved), keyed by resolved root-relative path. Avoids re-reading a
-    // target linked from several places.
-    let mut target_slugs: HashMap<PathBuf, Option<HashSet<String>>> = HashMap::new();
+    // The target-slug cache (None = target exists but is not anchor-checkable —
+    // non-markdown, or unreadable — so its fragment is not resolved), keyed by
+    // resolved root-relative path, lives in the RUN-level memo (GH #48 finding
+    // 8): a target linked from several FILES is parsed once per run, not once
+    // per referring file. Only the parsed slug set is cached — every
+    // per-reference finding (E0110/E0111/W0048) still fires per reference.
 
     // One CommonMark parse yields every inline / reference-style / image link's
     // destination with its byte offset. Destinations inside a code span or a
@@ -143,7 +146,7 @@ pub fn check_file(
             &link.dest,
             &own_slugs,
             root_relative,
-            &mut target_slugs,
+            &mut memo.link_slugs,
             findings,
         );
     }
@@ -253,31 +256,74 @@ fn resolve_link(
             }
             let key = confined.as_path().to_path_buf();
             if !target_slugs.contains_key(&key) {
-                // Non-UTF8 markdown target: existence is verified, the
-                // fragment is not resolved (not flagged).
+                // `None` = non-UTF8 markdown target: exists, not anchor-checkable.
                 let slugs = c.text().map(|t| heading_slugs(markdown_body(t)));
                 target_slugs.insert(key.clone(), slugs);
             }
-            if let Some(Some(slugs)) = target_slugs.get(&key) {
-                if !slugs.contains(&slugify(&frag)) {
-                    findings.push(link_finding(
+            match target_slugs.get(&key) {
+                Some(Some(slugs)) => {
+                    if !slugs.contains(&slugify(&frag)) {
+                        findings.push(link_finding(
+                            path,
+                            content,
+                            at,
+                            "MDATRON-E0111",
+                            "dead-anchor",
+                            "this link's `#fragment` matches no heading in the target \
+                             file (fragments resolve via the GitHub heading-slug \
+                             algorithm)",
+                            dest,
+                        ));
+                    }
+                }
+                // Non-UTF8 markdown target with a fragment: the anchor check
+                // was SKIPPED — loud (W0048), never silent (GH #48 lane G; the
+                // pre-fix silent skip exit-0'd on `[x](bin.md#frag)`). The
+                // run-level cache may hold the unverifiable state; this fires
+                // PER REFERENCE regardless.
+                Some(None) => {
+                    let mut f = link_finding(
                         path,
                         content,
                         at,
-                        "MDATRON-E0111",
-                        "dead-anchor",
-                        "this link's `#fragment` matches no heading in the target \
-                         file (fragments resolve via the GitHub heading-slug \
-                         algorithm)",
+                        "MDATRON-W0048",
+                        "reference-target-unverified",
+                        "this link's target is present but unverifiable (its \
+                         bytes cannot be read as text), so its fragment was NOT \
+                         resolved — existence only",
                         dest,
-                    ));
+                    );
+                    f.severity = Severity::Warning;
+                    findings.push(f);
                 }
+                None => unreachable!("inserted above"),
             }
         }
-        // Opened but unreadable (non-UTF8, FIFO, directory): the target
-        // exists; its fragment (if any) is not resolved — the pre-#103
-        // posture, unchanged and quiet by necessity.
-        Some(Captured::OpenedUnreadable { .. }) => {}
+        // Opened but unreadable (read failure past the open, FIFO, directory):
+        // the target EXISTS; a fragment-bearing link into a markdown target
+        // needed its bytes, so that check was skipped — loud (W0048, GH #48
+        // lane G), mirroring the TooLarge arm's gating. A fragment-less link
+        // (or a non-markdown target) is fully verified by existence and stays
+        // clean.
+        Some(Captured::OpenedUnreadable { .. }) => {
+            let anchor_check_skipped =
+                anchor.is_some_and(|frag| !frag.is_empty()) && is_markdown(confined.as_path());
+            if anchor_check_skipped {
+                let mut f = link_finding(
+                    path,
+                    content,
+                    at,
+                    "MDATRON-W0048",
+                    "reference-target-unverified",
+                    "this link's target is present but unverifiable (its bytes \
+                     cannot be read as text), so its fragment was NOT resolved — \
+                     existence only",
+                    dest,
+                );
+                f.severity = Severity::Warning;
+                findings.push(f);
+            }
+        }
         // Over the size budget: the target exists. W0048 fires ONLY when a
         // check was actually skipped — a fragment-bearing link to a markdown
         // target (the anchor check needed the bytes). A fragment-less link,
@@ -315,18 +361,27 @@ fn resolve_link(
                 dest,
             ));
         }
-        Some(Captured::OpenIo { .. }) => {
-            findings.push(link_finding(
+        Some(Captured::OpenIo { error }) => {
+            // GH #48 lane G: OpenIo covers permission-denied-at-open too, so
+            // "does not exist" overclaimed — the engine message stays neutral
+            // (missing OR unopenable) and the OS detail rides in a quoted
+            // region, per the marking discipline (#165).
+            let mut f = link_finding(
                 path,
                 content,
                 at,
                 "MDATRON-E0110",
                 "dead-link-target",
-                "this link points at a relative path that does not exist in the \
-                 working tree (uncommitted content counts; no git history is \
-                 consulted)",
+                "this link's relative target is missing or could not be opened \
+                 in the working-tree snapshot (uncommitted content counts; no \
+                 git history is consulted)",
                 dest,
-            ));
+            );
+            f.quoted.push(QuotedRegion {
+                label: "os error".into(),
+                content: error.clone(),
+            });
+            findings.push(f);
         }
         // Never captured: an ENGINE defect in target discovery, not a dead
         // link — misreporting would send the adopter to fix a healthy file
@@ -471,7 +526,11 @@ fn split_fragment(dest: &str) -> (&str, Option<&str>) {
 
 /// True when `dest` carries a URL scheme (`http:`, `mailto:`, …) or is
 /// protocol-relative (`//host`) — an external reference the engine does not
-/// resolve. A scheme is `[A-Za-z][A-Za-z0-9+.-]*:`.
+/// resolve. A scheme is `[A-Za-z][A-Za-z0-9+.-]+:` — at least TWO characters
+/// (GH #48 lane G): a single-letter "scheme" (`C:/docs/x.md`, `C:\docs`) is a
+/// Windows drive path in practice, and classifying it external silently
+/// exempted it from resolution; it now resolves as a path (missing → `E0110`
+/// on unix; the absolute-prefix refusal `E0010` on windows).
 fn is_external(dest: &str) -> bool {
     if dest.starts_with("//") {
         return true;
@@ -484,7 +543,7 @@ fn is_external(dest: &str) -> bool {
     while i < bytes.len() {
         let b = bytes[i];
         if b == b':' {
-            return true;
+            return i >= 2;
         }
         if !(b.is_ascii_alphanumeric() || matches!(b, b'+' | b'.' | b'-')) {
             return false;
@@ -554,6 +613,13 @@ mod tests {
         assert!(!is_external("../b.md"));
         assert!(!is_external("#fragment"));
         assert!(!is_external("a.md#frag"));
+        // RED GATE (GH #48 lane G): a single-letter "scheme" is a Windows
+        // drive path, not a URL — it must RESOLVE (and fail confinement or
+        // existence), not silently classify as external.
+        assert!(!is_external("C:/docs/x.md"));
+        assert!(!is_external("C:\\docs\\x.md"));
+        // A two-letter scheme is still a scheme.
+        assert!(is_external("ab:whatever"));
     }
 
     #[test]

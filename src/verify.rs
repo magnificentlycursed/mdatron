@@ -891,6 +891,12 @@ fn run(
     // an unserved Layer-1 request (W0047) even where W0045's has-infra gate stays
     // its hand.
     let mut any_unrouted_schema_class = false;
+    // The RUN-level reference memo (GH #48 finding 8): one per run() invocation
+    // — created here, dropped at return, so incremental runs share no cross-run
+    // state. Cross-file targets (marker member sets, link anchor slugs) are
+    // parsed once per run instead of once per referring file, and marker
+    // rule-level findings report once per run per rule key.
+    let mut memo = crate::memo::RefMemo::default();
     for (path, rel) in &governed {
         // Incremental: skip files outside the scope.
         if let Some(scope) = &scope {
@@ -967,6 +973,7 @@ fn run(
             &patterns,
             &registry,
             schemas_dir_missing,
+            &mut memo,
             &mut findings,
         )?;
         // A validated file (#105): the audit signal counts files the per-file
@@ -1828,8 +1835,11 @@ fn literal_type(v: &crate::dsl::Value) -> Option<&'static str> {
 
 /// The static type of a comparison operand, or `None` when undecidable. A
 /// scalar literal yields its own type; a `$self.<field>` chain yields the
-/// field's declared schema type (only on a closed-object leaf). A bare `$self`,
-/// a binding/`$file`/`$project` chain, or any richer expression is `None`.
+/// field's declared schema type — a DECLARED-property walk with a single
+/// concrete type at the leaf, regardless of object openness (GH #48 lane G
+/// docs-align: the closed-object gate belongs to E0021's existence check). A
+/// bare `$self`, a binding/`$file`/`$project` chain, or any richer expression
+/// is `None`.
 fn operand_type(e: &Expr, schema: &Schema) -> Option<String> {
     match e {
         Expr::Lit(v) => literal_type(v).map(str::to_string),
@@ -2162,6 +2172,7 @@ fn verify_file(
     patterns: &[PatternFile],
     registry: &IndexRegistry,
     schemas_dir_missing: bool,
+    memo: &mut crate::memo::RefMemo,
     findings: &mut Vec<Finding>,
 ) -> Result<bool, VerifyError> {
     // Content comes from the immutable snapshot (#103): every governed file is
@@ -2229,10 +2240,11 @@ fn verify_file(
                     content,
                     0,
                     link_root,
+                    memo,
                     findings,
                 );
             }
-            crate::marker::check_file(snapshot, path, content, 0, marker_rules, findings);
+            crate::marker::check_file(snapshot, path, content, 0, marker_rules, memo, findings);
             crate::codecat::check_file(code_catalogs, path, content, 0, findings);
             crate::section::check_file(section_rules, path, content, 0, findings);
             let rel = path.strip_prefix(project_root).unwrap_or(path);
@@ -2291,12 +2303,21 @@ fn verify_file(
             content,
             body_offset,
             link_root,
+            memo,
             findings,
         );
     }
     {
         let body_offset = content.len() - body_len;
-        crate::marker::check_file(snapshot, path, content, body_offset, marker_rules, findings);
+        crate::marker::check_file(
+            snapshot,
+            path,
+            content,
+            body_offset,
+            marker_rules,
+            memo,
+            findings,
+        );
         crate::codecat::check_file(code_catalogs, path, content, body_offset, findings);
         crate::section::check_file(section_rules, path, content, body_offset, findings);
     }
@@ -3078,6 +3099,28 @@ mod tests {
         proj
     }
 
+    // COMPATIBILITY RED GATE (GH #48 lane-G review F2): for a frontmatter-bearing
+    // doc with ONE matching heading, the lane-G extraction (frontmatter-stripped +
+    // all-matching-spans) must hash the SAME bytes the pre-lane-G extraction did
+    // (first `section_span` over the FULL content — which is exactly how
+    // `section_pinned_project` records the sha). If `pin_section_bytes` ever
+    // drifts for this common case (e.g. trimming the body's leading newline),
+    // every existing single-heading section pin would falsely trip E0061 with the
+    // rest of the suite green — this test goes red instead.
+    #[test]
+    fn single_heading_section_pin_hash_is_unchanged_by_lane_g_extraction() {
+        let content = "---\nschema_class: phase-primer\nphase: phase-1a\n\
+                       relevant_domains: [se]\n---\n\n# Governed\n\n## Contract\n\n\
+                       terms here\n\n## Other\n\nrest\n";
+        let proj = section_pinned_project("pin-compat", content, "## Contract");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert!(
+            findings.iter().all(|f| !f.code.starts_with("MDATRON-E006")),
+            "an old-style single-heading section pin stays clean: {findings:?}"
+        );
+    }
+
     // RED GATE (#146, vsdd#20 P2): a section pin tracks only its heading-delimited
     // span — an edit INSIDE the section is stale (E0061), an edit OUTSIDE it is
     // clean (a whole-file pin would trip), and re-pin restores clean.
@@ -3126,6 +3169,53 @@ mod tests {
         );
     }
 
+    // RED GATE (GH #48 finding 5, lane B): a pinned section containing an
+    // indented `# comment` (a shell snippet — indented CODE per CommonMark)
+    // hashes its FULL span. Pre-fix, the unbounded-trim heading scanner read
+    // the snippet's `    # comment` as an H1 that terminated the span, so the
+    // recorded hash covered only the bytes above it and an edit BELOW the
+    // snippet silently passed (and `pin --update` re-recorded the same
+    // truncated hash).
+    #[test]
+    fn section_pin_covers_span_past_an_indented_code_comment() {
+        let content = "# Governed\n\n## Contract\n\nintro\n\n    # install deps\n    \
+                       make install\n\nbelow the snippet\n\n## Next\n\ntail\n";
+        let proj = section_pinned_project("pin-indented-code", content, "## Contract");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        assert!(
+            verify(&cfg)
+                .unwrap()
+                .iter()
+                .all(|f| !f.code.starts_with("MDATRON-E006")),
+            "fresh pin over the full span is clean"
+        );
+        // Edit BELOW the indented snippet, still inside the pinned section.
+        proj.write(
+            "governed.md",
+            "# Governed\n\n## Contract\n\nintro\n\n    # install deps\n    \
+             make install\n\nbelow the snippet CHANGED\n\n## Next\n\ntail\n",
+        );
+        let findings = verify(&cfg).unwrap();
+        assert!(
+            findings.iter().any(|f| f.code == "MDATRON-E0061"),
+            "an edit below the indented snippet trips the section pin; got {findings:?}"
+        );
+        // An edit OUTSIDE the section (under ## Next) still does not trip it.
+        crate::pin::update(&proj.0, false).unwrap();
+        proj.write(
+            "governed.md",
+            "# Governed\n\n## Contract\n\nintro\n\n    # install deps\n    \
+             make install\n\nbelow the snippet CHANGED\n\n## Next\n\ntail CHANGED\n",
+        );
+        assert!(
+            verify(&cfg)
+                .unwrap()
+                .iter()
+                .all(|f| f.code != "MDATRON-E0061"),
+            "the real next heading still bounds the span"
+        );
+    }
+
     // RED GATE (#146): a section pin whose named heading is gone (renamed / mistyped)
     // is E0063 — the pinned section cannot be located, loud rather than silent.
     #[test]
@@ -3143,6 +3233,74 @@ mod tests {
         assert!(
             findings.iter().any(|f| f.code == "MDATRON-E0063"),
             "a renamed/missing pinned heading is E0063; got {findings:?}"
+        );
+    }
+
+    // RED GATE (GH #48 lane G, G3.1a): a section pin hashes over ALL spans
+    // matching its heading (document order, concatenated) — an edit under a
+    // SECOND duplicate-heading span trips E0061. Pre-fix only the first span
+    // was hashed, so content under the duplicate evaded the pin (the same
+    // evasion lane A closed for section rules).
+    #[test]
+    fn section_pin_covers_duplicate_heading_spans() {
+        let content = "# Governed\n\n## Contract\n\nfirst part\n\n## Other\n\nmiddle\n\n\
+                       ## Contract\n\nsecond part\n";
+        let proj = section_pinned_project("pin-dup-span", content, "## Contract");
+        // Re-record through the production extraction (both spans).
+        crate::pin::update(&proj.0, false).unwrap();
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        assert!(
+            verify(&cfg)
+                .unwrap()
+                .iter()
+                .all(|f| !f.code.starts_with("MDATRON-E006")),
+            "a freshly recorded duplicate-span pin is clean"
+        );
+        // Edit under the SECOND `## Contract` span only.
+        proj.write(
+            "governed.md",
+            "# Governed\n\n## Contract\n\nfirst part\n\n## Other\n\nmiddle\n\n\
+             ## Contract\n\nsecond part CHANGED\n",
+        );
+        let findings = verify(&cfg).unwrap();
+        assert!(
+            findings.iter().any(|f| f.code == "MDATRON-E0061"),
+            "an edit under the duplicate span trips the pin; got {findings:?}"
+        );
+        // An edit outside every matching span still does not trip it.
+        crate::pin::update(&proj.0, false).unwrap();
+        proj.write(
+            "governed.md",
+            "# Governed\n\n## Contract\n\nfirst part\n\n## Other\n\nmiddle CHANGED\n\n\
+             ## Contract\n\nsecond part CHANGED\n",
+        );
+        assert!(
+            verify(&cfg)
+                .unwrap()
+                .iter()
+                .all(|f| f.code != "MDATRON-E0061"),
+            "out-of-section edits stay clean"
+        );
+    }
+
+    // RED GATE (GH #48 lane G, G3.1b): frontmatter is stripped before span
+    // resolution — a `# x` COMMENT line inside frontmatter YAML is not a
+    // heading and must not satisfy a `# x` section spec. When only the
+    // frontmatter matches, the section cannot be located → E0063 (pre-fix the
+    // frontmatter line silently captured the span).
+    #[test]
+    fn frontmatter_heading_lookalike_does_not_satisfy_a_section_pin() {
+        let content = "---\n# x\ntitle: t\n---\n\nbody with no such heading\n";
+        let proj = section_pinned_project("pin-fm-collision", content, "# x");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert!(
+            findings.iter().any(|f| f.code == "MDATRON-E0063"),
+            "only the frontmatter matches the spec -> section not found; got {findings:?}"
+        );
+        assert!(
+            findings.iter().all(|f| f.code != "MDATRON-E0061"),
+            "no stale-pin verdict over a span that cannot be located; got {findings:?}"
         );
     }
 
@@ -4366,6 +4524,71 @@ pattern:
         assert!(findings.iter().all(|f| f.code != "MDATRON-E0100"));
     }
 
+    // RED GATE (GH #48 lane G, G3.2): the three distinct E0101 defects carry
+    // three distinct engine messages — line 0 (a 1-based-ness error), an
+    // inverted range, and a range genuinely past the target's end.
+    #[test]
+    fn e0101_messages_distinguish_zero_inverted_and_past_end() {
+        // src-file.rs has 5 lines (cite_project fixture).
+        let cases: [(&str, &str, &str); 3] = [
+            ("cite-msg-zero", "See src-file.rs:0 here.\n", "1-based"),
+            (
+                "cite-msg-inverted",
+                "See src-file.rs:5-2 here.\n",
+                "start exceeds its end",
+            ),
+            (
+                "cite-msg-pastend",
+                "See src-file.rs:9 here.\n",
+                "past its end",
+            ),
+        ];
+        for (label, body, expect) in cases {
+            let proj = cite_project(label, body);
+            let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+            let f = findings
+                .iter()
+                .find(|f| f.code == "MDATRON-E0101")
+                .unwrap_or_else(|| panic!("{label}: expected E0101; got {findings:?}"));
+            assert!(
+                f.message.contains(expect),
+                "{label}: the message names the specific defect ({expect}); got {:?}",
+                f.message
+            );
+        }
+    }
+
+    // RED GATE (GH #48 lane G, G2.2): a citation into a PRESENT-but-unverifiable
+    // (non-UTF8) target is W0048 per citation — the check was skipped, loudly —
+    // never a silent pass and never a false dead-citation.
+    #[test]
+    fn citation_into_non_utf8_target_is_w0048() {
+        let proj = cite_project("cite-nonutf8", "Per bin-file.rs:3 this holds.\n");
+        std::fs::write(proj.0.join("bin-file.rs"), b"\xff\xfeline\n").unwrap();
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        let w: Vec<_> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-W0048")
+            .collect();
+        assert_eq!(
+            w.len(),
+            1,
+            "the skipped range check is loud; got {findings:?}"
+        );
+        assert_eq!(w[0].severity, Severity::Warning);
+        assert!(
+            w[0].message.contains("unverifiable"),
+            "the message names the unverifiable state: {:?}",
+            w[0].message
+        );
+        assert!(
+            findings
+                .iter()
+                .all(|f| f.code != "MDATRON-E0100" && f.code != "MDATRON-E0101"),
+            "a present target is not dead and its range is not judged; got {findings:?}"
+        );
+    }
+
     // #86: uncommitted content COUNTS (working tree authoritative, no git):
     // a citation to a file that was never committed anywhere is live.
     #[test]
@@ -4507,12 +4730,12 @@ pattern:
         assert_eq!(codes_of(&findings, "MDATRON-E0010"), 1, "{findings:?}");
     }
 
-    // GH #37 phase-3 F-1: `link_root: true` WITHOUT `links: true` is inert —
-    // the link family does no work at all, so a leading-slash link produces no
-    // link-family finding (the flag only affects HOW the link check resolves,
-    // never whether it runs).
+    // RED GATE (GH #48 lane G, superseding GH #37 phase-3 F-1's silent
+    // inertness): `link_root: true` WITHOUT `links: true` configures a check
+    // that never runs — a dead config knob, statically knowable, so it is now
+    // refused at route load instead of silently ignored.
     #[test]
-    fn link_root_without_links_is_inert() {
+    fn link_root_without_links_is_a_load_error() {
         let proj = TempProject::new("link-root-inert");
         proj.write(
             ".mdatron/schemas/phase-primer.json",
@@ -4532,14 +4755,12 @@ pattern:
             "---\nschema_class: phase-primer\nphase: phase-1a\nrelevant_domains: [se]\n---\nSee [x](/docs/gone.md) and [y](also-gone.md).\n",
         );
         let cfg = VerifyConfig::from_project(&proj.0).unwrap();
-        let findings = verify(&cfg).unwrap();
-        for code in ["MDATRON-E0110", "MDATRON-E0111", "MDATRON-E0010"] {
-            assert_eq!(
-                codes_of(&findings, code),
-                0,
-                "{code} should not fire; got {findings:?}"
-            );
-        }
+        let err = verify(&cfg).expect_err("link_root without links must be refused at load");
+        let msg = format!("{err}");
+        assert!(
+            msg.contains("link_root") && msg.contains("links: true"),
+            "the refusal names the flag and its requirement; got {msg}"
+        );
     }
 
     // GH #37 phase-3 F-2: a percent-encoded `#fragment` resolves the heading
@@ -4920,6 +5141,91 @@ pattern:
         );
     }
 
+    // RED GATE (GH #48 lane G, G2.1 — triage-confirmed exit 0 pre-fix): a
+    // fragment-bearing link into a PRESENT-but-non-UTF8 markdown target is
+    // W0048 per reference (the anchor check was skipped, loudly) — never a
+    // silent pass, never a false dead-anchor/dead-target. A fragment-less link
+    // to the same target stays clean (existence verified). The run-level slug
+    // cache serves the second referring file, and its per-reference W0048
+    // still fires there.
+    #[test]
+    fn fragment_into_non_utf8_target_is_w0048_per_reference() {
+        let proj = link_project(
+            "link-nonutf8",
+            "Bad [x](../bin.md#some-frag) and plain [y](../bin.md).\n",
+        );
+        proj.write(
+            "docs/2026-07-28-doc.md",
+            "---\nschema_class: phase-primer\nphase: phase-1a\nrelevant_domains: [se]\n---\n\
+             Also [z](../bin.md#some-frag).\n",
+        );
+        // Root-level bin.md: present, markdown-named, NOT valid UTF-8, and
+        // outside the walked docs/** set (so it is never a governed body).
+        std::fs::write(proj.0.join("bin.md"), b"# Caf\xe9 heading\n").unwrap();
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        let w: Vec<_> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-W0048")
+            .collect();
+        assert_eq!(
+            w.len(),
+            2,
+            "one W0048 per fragment-bearing reference (both files), none for \
+             the fragment-less link; got {findings:?}"
+        );
+        assert!(w.iter().all(|f| f.severity == Severity::Warning));
+        assert!(
+            findings
+                .iter()
+                .all(|f| f.code != "MDATRON-E0111" && f.code != "MDATRON-E0110"),
+            "a present-but-unverifiable target is neither dead nor a dead \
+             anchor; got {findings:?}"
+        );
+    }
+
+    // RED GATE (GH #48 lane G, G3.3): a single-letter "scheme" (`C:/…`, a
+    // Windows drive path) is NOT an external URL — it resolves as a path and
+    // yields a link-family finding (E0110 missing on unix; the absolute-prefix
+    // refusal E0010 on windows). Pre-fix it classified external and was
+    // silently exempted from resolution.
+    #[test]
+    fn single_letter_drive_link_resolves_instead_of_classifying_external() {
+        let proj = link_project("link-drive", "See [x](C:/docs/x.md).\n");
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        assert_eq!(
+            codes_of(&findings, "MDATRON-E0110") + codes_of(&findings, "MDATRON-E0010"),
+            1,
+            "the drive-path link is resolved and flagged on the host platform; \
+             got {findings:?}"
+        );
+    }
+
+    // GH #48 lane G (G2.4): the E0110 message no longer claims the target
+    // "does not exist" (OpenIo covers permission-refused opens too) — it says
+    // missing-or-unopenable and carries the OS error detail in a quoted region.
+    #[test]
+    fn e0110_message_is_neutral_and_quotes_the_os_error() {
+        let proj = link_project("link-dead-os", "See [x](gone.md).\n");
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        let f = findings
+            .iter()
+            .find(|f| f.code == "MDATRON-E0110")
+            .unwrap_or_else(|| panic!("expected E0110; got {findings:?}"));
+        assert!(
+            f.message.contains("missing or could not be opened")
+                && !f.message.contains("does not exist"),
+            "neutral engine wording: {:?}",
+            f.message
+        );
+        assert!(
+            f.quoted
+                .iter()
+                .any(|q| q.label == "os error" && !q.content.is_empty()),
+            "the OS detail rides in quoted[]; got {:?}",
+            f.quoted
+        );
+    }
+
     // ── marker-line reference family (#147, vsdd GH#20 P3 / GH#22) ──────────
     //
     // A body line matching a declared pattern names a reference whose captured
@@ -5148,6 +5454,490 @@ pattern:
         assert!(!marker_families(&opted_out).marker.is_active());
     }
 
+    // RED GATE (GH #48 finding 3): a valid target_section spec whose heading was
+    // RENAMED in the target doc is exactly ONE E0114 for the governed file and
+    // ZERO E0112 — pre-fix, the permanently-empty member set mass-flagged every
+    // healthy reference as a dead one.
+    #[test]
+    fn renamed_target_section_is_one_e0114_not_mass_e0112() {
+        let routes = r###"routes:
+- files: "docs/**/*.md"
+  governed_by: GOVERNING.md
+  marker_rules:
+    - pattern: "^Provenance: (.+)$"
+      element: list-item-bold-name
+      target_doc: refs/contract.md
+      target_section: "## Decomposition (phase 1c)"
+"###;
+        // TWO healthy references — pre-fix, both were blamed E0112.
+        let proj = marker_project(
+            "marker-section-renamed",
+            "Provenance: Slice 1 — Live self-governance: the tracker join\n\n\
+             Provenance: Slice 2 — First guardrail\n",
+            routes,
+        );
+        // The heading is renamed in the target doc; the rule's spec no longer
+        // matches, though the referenced members still exist under it.
+        proj.write(
+            "refs/contract.md",
+            "# Contract\n\n## Decomposition (renamed)\n\n\
+             - **Slice 1 — Live self-governance: the tracker join.** first\n\
+             - **Slice 2 — First guardrail.** second\n",
+        );
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        let e0114: Vec<_> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0114")
+            .collect();
+        assert_eq!(
+            e0114.len(),
+            1,
+            "exactly one E0114 per (rule, governed file); got {findings:?}"
+        );
+        assert!(e0114[0]
+            .quoted
+            .iter()
+            .any(|q| q.label == "target_section" && q.content == "## Decomposition (phase 1c)"));
+        assert!(
+            findings.iter().all(|f| f.code != "MDATRON-E0112"),
+            "healthy references must not be mass-flagged for a renamed target \
+             heading; got {findings:?}"
+        );
+    }
+
+    // RED GATE (GH #48 finding 8, crosslink #173): rule-level marker findings
+    // report ONCE PER RUN per rule key, not once per governed file — TWO
+    // governed files on a route whose target_section heading is renamed yield
+    // exactly ONE E0114 (pre-memo: two, one per file), located at the first
+    // file the walk encounters.
+    #[test]
+    fn renamed_target_section_reports_one_e0114_per_run_across_files() {
+        let routes = r###"routes:
+- files: "docs/**/*.md"
+  governed_by: GOVERNING.md
+  marker_rules:
+    - pattern: "^Provenance: (.+)$"
+      element: list-item-bold-name
+      target_doc: refs/contract.md
+      target_section: "## Decomposition (phase 1c)"
+"###;
+        let proj = marker_project(
+            "memo-e0114-once",
+            "Provenance: Slice 1 — Live self-governance: the tracker join\n",
+            routes,
+        );
+        proj.write(
+            "docs/second-plan.md",
+            "Provenance: Slice 2 — First guardrail\n",
+        );
+        proj.write(
+            "refs/contract.md",
+            "# Contract\n\n## Decomposition (renamed)\n\n\
+             - **Slice 1 — Live self-governance: the tracker join.** first\n\
+             - **Slice 2 — First guardrail.** second\n",
+        );
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        let e0114: Vec<_> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0114")
+            .collect();
+        assert_eq!(
+            e0114.len(),
+            1,
+            "one E0114 per run per rule key, not per governed file; got {findings:?}"
+        );
+        assert!(
+            e0114[0].location.file.ends_with("docs/build-plan.md"),
+            "located at the first encountering file in walk order; got {:?}",
+            e0114[0].location.file
+        );
+        assert!(
+            findings.iter().all(|f| f.code != "MDATRON-E0112"),
+            "no mass-flagging in either file; got {findings:?}"
+        );
+    }
+
+    // RED GATE (GH #48 finding 8, relocated by lane G): a confinement-escaping
+    // target_doc reports exactly ONE E0011 — now at route LOAD, located at
+    // routes.yaml (the rule is dropped fail-closed), not per governed file and
+    // not at the first governed file. The dropped rule's lines are skipped, so
+    // no reference is mass-flagged dead against a rule that never loaded.
+    #[test]
+    fn escaping_target_doc_is_dropped_at_load_with_one_e0011() {
+        let routes = r#"routes:
+- files: "docs/**/*.md"
+  governed_by: GOVERNING.md
+  marker_rules:
+    - pattern: "^Provenance: (.+)$"
+      element: list-item-bold-name
+      target_doc: ../../outside.md
+"#;
+        let proj = marker_project("memo-e0011-once", "Provenance: Anything\n", routes);
+        proj.write("docs/second-plan.md", "Provenance: Something Else\n");
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        let e0011: Vec<_> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0011")
+            .collect();
+        assert_eq!(
+            e0011.len(),
+            1,
+            "one confinement finding per run, at load; got {findings:?}"
+        );
+        assert!(
+            e0011[0].location.file.ends_with(".mdatron/routes.yaml"),
+            "the misconfig is located at the route table, not a governed file; got {:?}",
+            e0011[0].location.file
+        );
+        assert!(
+            e0011[0]
+                .quoted
+                .iter()
+                .any(|q| q.label == "target_doc" && q.content == "../../outside.md"),
+            "the escaping path rides in quoted[]; got {:?}",
+            e0011[0].quoted
+        );
+        assert!(
+            findings.iter().all(|f| f.code != "MDATRON-E0112"),
+            "a dropped rule's lines are skipped, never flagged dead; got {findings:?}"
+        );
+    }
+
+    // GH #48 finding 8 correctness: the memoized member set serving the SECOND
+    // file equals a fresh resolution — healthy references in both files stay
+    // clean, and a dead reference in file 2 still fires E0112 AT FILE 2 (the
+    // per-line finding is never deduped, and the cached set is not stale).
+    #[test]
+    fn memoized_second_file_resolution_matches_fresh() {
+        let both_healthy = marker_project(
+            "memo-both-clean",
+            "Provenance: Slice 1 — Live self-governance: the tracker join\n",
+            MARKER_ROUTE_OPTIN,
+        );
+        both_healthy.write(
+            "docs/second-plan.md",
+            "Provenance: Slice 2 — First guardrail\n",
+        );
+        let clean = verify(&VerifyConfig::from_project(&both_healthy.0).unwrap()).unwrap();
+        assert!(
+            clean.iter().all(|f| f.code != "MDATRON-E0112"),
+            "healthy references in both files resolve via the memoized set; got {clean:?}"
+        );
+
+        let dead_in_second = marker_project(
+            "memo-dead-second",
+            "Provenance: Slice 1 — Live self-governance: the tracker join\n",
+            MARKER_ROUTE_OPTIN,
+        );
+        dead_in_second.write("docs/second-plan.md", "Provenance: No Such Slice\n");
+        let findings = verify(&VerifyConfig::from_project(&dead_in_second.0).unwrap()).unwrap();
+        let e0112: Vec<_> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0112")
+            .collect();
+        assert_eq!(
+            e0112.len(),
+            1,
+            "only the dead reference flags; got {findings:?}"
+        );
+        assert!(
+            e0112[0].location.file.ends_with("docs/second-plan.md"),
+            "the per-line finding stays at file 2; got {:?}",
+            e0112[0].location.file
+        );
+    }
+
+    // RED GATE (GH #48 lane G, G2.3): a marker rule whose target_doc is
+    // PRESENT but non-UTF8 used to yield an EMPTY member set — every matching
+    // reference line was falsely flagged dead (E0112 "resolves to no
+    // element"). It is now W0048 per matching line: the check was skipped,
+    // loudly, and no healthy reference is blamed.
+    #[test]
+    fn marker_references_into_non_utf8_target_are_w0048_not_e0112() {
+        let proj = marker_project(
+            "marker-nonutf8-target",
+            "Provenance: Slice 1 — Live self-governance: the tracker join\n\n\
+             Provenance: Slice 2 — First guardrail\n",
+            MARKER_ROUTE_OPTIN,
+        );
+        // Replace the target with PRESENT-but-non-UTF8 bytes.
+        std::fs::write(
+            proj.0.join("refs/contract.md"),
+            b"# Caf\xe9\n- **Slice 1.**\n",
+        )
+        .unwrap();
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        let w: Vec<_> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-W0048")
+            .collect();
+        assert_eq!(
+            w.len(),
+            2,
+            "one W0048 per matching reference line (never deduped by the run \
+             memo); got {findings:?}"
+        );
+        assert!(w.iter().all(|f| f.severity == Severity::Warning));
+        assert!(
+            findings.iter().all(|f| f.code != "MDATRON-E0112"),
+            "an unverifiable target is not a dead reference; got {findings:?}"
+        );
+    }
+
+    // RED GATE (GH #48 finding 8, parse-count probe): a shared target_doc is
+    // parsed ONCE for two referring files — the second check_file call is a
+    // memo hit. Driven directly so the memo is observable.
+    #[test]
+    fn marker_target_parses_once_for_two_referring_files() {
+        let proj = TempProject::new("memo-parse-once");
+        proj.write("refs/contract.md", MARKER_TARGET);
+        let mut snapshot = crate::snapshot::Snapshot::new(MAX_FILE_BYTES, MAX_FILE_BYTES);
+        let confined = crate::confine::confine_lexically(Path::new("refs/contract.md")).unwrap();
+        snapshot.capture(&proj.0, &confined).unwrap();
+
+        let rule = crate::route::MarkerRule {
+            pattern: regex_lite::Regex::new("^Provenance: (.+)$").unwrap(),
+            element: crate::route::ElementClass::ListItemBoldName,
+            target_doc: "refs/contract.md".into(),
+            target_section: None,
+        };
+        let mut memo = crate::memo::RefMemo::default();
+        let mut findings = Vec::new();
+        crate::marker::check_file(
+            &snapshot,
+            Path::new("docs/a.md"),
+            "Provenance: Slice 1 — Live self-governance: the tracker join\n",
+            0,
+            &[&rule],
+            &mut memo,
+            &mut findings,
+        );
+        crate::marker::check_file(
+            &snapshot,
+            Path::new("docs/b.md"),
+            "Provenance: Slice 2 — First guardrail\n",
+            0,
+            &[&rule],
+            &mut memo,
+            &mut findings,
+        );
+        assert!(
+            findings.is_empty(),
+            "both references resolve; got {findings:?}"
+        );
+        assert_eq!(
+            memo.marker_resolves, 1,
+            "the shared target resolves once; the second file is a memo hit"
+        );
+    }
+
+    // RED GATE (GH #48 finding 8, link leg — lane-F review F1): the anchor/slug
+    // cache is RUN-level, observable as one memo entry serving two referring
+    // files. A function-local cache leaves the memo empty, so this fails if the
+    // hoisting is ever re-localized; per-reference findings still fire per file.
+    #[test]
+    fn link_slug_cache_is_run_level_for_two_referring_files() {
+        let proj = TempProject::new("memo-link-hoist");
+        proj.write("refs/target.md", "# Title\n\n## Real Heading\n\nbody\n");
+        let mut snapshot = crate::snapshot::Snapshot::new(MAX_FILE_BYTES, MAX_FILE_BYTES);
+        let confined = crate::confine::confine_lexically(Path::new("refs/target.md")).unwrap();
+        snapshot.capture(&proj.0, &confined).unwrap();
+
+        let mut memo = crate::memo::RefMemo::default();
+        let mut findings = Vec::new();
+        crate::link::check_file(
+            &snapshot,
+            &proj.0,
+            &proj.0.join("a.md"),
+            "[ok](refs/target.md#real-heading)\n",
+            0,
+            false,
+            &mut memo,
+            &mut findings,
+        );
+        assert!(findings.is_empty(), "file 1 resolves clean: {findings:?}");
+        crate::link::check_file(
+            &snapshot,
+            &proj.0,
+            &proj.0.join("b.md"),
+            "[ok](refs/target.md#real-heading)\n[dead](refs/target.md#missing)\n",
+            0,
+            false,
+            &mut memo,
+            &mut findings,
+        );
+        assert_eq!(
+            findings
+                .iter()
+                .filter(|f| f.code == "MDATRON-E0111")
+                .count(),
+            1,
+            "file 2's dead anchor still fires from the cached slug set: {findings:?}"
+        );
+        assert_eq!(
+            memo.link_slugs.len(),
+            1,
+            "one shared target = one RUN-level cache entry (a function-local \
+             cache leaves the memo empty): {:?}",
+            memo.link_slugs.keys()
+        );
+    }
+
+    // GH #48 finding 8, link leg (behavior preservation): with two files
+    // fragment-linking one target, per-reference findings still fire per file —
+    // a dead anchor in file 2 is caught. (The HOISTING itself is pinned by the
+    // direct-drive probe below — this end-to-end test passes with a
+    // function-local cache too; lane-F review F1.)
+    #[test]
+    fn link_anchor_cache_serves_second_file_and_still_flags() {
+        let proj = link_project("memo-link-slugs", "Good [a](target.md#real-heading).\n");
+        proj.write(
+            "docs/2026-07-28-doc.md",
+            "---\nschema_class: phase-primer\nphase: phase-1a\nrelevant_domains: [se]\n---\n\
+             Bad [b](target.md#no-such-heading).\n",
+        );
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        let e0111: Vec<_> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0111")
+            .collect();
+        assert_eq!(
+            e0111.len(),
+            1,
+            "the good anchor resolves, the dead anchor in the second file \
+             still flags off the cached slug set; got {findings:?}"
+        );
+        assert!(
+            e0111[0].location.file.ends_with("docs/2026-07-28-doc.md"),
+            "the per-reference finding stays at its own file; got {:?}",
+            e0111[0].location.file
+        );
+    }
+
+    // RED GATE (GH #48 finding 3, load-time leg): a target_section spec written
+    // without the ATX heading marker can never match any heading — refused at
+    // route load, never shipped as a mass-flagging misconfig.
+    #[test]
+    fn marker_target_section_without_heading_marker_is_a_load_error() {
+        let routes = r#"routes:
+- files: "docs/**/*.md"
+  governed_by: GOVERNING.md
+  marker_rules:
+    - pattern: "^Provenance: (.+)$"
+      element: list-item-bold-name
+      target_doc: refs/contract.md
+      target_section: "Decomposition (phase 1c)"
+"#;
+        let proj = marker_project("marker-bare-section-spec", "prose\n", routes);
+        let err = match crate::route::load(&proj.0) {
+            Err(e) => e,
+            Ok(_) => panic!("a bare target_section spec must be refused at load"),
+        };
+        let msg = format!("{err}");
+        assert!(
+            msg.contains("target_section") && msg.contains("ATX heading"),
+            "the error names the field and the required shape; got {msg}"
+        );
+    }
+
+    // RED GATE (GH #48 round 2 nit): a target_section of bare `"##"` parses as
+    // a heading but has EMPTY text — it can never usefully match; refused at
+    // route load like a bare spec.
+    #[test]
+    fn marker_target_section_with_empty_heading_text_is_a_load_error() {
+        let routes = r###"routes:
+- files: "docs/**/*.md"
+  governed_by: GOVERNING.md
+  marker_rules:
+    - pattern: "^Provenance: (.+)$"
+      element: list-item-bold-name
+      target_doc: refs/contract.md
+      target_section: "##"
+"###;
+        let proj = marker_project("marker-empty-section-spec", "prose\n", routes);
+        let err = match crate::route::load(&proj.0) {
+            Err(e) => e,
+            Ok(_) => panic!("an empty-text target_section spec must be refused at load"),
+        };
+        assert!(
+            format!("{err}").contains("non-empty"),
+            "the error demands non-empty heading text; got {err}"
+        );
+    }
+
+    // RED GATE (GH #48 round 2): a load-accepted OPTIONAL capture group that
+    // does not participate on a matched line is a loud E0112 (the pattern
+    // matched, but captured no name) — not a silent per-line skip. A sibling
+    // line where the group participates still checks normally.
+    #[test]
+    fn non_participating_capture_group_is_a_loud_e0112() {
+        let routes = r#"routes:
+- files: "docs/**/*.md"
+  governed_by: GOVERNING.md
+  marker_rules:
+    - pattern: "^Provenance:( .+)?$"
+      element: list-item-bold-name
+      target_doc: refs/contract.md
+"#;
+        // Line 1: the group does not participate (nothing captured). Line 3: it
+        // participates with a leading space — ` Slice 2 — First guardrail`
+        // resolves (normalize_name trims), proving the rule still checks.
+        let proj = marker_project(
+            "marker-optional-group",
+            "Provenance:\n\nProvenance: Slice 2 — First guardrail\n",
+            routes,
+        );
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        let e0112: Vec<_> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0112")
+            .collect();
+        assert_eq!(
+            e0112.len(),
+            1,
+            "exactly the captured-nothing line flags; got {findings:?}"
+        );
+        let f = e0112[0];
+        assert!(
+            f.message.contains("captured no name"),
+            "the captured-nothing shape has its own engine-authored message: {:?}",
+            f.message
+        );
+        assert!(
+            f.quoted
+                .iter()
+                .any(|q| q.label == "pattern" && q.content == "^Provenance:( .+)?$"),
+            "the pattern rides in quoted[]; got {:?}",
+            f.quoted
+        );
+        assert_eq!(f.location.line, 1, "located at the captured-nothing line");
+    }
+
+    // RED GATE (GH #48 finding 2): a marker pattern with no capture group can
+    // never name a reference — previously every matching line was a silent
+    // per-line no-op; now refused at route load.
+    #[test]
+    fn marker_pattern_without_capture_group_is_a_load_error() {
+        let routes = r#"routes:
+- files: "docs/**/*.md"
+  governed_by: GOVERNING.md
+  marker_rules:
+    - pattern: "^Provenance: .+$"
+      element: list-item-bold-name
+      target_doc: refs/contract.md
+"#;
+        let proj = marker_project("marker-no-capture", "Provenance: anything\n", routes);
+        let err = match crate::route::load(&proj.0) {
+            Err(e) => e,
+            Ok(_) => panic!("a capture-group-less marker pattern must be refused at load"),
+        };
+        let msg = format!("{err}");
+        assert!(
+            msg.contains("capture group"),
+            "the error names the missing capture group; got {msg}"
+        );
+    }
+
     // ── adopter code-catalog family (#148, vsdd GH#20 P4) ───────────────────
     // Spine tests (token grammar / severity pending vsdd-cli#27): a cited
     // adopter code resolves against a declared comprehensive catalog, or blocks
@@ -5264,6 +6054,41 @@ catalogs:
         );
     }
 
+    // RED GATE (GH #48 lane G): a catalog with an EMPTY namespace can never
+    // match a token — declared-but-inert while the families report says active
+    // (the fail-open class). Refused at load.
+    #[test]
+    fn empty_code_catalog_namespace_is_a_load_error() {
+        let proj = code_catalog_project(
+            "codecat-empty-ns",
+            "prose\n",
+            "mdatron_format_version: 1\ncatalogs:\n  - namespace: \"\"\n    comprehensive: true\n    codes: [\"E0001\"]\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let err = format!("{}", verify(&cfg).unwrap_err());
+        assert!(
+            err.contains("namespace") && err.contains("non-empty"),
+            "an empty namespace is refused at load; got {err}"
+        );
+    }
+
+    // RED GATE (GH #48 lane G): two catalogs claiming ONE prefix is ambiguous
+    // authority (which codes: list is the closed legal set?). Refused at load.
+    #[test]
+    fn duplicate_code_catalog_namespace_is_a_load_error() {
+        let proj = code_catalog_project(
+            "codecat-dup-ns",
+            "prose\n",
+            "mdatron_format_version: 1\ncatalogs:\n  - namespace: \"VSDD-\"\n    codes: [\"E0001\"]\n  - namespace: \"VSDD-\"\n    codes: [\"E0002\"]\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let err = format!("{}", verify(&cfg).unwrap_err());
+        assert!(
+            err.contains("duplicate") && err.contains("VSDD-"),
+            "a duplicated namespace is refused at load; got {err}"
+        );
+    }
+
     // ── section-structural family (#157, vsdd GH#20 P5 / GH#29) ─────────────
     // Rules pinned to vsdd's live build-plan shape: count of open-phase H3s in
     // `## Requirements` (>= 1, an empty section is the retire trigger) and slice
@@ -5350,6 +6175,70 @@ catalogs:
         assert!(
             findings.iter().any(|f| f.code == "MDATRON-E0121"),
             "Slice 2 open AND complete is not disjoint; got {findings:?}"
+        );
+    }
+
+    // RED GATE (GH #48 finding 1, CRITICAL): a count predicate satisfied by 0
+    // (`== 0`) used to PASS silently when the named section is absent — the
+    // fail-open case. It must be E0122 end to end.
+    #[test]
+    fn absent_section_with_count_zero_predicate_is_e0122_end_to_end() {
+        let proj = section_project(
+            "section-absent-zero",
+            "# Build plan\n\nno sections at all.\n",
+        );
+        proj.write(
+            ".mdatron/routes.yaml",
+            r###"routes:
+- files: "plan/**/*.md"
+  governed_by: GOVERNING.md
+  section_rules:
+    - section: "## Open questions"
+      element: h3
+      match: '^### Q\d+'
+      count: "== 0"
+"###,
+        );
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        let f = findings
+            .iter()
+            .find(|f| f.code == "MDATRON-E0122")
+            .unwrap_or_else(|| panic!("expected E0122 on the absent section; got {findings:?}"));
+        assert!(f
+            .quoted
+            .iter()
+            .any(|q| q.label == "section" && q.content == "## Open questions"));
+        assert!(
+            findings.iter().all(|f| f.code != "MDATRON-E0120"),
+            "absence is not a count verdict; got {findings:?}"
+        );
+    }
+
+    // RED GATE (GH #48 finding 1): a renamed `## Requirements` heading reports
+    // E0122 from the count rule AND the disjoint operand naming it — never an
+    // E0120-with-count-0, and never a disjointness verdict (pre-fix the empty
+    // sets compared trivially disjoint, hiding a genuine Slice 2 overlap).
+    #[test]
+    fn renamed_section_is_e0122_not_e0120_or_a_disjoint_verdict() {
+        let plan = "# Build plan\n\n## Renamed Requirements\n\n\
+                    ### Phase 2: Slice 2 (sequential)\n\n## Completed phases\n\n\
+                    - **Slice 2 also done (complete):** oops\n";
+        let proj = section_project("section-renamed", plan);
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        assert!(
+            findings.iter().any(|f| f.code == "MDATRON-E0122"
+                && f.quoted
+                    .iter()
+                    .any(|q| q.label == "section" && q.content == "## Requirements")),
+            "the absent `## Requirements` reports E0122; got {findings:?}"
+        );
+        assert!(
+            findings.iter().all(|f| f.code != "MDATRON-E0120"),
+            "no E0120-with-count-0 for an absent section; got {findings:?}"
+        );
+        assert!(
+            findings.iter().all(|f| f.code != "MDATRON-E0121"),
+            "no disjointness verdict when an operand span is missing; got {findings:?}"
         );
     }
 
@@ -6460,6 +7349,7 @@ pattern:
         let empty = crate::snapshot::Snapshot::new(64, 4096);
 
         let mut findings = Vec::new();
+        let mut memo = crate::memo::RefMemo::default();
         crate::link::check_file(
             &empty,
             Path::new("/no-root"),
@@ -6467,6 +7357,7 @@ pattern:
             "See [t](t2.md#a).\n",
             0,
             false,
+            &mut memo,
             &mut findings,
         );
         assert_eq!(codes_of(&findings, "MDATRON-E0080"), 1, "{findings:?}");
@@ -6479,12 +7370,14 @@ pattern:
             target_section: None,
         };
         let mut findings = Vec::new();
+        let mut memo = crate::memo::RefMemo::default();
         crate::marker::check_file(
             &empty,
             Path::new("docs/plan.md"),
             "Provenance: Slice 1\n",
             0,
             &[&rule],
+            &mut memo,
             &mut findings,
         );
         assert_eq!(codes_of(&findings, "MDATRON-E0080"), 1, "{findings:?}");
@@ -7576,9 +8469,10 @@ pattern:
 
     // ── #156: comparison type-check (E0022) + dead-clause (W0050) ────────────
     //
-    // Same conservatism as E0021 (E0022 also hard-gates): fire only on a
-    // closed-object single-concrete-type leaf vs a scalar literal; every
-    // undecidable shape passes.
+    // Same conservatism SHAPE as E0021 (E0022 also hard-gates): fire only on a
+    // declared-property, single-concrete-type leaf vs a scalar literal; every
+    // undecidable shape passes. Openness is NOT part of this walk (GH #48
+    // lane G docs-align) — that gate belongs to E0021's existence check.
 
     const TYPED_DOC_SCHEMA: &str = r#"{
       "type": "object",
@@ -7673,6 +8567,58 @@ pattern:
             0,
             "a field with no declared type is undecidable"
         );
+    }
+
+    // GH #48 lane G (G3.6, docs-align): the decidability walk is DECLARED-
+    // PROPERTY based, not closed-object based — a property declared with a
+    // single concrete type under an OPEN object is decidable, and a mismatch
+    // there FIRES. (The closed-object gate belongs to E0021's existence check
+    // only.) This pins the actual semantics the docs now state.
+    #[test]
+    fn rg_declared_property_under_open_object_is_e0022() {
+        // No `additionalProperties: false` — an OPEN object.
+        let open_schema = r#"{
+          "type": "object",
+          "properties": {
+            "schema_class": { "type": "string" },
+            "count": { "type": "integer" }
+          }
+        }"#;
+        let findings =
+            run_field_ref_gate("e0022-open-obj", open_schema, "", r#"$self.count == "yes""#);
+        assert_eq!(
+            codes_of(&findings, "MDATRON-E0022"),
+            1,
+            "a declared single-typed property is decidable regardless of \
+             object openness; got {findings:?}"
+        );
+    }
+
+    // GH #48 lane G (G3.6): a `$ref`/combinator level has no walkable
+    // `properties`, so a path THROUGH it is undecidable — never flagged.
+    #[test]
+    fn rg_ref_and_combinator_levels_are_not_flagged() {
+        let schema = r##"{
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "schema_class": { "type": "string" },
+            "via_ref": { "$ref": "#/$defs/x" },
+            "via_all": { "allOf": [ { "type": "object" } ] }
+          },
+          "$defs": { "x": { "type": "object", "properties": { "n": { "type": "integer" } } } }
+        }"##;
+        for (label, expr) in [
+            ("e0022-ref", r#"$self.via_ref.n == "y""#),
+            ("e0022-allof", r#"$self.via_all.n == "y""#),
+        ] {
+            let findings = run_field_ref_gate(label, schema, "", expr);
+            assert_eq!(
+                codes_of(&findings, "MDATRON-E0022"),
+                0,
+                "{label}: a path through a $ref/combinator is undecidable; got {findings:?}"
+            );
+        }
     }
 
     // TRUE POSITIVE (dead clause): a string field with a declared enum compared

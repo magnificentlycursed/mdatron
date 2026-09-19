@@ -24,6 +24,12 @@ include = [
     "DESIGN.md",
     "LICENSE",
     "docs/dsl-reference.md",
+    # docs/limits.md is REQUIRED by a shipped test (limits::docs_limits_table_
+    # matches_shipped reads it via CARGO_MANIFEST_DIR), so `cargo test` from the
+    # published crate fails without it — and it is the operator rendering of the
+    # declared-limits catalog anyway (GH #48 lane E). CI's package-rehearsal
+    # step asserts its presence in the payload.
+    "docs/limits.md",
     "docs/dependencies/*.md",
 ]
 
