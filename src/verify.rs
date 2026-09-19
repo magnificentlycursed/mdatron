@@ -1584,10 +1584,14 @@ fn load_schemas(dir: &Path) -> Result<(BTreeMap<String, Schema>, Option<String>)
 }
 
 /// The #176 aggregate digest of one input directory: each `(relative filename,
-/// content sha256)` pair, sorted by filename, folded as `"{name}\n{sha}\n"`
+/// content sha256)` pair, sorted by filename, folded as `"{name}\0{sha}\0"`
 /// into one sha256. `None` when the directory held no files (absent/empty dirs
-/// omit their lineage key). Filenames in these flat dirs carry no separators,
-/// so the forward-slash requirement is trivially met.
+/// omit their lineage key). The framing byte is NUL — illegal in filenames on
+/// every platform — so a crafted filename cannot smuggle a frame boundary and
+/// make one file fold identically to two (cold-review R2: `\n` IS a legal unix
+/// filename byte, so `"a.json\n<sha>\nb.json"` collided with the honest
+/// two-file pair). Filenames in these flat dirs also carry no path
+/// separators, so the forward-slash requirement is trivially met.
 fn aggregate_digest(mut entries: Vec<(String, String)>) -> Option<String> {
     if entries.is_empty() {
         return None;
@@ -1596,9 +1600,9 @@ fn aggregate_digest(mut entries: Vec<(String, String)>) -> Option<String> {
     let mut acc = String::new();
     for (name, sha) in &entries {
         acc.push_str(name);
-        acc.push('\n');
+        acc.push('\0');
         acc.push_str(sha);
-        acc.push('\n');
+        acc.push('\0');
     }
     Some(crate::init::sha256_hex(acc.as_bytes()))
 }
@@ -2873,6 +2877,28 @@ mod tests {
         assert!(
             findings.is_empty(),
             "expected no findings; got {findings:?}"
+        );
+    }
+
+    // RED GATE (#176 cold-review R2): the aggregate lineage fold is framed by
+    // NUL (illegal in filenames on every platform), so a crafted filename
+    // cannot smuggle a frame boundary. Under the old `\n` framing, ONE file
+    // named `"a.json\n{sha_a}\nb.json"` folded byte-identically to the honest
+    // two-file directory `a.json` + `b.json` — the same inputs digest for
+    // different configuration. Pure-function drive; no filesystem needed.
+    #[test]
+    fn aggregate_digest_framing_resists_crafted_filenames() {
+        let sha_a = crate::init::sha256_hex(b"CA");
+        let sha_b = crate::init::sha256_hex(b"CB");
+        let honest = aggregate_digest(vec![
+            ("a.json".to_string(), sha_a.clone()),
+            ("b.json".to_string(), sha_b.clone()),
+        ]);
+        let crafted = aggregate_digest(vec![(format!("a.json\n{sha_a}\nb.json"), sha_b)]);
+        assert_ne!(
+            honest, crafted,
+            "a newline-smuggling filename must not fold identically to two \
+             honest files"
         );
     }
 

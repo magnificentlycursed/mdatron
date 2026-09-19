@@ -106,7 +106,7 @@
         "type": "string",
         "pattern": "^sha256:[0-9a-f]{64}$"
       },
-      "description": "Governance-input lineage: each input this run consumed, mapped to a sha256 digest of the exact bytes it read. Keys are the governance files found and read (config.yaml, routes.yaml, vocabulary.yaml, pins.yaml, code-catalogs.yaml — each present only when loaded) plus one aggregate digest each for the schemas and patterns directories (sorted filenames + per-file content digests; omitted when the directory is absent or empty). Lets a consumer attest WHICH configuration produced a verdict and detect config drift between runs. Deterministic across platforms; empty when the pipeline failed before loading anything."
+      "description": "Governance-input lineage: each input this run consumed, mapped to a sha256 digest of the exact bytes it read. Keys are the governance files found and read (config.yaml, routes.yaml, vocabulary.yaml, pins.yaml, code-catalogs.yaml — each present only when loaded) plus one aggregate digest each for the schemas and patterns directories (sorted filenames + per-file content digests; omitted when the directory is absent or empty). Lets a consumer attest WHICH configuration produced a verdict and detect config drift between runs. Deterministic across platforms; always empty on a failed pipeline (partial lineage is deliberately not attested)."
     },
     "timings": {
       "type": "object",
@@ -216,7 +216,8 @@
         },
         "quoted": {
           "type": "array",
-          "description": "Adopter-derived text carried out-of-line (absent when empty). Each region is untrusted adopter content, marked as such so a consumer need not infer it from the presence of the field.",
+          "minItems": 1,
+          "description": "Adopter-derived text carried out-of-line (absent when empty — the emitter never produces an empty array, and minItems pins that: an emitted `quoted: []` would be a shape regression). Each region is untrusted adopter content, marked as such so a consumer need not infer it from the presence of the field.",
           "items": {
             "type": "object",
             "additionalProperties": false,

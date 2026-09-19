@@ -77,9 +77,11 @@ enum Command {
 
         /// Include run-phase wall-clock timings in the JSON envelope (#175):
         /// an optional `timings` object with `total_ms`/`load_ms`/`capture_ms`/
-        /// `check_ms`. Off by default so the default envelope stays
-        /// deterministic (timings are its sole non-deterministic zone).
-        #[arg(long = "timings")]
+        /// `check_ms`. Requires --json — timings ride ONLY in the envelope, so
+        /// without it the flag would silently do nothing (cold-review R4). Off
+        /// by default so the default envelope stays deterministic (timings are
+        /// its sole non-deterministic zone).
+        #[arg(long = "timings", requires = "json")]
         timings: bool,
     },
 
@@ -572,8 +574,10 @@ fn cmd_verify(
                         r.inputs,
                         Some(r.timings),
                     ),
-                    // A failed pipeline reports no family as invoked (and loaded
-                    // no attestable inputs; #176 lineage stays empty).
+                    // A failed pipeline reports no family as invoked, and its
+                    // #176 lineage is ALWAYS empty — some inputs may have been
+                    // read before the failure, but partial lineage is
+                    // deliberately not attested (cold-review R3).
                     Err(e) => (
                         Vec::new(),
                         Families::all_inactive(),

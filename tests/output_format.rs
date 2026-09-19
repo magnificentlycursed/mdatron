@@ -505,6 +505,33 @@ fn stdout_under_json_contains_only_the_output_object() {
     );
 }
 
+// RED GATE (#175 cold-review R4): `--timings` rides ONLY in the JSON envelope,
+// so without `--json` it would silently do nothing — clap refuses the
+// combination loudly instead (a usage error naming the requirement).
+#[test]
+fn timings_without_json_is_a_usage_error() {
+    let proj = TempProject::new("timings-nojson");
+    proj.seed_minimal();
+    proj.seed_clean_md("post.md");
+
+    let out = Command::new(mdatron_bin())
+        .args(["verify", "--project-root"])
+        .arg(proj.path())
+        .arg("--timings")
+        .output()
+        .expect("mdatron binary executes");
+    assert!(
+        !out.status.success(),
+        "--timings without --json must be refused; got success with stdout: {:?}",
+        String::from_utf8_lossy(&out.stdout)
+    );
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        stderr.contains("--json"),
+        "the usage error names the missing --json requirement; got {stderr:?}"
+    );
+}
+
 #[test]
 fn unknown_flag_is_rejected() {
     let proj = TempProject::new("bc6");

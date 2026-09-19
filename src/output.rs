@@ -264,7 +264,9 @@ pub struct Output {
     /// aggregate digest each for the `schemas` and `patterns` directories —
     /// mapped to a `sha256:<lowercase-hex>` digest of the same bytes the run
     /// read. Deterministic (sorted map, forward-slashed names inside the
-    /// aggregates); empty when the pipeline failed before loading anything.
+    /// aggregates); always empty on a failed pipeline — some inputs may have
+    /// been read before the failure, but partial lineage is deliberately not
+    /// attested (cold-review R3).
     #[serde(default)]
     pub inputs: std::collections::BTreeMap<String, String>,
     /// Run-phase timings (#175) — present only under `verify --timings`, so
@@ -279,39 +281,48 @@ pub struct Output {
 }
 
 /// The `v1` per-finding fingerprints for a run's findings, positionally aligned
-/// (#177): `sha256` over — in order, NUL-separated — the finding's `code`, its
-/// FORWARD-SLASHED project-root-relative file path, its `summary`, each quoted
-/// region's label then content in order, and finally the 0-based occurrence
-/// ordinal among findings with an otherwise-identical input in the same run;
-/// truncated to 16 bytes (32 lowercase hex chars) and prefixed `v1:` (a future
-/// algorithm change mints `v2`). Line/column are EXCLUDED by design — the
-/// fingerprint survives line churn, which is its purpose (cross-run identity
-/// for a consumer trending envelopes across regenerated documents). The
-/// ordinal disambiguates byte-identical siblings (two identical dead links in
-/// one file get distinct prints); removing the first transfers its identity to
-/// the survivor — the standard SARIF-style tradeoff.
+/// (#177): `sha256` over an INJECTIVE, netstring-style encoding of — in order —
+/// the finding's `code`, its FORWARD-SLASHED project-root-relative file path,
+/// its `summary` (each as `{byte_len}:{bytes}`), the quoted-region COUNT (as
+/// `{n};`), each region's label then content (each `{byte_len}:{bytes}`), and
+/// finally the 0-based occurrence ordinal among findings with an
+/// otherwise-identical input in the same run; truncated to 16 bytes (32
+/// lowercase hex chars) and prefixed `v1:` (a future algorithm change mints
+/// `v2`). Every field is length-prefixed and the region list is
+/// count-prefixed, so no adopter-controlled byte (a YAML `"\0"` escape in a
+/// rule id or document value) can shift a field or region boundary — two
+/// distinct inputs always encode to distinct byte strings. Line/column are
+/// EXCLUDED by design — the fingerprint survives line churn, which is its
+/// purpose (cross-run identity for a consumer trending envelopes across
+/// regenerated documents). The ordinal disambiguates byte-identical siblings
+/// (two identical dead links in one file get distinct prints); removing the
+/// first transfers its identity to the survivor — the standard SARIF-style
+/// tradeoff.
 pub fn fingerprints(findings: &[Finding]) -> Vec<String> {
+    use std::fmt::Write;
     let mut seen: std::collections::HashMap<String, u32> = std::collections::HashMap::new();
+    let field = |out: &mut String, s: &str| {
+        let _ = write!(out, "{}:", s.len());
+        out.push_str(s);
+    };
     findings
         .iter()
         .map(|f| {
             let mut identity = String::new();
-            identity.push_str(&f.code);
-            identity.push('\0');
-            identity.push_str(&crate::diagnostic::to_forward_slash(&f.location.file));
-            identity.push('\0');
-            identity.push_str(&f.summary);
-            identity.push('\0');
+            field(&mut identity, &f.code);
+            field(
+                &mut identity,
+                &crate::diagnostic::to_forward_slash(&f.location.file),
+            );
+            field(&mut identity, &f.summary);
+            let _ = write!(identity, "{};", f.quoted.len());
             for q in &f.quoted {
-                identity.push_str(&q.label);
-                identity.push('\0');
-                identity.push_str(&q.content);
-                identity.push('\0');
+                field(&mut identity, &q.label);
+                field(&mut identity, &q.content);
             }
             let n = seen.entry(identity.clone()).or_insert(0);
             let ordinal = *n;
             *n += 1;
-            use std::fmt::Write;
             let _ = write!(identity, "{ordinal}");
             let hex = crate::init::sha256_hex(identity.as_bytes());
             format!("v1:{}", &hex[..32])
@@ -321,9 +332,12 @@ pub fn fingerprints(findings: &[Finding]) -> Vec<String> {
 
 /// Serialize the findings array with each finding's `fingerprint` attached
 /// (#177). A field-order-preserving MIRROR of [`Finding`]'s serialized shape
-/// plus the trailing `fingerprint` — the envelope-validates tripwire (schema
-/// `additionalProperties: false` on findings) fails if this row and the
-/// `Finding` struct drift apart.
+/// plus the trailing `fingerprint`. Drift guards, per leg (cold-review R5
+/// scoped the honest claim): an added/renamed field fails the
+/// envelope-validates tripwire (schema `additionalProperties: false` +
+/// `required` on findings); dropping the `quoted` skip-when-empty attr fails
+/// the schema's `minItems: 1` on `quoted` plus the no-quoted-key assertion in
+/// `envelope_carries_the_precut_fields_and_validates`.
 fn serialize_findings_with_fingerprints<S: serde::Serializer>(
     findings: &[Finding],
     serializer: S,
@@ -815,6 +829,51 @@ mod tests {
         );
     }
 
+    // RED GATE (#177 cold-review R1, MAJOR): the identity encoding is
+    // INJECTIVE — an adopter-controlled NUL (a YAML `"\0"` escape in a rule id
+    // or a document value) must not shift a field boundary. Under the old
+    // NUL-terminated encoding BOTH constructions below collided end-to-end.
+    #[test]
+    fn fingerprint_encoding_resists_nul_field_shifting() {
+        // Collision 1: summary "s" + quoted ("l","SECRET") vs a different
+        // finding whose summary smuggles the whole tail ("s\0l\0SECRET") with
+        // no quoted regions.
+        let mut a = f_at("T-E0001", "docs/a.md", 1);
+        a.summary = "s".into();
+        a.quoted = vec![crate::diagnostic::QuotedRegion {
+            label: "l".into(),
+            content: "SECRET".into(),
+        }];
+        let mut b = f_at("T-E0001", "docs/a.md", 1);
+        b.summary = "s\0l\0SECRET".into();
+        assert_ne!(
+            fingerprints(&[a])[0],
+            fingerprints(&[b])[0],
+            "a NUL-smuggling summary must not collide with a quoted region"
+        );
+    }
+
+    // RED GATE (#177 cold-review R1, MAJOR): quoted-region SPLICING — one
+    // region whose content smuggles a NUL-framed second region must not
+    // collide with the honest two-region finding (the region count and the
+    // per-field length prefixes make the list encoding injective).
+    #[test]
+    fn fingerprint_encoding_resists_region_splicing() {
+        let region = |label: &str, content: &str| crate::diagnostic::QuotedRegion {
+            label: label.into(),
+            content: content.into(),
+        };
+        let mut spliced = f_at("T-E0001", "docs/a.md", 1);
+        spliced.quoted = vec![region("found", "x\0found\0y")];
+        let mut honest = f_at("T-E0001", "docs/a.md", 1);
+        honest.quoted = vec![region("found", "x"), region("found", "y")];
+        assert_ne!(
+            fingerprints(&[spliced])[0],
+            fingerprints(&[honest])[0],
+            "one spliced region must not collide with two honest regions"
+        );
+    }
+
     // #177: the path is fingerprinted FORWARD-SLASHED, so the identity cannot
     // split across platforms on the separator.
     #[cfg(windows)]
@@ -853,6 +912,19 @@ mod tests {
                 .expect("every finding carries a fingerprint");
             assert!(fp.starts_with("v1:"), "algorithm-versioned: {fp}");
         }
+        // Cold-review R5: a finding WITHOUT quoted regions serializes with NO
+        // `quoted` key at all — never an empty array. Together with the
+        // schema's `minItems: 1`, this pins the Row mirror's skip-when-empty
+        // attr (dropping it emits `quoted: []`, which both legs now catch).
+        assert!(
+            json["findings"][0].get("quoted").is_some(),
+            "the quoted-bearing finding keeps its regions"
+        );
+        assert!(
+            json["findings"][1].get("quoted").is_none(),
+            "a region-less finding carries no quoted key; got {}",
+            json["findings"][1]
+        );
 
         let timed_env = representative_envelope()
             .with_inputs(inputs)
