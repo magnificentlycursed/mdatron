@@ -1,6 +1,6 @@
 {
   "next_display_id": 180,
-  "next_comment_id": 474,
+  "next_comment_id": 475,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -7092,11 +7092,20 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-08-10T12:56:45.901952Z",
-      "updated_at": "2026-09-19T00:48:25.688210Z",
+      "updated_at": "2026-09-19T22:14:18.692191Z",
       "labels": [
         "release"
       ],
       "comments": {
+        "2da47b09-6c62-4af2-9f95-cd0460d8b664": {
+          "display_id": 474,
+          "author": "79Ig",
+          "content": "RELEASE CHECKLIST ADDITIONS (operator, 2026-09-19): (1) POST-PUBLISH: file the '0.6.0 capability delta for your gate designs' issue on magnificentlycursed/vsdd-cli (the established relay) — their mdatron-capability-surface page is a full envelope-MAJOR stale (0.5.0/five families) while their build-plan disjointness gate depends on the new E0121/E0122 loud-absence semantics; reference the real tag. (2) PRE-CUT: a documentation coverage/discoverability lane — operator suspects most 0.6.0 additions are undocumented; audit dispatched, docs-only fixes ride before the cut. (3) vsdd-value ranking recorded on #175/#176/#177: fingerprints > lineage > duration.",
+          "created_at": "2026-09-19T22:14:18.663795Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAG9mtAUovV+LjNVn2N1yiWyC97uA4zZIyFwU1MFikg59o0n202XoOxgIqsoHClz+GSwzC2SrX6UmoSJx1DWebDQ=="
+        },
         "5b5a5c6c-2bde-4b4c-98ee-fd5b28fd9aa3": {
           "display_id": 458,
           "author": "79Ig",
@@ -7548,8 +7557,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-19T22:07:07.503653Z",
+    "timestamp": "2026-09-19T22:14:18.692191Z",
     "agent_id": "79Ig",
-    "agent_seq": 944
+    "agent_seq": 945
   }
 }
