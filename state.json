@@ -1,6 +1,6 @@
 {
   "next_display_id": 175,
-  "next_comment_id": 468,
+  "next_comment_id": 469,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -1646,7 +1646,7 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-07-21T03:53:35.156084Z",
-      "updated_at": "2026-08-10T12:53:55.030066Z",
+      "updated_at": "2026-09-19T03:55:22.125729Z",
       "labels": [
         "security"
       ],
@@ -1678,6 +1678,15 @@
           "kind": "observation",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA0u6UOhX32O3Ieb/o5NVVt78NHfe8OBdAdiNftrZIJfBKynE/sE6K2DYlRR7h3gSeN6eJ6q01OfVMKvFcdrPTAw=="
+        },
+        "d09212fc-3ed1-4c92-9b1c-3dfc548e6f09": {
+          "display_id": 468,
+          "author": "79Ig",
+          "content": "RULING UPDATED (operator, 2026-09-19, supersedes the 2026-08-10 defer): Windows IS now declared a target — 0.6.0 shipped real Windows surface (drive-path resolution, CRLF-stable scanners, a green windows-latest matrix that caught three real defects this cycle). #64 is scheduled as the FIRST post-0.6.0 item, its own PR: (1) docs/dependencies/windows-sys.md modeled on libc.md (SO scope justification = this ruling; PE pin/audit; Security fail-closed threat model) — operator ratifies the doc before the dep lands; (2) the fail-closed handle walk (NtCreateFile w/ RootDirectory, or CreateFileW + FILE_FLAG_OPEN_REPARSE_POINT|BACKUP_SEMANTICS) refusing all three reparse kinds (symlink/junction/mount point) — any ambiguity DENIES; (3) windows-latest red-gates pinning the refusals (blind-CI iteration, proven workable this cycle); (4) on close: revert the E0012 explain Unix-only hedge + DESIGN's check-then-swap qualification to universal. The 0.6.0 release keeps the honest documented carve-out.",
+          "created_at": "2026-09-19T03:55:22.109321Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABABoSbAeFOSqo/BR6xDqJCkYqVfhdS9To9WgGCW6AphNpHprzhFtAPQF5914eoB+EO+mFsiy/6nxNdOfNlKBneCQ=="
         },
         "ff9f0ace-f5bd-4d10-81d5-7b3121bcf9ff": {
           "author": "79Ig",
@@ -7416,8 +7425,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-19T03:52:57.188397Z",
+    "timestamp": "2026-09-19T03:55:22.125729Z",
     "agent_id": "79Ig",
-    "agent_seq": 924
+    "agent_seq": 925
   }
 }
