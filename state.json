@@ -1,6 +1,6 @@
 {
   "next_display_id": 181,
-  "next_comment_id": 480,
+  "next_comment_id": 481,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -3221,10 +3221,21 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-09-19T22:06:59.731270Z",
-      "updated_at": "2026-09-19T22:07:07.503653Z",
+      "updated_at": "2026-09-19T22:19:13.222807Z",
       "labels": [
         "enhancement"
-      ]
+      ],
+      "comments": {
+        "ab964bdb-9b56-4811-b749-12cfaa80c48c": {
+          "display_id": 480,
+          "author": "79Ig",
+          "content": "PROMOTED TO PRE-CUT (operator challenge, 2026-09-19): folds into the #180 docs pass — same files (README/DESIGN framing), same review. The Ch32 positioning paragraph ships with 0.6.0's docs rather than trailing it.",
+          "created_at": "2026-09-19T22:19:13.200892Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABArjE9FJpx+9SKq8mL1A2q6UAkax3iu94nIRWkxAEPUoshn9qXYRxybsYnCNBMPxOpGIgLCZOmM/9beQZFAp57CA=="
+        }
+      }
     },
     "82cb584a-cbc0-4ddd-9c36-0bd7a641a7a5": {
       "uuid": "82cb584a-cbc0-4ddd-9c36-0bd7a641a7a5",
@@ -7622,8 +7633,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-19T22:19:05.135952Z",
+    "timestamp": "2026-09-19T22:19:13.222807Z",
     "agent_id": "79Ig",
-    "agent_seq": 953
+    "agent_seq": 954
   }
 }
