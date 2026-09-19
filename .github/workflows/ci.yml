@@ -145,8 +145,11 @@ jobs:
         run: cargo run -q -p mdatron --locked -- init --project-root .
 
       # The gate: every review-log entry must satisfy schemas/review-entry.json.
+      # --deny-warnings: the gate takes its own documented escalation (GH #48
+      # lane-G review) — a warnings-only run (e.g. W0048, a reference check
+      # skipped over an unverifiable target) must fail this gate, not pass it.
       - name: Verify this repo against its own .mdatron/ config
-        run: cargo run -q -p mdatron --locked -- verify --project-root .
+        run: cargo run -q -p mdatron --locked -- verify --project-root . --deny-warnings
 
   package:
     # Publish rehearsal (#123, roast SHO3): green code-CI says nothing about what

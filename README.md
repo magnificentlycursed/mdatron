@@ -158,7 +158,10 @@ mdatron verify
 `mdatron verify` exits `0` when clean, `1` on findings, and `2` on a pipeline
 failure (see First run). Add `--deny-warnings` (alias `--strict`) to also fail a
 warnings-only run (exit `0 → 1`) — the switch a hard CI gate wants when warnings
-must block. The wrapper above blocks on all three of a missing
+must block. In particular, `MDATRON-W0048` (a reference check *skipped* over a
+present-but-unverifiable target — non-UTF8, unreadable, oversized) is a warning
+by design; a gate that must not pass an unverified reference needs this switch
+(this repo's own self-validation CI job uses it). The wrapper above blocks on all three of a missing
 binary, findings, and pipeline failure. Reserve `git commit --no-verify` for a
 deliberate, visible bypass rather than letting a missing checker pass unseen.
 

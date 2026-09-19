@@ -27,6 +27,15 @@ names nothing to resolve, which previously was a silent skip; it now reports
 here, with the rule's pattern quoted. (A pattern with **no** capture group at
 all is refused at route load.)
 
+An **absent** target document also reports here: every reference into a missing
+target is dead. A target that is **present but unverifiable** (non-UTF8,
+opened-but-unreadable) is different — those references report
+`MDATRON-W0048` (reference-target-unverified) instead, because the check was
+skipped, not failed. One conflation is accepted residue (#103): a target whose
+*open itself* is refused (e.g. permission denied) is indistinguishable from an
+absent one at capture time and reports as dead here — if this finding surprises
+you, check the target's permissions as well as its existence.
+
 ## How to fix
 
 - **The reference is a typo.** Correct the name to match the target element

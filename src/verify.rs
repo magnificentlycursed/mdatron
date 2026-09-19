@@ -3099,6 +3099,28 @@ mod tests {
         proj
     }
 
+    // COMPATIBILITY RED GATE (GH #48 lane-G review F2): for a frontmatter-bearing
+    // doc with ONE matching heading, the lane-G extraction (frontmatter-stripped +
+    // all-matching-spans) must hash the SAME bytes the pre-lane-G extraction did
+    // (first `section_span` over the FULL content — which is exactly how
+    // `section_pinned_project` records the sha). If `pin_section_bytes` ever
+    // drifts for this common case (e.g. trimming the body's leading newline),
+    // every existing single-heading section pin would falsely trip E0061 with the
+    // rest of the suite green — this test goes red instead.
+    #[test]
+    fn single_heading_section_pin_hash_is_unchanged_by_lane_g_extraction() {
+        let content = "---\nschema_class: phase-primer\nphase: phase-1a\n\
+                       relevant_domains: [se]\n---\n\n# Governed\n\n## Contract\n\n\
+                       terms here\n\n## Other\n\nrest\n";
+        let proj = section_pinned_project("pin-compat", content, "## Contract");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let findings = verify(&cfg).unwrap();
+        assert!(
+            findings.iter().all(|f| !f.code.starts_with("MDATRON-E006")),
+            "an old-style single-heading section pin stays clean: {findings:?}"
+        );
+    }
+
     // RED GATE (#146, vsdd#20 P2): a section pin tracks only its heading-delimited
     // span — an edit INSIDE the section is stale (E0061), an edit OUTSIDE it is
     // clean (a whole-file pin would trip), and re-pin restores clean.

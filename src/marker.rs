@@ -234,6 +234,11 @@ fn resolve_members(
             return MarkerMembers::Disabled;
         }
         // Missing target: empty set → references surface as E0112 (loud, not silent).
+        // Accepted residue (#103 phase-3 R2I-6, same as cite's): OpenIo
+        // conflates absent with open-refused (EACCES), so a permission-denied
+        // target reports its references as dead (E0112) rather than
+        // unverifiable — matching pre-#103 behavior; splitting the state is
+        // future work. An absent target IS dead: empty set → E0112 per line.
         Some(Captured::OpenIo { .. }) => return MarkerMembers::Resolved(HashSet::new()),
         // Never captured: an ENGINE defect in target discovery — report it as
         // one and disable the rule rather than flag healthy references.
