@@ -1,6 +1,6 @@
 {
   "next_display_id": 180,
-  "next_comment_id": 476,
+  "next_comment_id": 477,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -370,11 +370,20 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-19T22:04:38.508776Z",
-      "updated_at": "2026-09-19T22:06:41.139169Z",
+      "updated_at": "2026-09-19T22:14:38.008427Z",
       "labels": [
         "enhancement"
       ],
       "comments": {
+        "ad9938e0-ceb2-43a5-af46-445302f0e9a9": {
+          "display_id": 476,
+          "author": "79Ig",
+          "content": "vsdd-cli value: RANK 2 — the B5 ruling (dispatch rows mdatron-governed, regenerable) carries a reproducible-from-records determinism falsifier that needs to know WHICH ruleset produced a verdict; their GH#33 staleness trigger ('any change to... the output contract') is machine-detectable only via this lineage hash.",
+          "created_at": "2026-09-19T22:14:37.977892Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAnKTcdV1mh78t3X6uXGaUs2IQ5x0p8px7SdYFncnV7adkhxXSM4gp1Kq61iWyjmReWmlbN/GYNd4CtmOVPc5dDQ=="
+        },
         "ccf68a06-b6b2-4cd7-b29b-51e40fdc533c": {
           "display_id": 472,
           "author": "79Ig",
@@ -7566,8 +7575,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-19T22:14:28.178381Z",
+    "timestamp": "2026-09-19T22:14:38.008427Z",
     "agent_id": "79Ig",
-    "agent_seq": 946
+    "agent_seq": 947
   }
 }
