@@ -1,5 +1,5 @@
 {
-  "next_display_id": 172,
+  "next_display_id": 173,
   "next_comment_id": 459,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -19,6 +19,7 @@
     "1cafa0f3-dcdd-491b-b455-52af79c6c85d": 122,
     "1da67425-f44d-40d6-8ba1-2d2ed768de38": 97,
     "1f89fa15-980c-4d2d-ac43-108f45c87c2e": 146,
+    "1f95ee99-22a5-437e-9132-00d7744e0eef": 172,
     "1ff675c3-889e-4de4-84da-352debc4b1f7": 5,
     "224e7d50-2f87-4c2e-abf7-317c23ccbada": 46,
     "238317fa-9b8f-4ff1-9774-90c8dffb9a2e": 125,
@@ -814,6 +815,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA0UtWFIrYVWlPCl1x4yOr7LH8tCzGMNa5gkMGDvsSgmh5KCG80Zml7YdMmpjPNGpGx/1qMfV4eDIcUzTM4dneBA=="
         }
       }
+    },
+    "1f95ee99-22a5-437e-9132-00d7744e0eef": {
+      "uuid": "1f95ee99-22a5-437e-9132-00d7744e0eef",
+      "display_id": 172,
+      "title": "GH #48 lane A (CRITICAL): section/marker gate families fail open — E0122/E0114 section-not-found + load-time validation",
+      "status": "open",
+      "priority": "critical",
+      "created_by": "79Ig",
+      "created_at": "2026-09-19T00:21:56.638913Z",
+      "updated_at": "2026-09-19T00:21:56.638913Z"
     },
     "1ff675c3-889e-4de4-84da-352debc4b1f7": {
       "uuid": "1ff675c3-889e-4de4-84da-352debc4b1f7",
@@ -7269,8 +7280,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-19T00:21:48.614211Z",
+    "timestamp": "2026-09-19T00:21:56.638913Z",
     "agent_id": "79Ig",
-    "agent_seq": 897
+    "agent_seq": 898
   }
 }
