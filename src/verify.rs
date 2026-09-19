@@ -5148,6 +5148,108 @@ pattern:
         assert!(!marker_families(&opted_out).marker.is_active());
     }
 
+    // RED GATE (GH #48 finding 3): a valid target_section spec whose heading was
+    // RENAMED in the target doc is exactly ONE E0114 for the governed file and
+    // ZERO E0112 — pre-fix, the permanently-empty member set mass-flagged every
+    // healthy reference as a dead one.
+    #[test]
+    fn renamed_target_section_is_one_e0114_not_mass_e0112() {
+        let routes = r###"routes:
+- files: "docs/**/*.md"
+  governed_by: GOVERNING.md
+  marker_rules:
+    - pattern: "^Provenance: (.+)$"
+      element: list-item-bold-name
+      target_doc: refs/contract.md
+      target_section: "## Decomposition (phase 1c)"
+"###;
+        // TWO healthy references — pre-fix, both were blamed E0112.
+        let proj = marker_project(
+            "marker-section-renamed",
+            "Provenance: Slice 1 — Live self-governance: the tracker join\n\n\
+             Provenance: Slice 2 — First guardrail\n",
+            routes,
+        );
+        // The heading is renamed in the target doc; the rule's spec no longer
+        // matches, though the referenced members still exist under it.
+        proj.write(
+            "refs/contract.md",
+            "# Contract\n\n## Decomposition (renamed)\n\n\
+             - **Slice 1 — Live self-governance: the tracker join.** first\n\
+             - **Slice 2 — First guardrail.** second\n",
+        );
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        let e0114: Vec<_> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0114")
+            .collect();
+        assert_eq!(
+            e0114.len(),
+            1,
+            "exactly one E0114 per (rule, governed file); got {findings:?}"
+        );
+        assert!(e0114[0]
+            .quoted
+            .iter()
+            .any(|q| q.label == "target_section" && q.content == "## Decomposition (phase 1c)"));
+        assert!(
+            findings.iter().all(|f| f.code != "MDATRON-E0112"),
+            "healthy references must not be mass-flagged for a renamed target \
+             heading; got {findings:?}"
+        );
+    }
+
+    // RED GATE (GH #48 finding 3, load-time leg): a target_section spec written
+    // without the ATX heading marker can never match any heading — refused at
+    // route load, never shipped as a mass-flagging misconfig.
+    #[test]
+    fn marker_target_section_without_heading_marker_is_a_load_error() {
+        let routes = r#"routes:
+- files: "docs/**/*.md"
+  governed_by: GOVERNING.md
+  marker_rules:
+    - pattern: "^Provenance: (.+)$"
+      element: list-item-bold-name
+      target_doc: refs/contract.md
+      target_section: "Decomposition (phase 1c)"
+"#;
+        let proj = marker_project("marker-bare-section-spec", "prose\n", routes);
+        let err = match crate::route::load(&proj.0) {
+            Err(e) => e,
+            Ok(_) => panic!("a bare target_section spec must be refused at load"),
+        };
+        let msg = format!("{err}");
+        assert!(
+            msg.contains("target_section") && msg.contains("ATX heading"),
+            "the error names the field and the required shape; got {msg}"
+        );
+    }
+
+    // RED GATE (GH #48 finding 2): a marker pattern with no capture group can
+    // never name a reference — previously every matching line was a silent
+    // per-line no-op; now refused at route load.
+    #[test]
+    fn marker_pattern_without_capture_group_is_a_load_error() {
+        let routes = r#"routes:
+- files: "docs/**/*.md"
+  governed_by: GOVERNING.md
+  marker_rules:
+    - pattern: "^Provenance: .+$"
+      element: list-item-bold-name
+      target_doc: refs/contract.md
+"#;
+        let proj = marker_project("marker-no-capture", "Provenance: anything\n", routes);
+        let err = match crate::route::load(&proj.0) {
+            Err(e) => e,
+            Ok(_) => panic!("a capture-group-less marker pattern must be refused at load"),
+        };
+        let msg = format!("{err}");
+        assert!(
+            msg.contains("capture group"),
+            "the error names the missing capture group; got {msg}"
+        );
+    }
+
     // ── adopter code-catalog family (#148, vsdd GH#20 P4) ───────────────────
     // Spine tests (token grammar / severity pending vsdd-cli#27): a cited
     // adopter code resolves against a declared comprehensive catalog, or blocks
@@ -5350,6 +5452,70 @@ catalogs:
         assert!(
             findings.iter().any(|f| f.code == "MDATRON-E0121"),
             "Slice 2 open AND complete is not disjoint; got {findings:?}"
+        );
+    }
+
+    // RED GATE (GH #48 finding 1, CRITICAL): a count predicate satisfied by 0
+    // (`== 0`) used to PASS silently when the named section is absent — the
+    // fail-open case. It must be E0122 end to end.
+    #[test]
+    fn absent_section_with_count_zero_predicate_is_e0122_end_to_end() {
+        let proj = section_project(
+            "section-absent-zero",
+            "# Build plan\n\nno sections at all.\n",
+        );
+        proj.write(
+            ".mdatron/routes.yaml",
+            r###"routes:
+- files: "plan/**/*.md"
+  governed_by: GOVERNING.md
+  section_rules:
+    - section: "## Open questions"
+      element: h3
+      match: '^### Q\d+'
+      count: "== 0"
+"###,
+        );
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        let f = findings
+            .iter()
+            .find(|f| f.code == "MDATRON-E0122")
+            .unwrap_or_else(|| panic!("expected E0122 on the absent section; got {findings:?}"));
+        assert!(f
+            .quoted
+            .iter()
+            .any(|q| q.label == "section" && q.content == "## Open questions"));
+        assert!(
+            findings.iter().all(|f| f.code != "MDATRON-E0120"),
+            "absence is not a count verdict; got {findings:?}"
+        );
+    }
+
+    // RED GATE (GH #48 finding 1): a renamed `## Requirements` heading reports
+    // E0122 from the count rule AND the disjoint operand naming it — never an
+    // E0120-with-count-0, and never a disjointness verdict (pre-fix the empty
+    // sets compared trivially disjoint, hiding a genuine Slice 2 overlap).
+    #[test]
+    fn renamed_section_is_e0122_not_e0120_or_a_disjoint_verdict() {
+        let plan = "# Build plan\n\n## Renamed Requirements\n\n\
+                    ### Phase 2: Slice 2 (sequential)\n\n## Completed phases\n\n\
+                    - **Slice 2 also done (complete):** oops\n";
+        let proj = section_project("section-renamed", plan);
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        assert!(
+            findings.iter().any(|f| f.code == "MDATRON-E0122"
+                && f.quoted
+                    .iter()
+                    .any(|q| q.label == "section" && q.content == "## Requirements")),
+            "the absent `## Requirements` reports E0122; got {findings:?}"
+        );
+        assert!(
+            findings.iter().all(|f| f.code != "MDATRON-E0120"),
+            "no E0120-with-count-0 for an absent section; got {findings:?}"
+        );
+        assert!(
+            findings.iter().all(|f| f.code != "MDATRON-E0121"),
+            "no disjointness verdict when an operand span is missing; got {findings:?}"
         );
     }
 

@@ -23,7 +23,11 @@
 //! Resolution is **name-equality** with a trailing `.` tolerated on the target
 //! (vsdd GH#22 Q2) — deliberately NOT slug-based (the divergence from the link
 //! anchor resolver). A reference that resolves to nothing is `MDATRON-E0112`
-//! (dead-marker-reference).
+//! (dead-marker-reference). A `target_section` whose heading is never matched
+//! in the target document is `MDATRON-E0114` (marker-target-section-not-found,
+//! GH #48): one finding per (rule, governed file), and the rule's lines are
+//! skipped for that file — never mass-flagged E0112 for a rule misconfig or a
+//! renamed target heading.
 
 use std::collections::HashSet;
 use std::path::Path;
@@ -52,8 +56,9 @@ pub fn check_file(
     let body = &content[body_offset..];
 
     // Resolve each rule's target member-set once. `None` = the rule is disabled
-    // because its target_doc failed confinement (a finding was emitted); its
-    // matching lines are then skipped rather than spuriously flagged E0112.
+    // because its target_doc failed confinement or its target_section heading is
+    // absent from the target (a finding was emitted); its matching lines are
+    // then skipped rather than spuriously flagged E0112.
     let member_sets: Vec<Option<HashSet<String>>> = rules
         .iter()
         .map(|rule| resolve_members(snapshot, path, rule, findings))
@@ -65,8 +70,9 @@ pub fn check_file(
             let Some(caps) = rule.pattern.captures(line) else {
                 continue;
             };
-            // The first capture group is the referenced name. A pattern with no
-            // capture group cannot name a reference — skip it.
+            // The first capture group is the referenced name. Route load refuses
+            // a pattern with no capture group (GH #48 finding 2 — it was a
+            // silent no-op); this skip is defensive for a hand-built rule.
             let Some(name_match) = caps.get(1) else {
                 continue;
             };
@@ -91,9 +97,11 @@ pub fn check_file(
 
 /// A rule's target document from the captured snapshot (#103), scoped to
 /// `target_section` if named, as the set of normalized member names for the
-/// rule's element class. `None` means the target failed confinement (a finding
-/// was emitted). A missing/unreadable target yields an empty set, so its
-/// references surface loudly as `E0112` rather than degrading silently.
+/// rule's element class. `None` means the target failed confinement or the
+/// named `target_section` heading is absent from the target (a finding was
+/// emitted — `E0114` for the latter, GH #48). A missing/unreadable target
+/// yields an empty set, so its references surface loudly as `E0112` rather
+/// than degrading silently.
 fn resolve_members(
     snapshot: &Snapshot,
     path: &Path,
@@ -178,23 +186,50 @@ fn resolve_members(
         Ok(Some((_, b))) => b,
         _ => target,
     };
-    Some(extract_members(
-        doc_body,
-        rule.element,
-        rule.target_section.as_deref(),
-    ))
+    match extract_members(doc_body, rule.element, rule.target_section.as_deref()) {
+        Some(members) => Some(members),
+        // GH #48 finding 3: the named target_section heading is never matched in
+        // the target's body (renamed, or a misconfigured spec). Previously the
+        // member set stayed permanently empty and EVERY matching line in the
+        // governed file was mass-flagged E0112, blaming healthy references. One
+        // E0114 per (rule, governed file) instead, and the rule's lines are
+        // skipped for this file.
+        None => {
+            findings.push(marker_finding(
+                path,
+                "",
+                0,
+                "MDATRON-E0114",
+                "marker-target-section-not-found",
+                "a marker rule's target_section names a heading that is not \
+                 present in the rule's target document, so its references cannot \
+                 be resolved; the rule is skipped for this file",
+                "target_section",
+                rule.target_section.as_deref().unwrap_or_default(),
+            ));
+            None
+        }
+    }
 }
 
 /// The normalized member names of `body` for `element`, optionally scoped to the
 /// span of the heading named by `section` (until the next heading of the same or
-/// higher level).
-fn extract_members(body: &str, element: ElementClass, section: Option<&str>) -> HashSet<String> {
+/// higher level). Returns `None` when a section IS named but its heading is
+/// never matched in `body` (GH #48 — loud absence, decided by the SAME matching
+/// logic the member scan uses: level equality + [`normalize_name`] equality);
+/// with no `section` it always returns `Some`.
+fn extract_members(
+    body: &str,
+    element: ElementClass,
+    section: Option<&str>,
+) -> Option<HashSet<String>> {
     let mut members = HashSet::new();
 
     // Section gating: when a section is named, collect only between its heading
     // and the next heading of the same-or-higher level.
     let want = section.and_then(atx_heading);
     let mut in_section = section.is_none();
+    let mut section_matched = section.is_none();
 
     for (_, line) in non_fenced_lines(body) {
         if let Some((level, text)) = atx_heading(line) {
@@ -202,6 +237,7 @@ fn extract_members(body: &str, element: ElementClass, section: Option<&str>) -> 
                 if !in_section {
                     if level == want_lvl && normalize_name(text) == normalize_name(want_text) {
                         in_section = true;
+                        section_matched = true;
                     }
                     continue; // the section header itself is not a member
                 } else if level <= want_lvl {
@@ -223,7 +259,7 @@ fn extract_members(body: &str, element: ElementClass, section: Option<&str>) -> 
             }
         }
     }
-    members
+    section_matched.then_some(members)
 }
 
 /// Normalize a name for equality: trim surrounding whitespace and tolerate a
@@ -278,13 +314,38 @@ mod tests {
     #[test]
     fn extract_members_scopes_to_section() {
         let body = "# T\n\n## A\n\n- **In A.** x\n\n## B\n\n- **In B.** y\n";
-        let in_a = extract_members(body, ElementClass::ListItemBoldName, Some("## A"));
+        let in_a = extract_members(body, ElementClass::ListItemBoldName, Some("## A"))
+            .expect("## A is present, the scan resolves");
         assert!(in_a.contains("In A"));
         assert!(
             !in_a.contains("In B"),
             "a member under ## B is out of section A"
         );
-        let whole = extract_members(body, ElementClass::ListItemBoldName, None);
+        let whole = extract_members(body, ElementClass::ListItemBoldName, None)
+            .expect("no section named: always Some");
         assert!(whole.contains("In A") && whole.contains("In B"));
+    }
+
+    // RED GATE (GH #48 finding 3): a named target_section whose heading is never
+    // matched in the body is `None` (→ E0114 upstream), decided by the SAME
+    // matcher the member scan uses — level equality + normalize_name equality
+    // (trailing `.` tolerated) — never by a different detector.
+    #[test]
+    fn extract_members_is_none_when_named_section_never_matches() {
+        let body = "# T\n\n## Renamed\n\n- **In A.** x\n";
+        assert!(
+            extract_members(body, ElementClass::ListItemBoldName, Some("## A")).is_none(),
+            "a renamed heading must not yield a silently-empty member set"
+        );
+        // Level mismatch is a non-match too: `### A` does not satisfy `## A`.
+        let deeper = "# T\n\n### A\n\n- **In A.** x\n";
+        assert!(extract_members(deeper, ElementClass::ListItemBoldName, Some("## A")).is_none());
+        // normalize_name tolerance: a trailing `.` on the heading still matches.
+        let dotted = "# T\n\n## A.\n\n- **In A.** x\n";
+        assert!(
+            extract_members(dotted, ElementClass::ListItemBoldName, Some("## A"))
+                .expect("normalize_name equality matches the dotted heading")
+                .contains("In A")
+        );
     }
 }

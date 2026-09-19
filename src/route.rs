@@ -278,6 +278,31 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
                     )))
                 }
             };
+            // GH #48 finding 2: a pattern with no capture group can never name a
+            // reference — every matching line was a silent no-op. Refused at
+            // load (captures_len counts group 0, the whole match, so >= 2 means
+            // at least one real capture group).
+            if pattern.captures_len() < 2 {
+                return Err(Error::Config(format!(
+                    "route marker_rules pattern '{}' has no capture group; a \
+                     marker pattern must have a capture group for the referenced \
+                     <name>",
+                    rule.pattern
+                )));
+            }
+            // GH #48 finding 3 (load-time leg): a target_section spec that does
+            // not parse as an ATX heading can never match any heading — the
+            // member set would be permanently empty and every healthy reference
+            // mass-flagged E0112. Refused at load, like a non-compiling pattern.
+            if let Some(spec) = &rule.target_section {
+                if crate::markup::atx_heading(spec).is_none() {
+                    return Err(Error::Config(format!(
+                        "route marker_rules target_section '{spec}' is not a \
+                         heading; a section spec must be the full ATX heading \
+                         line (e.g. '## Requirements')"
+                    )));
+                }
+            }
             marker_rules.push(MarkerRule {
                 pattern,
                 element: rule.element,

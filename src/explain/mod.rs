@@ -1,7 +1,7 @@
 //! Embedded `mdatron explain CODE` catalog.
 //!
 //! v0.1.x catalog: MDATRON-E0001, E0002, E0010, E0011, E0012, E0050, E0060, E0070,
-//! E0080, W0040; route family E0030, E0031, E0032, W0041; pin family E0061, E0062, E0063, W0042, L0001; vocabulary family E0090-E0094; citation family E0100, E0101; link family E0110, E0111; marker family E0112; code-catalog family E0113; section-structural family E0120, E0121; DSL rule field-reference validation E0021. The catalog grows by one entry per newly-emitted code per the
+//! E0080, W0040; route family E0030, E0031, E0032, W0041; pin family E0061, E0062, E0063, W0042, L0001; vocabulary family E0090-E0094; citation family E0100, E0101; link family E0110, E0111; marker family E0112, E0114; code-catalog family E0113; section-structural family E0120, E0121, E0122; DSL rule field-reference validation E0021. The catalog grows by one entry per newly-emitted code per the
 //! Phase 0 DESIGN open question #2 SO disposition (2026-06-02); the
 //! path-confinement trio (E0010/E0011/E0012) landed with the confinement
 //! rework (the path-confinement defect issue in this tracker).
@@ -60,11 +60,13 @@ const E0110: &str = include_str!("MDATRON-E0110.md");
 const E0111: &str = include_str!("MDATRON-E0111.md");
 const E0112: &str = include_str!("MDATRON-E0112.md");
 const E0113: &str = include_str!("MDATRON-E0113.md");
+const E0114: &str = include_str!("MDATRON-E0114.md");
 const E0021: &str = include_str!("MDATRON-E0021.md");
 const E0022: &str = include_str!("MDATRON-E0022.md");
 const W0050: &str = include_str!("MDATRON-W0050.md");
 const E0120: &str = include_str!("MDATRON-E0120.md");
 const E0121: &str = include_str!("MDATRON-E0121.md");
+const E0122: &str = include_str!("MDATRON-E0122.md");
 const W0051: &str = include_str!("MDATRON-W0051.md");
 
 /// Structured shape of an explain page. Surfaces the required fields named
@@ -130,8 +132,10 @@ pub fn lookup(code: &str) -> Option<&'static str> {
         "MDATRON-E0111" => Some(E0111),
         "MDATRON-E0112" => Some(E0112),
         "MDATRON-E0113" => Some(E0113),
+        "MDATRON-E0114" => Some(E0114),
         "MDATRON-E0120" => Some(E0120),
         "MDATRON-E0121" => Some(E0121),
+        "MDATRON-E0122" => Some(E0122),
         "MDATRON-W0051" => Some(W0051),
         _ => None,
     }

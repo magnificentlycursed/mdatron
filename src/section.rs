@@ -186,6 +186,19 @@ pub(crate) fn compile_rule(r: RawRule) -> Result<Rule, Error> {
             Error::Config(format!("section-rules pattern '{p}' does not compile: {e}"))
         })
     };
+    // GH #48: a `section` spec that does not parse as an ATX heading can never
+    // match anything (`markup::section_span` starts with `atx_heading(spec)?`),
+    // so the rule would be a silent no-op — refused at load, the same hard
+    // posture as a non-compiling pattern.
+    let heading_spec = |s: &str| {
+        if atx_heading(s).is_none() {
+            return Err(Error::Config(format!(
+                "section-rules section spec '{s}' is not a heading; a section \
+                 spec must be the full ATX heading line (e.g. '## Requirements')"
+            )));
+        }
+        Ok(())
+    };
     match r.disjoint {
         Some(ops) => {
             if r.section.is_some()
@@ -202,6 +215,8 @@ pub(crate) fn compile_rule(r: RawRule) -> Result<Rule, Error> {
             let [a, b]: [RawOperand; 2] = ops.try_into().map_err(|_| {
                 Error::Config("a `disjoint` rule takes exactly two sections".into())
             })?;
+            heading_spec(&a.section)?;
+            heading_spec(&b.section)?;
             Ok(Rule::Disjoint {
                 a: Operand {
                     id_pattern: compile(&a.id_pattern)?,
@@ -232,6 +247,7 @@ pub(crate) fn compile_rule(r: RawRule) -> Result<Rule, Error> {
                     "section-rule count predicate '{count}' is not `<op> <n>` (e.g. \">= 1\")"
                 ))
             })?;
+            heading_spec(&section)?;
             Ok(Rule::Count {
                 matcher: compile(&pattern)?,
                 section,
@@ -264,34 +280,83 @@ pub fn check_file(
                 level,
                 matcher,
                 pred,
-            } => {
-                let count = section_span(body, section)
-                    .map(|s| count_matching_headings(s, *level, matcher))
-                    .unwrap_or(0);
-                if !pred.holds(count) {
-                    findings.push(section_finding(
-                        path,
-                        content,
-                        section_line(content, body_offset, section),
-                        "MDATRON-E0120",
-                        "section-count-violation",
-                        // #165: the section name is adopter-derived — it rides in
-                        // the quoted region, not inline in the message.
-                        &format!(
-                            "a section has {count} matching h{level} heading(s); the \
-                             rule requires the count {}",
-                            pred.describe()
-                        ),
-                        vec![QuotedRegion {
-                            label: "section".into(),
-                            content: section.clone(),
-                        }],
-                    ));
+            } => match section_span(body, section) {
+                // GH #48 finding 1 (fail-open): an ABSENT section used to count
+                // as 0, so a predicate satisfied by 0 passed silently after a
+                // heading rename. Loud absence instead (the pin family's E0063
+                // posture): the predicate is NOT evaluated.
+                None => findings.push(section_finding(
+                    path,
+                    content,
+                    section_line(content, body_offset, section),
+                    "MDATRON-E0122",
+                    "section-not-found",
+                    // #165: the section name is adopter-derived — it rides in
+                    // the quoted region, not inline in the message.
+                    "a section rule names a section whose heading is not present \
+                     in this document, so its count assertion cannot be evaluated",
+                    vec![QuotedRegion {
+                        label: "section".into(),
+                        content: section.clone(),
+                    }],
+                )),
+                Some(span) => {
+                    let count = count_matching_headings(span, *level, matcher);
+                    if !pred.holds(count) {
+                        findings.push(section_finding(
+                            path,
+                            content,
+                            section_line(content, body_offset, section),
+                            "MDATRON-E0120",
+                            "section-count-violation",
+                            // #165: the section name is adopter-derived — it rides in
+                            // the quoted region, not inline in the message.
+                            &format!(
+                                "a section has {count} matching h{level} heading(s); the \
+                                 rule requires the count {}",
+                                pred.describe()
+                            ),
+                            vec![QuotedRegion {
+                                label: "section".into(),
+                                content: section.clone(),
+                            }],
+                        ));
+                    }
                 }
-            }
+            },
             Rule::Disjoint { a, b } => {
-                let ids_a = extract_ids(body, a);
-                let ids_b = extract_ids(body, b);
+                // GH #48 finding 1 (fail-open): a renamed/absent operand section
+                // used to yield an empty id set, and empty-vs-empty is disjoint —
+                // the rule passed forever after a heading rename. Each absent
+                // operand is loud (E0122), and the disjointness comparison runs
+                // ONLY when both spans exist.
+                let span_a = section_span(body, &a.section);
+                let span_b = section_span(body, &b.section);
+                for (op, span) in [(a, &span_a), (b, &span_b)] {
+                    if span.is_none() {
+                        findings.push(section_finding(
+                            path,
+                            content,
+                            section_line(content, body_offset, &op.section),
+                            "MDATRON-E0122",
+                            "section-not-found",
+                            // #165: the section name is adopter-derived — it rides
+                            // in the quoted region, not inline in the message.
+                            "a disjointness rule names a section whose heading is \
+                             not present in this document, so the disjointness \
+                             assertion cannot be evaluated",
+                            vec![QuotedRegion {
+                                label: "section".into(),
+                                content: op.section.clone(),
+                            }],
+                        ));
+                    }
+                }
+                let (Some(span_a), Some(span_b)) = (span_a, span_b) else {
+                    continue;
+                };
+                let ids_a = extract_ids(span_a, a);
+                let ids_b = extract_ids(span_b, b);
                 let mut overlap: Vec<&String> = ids_a.intersection(&ids_b).collect();
                 if !overlap.is_empty() {
                     overlap.sort();
@@ -342,14 +407,13 @@ fn count_matching_headings(section: &str, level: usize, matcher: &regex_lite::Re
         .count()
 }
 
-/// Extract the id set for one disjoint operand — HEADING-SCOPED or BULLET-LEAD-
-/// SCOPED per `id_source`, never a full-span scan, so a body mention of an id is
-/// not collected (vsdd-cli#29's false-overlap trap).
-fn extract_ids(body: &str, op: &Operand) -> HashSet<String> {
+/// Extract the id set for one disjoint operand from its RESOLVED section span —
+/// HEADING-SCOPED or BULLET-LEAD-SCOPED per `id_source`, never a full-span scan,
+/// so a body mention of an id is not collected (vsdd-cli#29's false-overlap
+/// trap). The caller resolves the span first (GH #48): an absent section is a
+/// loud `E0122`, never an empty set that trivially satisfies disjointness.
+fn extract_ids(section: &str, op: &Operand) -> HashSet<String> {
     let mut ids = HashSet::new();
-    let Some(section) = section_span(body, &op.section) else {
-        return ids;
-    };
     for (_, line) in non_fenced_lines(section) {
         let source_text = match op.id_source {
             IdSource::H3Heading => atx_heading(line).filter(|(l, _)| *l == 3).map(|(_, t)| t),
@@ -453,8 +517,8 @@ mod tests {
             id_source: IdSource::BulletLead,
             id_pattern: rx(r"Slice (\d+)"),
         };
-        let open_ids = extract_ids(body, &open);
-        let done_ids = extract_ids(body, &done);
+        let open_ids = extract_ids(section_span(body, &open.section).unwrap(), &open);
+        let done_ids = extract_ids(section_span(body, &done.section).unwrap(), &done);
         assert_eq!(
             open_ids,
             HashSet::from(["2".to_string()]),
@@ -464,6 +528,154 @@ mod tests {
         assert!(
             open_ids.is_disjoint(&done_ids),
             "no false overlap on Slice 3"
+        );
+    }
+
+    // RED GATE (GH #48 finding 1, load-time leg): a count rule's `section` spec
+    // that does not parse as an ATX heading can never match anything — refused
+    // at load, not shipped as a silent no-op.
+    #[test]
+    fn compile_rule_rejects_count_section_spec_without_heading_marker() {
+        let raw = RawRule {
+            section: Some("Requirements".into()),
+            element: Some(HeadingLevel::H3),
+            match_pattern: Some(r"^### .*$".into()),
+            count: Some(">= 1".into()),
+            disjoint: None,
+        };
+        let err = match compile_rule(raw) {
+            Err(e) => e,
+            Ok(_) => panic!("a bare 'Requirements' spec must be refused"),
+        };
+        let msg = format!("{err}");
+        assert!(
+            msg.contains("Requirements") && msg.contains("ATX heading"),
+            "the error names the spec and the required shape; got {msg}"
+        );
+    }
+
+    // RED GATE (GH #48 finding 1, load-time leg): same refusal for each
+    // disjoint operand's `section` spec.
+    #[test]
+    fn compile_rule_rejects_disjoint_operand_spec_without_heading_marker() {
+        let raw = RawRule {
+            section: None,
+            element: None,
+            match_pattern: None,
+            count: None,
+            disjoint: Some(vec![
+                RawOperand {
+                    section: "## Requirements".into(),
+                    id_from: IdSource::H3Heading,
+                    id_pattern: r"Slice (\d+)".into(),
+                },
+                RawOperand {
+                    section: "Completed phases".into(),
+                    id_from: IdSource::BulletLead,
+                    id_pattern: r"Slice (\d+)".into(),
+                },
+            ]),
+        };
+        let err = match compile_rule(raw) {
+            Err(e) => e,
+            Ok(_) => panic!("a bare operand spec must be refused"),
+        };
+        let msg = format!("{err}");
+        assert!(
+            msg.contains("Completed phases") && msg.contains("ATX heading"),
+            "the error names the offending operand spec; got {msg}"
+        );
+    }
+
+    // RED GATE (GH #48 finding 1, the CRITICAL silent-pass case): a count
+    // predicate satisfied by 0 (`== 0`) used to PASS silently when the named
+    // section is absent. It must now be E0122, and the predicate must not be
+    // evaluated.
+    #[test]
+    fn absent_section_with_zero_satisfiable_predicate_is_e0122_not_silent() {
+        let rule = Rule::Count {
+            section: "## Requirements".into(),
+            level: 3,
+            matcher: rx(r"^### .*$"),
+            pred: parse_count_pred("== 0").unwrap(),
+        };
+        let body = "# Doc\n\n## Renamed Requirements\n\n### Phase 1: x\n";
+        let mut findings = Vec::new();
+        check_file(&[&rule], Path::new("d.md"), body, 0, &mut findings);
+        let f = findings
+            .iter()
+            .find(|f| f.code == "MDATRON-E0122")
+            .unwrap_or_else(|| panic!("expected E0122 on the absent section; got {findings:?}"));
+        assert_eq!(f.summary, "section-not-found");
+        assert!(
+            !f.message.contains("Requirements"),
+            "the spec rides in quoted[], not the message: {:?}",
+            f.message
+        );
+        assert!(f
+            .quoted
+            .iter()
+            .any(|q| q.label == "section" && q.content == "## Requirements"));
+    }
+
+    // RED GATE (GH #48 finding 1): an absent section under `>= 1` is E0122
+    // (section-not-found), NOT an E0120 with count 0 — the absence is reported
+    // as absence, never as a count.
+    #[test]
+    fn absent_section_is_e0122_not_e0120_with_count_zero() {
+        let rule = Rule::Count {
+            section: "## Requirements".into(),
+            level: 3,
+            matcher: rx(r"^### .*$"),
+            pred: parse_count_pred(">= 1").unwrap(),
+        };
+        let body = "# Doc\n\nno such section here.\n";
+        let mut findings = Vec::new();
+        check_file(&[&rule], Path::new("d.md"), body, 0, &mut findings);
+        assert!(
+            findings.iter().any(|f| f.code == "MDATRON-E0122"),
+            "absent section is E0122; got {findings:?}"
+        );
+        assert!(
+            findings.iter().all(|f| f.code != "MDATRON-E0120"),
+            "absence must not masquerade as a count violation; got {findings:?}"
+        );
+    }
+
+    // RED GATE (GH #48 finding 1): a disjoint rule whose operand section was
+    // renamed used to compare empty-vs-empty (= disjoint = silent pass). It must
+    // now be exactly one E0122 naming THAT operand, no E0121, no silent pass.
+    #[test]
+    fn disjoint_with_renamed_operand_section_is_e0122_for_that_operand() {
+        let mk = |section: &str| Operand {
+            section: section.into(),
+            id_source: IdSource::H3Heading,
+            id_pattern: rx(r"Slice (\d+)"),
+        };
+        let rule = Rule::Disjoint {
+            a: mk("## Requirements"),
+            b: mk("## Completed phases"),
+        };
+        // `## Completed phases` was renamed to `## Done` in the doc.
+        let body = "## Requirements\n\n### Slice 1\n\n## Done\n\n### Slice 1\n";
+        let mut findings = Vec::new();
+        check_file(&[&rule], Path::new("d.md"), body, 0, &mut findings);
+        let e0122: Vec<_> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0122")
+            .collect();
+        assert_eq!(
+            e0122.len(),
+            1,
+            "exactly one E0122, for the renamed operand; got {findings:?}"
+        );
+        assert!(e0122[0]
+            .quoted
+            .iter()
+            .any(|q| q.label == "section" && q.content == "## Completed phases"));
+        assert!(
+            findings.iter().all(|f| f.code != "MDATRON-E0121"),
+            "no disjointness verdict when an operand span is missing; got {findings:?}"
         );
     }
 
