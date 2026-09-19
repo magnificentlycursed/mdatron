@@ -1,6 +1,6 @@
 {
   "next_display_id": 172,
-  "next_comment_id": 457,
+  "next_comment_id": 459,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -6850,10 +6850,30 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-08-10T12:56:45.901952Z",
-      "updated_at": "2026-08-10T12:56:51.290284Z",
+      "updated_at": "2026-09-19T00:21:48.614211Z",
       "labels": [
         "release"
-      ]
+      ],
+      "comments": {
+        "5b5a5c6c-2bde-4b4c-98ee-fd5b28fd9aa3": {
+          "display_id": 458,
+          "author": "79Ig",
+          "content": "RELEASE PAUSED: GH #48 pre-0.6.0 roast (cold-cluster + adversarial-verify, confirmed vs b358391) — 1 CRITICAL + 7 majors, all release-gating. Routing plan (lanes, in order): A = findings 1+2+3 (section/marker gate families fail open: E0122/E0114 section-not-found + load-time validation) CRITICAL; B = finding 5 + markup minors (atx_heading 4+-space indent accepted -> truncated section-pin hashes); C = finding 4 (pin --update multibyte-sha panic + raw stderr + limits); D = finding 6 (vocab scans fenced blocks as live prose); E = finding 7 + doc/packaging minors (E0010/E0011 explain pages contradict 0.6.0 link semantics; README family count; docs/limits.md missing from package allowlist — promoted to pre-cut since the published crate's tests would fail); F = finding 8 (per-run memo for marker member-sets/link slugs); G = residue (remaining confirmed minors + the 11 unverified to triage). Cut resumes after A-F.",
+          "created_at": "2026-09-19T00:21:48.585039Z",
+          "kind": "blocker",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAea2bfTncta+7ku4DdNK8TqYYlZ0XEkzdQuA2amKxezEBnJ6/H+QPa3Dv477Bok6c983LQJdhfLrmXJ4pdcg5Bg=="
+        },
+        "bbf35663-da88-419f-9345-d4d553ca055a": {
+          "display_id": 457,
+          "author": "79Ig",
+          "content": "Session auto-ended (stale after 66484 minutes). No handoff notes provided.",
+          "created_at": "2026-09-19T00:07:04.368447Z",
+          "kind": "handoff",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA72R1+bZAmKIlLg3bHQsBNJbrI5EI/BFfdxGUOw5MOiW0zpz6BdfStVuRfi+HKOzupKxbpUsXh64PXMw0uoXRBg=="
+        }
+      }
     },
     "f9c58211-2b09-49a8-be00-280b9ea98e4f": {
       "uuid": "f9c58211-2b09-49a8-be00-280b9ea98e4f",
@@ -7249,8 +7269,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-18T20:22:57.057656Z",
+    "timestamp": "2026-09-19T00:21:48.614211Z",
     "agent_id": "79Ig",
-    "agent_seq": 895
+    "agent_seq": 897
   }
 }
