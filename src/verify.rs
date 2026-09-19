@@ -5429,9 +5429,63 @@ pattern:
         );
     }
 
-    // GH #48 finding 8, link leg: the anchor/slug cache is run-level — the
-    // second referring FILE is served from the cache, and its per-reference
-    // findings still fire (a dead anchor in file 2 is caught).
+    // RED GATE (GH #48 finding 8, link leg — lane-F review F1): the anchor/slug
+    // cache is RUN-level, observable as one memo entry serving two referring
+    // files. A function-local cache leaves the memo empty, so this fails if the
+    // hoisting is ever re-localized; per-reference findings still fire per file.
+    #[test]
+    fn link_slug_cache_is_run_level_for_two_referring_files() {
+        let proj = TempProject::new("memo-link-hoist");
+        proj.write("refs/target.md", "# Title\n\n## Real Heading\n\nbody\n");
+        let mut snapshot = crate::snapshot::Snapshot::new(MAX_FILE_BYTES, MAX_FILE_BYTES);
+        let confined = crate::confine::confine_lexically(Path::new("refs/target.md")).unwrap();
+        snapshot.capture(&proj.0, &confined).unwrap();
+
+        let mut memo = crate::memo::RefMemo::default();
+        let mut findings = Vec::new();
+        crate::link::check_file(
+            &snapshot,
+            &proj.0,
+            &proj.0.join("a.md"),
+            "[ok](refs/target.md#real-heading)\n",
+            0,
+            false,
+            &mut memo,
+            &mut findings,
+        );
+        assert!(findings.is_empty(), "file 1 resolves clean: {findings:?}");
+        crate::link::check_file(
+            &snapshot,
+            &proj.0,
+            &proj.0.join("b.md"),
+            "[ok](refs/target.md#real-heading)\n[dead](refs/target.md#missing)\n",
+            0,
+            false,
+            &mut memo,
+            &mut findings,
+        );
+        assert_eq!(
+            findings
+                .iter()
+                .filter(|f| f.code == "MDATRON-E0111")
+                .count(),
+            1,
+            "file 2's dead anchor still fires from the cached slug set: {findings:?}"
+        );
+        assert_eq!(
+            memo.link_slugs.len(),
+            1,
+            "one shared target = one RUN-level cache entry (a function-local \
+             cache leaves the memo empty): {:?}",
+            memo.link_slugs.keys()
+        );
+    }
+
+    // GH #48 finding 8, link leg (behavior preservation): with two files
+    // fragment-linking one target, per-reference findings still fire per file —
+    // a dead anchor in file 2 is caught. (The HOISTING itself is pinned by the
+    // direct-drive probe below — this end-to-end test passes with a
+    // function-local cache too; lane-F review F1.)
     #[test]
     fn link_anchor_cache_serves_second_file_and_still_flags() {
         let proj = link_project("memo-link-slugs", "Good [a](target.md#real-heading).\n");
