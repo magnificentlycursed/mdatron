@@ -1,6 +1,6 @@
 {
   "next_display_id": 186,
-  "next_comment_id": 506,
+  "next_comment_id": 507,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -5811,8 +5811,17 @@
       "priority": "critical",
       "created_by": "79Ig",
       "created_at": "2026-09-20T00:09:43.909732Z",
-      "updated_at": "2026-09-20T00:10:41.382218Z",
+      "updated_at": "2026-09-20T00:24:58.910591Z",
       "comments": {
+        "8b4baded-f566-48bd-b287-8888c4d2857e": {
+          "display_id": 506,
+          "author": "79Ig",
+          "content": "RESULT: lane A shipped in ebc2af5. All three GH52 blockers closed — E0040 dialect refusal at the Schema::compile chokepoint (refusal-over-override per plan ruling; explain page + catalog +1; 5-dialect red-gate + enforce-control), consume_keyword starts_with fix (+ the discovered #156 silent-skip: validate_rule_field_refs now propagates parse failures at load), array-literal enter()/leave() (+ full parse_primary-cycle audit). Independent verification: 9 suites 0-failed, clippy/fmt clean, self-verify clean, byte-identity holds; all three GH52 repros re-run end-to-end by the verifier against the built binary — exit 2 structured pipeline_error (schema_load/expr_parse), never 0/101/134; 2020-12 control still fires E0050. Cold review dispatched.",
+          "created_at": "2026-09-20T00:24:58.897699Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA6xU7P9J6l1G5ZgA2VIMOvhTNp80Abl+XYP+Uq3CNuM+CoGyJyYlePlHoMXJRmEEXIdvB2TbAU+rDb7nrhSEkBA=="
+        },
         "ad1a17a8-465b-44f8-a379-9da78cfddc94": {
           "display_id": 498,
           "author": "79Ig",
@@ -7940,8 +7949,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T00:24:31.469148Z",
+    "timestamp": "2026-09-20T00:24:58.910591Z",
     "agent_id": "79Ig",
-    "agent_seq": 993
+    "agent_seq": 994
   }
 }
