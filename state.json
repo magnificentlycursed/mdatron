@@ -1,6 +1,6 @@
 {
   "next_display_id": 186,
-  "next_comment_id": 502,
+  "next_comment_id": 503,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -2226,7 +2226,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-09-19T22:15:11.079839Z",
-      "updated_at": "2026-09-20T00:10:34.409118Z",
+      "updated_at": "2026-09-20T00:17:53.263284Z",
       "labels": [
         "enhancement"
       ],
@@ -2246,6 +2246,15 @@
           "kind": "observation",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA0wb3Y3bTptDAdT5HaAoltpiqiyH4rZfFKpkW9uX2OAh0RV3BC6c+EU22+Bd7DwP21Ewc/qBd2phZCXBjwEY2DQ=="
+        },
+        "67ac49dd-33ef-4949-adae-b5e298b52c5d": {
+          "display_id": 502,
+          "author": "79Ig",
+          "content": "SCOPE NOTE from #181 (operator 2026-09-19): the README quickstart shows the full diagnostic loop — a seeded violation, the rustc-style error it renders, the explain page, the fix, the clean re-run — not success-only output. The failure experience is the product pitch; docs that only show the golden path hide the differentiator.",
+          "created_at": "2026-09-20T00:17:53.250988Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABARzpqtWcFCoS7ghQrIK10cox1GaSiq0zyOeGW2xv50nQTKQ0rLB/2zriKNw8WcaZej/m3yqeH8gpM4i7FkzTDDA=="
         },
         "994b7386-5911-4e01-9a58-c0445c92964a": {
           "display_id": 484,
@@ -7904,8 +7913,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T00:17:47.093447Z",
+    "timestamp": "2026-09-20T00:17:53.263284Z",
     "agent_id": "79Ig",
-    "agent_seq": 988
+    "agent_seq": 989
   }
 }
