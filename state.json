@@ -1,6 +1,6 @@
 {
   "next_display_id": 195,
-  "next_comment_id": 529,
+  "next_comment_id": 530,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -3001,7 +3001,18 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-20T01:31:00.634457Z",
-      "updated_at": "2026-09-20T01:31:00.634457Z"
+      "updated_at": "2026-09-20T02:49:33.244870Z",
+      "comments": {
+        "1a3b99b2-d6cd-448e-a613-2709d6dcb00b": {
+          "display_id": 529,
+          "author": "79Ig",
+          "content": "SYNC SHIPPED (8dcbf15): D1 grade renames (aliases kept pending upstream #874 deprecation entries), D2 regression-corpus rename + retirement-split note, D3 rows re-marked 'shipped upstream, unadopted' (adoption = open operator decision), D4 honest-boundary rewrite, D8 spend-shape discipline in §1 + enforcement row (convention grade) + D9 warm-on-raw nuance + D7 fix-lane, D16 .vsdd/events archived. Register gate clean over both docs; seam tests green. REMAINING ON THIS ISSUE (batched for operator): the primer payload refresh v0.1.0->v0.2.0 (26 files of upstream text; upstream's own phase-3 primer still carries the review-log instruction its contract retired — the refresh must edit, not copy) and the D3 adopt-now decision (vsdd gate + routing-gate workflow here). Do not close until both are ruled.",
+          "created_at": "2026-09-20T02:49:33.233280Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAtLN643reHRURfeJA65xXYqxoH7qpT2ACJ4CPxsgtvd4Sr5/RYMIhgZL6rUlVMCLU67oxCACtcQxy5ZfeNAQPCA=="
+        }
+      }
     },
     "70039fee-0c5f-457a-8cb9-db920105b263": {
       "uuid": "70039fee-0c5f-457a-8cb9-db920105b263",
@@ -8283,8 +8294,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T02:46:06.091580Z",
+    "timestamp": "2026-09-20T02:49:33.244870Z",
     "agent_id": "79Ig",
-    "agent_seq": 1044
+    "agent_seq": 1045
   }
 }
