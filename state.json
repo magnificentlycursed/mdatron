@@ -1,6 +1,6 @@
 {
   "next_display_id": 186,
-  "next_comment_id": 498,
+  "next_comment_id": 499,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -5798,7 +5798,18 @@
       "priority": "critical",
       "created_by": "79Ig",
       "created_at": "2026-09-20T00:09:43.909732Z",
-      "updated_at": "2026-09-20T00:09:43.909732Z"
+      "updated_at": "2026-09-20T00:10:41.382218Z",
+      "comments": {
+        "ad1a17a8-465b-44f8-a379-9da78cfddc94": {
+          "display_id": 498,
+          "author": "79Ig",
+          "content": "PLAN (lane 1a; references: GH#52 blockers 1-3 + major 2, all reproduced by the roast at 7b97c32; knowledge pages consulted: cedar-opa-dsl-audit — refusal-over-reinterpretation posture; sarif-envelope-audit — results vs tool-conditions for the new refusal code). DESIGN RULING carried into implementation: blocker 1 fixes by REFUSAL, not $schema override — silently revalidating a draft-07-authored schema under 2020-12 semantics would reinterpret the author's declared dialect (exclusiveMinimum/items semantics differ); mdatron's doctrine is as-written-first + loud refusal. Supported dialect = 2020-12 ONLY (declared or absent); every other declared $schema refused at load with a loud schema-family code allocated per the codes.rs registry + explain page + golden catalog. 2019-09 'working today' is incidental unversioned crate behavior — refused too. Blocker 2: starts_with + boundary-char inspection (root cause), red-gates em-dash + euro + the load-time non-matching-doc path. Blocker 3: array-element parsing through enter()/leave() + audit every parse_primary-reachable cycle; red-gate deep-bracket input -> ParseError never abort; extend the existing depth unit test to brackets.",
+          "created_at": "2026-09-20T00:10:41.362589Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAVFRX/g3nav2lI6p+OfqK9ivV86l118XUE/2UPNgUIGa/pE/p44yaW/uONb3bmcg93hUo6Cf/xcxLxmFvmaHqCQ=="
+        }
+      }
     },
     "c5dc858e-4a6e-4662-9360-2aac4b0c176d": {
       "uuid": "c5dc858e-4a6e-4662-9360-2aac4b0c176d",
@@ -7862,8 +7873,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T00:10:34.409118Z",
+    "timestamp": "2026-09-20T00:10:41.382218Z",
     "agent_id": "79Ig",
-    "agent_seq": 983
+    "agent_seq": 984
   }
 }
