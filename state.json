@@ -1,6 +1,6 @@
 {
   "next_display_id": 192,
-  "next_comment_id": 523,
+  "next_comment_id": 524,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -1847,7 +1847,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-09-20T00:09:49.874040Z",
-      "updated_at": "2026-09-20T01:15:11.108778Z",
+      "updated_at": "2026-09-20T01:19:34.305675Z",
       "comments": {
         "24ffc771-664a-441c-81a1-2e97e0d6823a": {
           "display_id": 507,
@@ -1866,6 +1866,15 @@
           "kind": "observation",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA1rSb6G+HWYFmzZmLqQFO1MtLvOKh2IVu1g57C9Lzn9nj+QjdJ/HFirBWNvxOfsf8Dd/7/lhoYEEbIFxPpqVYAQ=="
+        },
+        "589dbf97-cff5-41bb-b44f-fdc8aaaa5ffb": {
+          "display_id": 523,
+          "author": "79Ig",
+          "content": "B6 fixed (see commit): concurrency group gains event_name — push+PR runs never share a group; same-event supersession unchanged; the rare release back-merge overlap costs one duplicate run instead of stranded required contexts. Lane B fully closed (B1-B6).",
+          "created_at": "2026-09-20T01:19:34.292637Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABABgaNqwYH8lfmsu00dK/8zpozjmsaOYoUqs3nlhu6NHO/jQglrUoUVk4VVVAT5DQSQpNwLkbWFnYib+X1VdU3AQ=="
         },
         "a59b9cfb-700a-49bf-baef-230c5e5e79a7": {
           "display_id": 519,
@@ -8193,8 +8202,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T01:16:45.803274Z",
+    "timestamp": "2026-09-20T01:19:34.305675Z",
     "agent_id": "79Ig",
-    "agent_seq": 1032
+    "agent_seq": 1033
   }
 }
