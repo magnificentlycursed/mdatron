@@ -1,6 +1,6 @@
 {
   "next_display_id": 186,
-  "next_comment_id": 504,
+  "next_comment_id": 505,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -7231,7 +7231,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-20T00:08:10.948448Z",
-      "updated_at": "2026-09-20T00:21:39.080513Z",
+      "updated_at": "2026-09-20T00:21:45.197724Z",
       "labels": [
         "docs"
       ],
@@ -7283,6 +7283,15 @@
           "kind": "plan",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAcnqQ4HapAm3kpOK/z7BMM67NPPlyz0AdbYv28585oSXCVSFoYDaAXQwLvfWFtJNjNvZQejtw5QV3syxUay/8BA=="
+        },
+        "eb131c5a-8496-46ad-97a7-b7d657182976": {
+          "display_id": 504,
+          "author": "79Ig",
+          "content": "DELIVERABLES (operator ruling 2026-09-19 — case study PROMOTED from roadmap note to formal deliverable): D1 docs/cookbook/ — one recipe page per standard in the ruled priority order (SKILL.md two profiles, CC subagents, Copilot .instructions.md, llms.txt, tier-3 extension lesson), each with the falsification demo + failure-loop section. D2 examples/standards/<name>/ — shipped fixture configs verified in CI (conforming passes, seeded violations red-gate); excluded from the crate package allowlist unless ruled otherwise. D3 README discoverability hook (#180) — agent-config governance quickstart showing one full diagnostic loop. D4 THE CASE STUDY — a blog post and/or presentation developing the positioning arc (silent failure -> false confidence -> failure loop -> doctrine meta-story); lives outside the crate repo; built from artifacts captured during D1/D2 (demo repo, vendor-silence + mdatron-refusal transcripts, envelope JSON, agent self-correction transcript); the artifact-capture obligation binds D1/D2 implementation — recipes that discard their demo material are incomplete against D4. Acceptance for the pack = all four, with D4 potentially trailing D1-D3 as its own lane but tracked HERE, not informally.",
+          "created_at": "2026-09-20T00:21:45.185628Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAg+uRhcWHoeCqQisC2FSE4SSEtk0vQSUSRTYx8FgWVGj0U8ThphYoXxcx87cEh+6eodUVgDDAaduyrw6xahJnAw=="
         }
       }
     },
@@ -7922,8 +7931,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T00:21:39.080513Z",
+    "timestamp": "2026-09-20T00:21:45.197724Z",
     "agent_id": "79Ig",
-    "agent_seq": 991
+    "agent_seq": 992
   }
 }
