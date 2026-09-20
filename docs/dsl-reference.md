@@ -89,6 +89,29 @@ To bring a field into scope, declare it under the schema's `properties` (or rela
 `additionalProperties` if the object is meant to carry open-ended keys). See
 `mdatron explain MDATRON-E0021`.
 
+### Comparison validation (`MDATRON-E0022`, `MDATRON-W0050`)
+
+The same load-time pass also type-checks comparisons against the schema:
+
+- An `==` / `!=` whose two operands the schema declares **type-incompatible**
+  (`$self.count == "yes"` where `count` is declared `integer`) is a
+  **constant** comparison — an always-false `==` flags every document, an
+  always-true `!=` is a silent no-op that looks like a check but enforces
+  nothing. Either way the rule cannot mean what its author intended, so it is
+  refused at load as `MDATRON-E0022` (error).
+- A comparison against a literal that is **not among the field's declared
+  `enum`** (`$self.phase == "phase-99"` where the schema allows only
+  `phase-1a`/`phase-2a`) is a **dead clause** — constant for every conforming
+  document. It warns as `MDATRON-W0050` (Cedar's always-false validator
+  signal): typically a stale enum value left in a rule after the schema
+  narrowed, or a typo in the compared literal.
+
+Both checks share `MDATRON-E0021`'s conservatism: only schema-class contexts
+are examined, and every undecidable shape passes unflagged. Independent of any
+schema, **every** rule's `let:` and `assert` expressions are parse-validated
+at load regardless of context — an unparseable expression is a loud load
+refusal, never deferred to an evaluation that may not come.
+
 ## Expressions
 
 Precedence, loosest first: `or`, `and`, `not`, `in`/`not_in`, `==`/`!=`,

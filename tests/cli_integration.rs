@@ -1032,13 +1032,17 @@ fn readme_contains_tron_disambiguation_sentence() {
 }
 
 #[test]
-fn readme_cites_cargo_install_path_for_bootstrap_period() {
+fn readme_cites_the_crates_io_install_path() {
+    // The bootstrap-period predecessor of this test mandated the
+    // `cargo install --path` checkout text — and kept mandating it after
+    // 0.5.0 published to crates.io, a test ENFORCING stale content (the
+    // #187 deletion-test audit's find; GH #52 major 7 confirmed the class).
+    // The current contract: the primary install path is crates.io.
     let readme = readme_text();
     assert!(
-        readme.contains("cargo install --path"),
-        "mdatron/README.md install section must cite `cargo install --path ...` \
-         for the bootstrap period (Phase 6 of the binary-first plan switches \
-         to crates.io); got readme without the bootstrap install command"
+        readme.contains("cargo install mdatron --locked"),
+        "mdatron/README.md install section must lead with the crates.io \
+         install command; got readme without `cargo install mdatron --locked`"
     );
 }
 
