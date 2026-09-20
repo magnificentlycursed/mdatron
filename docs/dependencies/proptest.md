@@ -45,13 +45,19 @@ exists to make aborts visible.
   committed, every CI job `--locked`.
 - **Maintainer trust:** the proptest-rs org (originally AltSysrq/Jason
   Lingle); the standard Rust property-testing crate.
-- **Transitive deps (with the trimmed feature set):** `bit-set`, `bit-vec`,
-  `bitflags`, `lazy_static`, `num-traits`, `rand` (+ `rand_core`,
-  `rand_chacha`, `rand_xorshift`, `ppv-lite86`, `getrandom`, `zerocopy`),
-  `unarray`, `cfg-if` — all dual MIT/Apache-2.0 (zerocopy adds BSD-2-Clause as
-  an OR arm), all inside the `deny.toml` license allowlist, all crates.io.
-  cargo-deny's graph includes dev-dependencies, so the tree stays under the
-  bans/licenses/sources gate.
+- **Transitive deps (with the trimmed feature set), from `Cargo.lock` ground
+  truth:** direct — `bitflags`, `num-traits`, `rand`, `rand_chacha`,
+  `rand_xorshift`, `regex-syntax`, `unarray`; via the rand family —
+  `rand_core`, `ppv-lite86`, `getrandom`. The adoption added exactly **seven
+  new packages** to the lock (`proptest`, `rand`, `rand_chacha`, `rand_core`,
+  `rand_xorshift`, `ppv-lite86`, `unarray`); `bitflags`, `num-traits`,
+  `regex-syntax`, and `getrandom` were already in the tree via existing
+  dependencies. The disabled `bit-set` feature keeps `bit-set`/`bit-vec` out
+  entirely. All dual MIT/Apache-2.0, all inside the `deny.toml` license
+  allowlist, all crates.io. cargo-deny's graph includes dev-dependencies, so
+  the tree stays under the bans/licenses/sources gate — the mechanical gate
+  over the REAL graph; this prose section is descriptive and is a generation
+  candidate (the same invertible-edge shape as the limits table).
 - **`cargo audit`:** clean at pin time.
 - **MSRV:** well under the pinned 1.88; runs under plain `cargo test` on the
   existing matrix (the decisive advantage over libFuzzer here).

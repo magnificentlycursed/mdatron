@@ -21,20 +21,32 @@
 //!   CI's parser-robustness job pins a seed for determinism; the deep run
 //!   raises the case count on demand.
 //!
-//! HONEST SCOPE — covered: the DSL expression parser (parse + evaluate), the
-//! pattern-file YAML loader, frontmatter parsing, JSON-Schema compile, and the
-//! four `.mdatron/` YAML loaders (route/pin/vocab/codecat), all at the public
-//! API. NOT covered: coverage-guided byte mutation (no libFuzzer/cargo-fuzz —
-//! nightly-only, tracked as the on-demand deep-fuzz follow-up), the markdown
-//! surface (pulldown-cmark, hardened upstream), the snapshot/confinement IO
-//! paths, and semantic differential properties (only panic-freedom is pinned
-//! here).
+//! HONEST SCOPE — covered: the DSL expression parser (parse + evaluate,
+//! including evaluation against generated frontmatter-shaped contexts), the
+//! pattern-file YAML loader, frontmatter parsing, JSON-Schema compile (both
+//! arbitrary JSON and keyword-shaped schemas), the five `.mdatron/` YAML
+//! loaders (config/route/pin/vocab/codecat), and the schema-file JSON text
+//! layer via the verify load path — all at the public API. NOT covered
+//! (lane-C review C2/C3 scoped this list honestly): coverage-guided byte
+//! mutation (no libFuzzer/cargo-fuzz — nightly-only, tracked as the on-demand
+//! deep-fuzz follow-up); the markdown BODY surface — both pulldown-cmark
+//! (hardened upstream) and mdatron's OWN first-party body scanners (marker
+//! and citation checks, link resolution including percent-decoding and the
+//! heading-slug algorithm, inline-code ranges, section scanning, the
+//! vocabulary scan), whose never-panic properties are tracked as crosslink
+//! #193; the snapshot/confinement IO paths; and semantic differential
+//! properties (only panic-freedom is pinned here).
 
 use mdatron::dsl::{evaluate, parse_expression, parse_pattern_file, EvalContext, Value};
 use mdatron::schema::Schema;
+use mdatron::{verify, VerifyConfig};
 use proptest::prelude::*;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
+
+/// The shipped expression-depth limit — every depth bound below derives from
+/// this constant, never a bare literal (lane-C review C1).
+const EXPR_DEPTH_LIMIT: usize = mdatron::limits::SHIPPED.expr_depth;
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -102,6 +114,7 @@ fn seed_nesting_floods_are_bounded_errors() {
         "[".repeat(80_000),
         "(".repeat(80_000),
         format!("{}true", "not ".repeat(20_000)),
+        format!("{}1", "some(x in ".repeat(20_000)),
     ] {
         let err = parse_expression(&flood).expect_err("floods never parse");
         assert!(
@@ -248,6 +261,49 @@ fn json_strategy() -> impl Strategy<Value = serde_json::Value> {
     })
 }
 
+/// Recursive conversion for evaluator-context generation (C5).
+fn json_to_dsl_value(j: &serde_json::Value) -> Value {
+    match j {
+        serde_json::Value::Null => Value::Null,
+        serde_json::Value::Bool(b) => Value::Bool(*b),
+        serde_json::Value::Number(n) => n.as_i64().map(Value::Int).unwrap_or(Value::Null),
+        serde_json::Value::String(s) => Value::Str(s.clone()),
+        serde_json::Value::Array(a) => Value::Array(a.iter().map(json_to_dsl_value).collect()),
+        serde_json::Value::Object(o) => Value::Object(
+            o.iter()
+                .map(|(k, v)| (k.clone(), json_to_dsl_value(v)))
+                .collect(),
+        ),
+    }
+}
+
+/// Objects whose keys are drawn from real JSON-Schema keywords with generated
+/// values, so compile internals beyond the dialect gate are exercised (C5).
+fn schema_shaped_strategy() -> impl Strategy<Value = serde_json::Value> {
+    let keyword = prop_oneof![
+        Just("type"),
+        Just("properties"),
+        Just("items"),
+        Just("prefixItems"),
+        Just("required"),
+        Just("enum"),
+        Just("const"),
+        Just("pattern"),
+        Just("patternProperties"),
+        Just("$ref"),
+        Just("$defs"),
+        Just("additionalProperties"),
+        Just("minItems"),
+        Just("minLength"),
+        Just("format"),
+        Just("allOf"),
+        Just("anyOf"),
+        Just("not"),
+    ];
+    prop::collection::btree_map(keyword.prop_map(str::to_string), json_strategy(), 1..8)
+        .prop_map(|m| serde_json::Value::Object(m.into_iter().collect()))
+}
+
 proptest! {
     // Expr parser + evaluator: hostile token mixes never panic; a parse
     // success must also evaluate without panicking (Ok or EvalError).
@@ -264,10 +320,77 @@ proptest! {
         expr_never_panics(&input.into_iter().collect::<String>());
     }
 
-    // The depth guard holds for arbitrary nesting mixes past the limit: any
-    // flood of recursion-root openers is a structured error, never an abort.
+    // Per-recursion-root floods hit the SPECIFIC depth error (lane-C review
+    // C1: the previous mixed-token form was empirically inert — it PASSED on
+    // the pre-fix aborting code, because incoherent mixes die shallow on
+    // ordinary parse errors long before reaching guard depth, and is_err()
+    // was satisfied by those. Asserting the depth message means a regressed
+    // guard reds by wrong-error at small depths and by crash at abort scale;
+    // abort scale itself is pinned by seed_nesting_floods_are_bounded_errors).
     #[test]
-    fn prop_depth_guard_holds_for_nesting_mixes(
+    fn prop_each_recursion_root_hits_the_depth_guard(
+        root in 0u8..4,
+        depth in (EXPR_DEPTH_LIMIT + 1)..(EXPR_DEPTH_LIMIT * 6)
+    ) {
+        let flood = match root {
+            0 => "(".repeat(depth),
+            1 => "[".repeat(depth),
+            2 => "not ".repeat(depth),
+            _ => format!("{}1", "some(x in ".repeat(depth)),
+        };
+        let err = parse_expression(&flood).expect_err("past-limit floods never parse");
+        prop_assert!(
+            err.message.contains("maximum depth"),
+            "root {root} at depth {depth} must be the bounded depth error; got {err}"
+        );
+    }
+
+    // Syntactically COHERENT mixed nesting past the limit hits the depth
+    // guard: every opener in the sequence is legal at its position (after
+    // '[', elements go through parse_primary, where 'not' is refused — so
+    // the generator never places 'not ' there), which keeps the descent
+    // alive until the guard fires instead of dying shallow (lane-C C1(b)).
+    #[test]
+    fn prop_coherent_nesting_mixes_hit_the_depth_guard(
+        choices in prop::collection::vec(
+            any::<u8>(),
+            (EXPR_DEPTH_LIMIT + 1)..(EXPR_DEPTH_LIMIT * 4)
+        )
+    ) {
+        let mut flood = String::new();
+        let mut inside_array = false;
+        for c in &choices {
+            let opener = if inside_array {
+                match c % 3 {
+                    0 => "(",
+                    1 => "[",
+                    _ => "some(x in ",
+                }
+            } else {
+                match c % 4 {
+                    0 => "(",
+                    1 => "[",
+                    2 => "not ",
+                    _ => "some(x in ",
+                }
+            };
+            inside_array = opener == "[";
+            flood.push_str(opener);
+        }
+        let err = parse_expression(&flood).expect_err("past-limit mixes never parse");
+        prop_assert!(
+            err.message.contains("maximum depth"),
+            "coherent mix of {} openers must be the bounded depth error; got {err}",
+            choices.len()
+        );
+    }
+
+    // Arbitrary (incoherent) opener mixes: a pure NEVER-PANIC probe. This
+    // deliberately claims only panic-freedom — most such mixes die shallow on
+    // ordinary parse errors, so it has no depth-guard detection power (the
+    // two properties above carry that; lane-C review C1(c)).
+    #[test]
+    fn prop_arbitrary_opener_mixes_never_panic(
         depth in 300usize..1500,
         mix in prop::collection::vec(0u8..3, 300..1500)
     ) {
@@ -281,6 +404,44 @@ proptest! {
             })
             .collect();
         prop_assert!(parse_expression(&flood).is_err());
+    }
+
+    // The evaluator against generated frontmatter-shaped contexts (lane-C
+    // review C5: evaluating only against an all-Null context left the
+    // evaluator's hostile surfaces unexplored). Realistic parseable
+    // expressions are guaranteed to reach evaluate(); generated hostile
+    // strings join in when they happen to parse.
+    #[test]
+    fn prop_eval_never_panics_with_hostile_context(
+        generated in hostile_expr_strategy(),
+        ctx_json in json_strategy()
+    ) {
+        let ctx_value = json_to_dsl_value(&ctx_json);
+        let null = Value::Null;
+        for input in [
+            "defined($self.count)",
+            "$self.count == 3",
+            "\"x\" in $self.tags",
+            "count(filter(m in $self.members, $m.kind == \"lane\")) == 1",
+            "every(t in $self.tags, defined($t))",
+            "not ($self.status == \"draft\") or $self.owner != null",
+            generated.as_str(),
+        ] {
+            if let Ok(expr) = parse_expression(input) {
+                let ctx = EvalContext::new(&ctx_value, &null, &null);
+                let _ = evaluate(&expr, &ctx); // Ok or EvalError — both fine.
+            }
+        }
+    }
+
+    // Schema compile with KEYWORD-SHAPED objects (lane-C review C5: pure
+    // json_strategy rarely emits schema keywords, so compile internals beyond
+    // the dialect gate went unexercised).
+    #[test]
+    fn prop_schema_compile_never_panics_on_keyword_shapes(
+        schema in schema_shaped_strategy()
+    ) {
+        let _ = Schema::compile(&schema);
     }
 
     // Pattern-file YAML loader: arbitrary strings never panic.
@@ -321,8 +482,10 @@ proptest! {
 }
 
 proptest! {
-    // The four `.mdatron/` YAML loaders: arbitrary bytes on disk never panic.
-    // File-backed, so bounded tighter than the pure parsers.
+    // The five `.mdatron/` YAML loaders + the schema-file JSON text layer:
+    // arbitrary bytes on disk never panic. File-backed, so bounded tighter
+    // than the pure parsers (this explicit `cases` also means the deep
+    // workflow_dispatch profile does NOT deepen this property — deliberate).
     #![proptest_config(ProptestConfig {
         cases: 24,
         ..ProptestConfig::default()
@@ -332,6 +495,7 @@ proptest! {
         let scratch = ScratchRoot::new();
         let root = &scratch.0;
         for name in [
+            "config.yaml",
             "routes.yaml",
             "pins.yaml",
             "vocabulary.yaml",
@@ -339,9 +503,20 @@ proptest! {
         ] {
             std::fs::write(root.join(".mdatron").join(name), &bytes).unwrap();
         }
+        let _ = mdatron::config::load(root);
         let _ = mdatron::route::load(root);
         let _ = mdatron::pin::load(root);
         let _ = mdatron::vocab::load(root);
         let _ = mdatron::codecat::load(root);
+
+        // The schema-file JSON TEXT layer (lane-C review C2): a separate
+        // scratch where ONLY a schema file is hostile, driven through the
+        // real verify load path so serde_json::from_str sees the raw bytes
+        // (the pure-compile properties above feed already-parsed Values).
+        let schema_scratch = ScratchRoot::new();
+        let sroot = &schema_scratch.0;
+        std::fs::create_dir_all(sroot.join(".mdatron/schemas")).unwrap();
+        std::fs::write(sroot.join(".mdatron/schemas/h.json"), &bytes).unwrap();
+        let _ = verify(&VerifyConfig::new(sroot.clone()));
     }
 }

@@ -114,9 +114,11 @@ jobs:
   # input. This job drives every input parser with hostile generated input
   # (proptest, MSRV-clean on 1.88 — no nightly anywhere) under the never-panic
   # property, plus deterministic revert-detector seeds for the fixed classes.
-  # BOUNDED per PR: a pinned RNG seed + 1024 cases (~10s). The deep profile
-  # runs only on manual workflow_dispatch. NOT in the required-check set
-  # (operator decision, parked).
+  # BOUNDED per PR: a pinned RNG seed + 1024 cases (about ten seconds). The
+  # deep profile runs only on manual workflow_dispatch — and deepens the pure
+  # parser properties only: the file-backed loader property pins its own
+  # tighter case count, which overrides the env (deliberate; lane-C C8). NOT
+  # in the required-check set (operator decision, parked).
   parser-robustness:
     name: Parser robustness (bounded property fuzz)
     needs: lint

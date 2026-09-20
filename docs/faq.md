@@ -35,9 +35,10 @@ conventions, not contracts, inside SARIF.
 
 The registry discipline: a diagnostic-code registry as the *generator* of
 derived artifacts, so drift is impossible by construction rather than caught by
-review. mdatron's golden code catalog and the tripwires that force hand-synced
-peer artifacts (like `docs/limits.md`) to match shipped data are applications of
-that idiom.
+review. mdatron's golden code catalog — generated from the explain pages — is
+the full application of that idiom; the tripwire that forces `docs/limits.md`
+to match shipped data is the weaker cousin (drift caught at test time rather
+than made impossible), and its promotion to a generated table is tracked.
 
 ## Why not a policy language like Cedar or OPA?
 
@@ -115,7 +116,7 @@ the review log). With gratitude:
   George Miranda, and Austin Parker (O'Reilly, ISBN 9781098179922) — the
   telemetry design inputs above, evaluated against this project's determinism
   constraints. See [the book's page](https://www.honeycomb.io/observability-engineering-oreilly-book);
-  buy it from [your local bookstore](http://www.indiebound.org/book/9781098179922)
+  buy it from [your local bookstore](https://bookshop.org/book/9781098179922)
   or [Amazon](https://www.amazon.com/dp/1098179927).
 - **[crosslink](https://github.com/Corvidae-Coding-Projects/crosslink)** (MIT,
   by [Dollspace](https://github.com/dollspace-gay)) — the issue tracking and
