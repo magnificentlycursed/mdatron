@@ -1,6 +1,6 @@
 {
   "next_display_id": 195,
-  "next_comment_id": 528,
+  "next_comment_id": 529,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -2300,7 +2300,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-09-19T22:15:11.079839Z",
-      "updated_at": "2026-09-20T01:25:17.606262Z",
+      "updated_at": "2026-09-20T02:37:21.118495Z",
       "labels": [
         "enhancement"
       ],
@@ -2365,6 +2365,15 @@
           "kind": "result",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA3g1Ks6TiFKf5Mpw21YkiiBvMKA3NU9sqXwAFROJ/aMuJOWXCbeVkAwmbzqnIV8/wMbaJyt6rvnO20RfkqtIbAQ=="
+        },
+        "a96adb14-70d5-44b2-98d2-58f837692d81": {
+          "display_id": 528,
+          "author": "79Ig",
+          "content": "DOCS PASS shipped (see commit): P0s closed (runnable code-catalogs example; E0022/W0050 section un-falsifies dsl-reference), exit contract + envelope fields + diagnostic-loop quickstart + Ch32 positioning + vocabulary example-with-motivation + tombstone snippet + limits link + stale-test replacement. Remaining on this issue: the CLI discovery trio (explain --list --json, richer per-subcommand help, mdatron docs subcommand) — the last pre-cut code lane. Implemented by the coordinator (implementer rate-limited); full gates green incl. README examples surviving self-verify with the link family active.",
+          "created_at": "2026-09-20T02:37:21.102397Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABATWUiWoyKXYmfZCUHCi/J/HHem9HjtJTqqZh5acYRzqZ4zqwf5QN0dN9UBx0/m4+wevOvyfBjwZ3t1VONkiyjBg=="
         },
         "c56fa46b-ad4c-42da-90c8-96d22831bf6d": {
           "display_id": 508,
@@ -8270,8 +8279,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T02:28:18.616925Z",
+    "timestamp": "2026-09-20T02:37:21.118495Z",
     "agent_id": "79Ig",
-    "agent_seq": 1042
+    "agent_seq": 1043
   }
 }
