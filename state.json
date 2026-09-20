@@ -1,6 +1,6 @@
 {
   "next_display_id": 187,
-  "next_comment_id": 510,
+  "next_comment_id": 511,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -5854,8 +5854,17 @@
       "priority": "critical",
       "created_by": "79Ig",
       "created_at": "2026-09-20T00:09:43.909732Z",
-      "updated_at": "2026-09-20T00:24:58.910591Z",
+      "updated_at": "2026-09-20T00:51:13.472508Z",
       "comments": {
+        "775d841b-54e4-4aa8-8bc0-87aa06f6ce80": {
+          "display_id": 510,
+          "author": "79Ig",
+          "content": "COLD REVIEW round 1 (ebc2af5): all three blockers verified fixed at root cause (independent parser slice audit, cycle audit, 5 abort-scale probes, 8-dialect refusal matrix). 2 findings: A1 major — parse validation missed path-glob-context rules (unparseable expr + empty glob = silent exit 0); FIXED in e13dc7e (parse before the schema-class guard; red-gate + control). A2 minor — raw U+2028/U+2029 in JSON pipeline_error.message; routed to #185 for one combined envelope-separator-hygiene pass post-cut (reviewer: post-cut-acceptable, same class as quoted-content minor). 8 candidates refuted. Reviewer verifying the A1 fix now.",
+          "created_at": "2026-09-20T00:51:13.460432Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABASTxY1p7CyUqJwoYu5ydbjvcPMsv67GSxUK6PJtEhINOaWbfyjyF0Zvz60dVzPNlZ2j9kf2dUcGuC0nYHYkQBCw=="
+        },
         "8b4baded-f566-48bd-b287-8888c4d2857e": {
           "display_id": 506,
           "author": "79Ig",
@@ -8003,8 +8012,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T00:50:44.890899Z",
+    "timestamp": "2026-09-20T00:51:13.472508Z",
     "agent_id": "79Ig",
-    "agent_seq": 1012
+    "agent_seq": 1013
   }
 }
