@@ -1,6 +1,6 @@
 {
   "next_display_id": 188,
-  "next_comment_id": 513,
+  "next_comment_id": 514,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -1839,7 +1839,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-09-20T00:09:49.874040Z",
-      "updated_at": "2026-09-20T00:39:35.496274Z",
+      "updated_at": "2026-09-20T00:55:37.909174Z",
       "comments": {
         "24ffc771-664a-441c-81a1-2e97e0d6823a": {
           "display_id": 507,
@@ -1849,6 +1849,15 @@
           "kind": "result",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA6gcd2Wn4z32E8OhIlIcJE21waE2yXhnFxA2JDMCw3MiLkQlPSibN5mFsW3SF7cVEApPigV6xnPcK9bYOmsNdAQ=="
+        },
+        "287fa3d0-be6e-4c38-babd-951e9338298e": {
+          "display_id": 513,
+          "author": "79Ig",
+          "content": "COLD REVIEW round 1 (0a29fb8): majors 3/5/6 survive adversarial probing (40 CLI fixtures; version-probe spelling matrix; CI OR-semantics + tag concurrency verified). 5 findings: B1 MAJOR — ContextSelector (untagged enum, both Combined fields Option+default, no deny_unknown_fields): 'schema_clas:' typo → Combined{None,None} → rule matches EVERYTHING and W0045 is suppressed; 'paht:' drops path confinement silently; context:{} matches all; CHANGELOG 'any level' claim falsified. B2 minor — dsl_version contract absent from dsl-reference/README (the reference claims exact-match). B3 minor — plain YAML syntax errors now misattributed to the version probe. B4 minor — PR based on release/** triggers no CI (pull_request filter still [main]). B5 nit — 'fixture pins' overstates three AST unit tests; no e2e refused-haystack gate. Fix round dispatched.",
+          "created_at": "2026-09-20T00:55:37.897339Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA1rSb6G+HWYFmzZmLqQFO1MtLvOKh2IVu1g57C9Lzn9nj+QjdJ/HFirBWNvxOfsf8Dd/7/lhoYEEbIFxPpqVYAQ=="
         }
       }
     },
@@ -8043,8 +8052,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T00:55:31.739780Z",
+    "timestamp": "2026-09-20T00:55:37.909174Z",
     "agent_id": "79Ig",
-    "agent_seq": 1016
+    "agent_seq": 1017
   }
 }
