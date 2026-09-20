@@ -272,8 +272,29 @@ fn main() -> ExitCode {
 /// consumer can `mdatron schema > mdatron-output.schema.json` and validate the
 /// `verify --json` envelope against it.
 fn cmd_schema() -> ExitCode {
-    print!("{}", mdatron::output::OUTPUT_SCHEMA);
-    ExitCode::SUCCESS
+    print_page(mdatron::output::OUTPUT_SCHEMA)
+}
+
+/// Write a full page to stdout, tolerating a closed pipe (consolidated-review
+/// F4): `mdatron docs | less` quit early — the README's own documented usage —
+/// used to panic on EPIPE and exit 101, violating the 0/1/2 exit contract the
+/// same branch pins. A broken pipe on a print-only surface is the CONSUMER
+/// saying "enough": graceful success, not an engine defect. Any other write
+/// error stays loud (exit 2).
+fn print_page(body: &str) -> ExitCode {
+    use std::io::Write;
+    let mut out = std::io::stdout().lock();
+    match out.write_all(body.as_bytes()).and_then(|()| out.flush()) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => ExitCode::SUCCESS,
+        Err(e) => {
+            eprintln!(
+                "error[MDATRON-E0080]: writing to stdout failed\n   = note: {}",
+                stderr_safe(&e, &[])
+            );
+            ExitCode::from(2)
+        }
+    }
 }
 
 /// Print a bundled documentation file to stdout (#180 discoverability). The
@@ -286,8 +307,7 @@ fn cmd_docs(topic: &str) -> ExitCode {
         "faq" => include_str!("../docs/faq.md"),
         _ => include_str!("../docs/dsl-reference.md"),
     };
-    print!("{body}");
-    ExitCode::SUCCESS
+    print_page(body)
 }
 
 fn cmd_pin(project_root: Option<PathBuf>, update: bool, dry_run: bool, quiet: bool) -> ExitCode {
@@ -863,7 +883,7 @@ fn cmd_explain(code: Option<&str>, list: bool, json: bool, compact: bool) -> Exi
                         .map(|(c, s)| serde_json::json!({ "code": c, "summary": s }))
                         .collect();
                     match serde_json::to_string(&arr) {
-                        Ok(line) => println!("{line}"),
+                        Ok(line) => return print_page(&format!("{line}\n")),
                         Err(e) => {
                             eprintln!(
                                 "error[MDATRON-E0080]: output serialization failed\n   = note: {}",
@@ -876,17 +896,21 @@ fn cmd_explain(code: Option<&str>, list: bool, json: bool, compact: bool) -> Exi
                     // One compact line per code (the same form `explain
                     // --compact <code>` emits), so an agent can bulk-load the
                     // catalog into a context budget.
+                    let mut buf = String::new();
                     for (c, _) in &entries {
                         if let Some(line) = explain::lookup_compact(c) {
-                            println!("{line}");
+                            buf.push_str(&line);
+                            buf.push('\n');
                         }
                     }
+                    return print_page(&buf);
                 } else {
+                    let mut buf = String::new();
                     for (c, summary) in entries {
-                        println!("{c} — {summary}");
+                        buf.push_str(&format!("{c} — {summary}\n"));
                     }
+                    return print_page(&buf);
                 }
-                return ExitCode::from(0);
             }
             Err(e) => {
                 // #167: routed through the print-boundary escape for
@@ -903,15 +927,13 @@ fn cmd_explain(code: Option<&str>, list: bool, json: bool, compact: bool) -> Exi
     let code = code.expect("a code is required unless --list");
     if compact {
         if let Some(line) = explain::lookup_compact(code) {
-            println!("{line}");
-            return ExitCode::from(0);
+            return print_page(&format!("{line}\n"));
         }
     } else if json {
         if let Some(structured) = explain::lookup_structured(code) {
             match serde_json::to_string(&structured) {
                 Ok(line) => {
-                    println!("{line}");
-                    return ExitCode::from(0);
+                    return print_page(&format!("{line}\n"));
                 }
                 Err(e) => {
                     eprintln!(
@@ -925,17 +947,14 @@ fn cmd_explain(code: Option<&str>, list: bool, json: bool, compact: bool) -> Exi
     } else if let Some(page) = explain::lookup(code) {
         // Normalize trailing whitespace + write exactly one trailing newline.
         // Per crosslink #13 SE/F1.
-        println!("{}", page.trim_end());
+        let mut buf = format!("{}\n", page.trim_end());
         // Per crosslink #12 UX/F1: if this code has a migration note (its
         // semantic shifted across emission sites), surface it AFTER the
         // page so operators recalling the prior meaning see the bridge.
         if let Some(note) = explain::migration_note(code) {
-            println!();
-            println!("## Migration note");
-            println!();
-            println!("{note}");
+            buf.push_str(&format!("\n## Migration note\n\n{note}\n"));
         }
-        return ExitCode::from(0);
+        return print_page(&buf);
     }
     // #167 audit find: `code` is operator argv echoed to stderr — escape it at
     // the print boundary like every other non-engine interpolation.

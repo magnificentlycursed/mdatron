@@ -48,12 +48,14 @@ exists to make aborts visible.
 - **Transitive deps (with the trimmed feature set), from `Cargo.lock` ground
   truth:** direct — `bitflags`, `num-traits`, `rand`, `rand_chacha`,
   `rand_xorshift`, `regex-syntax`, `unarray`; via the rand family —
-  `rand_core`, `ppv-lite86`, `getrandom`. The adoption added exactly **seven
+  `rand_core`, `ppv-lite86` (which pulls `zerocopy` + `zerocopy-derive`),
+  `getrandom`. The adoption added exactly **seven
   new packages** to the lock (`proptest`, `rand`, `rand_chacha`, `rand_core`,
   `rand_xorshift`, `ppv-lite86`, `unarray`); `bitflags`, `num-traits`,
   `regex-syntax`, and `getrandom` were already in the tree via existing
-  dependencies. The disabled `bit-set` feature keeps `bit-set`/`bit-vec` out
-  entirely. All dual MIT/Apache-2.0, all inside the `deny.toml` license
+  dependencies. The disabled `bit-set` feature keeps `bit-set`/`bit-vec` out of
+  proptest's subtree (both remain in the workspace lock via jsonschema's
+  tree). All dual MIT/Apache-2.0, all inside the `deny.toml` license
   allowlist, all crates.io. cargo-deny's graph includes dev-dependencies, so
   the tree stays under the bans/licenses/sources gate — the mechanical gate
   over the REAL graph; this prose section is descriptive and is a generation

@@ -160,17 +160,61 @@ pub fn lookup_compact(code: &str) -> Option<String> {
         .and_then(|l| l.split_once('\u{2014}').or_else(|| l.split_once("-")))
         .map(|(_, after)| after.trim().to_string())
         .unwrap_or_else(|| page.code.clone());
-    // First sentence of "How to fix" (up to first . or newline).
-    let first_sentence = page
-        .how_to_fix
-        .split(['.', '\n'])
-        .next()
-        .map(|s| s.trim().to_string())
-        .unwrap_or_default();
+    // First sentence of "How to fix". The naive split-on-'.' produced
+    // degenerate hints on pages whose fix section opens with a numbered list
+    // ("1. Do X" → "1") or whose first sentence carries an abbreviation
+    // ("(e.g." → cut mid-parenthetical) — consolidated-review F3, exposed in
+    // bulk by `explain --list --compact`. So: strip list markers first, then
+    // end the sentence only at a '.' followed by whitespace/EOL, skipping
+    // periods inside "e.g."/"i.e."-style abbreviations (a '.' preceded and
+    // followed by a lowercase letter).
+    let first_sentence = first_fix_sentence(&page.how_to_fix);
     Some(format!(
         "{} {}: {} — {}",
         page.code, page.severity, summary, first_sentence
     ))
+}
+
+/// The first real sentence of a fix section, tolerant of markdown list
+/// openers and dotted abbreviations (consolidated-review F3).
+fn first_fix_sentence(fix: &str) -> String {
+    // First non-empty line, with leading list markers stripped: "1. ", "- ",
+    // "* ", and bold markers.
+    let line = fix
+        .lines()
+        .map(str::trim)
+        .find(|l| !l.is_empty())
+        .unwrap_or_default();
+    let mut s = line;
+    loop {
+        let before = s;
+        s = s.trim_start_matches(['-', '*', ' ']).trim_start();
+        if let Some(rest) = s.strip_prefix(|c: char| c.is_ascii_digit()) {
+            if let Some(rest) = rest.strip_prefix(". ") {
+                s = rest;
+                continue;
+            }
+        }
+        if s == before {
+            break;
+        }
+    }
+    let s = s.trim_start_matches("**").trim_start();
+    // Sentence end: a '.' followed by whitespace or end-of-line — unless it
+    // is the closing dot of a dotted abbreviation ("e.g.", "i.e."), which the
+    // letter-dot-letter-dot shape identifies (the char two back is a '.').
+    let bytes = s.as_bytes();
+    for (i, &b) in bytes.iter().enumerate() {
+        if b != b'.' {
+            continue;
+        }
+        let ends_here = bytes.get(i + 1).is_none_or(|&n| n == b' ' || n == b'\n');
+        let abbreviation_tail = i >= 2 && bytes[i - 2] == b'.';
+        if ends_here && !abbreviation_tail {
+            return s[..i].trim().to_string();
+        }
+    }
+    s.trim().to_string()
 }
 
 /// Look up + parse the explain page into the structured [`ExplainPage`] form.
@@ -279,6 +323,31 @@ fn extract_section(markdown: &str, heading: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
+
+    // RED GATE (consolidated-review F3): `explain --list --compact` bulk-loads
+    // every code's one-liner, so no page may yield a degenerate hint — the
+    // naive first-sentence split produced "— 1" on numbered-list fix sections
+    // and cut mid-abbreviation ("(e.g.") on others.
+    #[test]
+    fn every_compact_line_carries_a_real_fix_hint() {
+        for (code, _) in catalog().expect("catalog parses") {
+            let line =
+                lookup_compact(&code).unwrap_or_else(|| panic!("{code}: compact form renders"));
+            let hint = line
+                .rsplit_once(" \u{2014} ")
+                .map(|(_, h)| h)
+                .unwrap_or_default();
+            assert!(
+                hint.len() >= 8 && !hint.chars().all(|c| c.is_ascii_digit()),
+                "{code}: degenerate compact hint {hint:?} in {line:?}"
+            );
+            assert!(
+                !hint.starts_with(['-', '*']),
+                "{code}: unstripped list marker in hint {hint:?}"
+            );
+        }
+    }
+
     use super::*;
 
     // #164: the hand-maintained BASELINE array was dissolved — the code set is now

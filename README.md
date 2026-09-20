@@ -311,14 +311,16 @@ governing document and re-pin: `mdatron pin --update` (preview with
 **heading-delimited span** — the hash covers that heading through just before
 the next heading of the same or higher level, so an edit elsewhere in the file
 doesn't trip it; a `section:` whose heading can't be found is loud (`E0063`).
-Un-pinning persists as a justified `unpinned:` tombstone that stays loud as an
-informational lint (`L0001`); an unjustified one warns (`W0042`):
+Un-pinning persists as a justified `unpinned:` tombstone — justified means it
+carries both a `reason` and an `owner` — that stays loud as an informational
+lint (`L0001`); one missing either field warns (`W0042`):
 
 ```yaml
 unpinned:
 - governing: contract.md
   file: plan/build-plan.md
   reason: "plan superseded by ROADMAP.md 2026-09-01; kept for history"
+  owner: "docs-maintainers"
 ```
 
 **Vocabulary** (`vocabulary.yaml`) — registry-driven prose scan. A coined term
