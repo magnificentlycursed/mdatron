@@ -1,6 +1,6 @@
 {
   "next_display_id": 187,
-  "next_comment_id": 509,
+  "next_comment_id": 510,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -7490,7 +7490,18 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-20T00:10:00.982073Z",
-      "updated_at": "2026-09-20T00:10:00.982073Z"
+      "updated_at": "2026-09-20T00:45:23.478794Z",
+      "comments": {
+        "669ed969-87f2-45d6-a115-44865628dddf": {
+          "display_id": 509,
+          "author": "79Ig",
+          "content": "ADDED from lane-A cold review (A2, minor): raw U+2028/U+2029 also survive unescaped in the JSON pipeline_error.message (main.rs:636-640 — relativize_message output is serde-escaped for Cc but not the separator pair; tty/compact renders of the same input are clean via escape_path_text). Same class as the tracked quoted[].content minor — fix BOTH together as one envelope-separator-hygiene pass (escape Cc ∪ {U+2028,U+2029} at construction reusing diagnostic::escape_path_text), with envelope-byte red-gates. Evidence: assert \"$a b<U+2028>c\" → raw E2 80 A8 in pipeline_error.message.",
+          "created_at": "2026-09-20T00:45:23.464096Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAqnO+fCGzDcaLVqzxHHRdM5LvIoTC4WKbpF4HeyXmUFoWAMxFRCHO0654dMVsjAmHMb+t+dCrpuDKah8s6w4lCA=="
+        }
+      }
     },
     "f9ae6221-0d48-49da-a2d4-46d81c6e5685": {
       "uuid": "f9ae6221-0d48-49da-a2d4-46d81c6e5685",
@@ -7992,8 +8003,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T00:44:43.919991Z",
+    "timestamp": "2026-09-20T00:45:23.478794Z",
     "agent_id": "79Ig",
-    "agent_seq": 1007
+    "agent_seq": 1008
   }
 }
