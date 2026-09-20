@@ -27,8 +27,7 @@ mod explain;
 Exit contract: 0 clean, 1 findings, 2 pipeline failure — anything else is an
 engine defect; please report it.
 
-Descended from Schematron (ISO/IEC 19757-3). Not related to the TRON \
-blockchain.")]
+Descended from Schematron (ISO/IEC 19757-3).")]
 struct Cli {
     #[command(subcommand)]
     command: Command,

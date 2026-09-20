@@ -2,8 +2,7 @@
 
 **A Rust CLI that validates markdown documents using JSON Schema (frontmatter)
 and a small Schematron-derived DSL (cross-field rules).** Descended from XML's
-Schematron (ISO/IEC 19757-3); not related to the TRON blockchain despite the
-`-tron` suffix.
+Schematron (ISO/IEC 19757-3).
 
 mdatron validates markdown documents in two layers:
 

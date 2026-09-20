@@ -1074,24 +1074,17 @@ fn readme_contains_seven_required_topic_headings() {
 }
 
 #[test]
-fn readme_contains_tron_disambiguation_sentence() {
+fn readme_states_the_schematron_lineage_up_front() {
+    // Operator ruling 2026-09-20: the TRON-blockchain disambiguation is
+    // retired from all prose (this test's predecessor pinned it). What stays
+    // pinned is the affirmative half: the Schematron lineage appears in the
+    // README's opening section — it is the name's actual story and the
+    // prior-art posture the FAQ builds on.
     let readme = readme_text();
-    let lower = readme.to_lowercase();
-    assert!(
-        lower.contains("tron"),
-        "mdatron/README.md must contain the TRON-blockchain disambiguation \
-         (TW-F3); got readme without 'tron' substring"
-    );
-    // The discipline per DESIGN.md § Summary (the disambiguation discipline) is the first README sentence
-    // states this explicitly — assert the disambiguation appears in the
-    // first ~30 lines (section 1 region).
     let head: String = readme.lines().take(30).collect::<Vec<_>>().join("\n");
-    let head_lower = head.to_lowercase();
     assert!(
-        head_lower.contains("tron")
-            && (head_lower.contains("schematron") || head_lower.contains("blockchain")),
-        "mdatron/README.md section 1 must disambiguate from TRON blockchain \
-         (cite Schematron lineage OR explicitly mention the blockchain); \
+        head.to_lowercase().contains("schematron"),
+        "mdatron/README.md section 1 must state the Schematron lineage; \
          got section 1: {head}"
     );
 }
