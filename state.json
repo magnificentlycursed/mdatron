@@ -1,6 +1,6 @@
 {
   "next_display_id": 186,
-  "next_comment_id": 499,
+  "next_comment_id": 500,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -7222,7 +7222,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-20T00:08:10.948448Z",
-      "updated_at": "2026-09-20T00:08:47.853710Z",
+      "updated_at": "2026-09-20T00:12:55.808373Z",
       "labels": [
         "docs"
       ],
@@ -7230,6 +7230,15 @@
         "4ebc561b-c68f-472e-8fee-f763332bf311"
       ],
       "comments": {
+        "9e354ffd-3df7-45fe-8b9b-c984b5c5acce": {
+          "display_id": 499,
+          "author": "79Ig",
+          "content": "OPERATOR POSITIONING RULING (2026-09-19): the Claude Code + GitHub Copilot use cases are the LEAD adoption pitch for mdatron. Rationale (ratified in discussion): (1) the pain is current and invisible by design — subagent silent-skip conditions, the claude.ai six-field strict upload failure, CLAUDE.md-shadows-AGENTS.md, applyTo-less instructions files never auto-applying; the tools themselves never warn, mdatron-in-CI is the only pre-flight for this file class; (2) adoption wedge — governing .claude/ + .github/ is a narrow one-step CI add with immediate payoff, expansion to project docs is incremental; (3) cross-assistant drift — teams running both maintain duplicated instructions (CLAUDE.md/copilot-instructions.md/AGENTS.md) that silently diverge; pinning shared sections is a problem no other tool addresses. CONSEQUENCES: recipe priority = 1. SKILL.md (spec-strict + Claude Code extended profiles), 2. Claude Code subagents, 3. Copilot .instructions.md; then llms.txt; then the tier-3 extension lesson. README discoverability hook (#180) opens with the agent-config governance quickstart, not abstract machinery.",
+          "created_at": "2026-09-20T00:12:55.794197Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABArv5chtE1nj5A4gKTXCd1ONcuqbe6pky6tM3M8mNn7jzmetDjsC1jAei76Fmk0LfWUuZlp0M4bOVzJC1oBb0BBw=="
+        },
         "b83cf26f-25bd-4b8d-b7fe-015d9921d8ee": {
           "display_id": 496,
           "author": "79Ig",
@@ -7877,8 +7886,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T00:10:55.421782Z",
+    "timestamp": "2026-09-20T00:12:55.808373Z",
     "agent_id": "79Ig",
-    "agent_seq": 985
+    "agent_seq": 986
   }
 }
