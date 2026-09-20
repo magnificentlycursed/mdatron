@@ -1,6 +1,6 @@
 {
   "next_display_id": 181,
-  "next_comment_id": 495,
+  "next_comment_id": 496,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -5318,7 +5318,7 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-09-19T22:04:55.795826Z",
-      "updated_at": "2026-09-19T23:04:24.185337Z",
+      "updated_at": "2026-09-20T00:06:03.820870Z",
       "labels": [
         "enhancement"
       ],
@@ -5349,6 +5349,15 @@
           "kind": "observation",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAb5zOMoPIhW7pgpgLPyxFjKccAIGceRX0MoGAVGSb38NR4w6Wrimrzi5PcLd0XkSXb0vwKWmqqRbKIXqIpPGwCg=="
+        },
+        "acccafcd-6472-4f6b-88cc-138ed8cc13f7": {
+          "display_id": 495,
+          "author": "79Ig",
+          "content": "MVR: fingerprint feature complete through 3 cold rounds — injective netstring encoding, platform-variant region exclusion, schema description aligned (R8/2d865c3). Identity contract: code + fwd-slashed relpath + summary + identity-bearing quoted regions + ordinal; line/col and platform prose excluded.",
+          "created_at": "2026-09-20T00:06:03.804819Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAwVYxHoKkf1ljJJvRS7t5piogbxAoo3PBA+Z0iLS5CBhlCFwc/sBGbOd3cafCKgYUkY/1fOYeB8m0a/WpvgWnBQ=="
         },
         "d93637f0-5850-44ec-99ee-fc51811d807b": {
           "display_id": 477,
@@ -7765,8 +7774,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T00:05:56.049878Z",
+    "timestamp": "2026-09-20T00:06:03.820870Z",
     "agent_id": "79Ig",
-    "agent_seq": 971
+    "agent_seq": 972
   }
 }
