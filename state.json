@@ -1,6 +1,6 @@
 {
   "next_display_id": 192,
-  "next_comment_id": 521,
+  "next_comment_id": 522,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -2913,7 +2913,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-07-19T20:53:19.066865Z",
-      "updated_at": "2026-07-28T19:03:11.817874Z",
+      "updated_at": "2026-09-20T01:16:39.081185Z",
       "closed_at": "2026-07-28T19:03:11.817866Z",
       "labels": [
         "feature",
@@ -2932,6 +2932,15 @@
           "kind": "result",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAFd7IgAbX/rlJsbYd+asz8IUneRs+6LTHPBfFBO5Pq1nAOsooxd/WcfM5/AgsOan7K8sjRISQYecayfMGjnhIBg=="
+        },
+        "a6386be9-3c9c-42aa-ab23-1a8a110214a7": {
+          "display_id": 521,
+          "author": "79Ig",
+          "content": "WAIVER-DISCHARGE RECEIPT (migrated from dsl-falsifiability-report.md at its deletion, #187 corpus cleanup, 2026-09-19 — git history preserves the full report; this receipt is the canonical copy).\n\nRe-run at the narrowed scope — 2026-07-28 (#47). Reference under test: docs/dsl-reference.md. Method: cold-context agent, no history/repo access, ONLY the reference text, authoring 8 rules; harness runs each rule verbatim against seeded should-fire / must-stay-quiet fixtures through the real binary. Rules: the three 2026-06-01 passers re-posed + five first-consumer-real rules from the vsdd-cli #73 requirement set.\n\nResults: Run 1 (draft reference): 8/8 authored, 2/8 one-pass — reference defect (undocumented .md index-source frontmatter wrapper); reference revised. Run 2 (revised): initial failures were ENGINE defects, not authoring errors — #88 keys: array fan-out never landed; #89 let: bindings evaluated BTreeMap-alphabetically breaking declared chains; both fixed red-gated; the unchanged run-2 artifacts then pass 8/8 (compile, quiet-on-clean, fire-on-dirty). SCORE: 8/8 = 100% one-pass against revised reference + corrected engine; >=80% acceptance criterion MET.\n\nFindings routed: engine #88/#89 fixed in-lane (invisible to unit suite; surfaced only by cold authoring — the argument for the test existing); DESIGN construct-inventory overclaim (\"arithmetic and comparison\") amended to equality-only; known limit closed 2026-07-28 (#93) by the filter(x in arr, pred) construct — exactly-N = count(filter(...)) == N — confirmed by a fresh cold-authoring run (rule authored confidently one-pass, fires on two lanes, clean on one).\n\nWAIVER RECORD: the 2026-06-01 run scored 43% and the routing decision accepted the revised spec WITHOUT a second cold-context test (cost-bounded) — that acceptance was the standing waiver, previously noted in V1-SHIP-CRITERIA (retired at design ratification). The 2026-07-28 re-run DISCHARGES the waiver: the bar is met by measurement, at the narrowed scope, against the corrected engine. The reference↔implementation agreement is now enforced continuously by CI tripwires (construct-inventory check + operator-semantics pins), superseding point-in-time campaigns.",
+          "created_at": "2026-09-20T01:16:39.069273Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAQFNCtigAEAU87v1aRohby8wvki8owBG0I2OhLn3xa2NU2Ur0X1xYwimOO2fxXvJj2cAd6sWr14j21TQQVAcKDQ=="
         }
       }
     },
@@ -8173,8 +8182,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T01:15:17.334765Z",
+    "timestamp": "2026-09-20T01:16:39.081185Z",
     "agent_id": "79Ig",
-    "agent_seq": 1030
+    "agent_seq": 1031
   }
 }
