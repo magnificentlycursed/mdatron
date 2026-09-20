@@ -1,6 +1,6 @@
 {
   "next_display_id": 192,
-  "next_comment_id": 518,
+  "next_comment_id": 519,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -2273,7 +2273,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-09-19T22:15:11.079839Z",
-      "updated_at": "2026-09-20T00:42:08.640992Z",
+      "updated_at": "2026-09-20T01:09:56.470812Z",
       "labels": [
         "enhancement"
       ],
@@ -2302,6 +2302,15 @@
           "kind": "observation",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABARzpqtWcFCoS7ghQrIK10cox1GaSiq0zyOeGW2xv50nQTKQ0rLB/2zriKNw8WcaZej/m3yqeH8gpM4i7FkzTDDA=="
+        },
+        "765ecf3c-592a-4c4c-8fb8-1ee0acd737d2": {
+          "display_id": 518,
+          "author": "79Ig",
+          "content": "PRE-CUT ADDITION (#187 addendum): tests/cli_integration.rs:1035-1041 readme_cites_cargo_install_path_for_bootstrap_period ENFORCES STALE CONTENT — 0.5.0 has been on crates.io since 2026-07-31 but the test mandates the cargo-install --path bootstrap text in README. The docs lane replaces the README install section with the crates.io path AND retires/replaces that test (crates.io-install assertion) in the same commit.",
+          "created_at": "2026-09-20T01:09:56.457859Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAUcMdVIfdAlSHXfnh1Qs28kn4C0zTS0npDS1gkLRsvO/HQ/0fb85wsrKVN6pG8HPmVKEQW9NrwjvJHuQHd/LrCw=="
         },
         "994b7386-5911-4e01-9a58-c0445c92964a": {
           "display_id": 484,
@@ -8144,8 +8153,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T01:09:50.275170Z",
+    "timestamp": "2026-09-20T01:09:56.470812Z",
     "agent_id": "79Ig",
-    "agent_seq": 1027
+    "agent_seq": 1028
   }
 }
