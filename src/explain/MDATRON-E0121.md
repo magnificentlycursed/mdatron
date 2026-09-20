@@ -7,11 +7,11 @@
 ## What this means
 
 A section-structural **disjoint** rule found an id present in both of its two
-sections. A disjoint rule in a route's `section_rules:` block (#34) names two sections,
+sections. A disjoint rule in a route's `section_rules:` block names two sections,
 each with an `id_from` (`h3-heading` — the id comes from H3 heading text; or
 `bullet-lead` — from the `**bold**` lead of a `- ` list item) and an
 `id_pattern` (a regex whose first capture is the id); the engine extracts an id
-set from each and asserts the two share no element. Live case (vsdd): a "slice"
+set from each and asserts the two share no element. Live case from the first adopter: a "slice"
 is open **xor** complete — its id appears as an open-phase H3 in one section or
 as a completed bullet in another, never both.
 

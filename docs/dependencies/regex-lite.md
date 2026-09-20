@@ -6,8 +6,8 @@
 
 ## Why this dependency
 
-Naming-grammar matching for the route family (#83: `W0041 name-underivable`)
-and, later, vocabulary-family label schemes and anti-patterns (#85). DESIGN L17
+Naming-grammar matching for the route family (`W0041 name-underivable`)
+and, later, vocabulary-family label schemes and anti-patterns. DESIGN L17
 requires adopter-supplied regular expressions to run on **linear-time engines**
 under the step budget — `regex-lite` (like its big sibling `regex`) is a
 finite-automata engine with no backtracking, so adopter patterns cannot be
@@ -23,7 +23,7 @@ pathological.
 - Hand-rolled glob-ish matcher: rejected — naming grammars are contracts
   adopters author; a bespoke dialect would be its own falsifiability burden.
 
-## PE supply-chain notes
+## Supply-chain notes
 
 - **Version pin discipline:** workspace `regex-lite = "0.1"` → 0.1.9.
 - **Maintainer trust:** rust-lang regex team (same org as `regex`).
@@ -38,20 +38,10 @@ pathological.
   matching removes the ReDoS class by construction. Compile errors on load are
   loud config errors, never silent no-ops.
 
-## SO approval
+## Approval
 
 - **Operator-attribution:** family formats + code assignments ratified
-  2026-07-27 (#45); the naming-grammar mechanism is part of the ratified route
+  2026-07-27; the naming-grammar mechanism is part of the ratified route
   shape.
 - **Scope justification:** one zero-dependency crate serving two ratified
   families; proportionate.
-
-## Co-authorship attribution
-
-Per VSDD-E0100 discipline:
-
-```
-Co-authored-by: Solution Owner <so@vsdd-domains>
-Co-authored-by: Platform Engineer <pe@vsdd-domains>
-Co-authored-by: Security <security@vsdd-domains>
-```

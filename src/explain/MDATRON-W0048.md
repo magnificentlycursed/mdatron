@@ -13,7 +13,7 @@ cases emit this finding:
 - the target exceeds the input size budget (the per-file cap, or the run's
   aggregate capture budget), so the check was skipped by budget;
 - the target is **unverifiable** (its bytes are not valid UTF-8 text, or the
-  open succeeded but the content could not be read — GH #48): a citation's
+  open succeeded but the content could not be read): a citation's
   line range, a fragment-bearing link into a markdown target, or a marker
   reference cannot be resolved against bytes the engine cannot read as text.
 

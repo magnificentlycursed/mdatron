@@ -31,6 +31,9 @@ include = [
     # step asserts its presence in the payload.
     "docs/limits.md",
     "docs/dependencies/*.md",
+    # Prior-art comparisons + influences (#187): crates.io-reader material,
+    # linked from the README's docs list.
+    "docs/faq.md",
 ]
 
 # Single-crate, binary-first (#81, operator ruling 2026-07-22 executing the

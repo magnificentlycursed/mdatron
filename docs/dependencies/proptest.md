@@ -7,9 +7,9 @@
 
 ## Why this dependency
 
-The parser-robustness harness (GH #52 major 1, crosslink #184;
-`tests/parser_robustness.rs`). DESIGN declares the input parsers a trust
-boundary, and GH #52's blockers 2 and 3 — a char-boundary panic and an
+The parser-robustness harness (`tests/parser_robustness.rs`, added 2026-09-19
+after a pre-release adversarial review). DESIGN declares the input parsers a
+trust boundary, and that review's two parser blockers — a char-boundary panic and an
 unguarded-recursion abort in the DSL expression parser — reached a green
 release candidate because no test fed the parsers malformed input. proptest
 drives every input parser (expression parse + evaluate, pattern-file YAML,
@@ -39,7 +39,7 @@ exists to make aborts visible.
   a parser-crash triage needs, and a bespoke harness would be its own
   falsifiability burden.
 
-## PE supply-chain notes
+## Supply-chain notes
 
 - **Version pin discipline:** `proptest = "1"` → 1.11.0, `Cargo.lock`
   committed, every CI job `--locked`.
@@ -66,21 +66,11 @@ exists to make aborts visible.
   not production behavior; CI pins `PROPTEST_RNG_SEED` for a deterministic
   bounded gate.
 
-## SO approval
+## Approval
 
-- **Operator-attribution:** GH #52 major 1 fix, operator directive 2026-09-19
-  (crosslink #184; the roast's "no fuzz harness and no CI parser-robustness
-  gate" finding).
+- **Operator-attribution:** operator directive 2026-09-19, closing the
+  pre-release review's "no fuzz harness and no CI parser-robustness gate"
+  finding.
 - **Scope justification:** one dev-only crate closing the declared-trust-
   boundary/no-hostile-input gap that let two parser aborts reach a green RC;
   proportionate.
-
-## Co-authorship attribution
-
-Per VSDD-E0100 discipline:
-
-```
-Co-authored-by: Solution Owner <so@vsdd-domains>
-Co-authored-by: Platform Engineer <pe@vsdd-domains>
-Co-authored-by: Security <security@vsdd-domains>
-```

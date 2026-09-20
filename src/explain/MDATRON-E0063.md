@@ -8,7 +8,7 @@
 
 A pin carries a `section` (a heading naming a span of its target file), but that
 heading is not present in the file — so the section it pins over cannot be
-located, and the pin cannot be verified. Section pins (#146) let a governing
+located, and the pin cannot be verified. Section pins let a governing
 document pin a sha256 over one heading-delimited span rather than the whole
 file: the hash covers the span from the named heading's line through just
 before the next heading of the same or higher level. The heading is matched by

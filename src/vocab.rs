@@ -4,8 +4,9 @@
 //! `.mdatron/vocabulary.yaml` is an engine-defined interface parsed strictly.
 //! Each section activates its own scan when present: `terms` drives the
 //! coinage and reserved-word checks (`MDATRON-E0090` unregistered coinage —
-//! bold-introduced terms absent from the registry, the bootstrap validator's
-//! proven heuristic; `MDATRON-E0092` reserved-word use — reserved means held,
+//! bold-introduced terms absent from the registry, a heuristic proven by the
+//! project's pre-engine bootstrap validation, 2026-06;
+//! `MDATRON-E0092` reserved-word use — reserved means held,
 //! not usable; draft-status terms are exempt from strict findings per
 //! contract). `label_schemes.allow` drives the invented-label-scheme check
 //! (`MDATRON-E0091`: letter-plus-number clusters outside the allowlist — the

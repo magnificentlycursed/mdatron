@@ -461,8 +461,9 @@ vsdd composes mdatron in two ways:
   engine, not the methodology.
 
 A generalized examples library (artifact-class schemas for non-VSDD adopters)
-is deferred to adopter evidence per the absorption ledger — see
-[`DESIGN.md`](./DESIGN.md) § References.
+is deferred until real adopters supply the evidence of what shapes they need —
+the standing record of that decision lives in [`DESIGN.md`](./DESIGN.md)
+§ References.
 
 ## Where to go next
 
@@ -470,8 +471,12 @@ is deferred to adopter evidence per the absorption ledger — see
   the nine check families, output marking discipline, path confinement,
   governance-data governance
 - [`docs/dsl-reference.md`](./docs/dsl-reference.md) — the complete Layer 2
-  construct inventory with evaluation semantics; validated by a cold-context
-  authoring campaign at 100% one-pass (`dsl-falsifiability-report.md`)
+  construct inventory with evaluation semantics; held to the implementation
+  continuously by CI tripwires (the construct-inventory check and the
+  operator-semantics pins), so an engine construct absent from the reference —
+  or reference semantics the engine does not implement — fails the build
+- [`docs/faq.md`](./docs/faq.md) — prior-art comparisons, influences, and
+  frequently asked questions
 - `mdatron explain <code>` — per-code prose for every emitted diagnostic
   (frontmatter, confinement, schema, init, jurisdiction, route, pin,
   vocabulary, and citation codes); the catalog grows by one entry per

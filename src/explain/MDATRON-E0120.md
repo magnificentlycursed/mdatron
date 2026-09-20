@@ -7,7 +7,7 @@
 ## What this means
 
 A section-structural rule's **count** predicate failed. A count rule in
-a route's `section_rules:` block (#34) names a `section` (a heading), an `element`
+a route's `section_rules:` block names a `section` (a heading), an `element`
 (a heading level, e.g. `h3`), a `match` (a regex the heading line must match),
 and a `count` predicate (`>= 1`, `== 1`, `< 3`, …); the engine counts the
 `element`-level headings inside that section's span (from its heading through
@@ -15,7 +15,7 @@ just before the next heading of the same or higher level, fence-aware) whose
 line matches, and asserts the predicate. This is the body-content counterpart of
 the DSL's frontmatter arity rule (`count(filter(...)) == N`), delivered as a
 fixed-semantics check because body-content extraction is excluded from the rule
-DSL. Live case (vsdd): "at least one open-phase H3 in `## Requirements`" — an
+DSL. Live case from the first adopter: "at least one open H3 in `## Requirements`" — an
 empty section is the retire trigger, so the rule is `>= 1`, and this fires when
 the count leaves the required range.
 

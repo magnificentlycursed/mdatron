@@ -14,7 +14,7 @@ CLI argument parsing for the `mdatron` binary subcommand surface (`verify`, `exp
 - `lexopt` / hand-rolled parsing: rejected — would re-implement ~200 LoC of subcommand dispatch + help-text generation; clap is the de-facto standard
 - `bpaf`: interesting alternative; rejected for v0.1.0 — smaller adoption; not a v0.1.0 blocker but reconsider at v1.0
 
-## PE supply-chain notes
+## Supply-chain notes
 
 - **Version pin discipline:** workspace-level `clap = { version = "4.5", features = ["derive"] }`; resolves to 4.6.1 at pin time.
 - **Maintainer trust:** clap-rs/clap GitHub org; multiple active maintainers; ~25k reverse deps.
@@ -27,17 +27,7 @@ CLI argument parsing for the `mdatron` binary subcommand surface (`verify`, `exp
 - **License:** MIT OR Apache-2.0; compatible with mdatron's MIT license.
 - **Threat model:** parses user-controlled CLI arguments (operator-controlled). The threat is argument-injection — clap's parser does not execute argument content; the binary's own logic is responsible for sanitizing argument values (e.g., the path-confinement discipline applies to `--files` values).
 
-## SO approval
+## Approval
 
 - **Operator-attribution:** Solution Owner confirms clap is the appropriate CLI library for mdatron's subcommand structure. The derive feature pulls in proc-macros at compile time; runtime cost is minimal.
 - **Scope justification:** mdatron will eventually ship ~10 subcommands. Hand-rolling that surface would cost ~500-1000 LoC; clap absorbs that complexity. Dep cost is proportionate.
-
-## Co-authorship attribution
-
-Per VSDD-E0100 discipline:
-
-```
-Co-authored-by: Solution Owner <so@vsdd-domains>
-Co-authored-by: Platform Engineer <pe@vsdd-domains>
-Co-authored-by: Security <security@vsdd-domains>
-```
