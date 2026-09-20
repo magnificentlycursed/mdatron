@@ -29,6 +29,10 @@ on:
     tags: ["v*"]
   pull_request:
     branches: [main]
+  # Manual dispatch runs the whole gauntlet PLUS the deep parser-robustness
+  # profile (GH #52 major 1 — the on-demand deep-fuzz surface; the per-PR run
+  # is a bounded, seeded smoke).
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -91,6 +95,42 @@ jobs:
 
       - name: Test
         run: cargo test --workspace --locked --verbose
+
+  # Parser-robustness gate (GH #52 major 1, crosslink #184): the input parsers
+  # are a declared trust boundary, and blockers 2/3 (a parser panic and a
+  # parser abort) reached a green RC because no CI job fed them malformed
+  # input. This job drives every input parser with hostile generated input
+  # (proptest, MSRV-clean on 1.88 — no nightly anywhere) under the never-panic
+  # property, plus deterministic revert-detector seeds for the fixed classes.
+  # BOUNDED per PR: a pinned RNG seed + 1024 cases (~10s). The deep profile
+  # runs only on manual workflow_dispatch. NOT in the required-check set
+  # (operator decision, parked).
+  parser-robustness:
+    name: Parser robustness (bounded property fuzz)
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install Rust toolchain (pinned to the project MSRV)
+        uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master
+        with:
+          toolchain: "1.88"
+
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+
+      - name: Bounded property fuzz (seeded, deterministic)
+        env:
+          PROPTEST_CASES: "1024"
+          PROPTEST_RNG_SEED: "20260919"
+        run: cargo test --locked --test parser_robustness
+
+      - name: Deep property fuzz (on-demand only)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          PROPTEST_CASES: "16384"
+        run: cargo test --locked --test parser_robustness
 
   audit:
     name: Security audit (cargo-audit + cargo-deny)
