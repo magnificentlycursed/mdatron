@@ -1,5 +1,5 @@
 {
-  "next_display_id": 186,
+  "next_display_id": 187,
   "next_comment_id": 507,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -58,6 +58,7 @@
     "4dd99e1d-a2be-43b8-b748-53449ce44113": 152,
     "4ebc561b-c68f-472e-8fee-f763332bf311": 180,
     "4fe1ca8e-6b24-4d43-86c1-7a29b108f3ac": 126,
+    "5036a175-b563-417b-bc1a-aca16891ec5f": 186,
     "52ecc683-68d9-47ce-934f-0d9b43c371f4": 70,
     "571fe228-1e58-4ec0-8edf-6ebced31ecd8": 155,
     "57311af8-98a9-4083-9f80-586f713d0089": 142,
@@ -2316,6 +2317,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA/h6yPAPUBabTTRJoJobFE7X9Rh71Yc0iinxDz1TpkeYxrzL2XKjbfGzkrOgQTUyaWny+IGiyFc3hPCJ8vTCPAg=="
         }
       }
+    },
+    "5036a175-b563-417b-bc1a-aca16891ec5f": {
+      "uuid": "5036a175-b563-417b-bc1a-aca16891ec5f",
+      "display_id": 186,
+      "title": "docs: FAQ — prior-art comparison questions + influences & acknowledgments section (operator-ruled 2026-09-19, concurrent with GH52 lanes)",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-09-20T00:34:59.669773Z",
+      "updated_at": "2026-09-20T00:34:59.669773Z"
     },
     "52ecc683-68d9-47ce-934f-0d9b43c371f4": {
       "uuid": "52ecc683-68d9-47ce-934f-0d9b43c371f4",
@@ -7953,8 +7964,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T00:25:06.830594Z",
+    "timestamp": "2026-09-20T00:34:59.669773Z",
     "agent_id": "79Ig",
-    "agent_seq": 995
+    "agent_seq": 996
   }
 }
