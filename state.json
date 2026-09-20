@@ -1,5 +1,5 @@
 {
-  "next_display_id": 187,
+  "next_display_id": 188,
   "next_comment_id": 512,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -124,6 +124,7 @@
     "a8e5a57b-9652-4feb-9927-f4229585515c": 21,
     "a943580f-3634-4daa-a8f1-5d31c8af3f1b": 16,
     "ab161d79-2af6-4e4f-93c9-068243b3878b": 38,
+    "ac580493-5c18-4b2c-83b9-f9957ee8e229": 187,
     "ad262d4e-1a34-496d-9f64-802bc05ea4fd": 39,
     "ae2f415b-24e4-48b1-85ff-44033199129a": 20,
     "b1c5d325-ab66-41f7-8346-5c3e4b117555": 61,
@@ -4836,6 +4837,16 @@
         }
       }
     },
+    "ac580493-5c18-4b2c-83b9-f9957ee8e229": {
+      "uuid": "ac580493-5c18-4b2c-83b9-f9957ee8e229",
+      "display_id": 187,
+      "title": "docs corpus deletion-test audit: apply the o11y deletion test to every tracked markdown file (reader-facing cruft, dead scaffolding, internal-context leakage) — inventory + dispositions for operator ruling",
+      "status": "open",
+      "priority": "high",
+      "created_by": "79Ig",
+      "created_at": "2026-09-20T00:53:45.402672Z",
+      "updated_at": "2026-09-20T00:53:45.402672Z"
+    },
     "ad262d4e-1a34-496d-9f64-802bc05ea4fd": {
       "uuid": "ad262d4e-1a34-496d-9f64-802bc05ea4fd",
       "display_id": 39,
@@ -8023,8 +8034,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T00:52:41.867341Z",
+    "timestamp": "2026-09-20T00:53:45.402672Z",
     "agent_id": "79Ig",
-    "agent_seq": 1014
+    "agent_seq": 1015
   }
 }
