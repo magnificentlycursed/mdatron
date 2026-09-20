@@ -443,6 +443,71 @@ fn explain_accepts_short_code_and_lists_catalog() {
     );
 }
 
+// #180 (the CLI discovery trio): `explain --list --json` used to silently
+// ignore the --json flag — the same silent-no-op class the --timings gate
+// closed. It now emits the catalog as a JSON array of {code, summary}, and
+// `--list --compact` emits the per-code compact lines.
+#[test]
+fn explain_list_honors_json_and_compact() {
+    let out = run(&["explain", "--list", "--json"]);
+    assert_eq!(out.status.code(), Some(0));
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let arr: serde_json::Value =
+        serde_json::from_str(&stdout).expect("--list --json emits parseable JSON");
+    let entries = arr.as_array().expect("a JSON array");
+    assert!(entries.len() > 10, "the array enumerates the catalog");
+    assert!(
+        entries.iter().all(|e| e
+            .get("code")
+            .is_some_and(|c| c.as_str().is_some_and(|s| s.starts_with("MDATRON-")))
+            && e.get("summary").is_some()),
+        "every entry carries code + summary: {stdout}"
+    );
+
+    let out = run(&["explain", "--list", "--compact"]);
+    assert_eq!(out.status.code(), Some(0));
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        stdout.lines().count() > 10 && stdout.contains("MDATRON-E0050"),
+        "--list --compact emits one compact line per code: {stdout}"
+    );
+}
+
+// #180 (the CLI discovery trio): `mdatron docs` prints the bundled reference
+// files verbatim, so a binary-only install reads them with no checkout.
+#[test]
+fn docs_subcommand_prints_bundled_references() {
+    let out = run(&["docs"]);
+    assert_eq!(out.status.code(), Some(0));
+    assert!(
+        String::from_utf8_lossy(&out.stdout).contains("# mdatron DSL reference"),
+        "default topic is the DSL reference"
+    );
+
+    let out = run(&["docs", "limits"]);
+    assert_eq!(out.status.code(), Some(0));
+    assert!(
+        String::from_utf8_lossy(&out.stdout)
+            .to_lowercase()
+            .contains("limit"),
+        "the limits table prints"
+    );
+
+    let out = run(&["docs", "faq"]);
+    assert_eq!(out.status.code(), Some(0));
+    assert!(
+        String::from_utf8_lossy(&out.stdout).contains("# FAQ"),
+        "the FAQ prints"
+    );
+
+    let out = run(&["docs", "nonsense"]);
+    assert_ne!(
+        out.status.code(),
+        Some(0),
+        "an unknown topic is a loud usage error, never a silent default"
+    );
+}
+
 // #117 (vsdd item, W4): `--json` without `-q` used to emit the machine envelope
 // on stdout AND re-render every finding as human TTY text on stderr — a ~1.7x
 // token cost for an agent capturing both streams, and fully redundant with the

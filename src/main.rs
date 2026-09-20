@@ -16,8 +16,19 @@ mod explain;
 
 #[derive(Parser, Debug)]
 #[command(name = "mdatron", about, version, long_about = None)]
-#[command(after_help = "Descended from Schematron (ISO/IEC 19757-3). \
-                       Not related to the TRON blockchain.")]
+#[command(after_help = "The working loop (#180 discoverability):
+  mdatron init                     scaffold .mdatron/ in a new project
+  mdatron verify                   check the tree; rustc-shaped diagnostics
+  mdatron explain <code>           the fix for any diagnostic (--list for all)
+  mdatron verify --json            the versioned machine envelope (agents/CI)
+  mdatron docs                     the bundled DSL reference (also: limits, faq)
+  mdatron schema                   the published envelope JSON Schema
+
+Exit contract: 0 clean, 1 findings, 2 pipeline failure — anything else is an
+engine defect; please report it.
+
+Descended from Schematron (ISO/IEC 19757-3). Not related to the TRON \
+blockchain.")]
 struct Cli {
     #[command(subcommand)]
     command: Command,
@@ -105,8 +116,10 @@ enum Command {
         list: bool,
 
         /// Emit the explain page as a structured JSON object on stdout
-        /// (per crosslink #13 AIE/F7). Without this flag, the markdown body
-        /// is printed verbatim.
+        /// (per crosslink #13 AIE/F7); with --list, the catalog as a JSON
+        /// array of {code, summary} objects (#180 — previously the flag was
+        /// silently ignored under --list). Without this flag, the markdown
+        /// body (or the plain list) is printed verbatim.
         #[arg(long = "json")]
         json: bool,
 
@@ -153,6 +166,16 @@ enum Command {
     /// (#127) — so a binary-only consumer can pin and validate against it without
     /// a repo checkout. Kept in lockstep with `mdatron_output_version`.
     Schema,
+
+    /// Print bundled documentation on stdout (#180 discoverability): the
+    /// complete DSL reference (default), the declared-limits table, or the
+    /// FAQ — the same files the crate ships, so a binary-only `cargo install`
+    /// consumer reads them without a repo checkout (`mdatron docs | less`).
+    Docs {
+        /// Which document to print.
+        #[arg(value_parser = ["dsl", "limits", "faq"], default_value = "dsl")]
+        topic: String,
+    },
 }
 
 fn parse_explain_code(s: &str) -> Result<String, String> {
@@ -242,6 +265,7 @@ fn main() -> ExitCode {
             quiet,
         } => cmd_init(project_root, quiet),
         Command::Schema => cmd_schema(),
+        Command::Docs { topic } => cmd_docs(&topic),
     }
 }
 
@@ -250,6 +274,20 @@ fn main() -> ExitCode {
 /// `verify --json` envelope against it.
 fn cmd_schema() -> ExitCode {
     print!("{}", mdatron::output::OUTPUT_SCHEMA);
+    ExitCode::SUCCESS
+}
+
+/// Print a bundled documentation file to stdout (#180 discoverability). The
+/// files are embedded at build time from the same paths the crate package
+/// ships, so a `cargo install` consumer reads them with no repo checkout.
+/// clap's value_parser closes the topic set, so the match is total.
+fn cmd_docs(topic: &str) -> ExitCode {
+    let body = match topic {
+        "limits" => include_str!("../docs/limits.md"),
+        "faq" => include_str!("../docs/faq.md"),
+        _ => include_str!("../docs/dsl-reference.md"),
+    };
+    print!("{body}");
     ExitCode::SUCCESS
 }
 
@@ -818,8 +856,36 @@ fn cmd_explain(code: Option<&str>, list: bool, json: bool, compact: bool) -> Exi
     if list {
         match explain::catalog() {
             Ok(entries) => {
-                for (c, summary) in entries {
-                    println!("{c} — {summary}");
+                if json {
+                    // #180: --list previously ignored --json silently — the
+                    // same silent-no-op class the --timings gate closed.
+                    let arr: Vec<serde_json::Value> = entries
+                        .iter()
+                        .map(|(c, s)| serde_json::json!({ "code": c, "summary": s }))
+                        .collect();
+                    match serde_json::to_string(&arr) {
+                        Ok(line) => println!("{line}"),
+                        Err(e) => {
+                            eprintln!(
+                                "error[MDATRON-E0080]: output serialization failed\n   = note: {}",
+                                stderr_safe(&e, &[])
+                            );
+                            return ExitCode::from(2);
+                        }
+                    }
+                } else if compact {
+                    // One compact line per code (the same form `explain
+                    // --compact <code>` emits), so an agent can bulk-load the
+                    // catalog into a context budget.
+                    for (c, _) in &entries {
+                        if let Some(line) = explain::lookup_compact(c) {
+                            println!("{line}");
+                        }
+                    }
+                } else {
+                    for (c, summary) in entries {
+                        println!("{c} — {summary}");
+                    }
                 }
                 return ExitCode::from(0);
             }
