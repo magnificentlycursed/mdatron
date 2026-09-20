@@ -1,5 +1,5 @@
 {
-  "next_display_id": 191,
+  "next_display_id": 192,
   "next_comment_id": 518,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -161,6 +161,7 @@
     "d2bcf2cb-f611-4a11-bc88-00a0ace5e037": 101,
     "d6a9a419-11bd-4e47-bbfc-1cd8940f61a1": 107,
     "dc7c4aa3-af1b-41be-87dd-2a778fcd6c8d": 43,
+    "decfc009-3573-4782-ba16-6d89f8898711": 191,
     "defb3290-053e-4af9-989f-daf56c87410a": 102,
     "df97fa67-a0e9-46f5-b742-43663606453b": 157,
     "e055a0eb-e767-4ca7-8248-7c695b3c501a": 166,
@@ -6783,6 +6784,16 @@
         }
       }
     },
+    "decfc009-3573-4782-ba16-6d89f8898711": {
+      "uuid": "decfc009-3573-4782-ba16-6d89f8898711",
+      "display_id": 191,
+      "title": "Retire docs/methodology*.md when vsdd-cli is dogfooded here — 9-step checklist from #187 addendum (escape corpus migrates FIRST; config+route+seam-test atomic; amendment hook/CI scan retire only at grade>=CI-backed replacement; vocabulary_globs re-scope deliberately — key removal reverts to ALL walked files)",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-09-20T01:09:50.275170Z",
+      "updated_at": "2026-09-20T01:09:50.275170Z"
+    },
     "defb3290-053e-4af9-989f-daf56c87410a": {
       "uuid": "defb3290-053e-4af9-989f-daf56c87410a",
       "display_id": 102,
@@ -8133,8 +8144,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T01:09:44.378006Z",
+    "timestamp": "2026-09-20T01:09:50.275170Z",
     "agent_id": "79Ig",
-    "agent_seq": 1026
+    "agent_seq": 1027
   }
 }
