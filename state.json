@@ -1,5 +1,5 @@
 {
-  "next_display_id": 184,
+  "next_display_id": 185,
   "next_comment_id": 497,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -71,6 +71,7 @@
     "6778c47f-8706-4a31-9cbe-2d60f8fdf19c": 50,
     "67c6fa14-5eb9-4657-abd6-904507360757": 99,
     "685a5139-6347-4bf4-abd8-ce9c7ac48024": 117,
+    "688e0ef3-333c-422b-96dc-d0295a1ff25c": 184,
     "69b33517-946c-45ba-9287-c1231028d5ec": 47,
     "70039fee-0c5f-457a-8cb9-db920105b263": 137,
     "700bbf38-a0db-46e2-90a8-36df989ecb06": 53,
@@ -2745,6 +2746,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABApR2jQbvcp2u+zRKGUgreW/y6LOn8Gz1YQHmm2FwIqF8MDMmBapQx10vi60iXmG6CwYKHd6vhqgju3LCXYg81Dw=="
         }
       }
+    },
+    "688e0ef3-333c-422b-96dc-d0295a1ff25c": {
+      "uuid": "688e0ef3-333c-422b-96dc-d0295a1ff25c",
+      "display_id": 184,
+      "title": "GH52 lane C (major 1): fuzz harness per input parser + bounded CI parser-robustness gate",
+      "status": "open",
+      "priority": "high",
+      "created_by": "79Ig",
+      "created_at": "2026-09-20T00:09:55.402437Z",
+      "updated_at": "2026-09-20T00:09:55.402437Z"
     },
     "69b33517-946c-45ba-9287-c1231028d5ec": {
       "uuid": "69b33517-946c-45ba-9287-c1231028d5ec",
@@ -7827,8 +7838,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T00:09:49.874040Z",
+    "timestamp": "2026-09-20T00:09:55.402437Z",
     "agent_id": "79Ig",
-    "agent_seq": 978
+    "agent_seq": 979
   }
 }
