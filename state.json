@@ -1,6 +1,6 @@
 {
   "next_display_id": 193,
-  "next_comment_id": 524,
+  "next_comment_id": 525,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -2292,7 +2292,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-09-19T22:15:11.079839Z",
-      "updated_at": "2026-09-20T01:09:56.470812Z",
+      "updated_at": "2026-09-20T01:25:17.606262Z",
       "labels": [
         "enhancement"
       ],
@@ -2304,6 +2304,15 @@
         "f21336ca-f031-48da-ab68-018e700d4db1"
       ],
       "comments": {
+        "300bc649-5b3e-4293-91e1-f7f7779a2538": {
+          "display_id": 524,
+          "author": "79Ig",
+          "content": "POSITIONING INPUT (o11y Ch31 capture, knowledge page observability-engineering-ch31-vocabulary): the vocab-family motivation sentence for README/docs — the book's authors coined 'observability' with a precise definition and lost it to vendor drift ('we're sorry. This is not what we intended', Ch25 p452); a coined term with a definition but no codified governance drifts and is lost — mdatron's vocabulary family is that codification for a project's own terms. One sentence, cite the book (already in FAQ acknowledgments).",
+          "created_at": "2026-09-20T01:25:17.593220Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABARuXTZ8O2L9ZYeSY3gsTzuS9oL9cLZNPB2sZToObs5W0svYZ4E2U1jAofr2jUiOJrZGAo8ttdyCVTlaOfue9VAQ=="
+        },
         "3097f091-ec1e-47bf-ab72-1e0158bf570f": {
           "display_id": 497,
           "author": "79Ig",
@@ -8213,8 +8222,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T01:25:11.470939Z",
+    "timestamp": "2026-09-20T01:25:17.606262Z",
     "agent_id": "79Ig",
-    "agent_seq": 1034
+    "agent_seq": 1035
   }
 }
