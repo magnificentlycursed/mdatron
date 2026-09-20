@@ -3171,6 +3171,25 @@ mod tests {
         );
     }
 
+    // RED GATE (GH #52 lane-B review B3): a plain YAML-SYNTAX error in a
+    // pattern file reports as the pattern-file parse error, never
+    // misattributed as a version-read failure — the lenient version probe
+    // defers its own deserialize failures to the strict parse that always
+    // runs next.
+    #[test]
+    fn broken_pattern_yaml_reports_as_a_parse_error_not_a_version_error() {
+        let proj = dsl_gate_project("dslver-broken-yaml", "pattern: [unclosed\n");
+        let err = format!("{}", verify(&VerifyConfig::new(&proj.0)).unwrap_err());
+        assert!(
+            err.contains("pattern load error"),
+            "the canonical parse attribution; got {err}"
+        );
+        assert!(
+            !err.contains("mdatron_dsl_version"),
+            "a syntax error is not a version-read failure; got {err}"
+        );
+    }
+
     // RED GATE (GH #52 major 4): the DSL structs are `deny_unknown_fields`
     // like the five sibling input formats — a typo'd key at ANY level (file,
     // pattern, rule, key decl, location) refuses loudly instead of being

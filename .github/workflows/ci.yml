@@ -22,13 +22,18 @@ on:
     # unchanged — but it accidentally left the RELEASE surface with no CI at
     # all: a release/** push triggered nothing, and no tag re-ran the
     # gauntlet on the tagged tree, so the blocking self-verify release gate
-    # physically could not fire where releases are cut. A branch that wants
-    # CI before its PR exists opens a draft PR. crosslink/** tracker branches
+    # physically could not fire where releases are cut. Push-CI verifies
+    # merges to main and release/** plus tags; PRs (to main or release/**
+    # bases, B4) get their one pull_request run. A branch that wants CI
+    # before its PR exists opens a draft PR. crosslink/** tracker branches
     # stay excluded — no buildable source.
     branches: [main, "release/**"]
     tags: ["v*"]
   pull_request:
-    branches: [main]
+    # main + release/** BASES (lane-B review B4): a PR targeting a release
+    # branch gets CI like any other PR — and still exactly ONE run, since the
+    # push trigger does not cover PR head branches.
+    branches: [main, "release/**"]
   # Manual dispatch runs the whole gauntlet PLUS the deep parser-robustness
   # profile (GH #52 major 1 — the on-demand deep-fuzz surface; the per-PR run
   # is a bounded, seeded smoke).

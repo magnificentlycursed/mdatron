@@ -217,7 +217,7 @@ not be in the future." That is Layer 2 territory — DSL patterns at
 
 <!-- mdatron-roundtrip:pattern-start -->
 ```yaml
-mdatron_dsl_version: 1
+mdatron_dsl_version: 1      # optional (absent = v1); unsupported versions refuse at load
 pattern:
   id: blog-validation
   rules:

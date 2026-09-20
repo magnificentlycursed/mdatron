@@ -91,11 +91,18 @@ struct DslProbe {
 /// greater-than-supported value refuse loudly, mirroring
 /// [`check_input_format_version`]'s message shape.
 pub(crate) fn check_dsl_version(content: &str, file: &str) -> Result<(), Error> {
-    let probe: DslProbe = serde_yaml_ng::from_str(content).map_err(|e| {
-        Error::Config(format!(
-            "cannot read mdatron_dsl_version from '{file}': {e}"
-        ))
-    })?;
+    // Lane-B review B3: a probe deserialize failure DEFERS to the strict
+    // parse that always runs next, rather than misattributing a plain YAML
+    // syntax error as a version-read failure ("cannot read
+    // mdatron_dsl_version from …"). The probe is strictly more lenient than
+    // the strict parse, so probe-fail ⇒ strict-fail: nothing passes silently,
+    // and every error carries the canonical parse attribution — a syntax
+    // error reports as the pattern-file parse error, and a wrong-typed
+    // version field reports field-precisely from the strict parse. `file`
+    // stays in the signature for the version-refusal messages below.
+    let Ok(probe) = serde_yaml_ng::from_str::<DslProbe>(content) else {
+        return Ok(());
+    };
     match probe.mdatron_dsl_version {
         // Absent: the v1 legacy baseline (pre-0.6.0-authored pattern files).
         None => Ok(()),

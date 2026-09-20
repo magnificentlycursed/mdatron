@@ -403,6 +403,37 @@ fn finding_fingerprints_survive_line_churn_across_runs() {
     assert_eq!(fp1, fp2, "the identity survives document churn");
 }
 
+// GH #52 lane-B review B5: the `in` array-only narrowing, driven END-TO-END
+// through the binary (parse → verify → envelope): a refused haystack (`"x" in
+// $self.<absent>` — a Null right side) surfaces as the E0080 eval pipeline
+// error in the envelope, kind "eval", exit 2 — the loud surface the reference
+// documents, never the silent `false` it used to be.
+#[test]
+fn refused_in_haystack_is_an_eval_pipeline_error_end_to_end() {
+    let proj = TempProject::new("in-null-e2e");
+    proj.write(
+        ".mdatron/patterns/p.yaml",
+        "mdatron_dsl_version: 1\npattern:\n  id: p\n  rules:\n    - id: r\n      \
+         context: \"**/*.md\"\n      assert: '\"x\" in $self.absent'\n      \
+         code: T-E0001\n      message: m\n",
+    );
+    proj.write("doc.md", "---\nfoo: bar\n---\n");
+    let out = run_verify_json(&proj);
+    assert_eq!(
+        out.status.code(),
+        Some(2),
+        "a refused haystack is a loud pipeline failure; stderr={:?}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let env = parse_output(&out);
+    assert_eq!(env["pipeline_status"], "failed");
+    assert_eq!(env["pipeline_error"]["code"], "MDATRON-E0080");
+    assert_eq!(
+        env["pipeline_error"]["kind"], "eval",
+        "the eval failure class rides the envelope; got {env}"
+    );
+}
+
 #[test]
 fn finding_code_prefix_matches_severity() {
     let proj = TempProject::new("bc3");

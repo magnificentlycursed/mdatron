@@ -10,7 +10,11 @@ violation.
 
 ## Pattern files
 
-Patterns live at `.mdatron/patterns/<name>.yaml`:
+Patterns live at `.mdatron/patterns/<name>.yaml`. `mdatron_dsl_version` is the
+DSL's own version axis (DEF5): the supported value is `1`; the field is
+optional, and an absent declaration is read as the v1 legacy baseline; a `0`
+or a value above the supported version is refused legibly at load ("declares
+v99, supports v1") — never run silently under different semantics.
 
 ```yaml
 mdatron_dsl_version: 1
