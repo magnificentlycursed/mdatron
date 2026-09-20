@@ -1,6 +1,6 @@
 {
   "next_display_id": 186,
-  "next_comment_id": 503,
+  "next_comment_id": 504,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -7231,7 +7231,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-20T00:08:10.948448Z",
-      "updated_at": "2026-09-20T00:17:47.093447Z",
+      "updated_at": "2026-09-20T00:19:44.395027Z",
       "labels": [
         "docs"
       ],
@@ -7247,6 +7247,15 @@
           "kind": "decision",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAeeOwWNTed2z7Kfb63EdwNkV1VMugpUxwEGHTvaA8z3ibn18mYR76ZihG3JUyOR43eCKTO/fmNZj5ZxqU8ZCPCw=="
+        },
+        "84389def-b4aa-433c-8b9e-c1a137fac837": {
+          "display_id": 503,
+          "author": "79Ig",
+          "content": "ROADMAP (operator, 2026-09-19): the positioning arc (silent agent-config failure -> false confidence -> mdatron failure loop) is a CASE STUDY candidate, foreseen as a blog post and/or presentation. BUILD CONSEQUENCE: capture case-study artifacts AS A BYPRODUCT of building the pack, not reconstructed later — keep the demo repo used for falsification demos; save real terminal transcripts (the vendor tool silently skipping the broken file; mdatron's rustc-style diagnostic; the envelope JSON; an agent self-correction transcript if achievable honestly); screenshot/asciinema-worthy moments flagged in recipe commits. Candidate narrative arc: (1) hook — 'your agent config is broken and nothing will ever tell you', demonstrated live against the real tools with vendor-doc receipts (the skip conditions are documented!); (2) the invisible-failure taxonomy across CC/Copilot; (3) the failure loop demo end-to-end incl. fingerprint-verified correction; (4) the doctrine meta-story — the engine hunting fail-open gates was itself built under adversarial review hunting fail-open gates (self-verify release gate, red-gate discipline, #48/#52 roasts as receipts); (5) CTA: cargo install + one CI step. Presentation variant is live-demo-heavy (break a subagent file on stage, watch the tool stay silent, watch mdatron refuse). Deliverable lives OUTSIDE the crate repo — post-cut, after the pack exists.",
+          "created_at": "2026-09-20T00:19:44.381616Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAGGcIYwnxnybKZw9PiIsuoPKYbN+voLbHSUwlr2yksGtIk3mHjGUr0UevRwY1Z6WE0l4jXCSxQ3wzBllqSr0dAg=="
         },
         "978bb720-1d1d-46b1-ba3b-b0465847bc31": {
           "display_id": 500,
@@ -7913,8 +7922,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T00:17:53.263284Z",
+    "timestamp": "2026-09-20T00:19:44.395027Z",
     "agent_id": "79Ig",
-    "agent_seq": 989
+    "agent_seq": 990
   }
 }
