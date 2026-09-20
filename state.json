@@ -1,6 +1,6 @@
 {
   "next_display_id": 186,
-  "next_comment_id": 500,
+  "next_comment_id": 501,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -7222,7 +7222,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-20T00:08:10.948448Z",
-      "updated_at": "2026-09-20T00:12:55.808373Z",
+      "updated_at": "2026-09-20T00:15:49.193738Z",
       "labels": [
         "docs"
       ],
@@ -7230,6 +7230,15 @@
         "4ebc561b-c68f-472e-8fee-f763332bf311"
       ],
       "comments": {
+        "978bb720-1d1d-46b1-ba3b-b0465847bc31": {
+          "display_id": 500,
+          "author": "79Ig",
+          "content": "POSITIONING REFINEMENT (operator, 2026-09-19): 'found out days later' is one of the BETTER outcomes — the modal case is they NEVER find out: a mechanism they believe is helping that doesn't work. Agent output is stochastic, so a silently-skipped config never yields a legible failure, only a shifted distribution — no feedback loop, unfalsifiable from inside the mechanism; the only detection is an external check OF the mechanism, which is mdatron's category. False confidence compounds (more rules written into a file nothing reads; inert mechanism credited for unrelated successes — the disconnected smoke detector). PITCH LANGUAGE: lead with false-confidence/never-find-out, not debugging-cost. DOCTRINE TIE: this is 'silence always means verified-clean' pointed outward — the families tri-state exists because configured-but-inert masquerading as active had to be structurally impossible in our own envelope; a silently-skipped subagent file is the same fail-open class in the adopter's repo. COOKBOOK CONSEQUENCE: seeded-violation sections are falsification demos — reader proves the silent failure against the real tool first (skip condition fires, no complaint), THEN sees mdatron refuse it in CI.",
+          "created_at": "2026-09-20T00:15:49.176892Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA0YLI71LQZqCTOURh2BsOjtDNNUNte9UdRXWHf0jgbWJOW5qPYFt2H37HALVWAh7E59I5DxmeR5dOBYeQaG75BA=="
+        },
         "9e354ffd-3df7-45fe-8b9b-c984b5c5acce": {
           "display_id": 499,
           "author": "79Ig",
@@ -7886,8 +7895,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T00:12:55.808373Z",
+    "timestamp": "2026-09-20T00:15:49.193738Z",
     "agent_id": "79Ig",
-    "agent_seq": 986
+    "agent_seq": 987
   }
 }
