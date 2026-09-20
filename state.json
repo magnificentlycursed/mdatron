@@ -1,6 +1,6 @@
 {
   "next_display_id": 192,
-  "next_comment_id": 520,
+  "next_comment_id": 521,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -2778,7 +2778,18 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-20T01:09:44.378006Z",
-      "updated_at": "2026-09-20T01:09:44.378006Z"
+      "updated_at": "2026-09-20T01:15:17.334765Z",
+      "comments": {
+        "d0be0a7b-2d91-4cc4-b0fb-090d96d762bd": {
+          "display_id": 520,
+          "author": "79Ig",
+          "content": "PROVENANCE CHECK (operator question 2026-09-19): the dependency-docs practice IS vsdd-originated and IS in vsdd-cli's CURRENT design — .design/agent-first-vsdd-toolkit.md line ~242: an added manifest entry needs its living record at docs/dependencies/<crate>.md + three-lens review landing with the addition; missing-record = VSDD-E0100; removals/upgrades/transitive churn deliberately carry no machinery; current grade 'convention' (their #872 records the no-hook lapse), target grade = pre-push hook + CI leg via vsdd init. Their 2026-09-18 compaction (#869/#873) SIMPLIFIED dependency approval — before designing our record schema, read their simplified current form so the two projects stay consistent. Note the alignment opportunity: a dependency-record schema in mdatron is exactly the CI leg THEIR target grade needs — candidate shared artifact / standards-pack-adjacent recipe.",
+          "created_at": "2026-09-20T01:15:17.323062Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAZ8ucIPrkN8feQ1DLIlYn1GK6rG35sCbl+9tH62f57TwoRgkx70NrJIFisMkoOxImiKRBWuIl+JePD/JNYjIHBg=="
+        }
+      }
     },
     "67c6fa14-5eb9-4657-abd6-904507360757": {
       "uuid": "67c6fa14-5eb9-4657-abd6-904507360757",
@@ -8162,8 +8173,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T01:15:11.108778Z",
+    "timestamp": "2026-09-20T01:15:17.334765Z",
     "agent_id": "79Ig",
-    "agent_seq": 1029
+    "agent_seq": 1030
   }
 }
