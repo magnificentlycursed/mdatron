@@ -1,5 +1,5 @@
 {
-  "next_display_id": 181,
+  "next_display_id": 182,
   "next_comment_id": 496,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -169,6 +169,7 @@
     "ee671da2-071b-4656-bf74-6259586911d8": 162,
     "f00730f0-5883-4ad4-9ae0-9a665b2baa0b": 100,
     "f187546d-64e0-4da8-9b7c-6f1023106726": 119,
+    "f21336ca-f031-48da-ab68-018e700d4db1": 181,
     "f46bbe99-0826-4d9b-910d-557d5c3277a7": 41,
     "f66effba-1ef2-402d-9b3c-527b9ef4ea80": 26,
     "f7b7edd2-26cc-4bf0-839d-af22d2b8ca75": 45,
@@ -7148,6 +7149,16 @@
         }
       }
     },
+    "f21336ca-f031-48da-ab68-018e700d4db1": {
+      "uuid": "f21336ca-f031-48da-ab68-018e700d4db1",
+      "display_id": 181,
+      "title": "Standards pack: agentic-markdown reference implementations — a cookbook tour of mdatron's features through well-known files (3 tiers incl. llms.txt)",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-09-20T00:08:10.948448Z",
+      "updated_at": "2026-09-20T00:08:10.948448Z"
+    },
     "f46bbe99-0826-4d9b-910d-557d5c3277a7": {
       "uuid": "f46bbe99-0826-4d9b-910d-557d5c3277a7",
       "display_id": 41,
@@ -7774,8 +7785,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T00:06:03.820870Z",
+    "timestamp": "2026-09-20T00:08:10.948448Z",
     "agent_id": "79Ig",
-    "agent_seq": 972
+    "agent_seq": 973
   }
 }
