@@ -1,5 +1,5 @@
 {
-  "next_display_id": 193,
+  "next_display_id": 194,
   "next_comment_id": 526,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -29,6 +29,7 @@
     "262c8f3f-bab5-4796-b735-b24d9bf01ac9": 123,
     "277a179b-fdda-44e7-a79b-f9e096e12789": 124,
     "27c148a2-87df-4d35-8f22-46b99666de3f": 130,
+    "28577049-08ee-4b38-8981-24144f74842d": 193,
     "2881253a-3641-4d7b-a6c1-e09cbbd2d140": 96,
     "28885c69-878b-4b5d-b165-8a917d7056e3": 83,
     "291f852d-9a3c-429a-8ba1-83a1010974d1": 29,
@@ -1262,6 +1263,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAZtQ+k3PJrEsY1WOCLl2C15FsgCw+xELYdhR20XfyHQC4S6MWYyKt8KCUWnkEvFmHQ6ChH0fZVjg1yibdceEQAg=="
         }
       }
+    },
+    "28577049-08ee-4b38-8981-24144f74842d": {
+      "uuid": "28577049-08ee-4b38-8981-24144f74842d",
+      "display_id": 193,
+      "title": "Parser-robustness follow-up (lane-C review C3): never-panic properties over the FIRST-PARTY body-text scanners — marker/cite/link (percent-decode + slug)/section/vocab checkers driven with hostile markdown bodies (pure functions over content+config); the #48-era byte-slice class lived here, not upstream (post-cut)",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-09-20T01:30:54.698406Z",
+      "updated_at": "2026-09-20T01:30:54.698406Z"
     },
     "2881253a-3641-4d7b-a6c1-e09cbbd2d140": {
       "uuid": "2881253a-3641-4d7b-a6c1-e09cbbd2d140",
@@ -8228,8 +8239,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T01:30:48.894900Z",
+    "timestamp": "2026-09-20T01:30:54.698406Z",
     "agent_id": "79Ig",
-    "agent_seq": 1038
+    "agent_seq": 1039
   }
 }
