@@ -1,6 +1,6 @@
 {
   "next_display_id": 192,
-  "next_comment_id": 522,
+  "next_comment_id": 523,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -4325,10 +4325,21 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-09-20T01:06:15.299161Z",
-      "updated_at": "2026-09-20T01:06:23.796535Z",
+      "updated_at": "2026-09-20T01:16:45.803274Z",
       "related": [
         "ac580493-5c18-4b2c-83b9-f9957ee8e229"
-      ]
+      ],
+      "comments": {
+        "61650f2a-6e1a-4680-9f11-8a9a184622fa": {
+          "display_id": 522,
+          "author": "79Ig",
+          "content": "AMENDMENT (from BOOTSTRAP-MITIGATION.md's actual exit-criteria list, extracted at deletion): criterion 4 was missing here — 'Coinage log processed: all entries merged into templates/registry/vocabulary.yaml with appropriate tiers.' Criterion 3 (bootstrap-validator.py deleted) already discharged, not carried. Full original preserved in git history at the #187 deletion commit.",
+          "created_at": "2026-09-20T01:16:45.788020Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAQBEpryaxl+4IkC0ClHUTzgCWQeRYSBnmKuERx43LpZgBpbz1s0D6n3cBSTBkm3KdUh8qeJkrtF9ZRAs1NM9lBQ=="
+        }
+      }
     },
     "9e14b0dd-b125-4e1c-a9eb-0c15086a3f1e": {
       "uuid": "9e14b0dd-b125-4e1c-a9eb-0c15086a3f1e",
@@ -8182,8 +8193,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T01:16:39.081185Z",
+    "timestamp": "2026-09-20T01:16:45.803274Z",
     "agent_id": "79Ig",
-    "agent_seq": 1031
+    "agent_seq": 1032
   }
 }
