@@ -1,6 +1,6 @@
 {
   "next_display_id": 186,
-  "next_comment_id": 505,
+  "next_comment_id": 506,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -7231,7 +7231,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-20T00:08:10.948448Z",
-      "updated_at": "2026-09-20T00:21:45.197724Z",
+      "updated_at": "2026-09-20T00:24:31.469148Z",
       "labels": [
         "docs"
       ],
@@ -7274,6 +7274,15 @@
           "kind": "decision",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABArv5chtE1nj5A4gKTXCd1ONcuqbe6pky6tM3M8mNn7jzmetDjsC1jAei76Fmk0LfWUuZlp0M4bOVzJC1oBb0BBw=="
+        },
+        "b29c4ae6-57e0-42da-bfe0-b47d54db5017": {
+          "display_id": 505,
+          "author": "79Ig",
+          "content": "ROADMAP CONTEXT (operator, 2026-09-19): a SECOND case study is planned alongside D4 — vsdd-cli as mdatron's first consumer (the first-consumer typed-markdown-governance story, distinct from this issue's agent-config story). Contingent on how vsdd-cli evolves during development; not a deliverable of this issue — tracked here only so the two case studies are planned as a pair. Revisit at the post-cut vsdd-cli capability-delta handoff.",
+          "created_at": "2026-09-20T00:24:31.456020Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAsFjSqbhWoTkpSEkU6pu1befOtC8DPZQ7F/QjfQXGzTioiV9aN9LO5na65ufU38LihLAhx2JkFiuBKL/Z5Sz5AQ=="
         },
         "b83cf26f-25bd-4b8d-b7fe-015d9921d8ee": {
           "display_id": 496,
@@ -7931,8 +7940,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T00:21:45.197724Z",
+    "timestamp": "2026-09-20T00:24:31.469148Z",
     "agent_id": "79Ig",
-    "agent_seq": 992
+    "agent_seq": 993
   }
 }
