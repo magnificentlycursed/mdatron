@@ -14,15 +14,19 @@ name: CI
 
 on:
   push:
-    # main ONLY (#178, observability-engineering-audit input 4): a working
-    # branch under PR used to get BOTH a push run and a pull_request run in the
-    # same concurrency group — they cancelled each other, stranding required
-    # contexts as CANCELLED, and every PR of the 0.6.0 cycle needed a manual
-    # rerun before merge (Ch18's "retries are a tail-latency tax", live). A PR
-    # branch now gets exactly ONE run (pull_request); push-CI verifies merges
-    # to main. A branch that wants CI before its PR exists opens a draft PR.
-    # crosslink/** tracker branches stay excluded — no buildable source.
-    branches: [main]
+    # main + release/** + tags (#178 as amended by GH #52 major 5): #178 cut
+    # push-CI to main only so a working branch under PR gets exactly ONE run
+    # (pull_request) instead of a push+PR pair cancelling each other in the
+    # same concurrency group (stranding required contexts as CANCELLED —
+    # Ch18's "retries are a tail-latency tax", live). That rationale is
+    # unchanged — but it accidentally left the RELEASE surface with no CI at
+    # all: a release/** push triggered nothing, and no tag re-ran the
+    # gauntlet on the tagged tree, so the blocking self-verify release gate
+    # physically could not fire where releases are cut. A branch that wants
+    # CI before its PR exists opens a draft PR. crosslink/** tracker branches
+    # stay excluded — no buildable source.
+    branches: [main, "release/**"]
+    tags: ["v*"]
   pull_request:
     branches: [main]
 

@@ -1661,6 +1661,22 @@ fn load_patterns(
             path: path.to_string_lossy().into_owned(),
             error: e.to_string(),
         })?;
+        // GH #52 major 3 (DEF5 for the DSL axis): the lenient version probe
+        // runs BEFORE the strict deny-unknown-fields parse, so an
+        // unknown-future-version pattern file breaks legibly ("declares v99,
+        // supports v1"), never as an opaque unknown-sibling serde error — and
+        // a v0/v99 file no longer runs silently as v1.
+        crate::format_version::check_dsl_version(
+            &content,
+            &path
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_else(|| path.to_string_lossy().into_owned()),
+        )
+        .map_err(|e| VerifyError::PatternLoad {
+            path: path.to_string_lossy().into_owned(),
+            error: e.to_string(),
+        })?;
         let pf = parse_pattern_file(&content).map_err(|e| VerifyError::PatternLoad {
             path: path.to_string_lossy().into_owned(),
             error: e.to_string(),
@@ -3030,6 +3046,122 @@ mod tests {
             err.contains("parse error"),
             "a bounded parse diagnostic, never a panic; got {err}"
         );
+    }
+
+    /// A minimal pattern project for the DSL-loader gates (GH #52 majors 3+4):
+    /// `header` replaces the version line, `extra_rule_lines` append inside the
+    /// rule mapping.
+    fn dsl_gate_project(label: &str, pattern_yaml: &str) -> TempProject {
+        let proj = TempProject::new(label);
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(".mdatron/patterns/p.yaml", pattern_yaml);
+        proj.write("doc.md", "---\nfoo: bar\n---\n");
+        proj
+    }
+
+    const DSL_GATE_BODY: &str = "pattern:\n  id: p\n  rules:\n    - id: r\n      \
+                                 context: \"**/*.md\"\n      assert: \"false\"\n      \
+                                 code: T-E0001\n      message: m\n";
+
+    // RED GATE (GH #52 major 3): `mdatron_dsl_version` is now VALIDATED —
+    // previously 0, 1, and 99 all ran identically (the one format whose
+    // version field was inert against the DEF5 legible-break goal). Version 1
+    // and ABSENT (the v1 legacy baseline, like routes/vocab/pins) both load;
+    // 0 and 99 refuse loudly naming the found and supported versions.
+    #[test]
+    fn dsl_version_is_gated_like_the_other_input_formats() {
+        // v1 and absent both load: the rule fires (assert false).
+        for (label, header) in [("v1", "mdatron_dsl_version: 1\n"), ("absent", "")] {
+            let proj = dsl_gate_project(
+                &format!("dslver-{label}"),
+                &format!("{header}{DSL_GATE_BODY}"),
+            );
+            let findings = verify(&VerifyConfig::new(&proj.0)).unwrap();
+            assert!(
+                findings.iter().any(|f| f.code == "T-E0001"),
+                "{label}: the pattern loads and its rule fires; got {findings:?}"
+            );
+        }
+        // 0 and 99 refuse loudly, as a legible envelope surface (a pattern_load
+        // pipeline error naming both versions), never a bare serde error.
+        for (label, header, expect) in [
+            ("v0", "mdatron_dsl_version: 0\n", "start at 1"),
+            ("v99", "mdatron_dsl_version: 99\n", "supports up to 1"),
+        ] {
+            let proj = dsl_gate_project(
+                &format!("dslver-{label}"),
+                &format!("{header}{DSL_GATE_BODY}"),
+            );
+            let err = format!("{}", verify(&VerifyConfig::new(&proj.0)).unwrap_err());
+            assert!(
+                err.contains("mdatron_dsl_version") && err.contains(expect),
+                "{label}: a legible version refusal; got {err}"
+            );
+        }
+        // The DEF5 legible-break property: a FUTURE file with an unknown
+        // sibling still reports the VERSION (the lenient probe runs before
+        // the strict deny-unknown-fields parse), not an opaque serde error.
+        let proj = dsl_gate_project(
+            "dslver-future",
+            &format!("mdatron_dsl_version: 99\nfuture_top_level_thing: x\n{DSL_GATE_BODY}"),
+        );
+        let err = format!("{}", verify(&VerifyConfig::new(&proj.0)).unwrap_err());
+        assert!(
+            err.contains("supports up to 1"),
+            "the version surfaces ahead of the unknown sibling; got {err}"
+        );
+    }
+
+    // RED GATE (GH #52 major 4): the DSL structs are `deny_unknown_fields`
+    // like the five sibling input formats — a typo'd key at ANY level (file,
+    // pattern, rule, key decl, location) refuses loudly instead of being
+    // silently dropped (`locaton:` used to silently drop a rule's
+    // finding-location override).
+    #[test]
+    fn unknown_pattern_keys_refuse_at_every_level() {
+        let cases: [(&str, String); 5] = [
+            (
+                "file",
+                format!("mdatron_dsl_version: 1\nbogus_top: x\n{DSL_GATE_BODY}"),
+            ),
+            (
+                "pattern",
+                "mdatron_dsl_version: 1\npattern:\n  id: p\n  bogus_pattern: x\n  rules:\n    \
+                 - id: r\n      context: \"**/*.md\"\n      assert: \"false\"\n      \
+                 code: T-E0001\n      message: m\n"
+                    .into(),
+            ),
+            (
+                "rule",
+                "mdatron_dsl_version: 1\npattern:\n  id: p\n  rules:\n    - id: r\n      \
+                 context: \"**/*.md\"\n      assert: \"false\"\n      code: T-E0001\n      \
+                 message: m\n      locaton:\n        field: f\n"
+                    .into(),
+            ),
+            (
+                "keydecl",
+                "mdatron_dsl_version: 1\npattern:\n  id: p\n  keys:\n    - name: k\n      \
+                 source: r.yaml\n      select: $\n      indexed_by: $key\n      bogus_key: x\n  \
+                 rules:\n    - id: r\n      context: \"**/*.md\"\n      assert: \"false\"\n      \
+                 code: T-E0001\n      message: m\n"
+                    .into(),
+            ),
+            (
+                "location",
+                "mdatron_dsl_version: 1\npattern:\n  id: p\n  rules:\n    - id: r\n      \
+                 context: \"**/*.md\"\n      assert: \"false\"\n      code: T-E0001\n      \
+                 message: m\n      location:\n        feild: f\n"
+                    .into(),
+            ),
+        ];
+        for (label, yaml) in cases {
+            let proj = dsl_gate_project(&format!("denyuk-{label}"), &yaml);
+            let err = format!("{}", verify(&VerifyConfig::new(&proj.0)).unwrap_err());
+            assert!(
+                err.contains("unknown field"),
+                "{label}: an unknown key refuses loudly; got {err}"
+            );
+        }
     }
 
     // RED GATE (#77, consumer raise 3): config.yaml `file_globs` are the

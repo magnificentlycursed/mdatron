@@ -32,7 +32,7 @@ pattern:
       message: "phase must be phase-1a"
 "#;
         let pf = parse_pattern_file(yaml).expect("minimal pattern parses");
-        assert_eq!(pf.mdatron_dsl_version, 1);
+        assert_eq!(pf.mdatron_dsl_version, Some(1));
         assert_eq!(pf.pattern.id, "my-pattern");
         assert_eq!(pf.pattern.rules.len(), 1);
         let rule = &pf.pattern.rules[0];

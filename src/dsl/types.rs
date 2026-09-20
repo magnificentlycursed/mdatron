@@ -3,14 +3,24 @@
 use serde::Deserialize;
 
 /// Top-level pattern file: a `mdatron_dsl_version` declaration + a `pattern` block.
+/// Strict like the five sibling input formats (GH #52 major 4,
+/// `deny_unknown_fields`): a typo'd key — `locaton:` for `location:` — used to
+/// be silently dropped on the highest-risk adopter input. The version field is
+/// OPTIONAL (absent = the v1 legacy baseline, GH #52 major 3 — pattern files
+/// predate 0.6.0, consistent with routes/vocab/pins per DEF5) and is GATED by
+/// the lenient two-pass probe in `format_version` before this strict parse, so
+/// an unknown-future-version file breaks legibly, not atomically.
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 pub struct PatternFile {
-    pub mdatron_dsl_version: u32,
+    #[serde(default)]
+    pub mdatron_dsl_version: Option<u32>,
     pub pattern: Pattern,
 }
 
 /// A named group of rules sharing a `keys:` declaration + optional `phases:` selection.
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 pub struct Pattern {
     pub id: String,
     #[serde(default)]
@@ -25,6 +35,7 @@ pub struct Pattern {
 /// A cross-file index declaration. Built once per validation pass; queryable from
 /// any rule in the pattern via `key("<name>", <value>)` expressions.
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 pub struct KeyDecl {
     pub name: String,
     /// File path or glob pattern from which entries are extracted.
@@ -37,6 +48,7 @@ pub struct KeyDecl {
 
 /// A single declarative rule.
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 pub struct Rule {
     pub id: String,
     pub context: ContextSelector,
@@ -116,6 +128,7 @@ impl ContextSelector {
 /// Override for the source-span location attached to a finding. When absent, the
 /// validator defaults to the whole-artifact span.
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 pub struct LocationSpec {
     #[serde(default)]
     pub field: Option<String>,
