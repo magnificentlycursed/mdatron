@@ -25,7 +25,14 @@ sentence with practice):
 - **2a red gate** — the failing test demonstrated against the defect/gap first.
 - **2b implement to green** — the minimal implementation.
 - **2c exit gate** — refactor while green; the exit boundary commit.
-- **3 adversarial cold review** — independent, multi-lens, no prior context.
+- **3 adversarial cold review** — independent, multi-lens, cold. Cold means
+  no curated summary ever reaches a reviewer; warm on the raw artifact is
+  acceptable, and true cold context is reserved for the terminal rounds. The
+  composition declares its **fan-out shape and hard agent-count ceiling**
+  before dispatch, and refutation happens **across rounds, never as a
+  per-finding verifier fan-out** (the named bypass) — a discipline founded on
+  this project's own overspend incidents (synced from vsdd-cli's
+  declaration-completeness gate, #194).
 - **4 route findings** — see § 2.
 - **5 harden** — close the routed findings.
 - **6 exit** — the milestone closes with evidence.
@@ -33,9 +40,10 @@ sentence with practice):
 ### 2. Route findings before fixing
 
 The load-bearing lesson. Every review finding routes to the phase that would
-have prevented it *before* any fix is written. A fix-close with no prior
-routing plan is malformed. Never grind a fix in place: file the finding, route
-it to its owning phase, then fix.
+have prevented it *before* any fix is written — or to the **fix lane**, the
+one routing target that is not a phase and is never called one. A fix-close
+with no prior routing plan is malformed. Never grind a fix in place: file the
+finding, route it, then fix.
 
 ### 3. Owned, reviewed spec changes
 
@@ -66,13 +74,16 @@ same discipline applies to mdatron's development.
 
 ## Honest boundary
 
-The parts that need vsdd-cli — phase-answer derivation, process-integrity
-status queries, the mechanized gate commands — are not shippable yet. Those
-stay conduct plus cold review until vsdd-cli ships. So is tamper-proof
-enforcement against an agent that controls all local state: it needs an
-independent corroboration oracle the agent cannot author (vsdd-cli #815), which
-is not shippable here. Everything else is mechanized now (enforcement doc). Do
-not wait on the tool for the rest.
+The boundary has moved since this document was first written (checked against
+vsdd-cli's current design 2026-09-19, #194): the process-integrity status
+queries, init, and the routing gate (`vsdd gate` plus its CI workflow) have
+**shipped upstream** — adopting them here is an open operator decision, not a
+wait. Still genuinely unshippable: phase-answer derivation at full depth, the
+red-green gate commands, recorded dispatch, and tamper-proof enforcement
+against an agent that controls all local state — the last needs an independent
+corroboration oracle the agent cannot author (vsdd-cli #815). Those stay
+conduct plus cold review. Everything else is mechanized now (enforcement doc).
+Do not wait on the tool for the rest.
 
 ## Enforcement, in one line
 
@@ -80,7 +91,7 @@ Conduct alone drifts. The disciplines above are **bound or explicitly deferred
 by grade** — mdatron's own engine over the governed markdown, git-hook friction
 at the act, and the required self-validation CI job as the durable leg (it
 re-derives the register and the amendment citations over the pushed range; the
-escape-corpus seeds additionally pin the checkers' own wiring, in a job that is
+regression-corpus seeds additionally pin the checkers' own wiring, in a job that is
 not yet a required check — see the enforcement doc's mechanisms note) — so
 that a deviation produces compiler-shaped feedback at the act, not a latent
 record. Every §-discipline has a row in the enforcement table stating its
@@ -88,6 +99,6 @@ grade, its planned tracking issue, or its honest-boundary deferral; a
 discipline with none of the three would be the corpus's first escape. A
 runtime-harness session-stop hook is not one of the legs: it is in-repo code
 that cannot self-protect, so it would assert enforcement it cannot deliver
-(#99). The escape corpus (`docs/methodology-enforcement.md`) is the
-regression-seed set: if the guardrails do not catch each escape, they are
-insufficient.
+(#99). The regression corpus (`docs/methodology-enforcement.md`; upstream's name —
+formerly the escape corpus here) is the seed set: if the guardrails do not
+catch each escape, they are insufficient.
