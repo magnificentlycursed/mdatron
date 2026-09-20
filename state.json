@@ -1,6 +1,6 @@
 {
   "next_display_id": 189,
-  "next_comment_id": 517,
+  "next_comment_id": 518,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -4881,7 +4881,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-09-20T00:53:45.402672Z",
-      "updated_at": "2026-09-20T01:06:23.796535Z",
+      "updated_at": "2026-09-20T01:09:33.083300Z",
       "related": [
         "9c778edd-4f92-46ae-95f7-20360a2ff15f"
       ],
@@ -4903,6 +4903,15 @@
           "kind": "decision",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA1N+mMFTNOdWf3jX6qE8uc2+0MELWFUwyoS7swX6QBJ5UjvVrXdv0CyT+iXdL7DqiDSXy1Te6sFjVtEiFGVHfCQ=="
+        },
+        "a42bc6c2-8545-428d-84ac-ea2ee2e419d4": {
+          "display_id": 517,
+          "author": "79Ig",
+          "content": "ADDENDUM recorded (refactor grading + retarget plan). Grades: limits.md INVERT (generate from limits::SHIPPED — copy the code-catalog model, mirror direction); dependency-docs REPLACE (typed frontmatter + dependency-record schema; agnosticism shrinks to bijection + gains the missing orphan direction); cost-ledger fold into generated limits.md; field-rename-ledger fold into DESIGN; README heading tests + DESIGN edges EDGE-SOUND; README bootstrap-install test REPLACE/RETIRE — it ENFORCES STALE CONTENT (mandates cargo-install --path text while 0.5.0 is live on crates.io) — routed PRE-CUT to #180. RETARGET PLAN (2a) accepted for part 2: phase-1 route-only governance of docs/**+README (links:true), review-entry.json retires, 10-touch list, two-commit ordering (config swap THEN archive), +1 vacuity seam test (files_checked floor). RECEIPTS RULING: out-of-tree — archive commit + sha-pinned permalinks for #181 (operator may add an archive/vsdd-reviews tag at push time); CHANGELOG:301 link repointed to a permalink (link-target swap = maintenance, text unchanged). Methodology retirement checklist (2b) filed separately, trigger = vsdd-cli dogfood.",
+          "created_at": "2026-09-20T01:09:33.069364Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAjHEf0mTBMhcS8JuLFyn7LkTkXRshPhdCNU7GVGe6MYejMzz+0QduXJktqz7gjwzFVwGnLq/naCMHd1BTULxgCg=="
         }
       }
     },
@@ -8102,8 +8111,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T01:06:32.316883Z",
+    "timestamp": "2026-09-20T01:09:33.083300Z",
     "agent_id": "79Ig",
-    "agent_seq": 1023
+    "agent_seq": 1024
   }
 }
