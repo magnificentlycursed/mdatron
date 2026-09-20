@@ -43,7 +43,14 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  # The group is discriminated by EVENT (GH #52 lane-B review B6): the release
+  # back-merge PR (head release/X, base main) is the one place a push-covered
+  # ref is also a PR head — without event_name both runs share a group and
+  # cancel each other, stranding required contexts as CANCELLED (the same
+  # pathology the main-only push narrowing fixed for feature branches,
+  # relocated onto the release lane). One duplicate run in that rare overlap
+  # is the accepted cost.
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 env:
