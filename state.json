@@ -1,6 +1,6 @@
 {
   "next_display_id": 188,
-  "next_comment_id": 512,
+  "next_comment_id": 513,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -5876,7 +5876,7 @@
       "priority": "critical",
       "created_by": "79Ig",
       "created_at": "2026-09-20T00:09:43.909732Z",
-      "updated_at": "2026-09-20T00:51:13.472508Z",
+      "updated_at": "2026-09-20T00:55:31.739780Z",
       "comments": {
         "775d841b-54e4-4aa8-8bc0-87aa06f6ce80": {
           "display_id": 510,
@@ -5895,6 +5895,15 @@
           "kind": "result",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA6xU7P9J6l1G5ZgA2VIMOvhTNp80Abl+XYP+Uq3CNuM+CoGyJyYlePlHoMXJRmEEXIdvB2TbAU+rDb7nrhSEkBA=="
+        },
+        "8d5d4749-88e6-48b3-b084-b1bd68510adb": {
+          "display_id": 512,
+          "author": "79Ig",
+          "content": "A1 CLOSED (reviewer verification of e13dc7e): verbatim repro now exit 2 expr_parse (was exit 0 silent); bonus closure — unknown-schema-class contexts with unparseable exprs also refuse now; E0021/E0022 unaffected by the reorder; let-binding order preserved; no new findings. Lane A at MVR (A2 routed to #185).",
+          "created_at": "2026-09-20T00:55:31.728206Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAYl4iElF1IJ9LdL7BV11wpCTHdsxqIuOJhTJ8vdiJiJAAcaGPnZKLPDRmrsD2q+DBX9G5y+YwG9GHiqFVttpADw=="
         },
         "ad1a17a8-465b-44f8-a379-9da78cfddc94": {
           "display_id": 498,
@@ -8034,8 +8043,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T00:53:45.402672Z",
+    "timestamp": "2026-09-20T00:55:31.739780Z",
     "agent_id": "79Ig",
-    "agent_seq": 1015
+    "agent_seq": 1016
   }
 }
