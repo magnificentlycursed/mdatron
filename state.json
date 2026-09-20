@@ -1,6 +1,6 @@
 {
   "next_display_id": 182,
-  "next_comment_id": 496,
+  "next_comment_id": 497,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -7157,10 +7157,21 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-20T00:08:10.948448Z",
-      "updated_at": "2026-09-20T00:08:29.380468Z",
+      "updated_at": "2026-09-20T00:08:38.914489Z",
       "labels": [
         "docs"
-      ]
+      ],
+      "comments": {
+        "b83cf26f-25bd-4b8d-b7fe-015d9921d8ee": {
+          "display_id": 496,
+          "author": "79Ig",
+          "content": "PLAN (operator-ruled 2026-09-19: register+file approved; all 3 tiers; llms.txt in; framing = 'real well-known use cases that can give a tour of features'). Source of truth: knowledge page agentic-markdown-standards-audit (citations verified via safe_fetch 2026-09-19). Shape: docs/cookbook/ one page per standard (citation + chosen conformance profile with exact spec clauses -> complete .mdatron/ config -> clause-to-construct mapping -> honest cant-check list -> seeded violation with the actual finding output -> 'make it yours' project-extension section) + examples/standards/<name>/ shipped fixtures VERIFIED IN CI (conforming passes, seeded violations red-gate — self-testing documentation, the Ch32 'documents become cache' posture) + README discoverability hook. Feature-tour mapping: SKILL.md -> schema classes + the two-profile (spec-strict vs Claude Code extended) additionalProperties lesson; llms.txt -> section_rules + marker file-list shape + link-family honest limits; subagents/.instructions.md -> required-field schemas + making silent-skip conditions loud pre-flight; AGENTS.md/CLAUDE.md -> the extension lesson proper (project-imposed structure on freeform standards) + pinning a build-commands section against drift. Each recipe doubles as a DSL falsification probe; expected gaps already on the knowledge page (path-aware name==dir predicate, cross-file conditional existence/shadowing-trap, @import resolution, external-URL scope, blockquote ordering) — gaps become their own issues, never silent recipe omissions. SEQUENCING: post-0.6.0 flagship docs follow-up — the pre-cut train just absorbed GH#52's 3 blockers; operator may pull individual recipes forward.",
+          "created_at": "2026-09-20T00:08:38.888130Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAcnqQ4HapAm3kpOK/z7BMM67NPPlyz0AdbYv28585oSXCVSFoYDaAXQwLvfWFtJNjNvZQejtw5QV3syxUay/8BA=="
+        }
+      }
     },
     "f46bbe99-0826-4d9b-910d-557d5c3277a7": {
       "uuid": "f46bbe99-0826-4d9b-910d-557d5c3277a7",
@@ -7788,8 +7799,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T00:08:29.380468Z",
+    "timestamp": "2026-09-20T00:08:38.914489Z",
     "agent_id": "79Ig",
-    "agent_seq": 974
+    "agent_seq": 975
   }
 }
