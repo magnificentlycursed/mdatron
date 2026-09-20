@@ -1,5 +1,5 @@
 {
-  "next_display_id": 189,
+  "next_display_id": 190,
   "next_comment_id": 518,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -76,6 +76,7 @@
     "69b33517-946c-45ba-9287-c1231028d5ec": 47,
     "70039fee-0c5f-457a-8cb9-db920105b263": 137,
     "700bbf38-a0db-46e2-90a8-36df989ecb06": 53,
+    "70e938ea-22f8-45f7-bce4-61204556c4fd": 189,
     "72e27489-2e30-4b01-9833-62299f42c542": 111,
     "730c7a15-f81f-449a-8323-8d09d5206454": 87,
     "73fb2a8c-e991-4bfe-b8d2-7c56f53ce417": 143,
@@ -2981,6 +2982,16 @@
           "kind": "result"
         }
       }
+    },
+    "70e938ea-22f8-45f7-bce4-61204556c4fd": {
+      "uuid": "70e938ea-22f8-45f7-bce4-61204556c4fd",
+      "display_id": 189,
+      "title": "INVERT docs/limits.md: generate the table from limits::SHIPPED (code-catalog model, mirror direction) + fold docs/cost-ledger.md's measured column in; repoint DESIGN's cost-ledger clause (post-cut; #187 addendum)",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-09-20T01:09:38.927412Z",
+      "updated_at": "2026-09-20T01:09:38.927412Z"
     },
     "72e27489-2e30-4b01-9833-62299f42c542": {
       "uuid": "72e27489-2e30-4b01-9833-62299f42c542",
@@ -8111,8 +8122,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T01:09:33.083300Z",
+    "timestamp": "2026-09-20T01:09:38.927412Z",
     "agent_id": "79Ig",
-    "agent_seq": 1024
+    "agent_seq": 1025
   }
 }
