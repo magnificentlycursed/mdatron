@@ -1,6 +1,6 @@
 {
   "next_display_id": 186,
-  "next_comment_id": 497,
+  "next_comment_id": 498,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -2222,7 +2222,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-09-19T22:15:11.079839Z",
-      "updated_at": "2026-09-20T00:08:47.853710Z",
+      "updated_at": "2026-09-20T00:10:21.052271Z",
       "labels": [
         "enhancement"
       ],
@@ -2230,6 +2230,15 @@
         "f21336ca-f031-48da-ab68-018e700d4db1"
       ],
       "comments": {
+        "3097f091-ec1e-47bf-ab72-1e0158bf570f": {
+          "display_id": 497,
+          "author": "79Ig",
+          "content": "SCOPE EXTENSION (GH52 major 7, operator-routed 2026-09-19): the docs lane additionally (a) confirms the README code-catalogs example carries mdatron_format_version: 1 (already P0 here — GH52 independently confirmed it at 7b97c32) and (b) documents the abort exit codes: after GH52 lane A lands, 101/134 from adopter input are DEFECTS by contract — README exit-code section states 0/1/2 as the contract and names any other exit an engine defect to report, never a documented mode. Docs lane now runs AFTER GH52 lanes A-C.",
+          "created_at": "2026-09-20T00:10:21.038492Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA0wb3Y3bTptDAdT5HaAoltpiqiyH4rZfFKpkW9uX2OAh0RV3BC6c+EU22+Bd7DwP21Ewc/qBd2phZCXBjwEY2DQ=="
+        },
         "994b7386-5911-4e01-9a58-c0445c92964a": {
           "display_id": 484,
           "author": "79Ig",
@@ -7849,8 +7858,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T00:10:00.982073Z",
+    "timestamp": "2026-09-20T00:10:21.052271Z",
     "agent_id": "79Ig",
-    "agent_seq": 980
+    "agent_seq": 981
   }
 }
