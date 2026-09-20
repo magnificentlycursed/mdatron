@@ -1,6 +1,6 @@
 {
   "next_display_id": 186,
-  "next_comment_id": 501,
+  "next_comment_id": 502,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -7222,7 +7222,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-20T00:08:10.948448Z",
-      "updated_at": "2026-09-20T00:15:49.193738Z",
+      "updated_at": "2026-09-20T00:17:47.093447Z",
       "labels": [
         "docs"
       ],
@@ -7230,6 +7230,15 @@
         "4ebc561b-c68f-472e-8fee-f763332bf311"
       ],
       "comments": {
+        "739dff48-ef4b-463c-b2a9-6ab4b8a51b3d": {
+          "display_id": 501,
+          "author": "79Ig",
+          "content": "POSITIONING ADDITION (operator, 2026-09-19): the cookbook must showcase the FAILURE LOOP, not just the golden path — how failures are detected AND course-corrected. Recipe anatomy gains a failure-loop section after the falsification demo: (1) the actual rustc-style TTY diagnostic (error[MDATRON-EXXXX], location, quoted adopter content, help line — the rustc --explain pedigree, every code resolves in explain, CI-enforced); (2) the SAME finding's envelope view for the agent consumer — structured code/summary/location/explain_ref plus quoted[] regions marked untrusted and escape-hardened (the diagnostic itself cannot prompt-inject even when the broken config carries instruction-shaped text — a claim no competing tool can make; #114/#167/#168 marking discipline as a headline feature); (3) mdatron explain <code> as the remediation page; (4) corrected file + clean re-run, with the FINGERPRINT identity showing the finding gone across runs (course correction machine-verified, not vibes). Frame as agent self-correction where honest: agent breaks a subagent file -> CI/hook feeds the envelope -> agent reads finding + explain -> fixes its own config -> green. Also routes to #180: the README quickstart should show one full loop (violation -> diagnostic -> explain -> fix -> clean), not success-only output.",
+          "created_at": "2026-09-20T00:17:47.081045Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAeeOwWNTed2z7Kfb63EdwNkV1VMugpUxwEGHTvaA8z3ibn18mYR76ZihG3JUyOR43eCKTO/fmNZj5ZxqU8ZCPCw=="
+        },
         "978bb720-1d1d-46b1-ba3b-b0465847bc31": {
           "display_id": 500,
           "author": "79Ig",
@@ -7895,8 +7904,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T00:15:49.193738Z",
+    "timestamp": "2026-09-20T00:17:47.093447Z",
     "agent_id": "79Ig",
-    "agent_seq": 987
+    "agent_seq": 988
   }
 }
