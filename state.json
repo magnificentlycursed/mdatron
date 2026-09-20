@@ -1,5 +1,5 @@
 {
-  "next_display_id": 194,
+  "next_display_id": 195,
   "next_comment_id": 526,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -76,6 +76,7 @@
     "685a5139-6347-4bf4-abd8-ce9c7ac48024": 117,
     "688e0ef3-333c-422b-96dc-d0295a1ff25c": 184,
     "69b33517-946c-45ba-9287-c1231028d5ec": 47,
+    "6ccc5223-9a98-44ca-a398-17334578d0b4": 194,
     "70039fee-0c5f-457a-8cb9-db920105b263": 137,
     "700bbf38-a0db-46e2-90a8-36df989ecb06": 53,
     "70e938ea-22f8-45f7-bce4-61204556c4fd": 189,
@@ -2969,6 +2970,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAQFNCtigAEAU87v1aRohby8wvki8owBG0I2OhLn3xa2NU2Ur0X1xYwimOO2fxXvJj2cAd6sWr14j21TQQVAcKDQ=="
         }
       }
+    },
+    "6ccc5223-9a98-44ca-a398-17334578d0b4": {
+      "uuid": "6ccc5223-9a98-44ca-a398-17334578d0b4",
+      "display_id": 194,
+      "title": "Sync the methodology stopgaps to vsdd-cli current design (drift report on #191's thread): D8 phase-3 declared-plan discipline (fan-out shape + agent ceiling + across-rounds refutation) + primer payload refresh v0.1.0->v0.2.0 (minus the stale review-log instruction upstream hasn't shrunk); D3 routing rows re-marked (vsdd gate + routing-gate.yml SHIPPED upstream — adopt-now candidate); D4 honest-boundary paragraph rewrite (status/init built); D1+D2 grade renames (detective/bypassable-preventive/enforced-preventive; escape->regression corpus); D16 archive .vsdd/events/. LOCAL-DIVERGENCE-OK: D12 milestones (ratified #170) — reconcile at dogfood, not now",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-09-20T01:31:00.634457Z",
+      "updated_at": "2026-09-20T01:31:00.634457Z"
     },
     "70039fee-0c5f-457a-8cb9-db920105b263": {
       "uuid": "70039fee-0c5f-457a-8cb9-db920105b263",
@@ -8239,8 +8250,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T01:30:54.698406Z",
+    "timestamp": "2026-09-20T01:31:00.634457Z",
     "agent_id": "79Ig",
-    "agent_seq": 1039
+    "agent_seq": 1040
   }
 }
