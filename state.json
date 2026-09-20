@@ -1,6 +1,6 @@
 {
   "next_display_id": 195,
-  "next_comment_id": 526,
+  "next_comment_id": 527,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -6888,7 +6888,18 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-09-20T01:09:50.275170Z",
-      "updated_at": "2026-09-20T01:09:50.275170Z"
+      "updated_at": "2026-09-20T01:31:06.816882Z",
+      "comments": {
+        "9a26525f-9627-4c16-96f2-42c6114eecc9": {
+          "display_id": 526,
+          "author": "79Ig",
+          "content": "DRIFT REPORT (2026-09-19, full text in session transcript; sync lane filed separately): 16 items — 1 CONTRADICTS-estate (D5 review-log, EXECUTED via #187), 12 LAGS, 2 NO-DRIFT (phases identical; Exacting Mentor + five lenses still current upstream), 1 LOCAL-DIVERGENCE-OK (D12 milestones, ratified #170 f6 — must reconcile before vsdd status is trusted here). RETIREMENT-CHECKLIST DELTAS: escape corpus splits into TWO destinations (escapes -> regression corpus; standing deviations -> exception register); the amendment hook/CI-scan retire condition is currently UNSATISFIABLE upstream (their design-amendment gate is convention-grade; keep ours until theirs reaches enforced-preventive); routing rows retire via ADOPTION of vsdd gate (shipped); add .vsdd/events archive; trigger can be STAGED per-mechanism (init -> status -> routing-gate -> gates -> dispatch) instead of a monolithic alpha.",
+          "created_at": "2026-09-20T01:31:06.803277Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAijSaMxKPfB20l82TKyO+oq4xL28GLCq0C2z1dRgtkjq1zSLg3wT3qvaDMpsojwjbvhOGqSsqPph2ruXgzJ8zAA=="
+        }
+      }
     },
     "defb3290-053e-4af9-989f-daf56c87410a": {
       "uuid": "defb3290-053e-4af9-989f-daf56c87410a",
@@ -8250,8 +8261,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T01:31:00.634457Z",
+    "timestamp": "2026-09-20T01:31:06.816882Z",
     "agent_id": "79Ig",
-    "agent_seq": 1040
+    "agent_seq": 1041
   }
 }
