@@ -1,5 +1,5 @@
 {
-  "next_display_id": 192,
+  "next_display_id": 193,
   "next_comment_id": 524,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -177,6 +177,7 @@
     "eddd10af-f936-439c-9ead-0f9d6b9832b3": 28,
     "ee671da2-071b-4656-bf74-6259586911d8": 162,
     "f00730f0-5883-4ad4-9ae0-9a665b2baa0b": 100,
+    "f15408fb-30ae-4167-bcce-abcfc26b7bc1": 192,
     "f187546d-64e0-4da8-9b7c-6f1023106726": 119,
     "f21336ca-f031-48da-ab68-018e700d4db1": 181,
     "f46bbe99-0826-4d9b-910d-557d5c3277a7": 41,
@@ -7446,6 +7447,16 @@
         }
       }
     },
+    "f15408fb-30ae-4167-bcce-abcfc26b7bc1": {
+      "uuid": "f15408fb-30ae-4167-bcce-abcfc26b7bc1",
+      "display_id": 192,
+      "title": "Vocab family design input (o11y Ch31): per-term maturity/stability levels in adopter registries — TermStatus gains a deprecation flow (status -> alias -> removal), the field-rename-ledger discipline applied to adopter coined terms (post-cut)",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-09-20T01:25:11.470939Z",
+      "updated_at": "2026-09-20T01:25:11.470939Z"
+    },
     "f187546d-64e0-4da8-9b7c-6f1023106726": {
       "uuid": "f187546d-64e0-4da8-9b7c-6f1023106726",
       "display_id": 119,
@@ -8202,8 +8213,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T01:19:34.305675Z",
+    "timestamp": "2026-09-20T01:25:11.470939Z",
     "agent_id": "79Ig",
-    "agent_seq": 1033
+    "agent_seq": 1034
   }
 }
