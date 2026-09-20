@@ -1,5 +1,5 @@
 {
-  "next_display_id": 183,
+  "next_display_id": 184,
   "next_comment_id": 497,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -44,6 +44,7 @@
     "329e1fd4-c61b-4f95-af0e-6273ee883994": 85,
     "3584e906-268f-45e3-96ef-9d107e4ade52": 64,
     "3600e19c-f724-4b0f-afa7-171c3d436a4d": 135,
+    "383a5b82-13fb-44f2-bb14-9b2cf0bf8fbb": 183,
     "39fb91bc-ed4a-4358-a8f9-75a737bd1e3b": 8,
     "3ba648b0-e6bb-40d1-ae8e-00548d4dc219": 151,
     "3bf8a891-a8c6-44cc-9698-1b69f2a3b3c1": 62,
@@ -1813,6 +1814,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAuQXmW0EdUGQ4s53UynCbb8yQtIc8QfhG8lSQ3qBxqCixlztP17P19GkCHYom7jTqy33dN85TDzvYgfLQRQK9Cw=="
         }
       }
+    },
+    "383a5b82-13fb-44f2-bb14-9b2cf0bf8fbb": {
+      "uuid": "383a5b82-13fb-44f2-bb14-9b2cf0bf8fbb",
+      "display_id": 183,
+      "title": "GH52 lane B (majors 3-6): mdatron_dsl_version gate, deny_unknown_fields on DSL input structs, 'in' operator narrowed to array-only per its own reference, CI release/** + tag gauntlet legs",
+      "status": "open",
+      "priority": "high",
+      "created_by": "79Ig",
+      "created_at": "2026-09-20T00:09:49.874040Z",
+      "updated_at": "2026-09-20T00:09:49.874040Z"
     },
     "39fb91bc-ed4a-4358-a8f9-75a737bd1e3b": {
       "uuid": "39fb91bc-ed4a-4358-a8f9-75a737bd1e3b",
@@ -7816,8 +7827,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T00:09:43.909732Z",
+    "timestamp": "2026-09-20T00:09:49.874040Z",
     "agent_id": "79Ig",
-    "agent_seq": 977
+    "agent_seq": 978
   }
 }
