@@ -1,7 +1,7 @@
 //! Embedded `mdatron explain CODE` catalog.
 //!
 //! v0.1.x catalog: MDATRON-E0001, E0002, E0010, E0011, E0012, E0050, E0060, E0070,
-//! E0080, W0040; route family E0030, E0031, E0032, W0041; pin family E0061, E0062, E0063, W0042, L0001; vocabulary family E0090-E0094; citation family E0100, E0101; link family E0110, E0111; marker family E0112, E0114; code-catalog family E0113; section-structural family E0120, E0121, E0122; DSL rule field-reference validation E0021. The catalog grows by one entry per newly-emitted code per the
+//! E0080, W0040; schema-load family E0040; route family E0030, E0031, E0032, W0041; pin family E0061, E0062, E0063, W0042, L0001; vocabulary family E0090-E0094; citation family E0100, E0101; link family E0110, E0111; marker family E0112, E0114; code-catalog family E0113; section-structural family E0120, E0121, E0122; DSL rule field-reference validation E0021. The catalog grows by one entry per newly-emitted code per the
 //! Phase 0 DESIGN open question #2 SO disposition (2026-06-02); the
 //! path-confinement trio (E0010/E0011/E0012) landed with the confinement
 //! rework (the path-confinement defect issue in this tracker).
@@ -32,6 +32,7 @@ const E0050: &str = include_str!("MDATRON-E0050.md");
 const E0060: &str = include_str!("MDATRON-E0060.md");
 const E0070: &str = include_str!("MDATRON-E0070.md");
 const E0080: &str = include_str!("MDATRON-E0080.md");
+const E0040: &str = include_str!("MDATRON-E0040.md");
 const W0040: &str = include_str!("MDATRON-W0040.md");
 const E0030: &str = include_str!("MDATRON-E0030.md");
 const E0031: &str = include_str!("MDATRON-E0031.md");
@@ -101,6 +102,7 @@ pub fn lookup(code: &str) -> Option<&'static str> {
         "MDATRON-E0060" => Some(E0060),
         "MDATRON-E0070" => Some(E0070),
         "MDATRON-E0080" => Some(E0080),
+        "MDATRON-E0040" => Some(E0040),
         "MDATRON-W0040" => Some(W0040),
         "MDATRON-E0030" => Some(E0030),
         "MDATRON-E0031" => Some(E0031),

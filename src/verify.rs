@@ -574,7 +574,10 @@ fn run_inner(
     // before any document is walked (Cedar's validate-before-deploy posture).
     // Each rule's `$self.<field>` references are checked against the frontmatter
     // schema its context binds; a path naming an undeclared property under a
-    // closed object hard-gates as E0021. Conservative by construction — see
+    // closed object hard-gates as E0021, and an expression that does not PARSE
+    // is a load-time ExprParse pipeline error (GH #52 blocker 2 blast radius —
+    // no longer deferred to eval time, where a rule with no matching document
+    // shipped it silently). Conservative by construction — see
     // `validate_rule_field_refs`.
     validate_rule_field_refs(
         &config.patterns_dir,
@@ -582,7 +585,7 @@ fn run_inner(
         &schemas,
         &rule_locations,
         &mut findings,
-    );
+    )?;
 
     // Keep the pins for after the scope filter: a pin finding locates at
     // pins.yaml but is ABOUT the pinned file, so incremental includes it by the
@@ -1830,7 +1833,7 @@ fn validate_rule_field_refs(
     schemas: &BTreeMap<String, Schema>,
     rule_locations: &RuleLocations,
     findings: &mut Vec<Finding>,
-) {
+) -> Result<(), VerifyError> {
     // `rule_locations` is parallel to `patterns` (one inner vec per file, one
     // entry per rule position), so a rule's span is resolved by its file AND its
     // index — never by a globally-colliding (pattern_id, rule_id) key (#118).
@@ -1854,25 +1857,30 @@ fn validate_rule_field_refs(
             let sources = rule
                 .let_bindings
                 .iter()
-                .map(|(_, v)| v.as_str())
-                .chain(std::iter::once(rule.assert.as_str()));
+                .map(|(name, v)| (format!("let.{name}"), v.as_str()))
+                .chain(std::iter::once((
+                    "assert".to_string(),
+                    rule.assert.as_str(),
+                )));
             let mut paths: Vec<Vec<String>> = Vec::new();
-            for src in sources {
-                // A parse failure here is not a field typo; the same parse runs
-                // at eval time and surfaces as `ExprParse` against a matching
-                // document. Skip it rather than double-reporting.
-                if let Ok(expr) = parse_expression(src) {
-                    collect_self_paths(&expr, &mut paths);
-                    // #156: Cedar-style comparison type-check + dead-clause.
-                    check_rule_comparisons(
-                        &expr,
-                        schema,
-                        &location,
-                        &pf.pattern.id,
-                        rule,
-                        findings,
-                    );
-                }
+            for (field, src) in sources {
+                // GH #52 blocker 2 (the #156 blast radius): an expression that
+                // does not PARSE is refused here, loudly — the same ExprParse
+                // the eval path raises, just at load (Cedar's
+                // validate-before-deploy). The old Ok-skip deferred it to eval
+                // time, so a rule with NO matching document shipped its
+                // unparseable expression silently — and before the
+                // char-boundary fix, this very call PANICKED on a multibyte
+                // typo (exit 101, empty envelope) instead of erroring at all.
+                let expr = parse_expression(src).map_err(|e| VerifyError::ExprParse {
+                    pattern_id: pf.pattern.id.clone(),
+                    rule_id: rule.id.clone(),
+                    field,
+                    error: e.message,
+                })?;
+                collect_self_paths(&expr, &mut paths);
+                // #156: Cedar-style comparison type-check + dead-clause.
+                check_rule_comparisons(&expr, schema, &location, &pf.pattern.id, rule, findings);
             }
             paths.sort();
             paths.dedup();
@@ -1889,6 +1897,7 @@ fn validate_rule_field_refs(
             }
         }
     }
+    Ok(())
 }
 
 /// The schema_class a rule's context statically binds `$self` to: a bare
@@ -2923,6 +2932,103 @@ mod tests {
             honest, crafted,
             "a newline-smuggling filename must not fold identically to two \
              honest files"
+        );
+    }
+
+    // RED GATE (GH #52 blocker 1 + major 2): a schema declaring ANY
+    // non-2020-12 `$schema` dialect is refused loudly at load
+    // (MDATRON-E0040, a schema-load pipeline error → exit 2) — pre-fix, a
+    // draft-07 schema compiled clean to a validator that enforced NOTHING:
+    // enum + additionalProperties violations passed silently, exit 0.
+    #[test]
+    fn non_2020_12_schema_dialects_are_refused_at_load() {
+        let dialects = [
+            ("d07", "http://json-schema.org/draft-07/schema#"),
+            ("d06", "http://json-schema.org/draft-06/schema#"),
+            ("d04", "http://json-schema.org/draft-04/schema#"),
+            ("d2019", "https://json-schema.org/draft/2019-09/schema"),
+            ("dunknown", "https://example.com/my-own-dialect/schema"),
+        ];
+        for (label, uri) in dialects {
+            let proj = TempProject::new(&format!("dialect-{label}"));
+            proj.write(
+                ".mdatron/schemas/doc.json",
+                &format!(
+                    r#"{{"$schema":"{uri}","type":"object","properties":{{"schema_class":{{"const":"doc"}},"name":{{"enum":["a","b"]}}}},"additionalProperties":false}}"#
+                ),
+            );
+            // The reviewer's repro shape: a document VIOLATING enum +
+            // additionalProperties — it must never silently pass.
+            proj.write("doc.md", "---\nschema_class: doc\nname: zzz\n---\n");
+            let err = format!("{}", verify(&VerifyConfig::new(&proj.0)).unwrap_err());
+            assert!(
+                err.contains("MDATRON-E0040") && err.contains(uri) && err.contains("2020-12"),
+                "{label}: the refusal names the code, the found dialect, and \
+                 the supported one; got {err}"
+            );
+        }
+    }
+
+    // CONTROL (GH #52 major 2): the supported dialect — declared with or
+    // without the trailing `#`, or absent entirely — still ENFORCES: the
+    // violating document fires E0050, proving the refusal never traded
+    // fail-open for enforce-nothing-under-a-new-name.
+    #[test]
+    fn supported_dialect_and_absent_schema_still_enforce() {
+        let cases = [
+            (
+                "declared",
+                r#""$schema":"https://json-schema.org/draft/2020-12/schema","#,
+            ),
+            (
+                "declared-hash",
+                r#""$schema":"https://json-schema.org/draft/2020-12/schema#","#,
+            ),
+            ("absent", ""),
+        ];
+        for (label, dollar_schema) in cases {
+            let proj = TempProject::new(&format!("dialect-ok-{label}"));
+            proj.write(
+                ".mdatron/schemas/doc.json",
+                &format!(
+                    r#"{{{dollar_schema}"type":"object","properties":{{"schema_class":{{"const":"doc"}},"name":{{"enum":["a","b"]}}}},"additionalProperties":false}}"#
+                ),
+            );
+            proj.write("doc.md", "---\nschema_class: doc\nname: zzz\n---\n");
+            let findings = verify(&VerifyConfig::new(&proj.0)).unwrap();
+            assert!(
+                findings.iter().any(|f| f.code == "MDATRON-E0050"),
+                "{label}: the 2020-12 path still enforces (E0050 fires); got {findings:?}"
+            );
+        }
+    }
+
+    // RED GATE (GH #52 blocker 2, the #156 load-time blast radius): a pattern
+    // whose `assert:` carries a multibyte typo (an em-dash) previously
+    // PANICKED at load on a char-boundary slice — exit 101, raw Rust panic on
+    // stderr, empty envelope — even when the only document in the tree does
+    // NOT match the rule's context (#156 parses every rule expression at
+    // load, before any document is walked). It must be the loud expression
+    // parse diagnostic instead.
+    #[test]
+    fn multibyte_assert_typo_is_a_load_diagnostic_not_a_panic() {
+        let proj = TempProject::new("emdash-assert");
+        proj.write(
+            ".mdatron/schemas/doc.json",
+            r#"{"type":"object","properties":{"schema_class":{"const":"doc"}}}"#,
+        );
+        proj.write(
+            ".mdatron/patterns/p.yaml",
+            "mdatron_dsl_version: 1\npattern:\n  id: p\n  rules:\n    - id: r\n      \
+             context: doc\n      assert: \"$self.count — required\"\n      \
+             code: T-E0001\n      message: m\n",
+        );
+        // A NON-matching document — the blast radius the roast confirmed.
+        proj.write("doc.md", "---\nschema_class: other\n---\n");
+        let err = format!("{}", verify(&VerifyConfig::new(&proj.0)).unwrap_err());
+        assert!(
+            err.contains("parse error"),
+            "a bounded parse diagnostic, never a panic; got {err}"
         );
     }
 

@@ -10,6 +10,7 @@
   "MDATRON-E0030": "unrouted-file",
   "MDATRON-E0031": "governing-document-absent",
   "MDATRON-E0032": "route-conflict",
+  "MDATRON-E0040": "unsupported-schema-dialect",
   "MDATRON-E0050": "frontmatter-schema-violation",
   "MDATRON-E0060": "managed-manifest-drift",
   "MDATRON-E0061": "pin-stale",
