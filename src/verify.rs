@@ -1859,15 +1859,6 @@ fn validate_rule_field_refs(
         .zip(rule_locations.iter().chain(std::iter::repeat(&empty)))
     {
         for (rule_idx, rule) in pf.pattern.rules.iter().enumerate() {
-            let Some(schema_class) = context_schema_class(&rule.context) else {
-                continue;
-            };
-            let Some(schema) = schemas.get(schema_class) else {
-                continue;
-            };
-            // The precise source span of this rule in its own pattern file (#118),
-            // resolved once and shared by every finding the rule produces.
-            let location = rule_location(rule_locs, rule_idx, patterns_dir);
             // Every expression the rule evaluates: each let-binding value in
             // order, then the assertion itself.
             let sources = rule
@@ -1878,25 +1869,43 @@ fn validate_rule_field_refs(
                     "assert".to_string(),
                     rule.assert.as_str(),
                 )));
-            let mut paths: Vec<Vec<String>> = Vec::new();
+            // GH #52 blocker 2 (the #156 blast radius) + lane-A review A1:
+            // EVERY rule's expressions are parse-validated here, loudly,
+            // BEFORE the schema-class guard — parsing needs no schema, and a
+            // path-glob-context rule (which the guard skips) with an
+            // unparseable expression previously shipped silently whenever its
+            // glob matched no file. The refusal is the same ExprParse the eval
+            // path raises, just at load (Cedar's validate-before-deploy) —
+            // and before the char-boundary fix, this very call PANICKED on a
+            // multibyte typo (exit 101, empty envelope) instead of erroring.
+            let mut exprs = Vec::new();
             for (field, src) in sources {
-                // GH #52 blocker 2 (the #156 blast radius): an expression that
-                // does not PARSE is refused here, loudly — the same ExprParse
-                // the eval path raises, just at load (Cedar's
-                // validate-before-deploy). The old Ok-skip deferred it to eval
-                // time, so a rule with NO matching document shipped its
-                // unparseable expression silently — and before the
-                // char-boundary fix, this very call PANICKED on a multibyte
-                // typo (exit 101, empty envelope) instead of erroring at all.
                 let expr = parse_expression(src).map_err(|e| VerifyError::ExprParse {
                     pattern_id: pf.pattern.id.clone(),
                     rule_id: rule.id.clone(),
                     field,
                     error: e.message,
                 })?;
-                collect_self_paths(&expr, &mut paths);
+                exprs.push(expr);
+            }
+            // The schema-dependent checks stay behind the guard: a path-glob
+            // context binds $self to whatever the matched files route to (not
+            // knowable at load), so field-ref and comparison validation would
+            // be unsound there.
+            let Some(schema_class) = context_schema_class(&rule.context) else {
+                continue;
+            };
+            let Some(schema) = schemas.get(schema_class) else {
+                continue;
+            };
+            // The precise source span of this rule in its own pattern file (#118),
+            // resolved once and shared by every finding the rule produces.
+            let location = rule_location(rule_locs, rule_idx, patterns_dir);
+            let mut paths: Vec<Vec<String>> = Vec::new();
+            for expr in &exprs {
+                collect_self_paths(expr, &mut paths);
                 // #156: Cedar-style comparison type-check + dead-clause.
-                check_rule_comparisons(&expr, schema, &location, &pf.pattern.id, rule, findings);
+                check_rule_comparisons(expr, schema, &location, &pf.pattern.id, rule, findings);
             }
             paths.sort();
             paths.dedup();
@@ -3045,6 +3054,56 @@ mod tests {
         assert!(
             err.contains("parse error"),
             "a bounded parse diagnostic, never a panic; got {err}"
+        );
+    }
+
+    // RED GATE (GH #52 lane-A cold review A1): parse validation reaches
+    // PATH-GLOB-context rules too. The schema-class guard skips glob contexts
+    // (their $self binding is unknowable at load — sound for field-ref
+    // checks), but the original blocker-2 fix parsed only guarded rules, so a
+    // glob-context rule with an unparseable expression shipped SILENTLY
+    // whenever its glob matched no file (exit 0, zero findings — e.g. a rule
+    // targeting docs/adr/** in a repo with no ADRs yet). Parsing needs no
+    // schema; it now runs for every rule before the guard.
+    #[test]
+    fn glob_context_rule_with_unparseable_expression_refuses_at_load() {
+        let proj = TempProject::new("glob-emdash-assert");
+        proj.write(
+            ".mdatron/schemas/doc.json",
+            r#"{"type":"object","properties":{"schema_class":{"const":"doc"}}}"#,
+        );
+        proj.write(
+            ".mdatron/patterns/p.yaml",
+            "mdatron_dsl_version: 1\npattern:\n  id: p\n  rules:\n    - id: r\n      \
+             context: \"docs/adr/**\"\n      assert: \"$self.count — required\"\n      \
+             code: T-E0001\n      message: m\n",
+        );
+        // NO file matches the glob — the exact silent window A1 demonstrated.
+        proj.write("doc.md", "---\nschema_class: doc\n---\n");
+        let err = format!("{}", verify(&VerifyConfig::new(&proj.0)).unwrap_err());
+        assert!(
+            err.contains("parse error"),
+            "an unparseable glob-context rule must refuse at load even with \
+             no matching file; got {err}"
+        );
+        // Control: a well-formed glob-context rule with no matching file is
+        // NOT an error — the fix validates syntax, not reach.
+        let ok = TempProject::new("glob-ok-assert");
+        ok.write(
+            ".mdatron/schemas/doc.json",
+            r#"{"type":"object","properties":{"schema_class":{"const":"doc"}}}"#,
+        );
+        ok.write(
+            ".mdatron/patterns/p.yaml",
+            "mdatron_dsl_version: 1\npattern:\n  id: p\n  rules:\n    - id: r\n      \
+             context: \"docs/adr/**\"\n      assert: \"defined($self.count)\"\n      \
+             code: T-E0001\n      message: m\n",
+        );
+        ok.write("doc.md", "---\nschema_class: doc\n---\n");
+        let findings = verify(&VerifyConfig::new(&ok.0)).unwrap();
+        assert!(
+            findings.is_empty(),
+            "a parseable glob-context rule with no matching file stays clean; got {findings:?}"
         );
     }
 
