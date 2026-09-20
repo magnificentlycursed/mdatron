@@ -1,6 +1,6 @@
 {
   "next_display_id": 188,
-  "next_comment_id": 514,
+  "next_comment_id": 515,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -4854,7 +4854,18 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-09-20T00:53:45.402672Z",
-      "updated_at": "2026-09-20T00:53:45.402672Z"
+      "updated_at": "2026-09-20T00:57:05.361847Z",
+      "comments": {
+        "a06d9730-8644-4e71-bc05-344d202a9c18": {
+          "display_id": 514,
+          "author": "79Ig",
+          "content": "SCOPE EXTENSION (operator, 2026-09-19): load-bearing is not an automatic KEEP — the edge itself may be the defect. Every KEEP-because-load-bearing gets a refactor consideration: EDGE-SOUND (dependency is right design) / INVERT (registry-as-generator — e.g. generate docs/limits.md from limits::SHIPPED instead of testing prose against code; the doc becomes a build artifact and the deletion test applies cleanly) / RELOCATE (e.g. the self-validation corpus's top-level placement vs a clearly-internal path — weighing that the gate's value is verifying a REAL corpus, synthetic fixtures would weaken it) / REPLACE (cheaper edge), each with a cost line. Audit agent briefed mid-flight.",
+          "created_at": "2026-09-20T00:57:05.350336Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA1N+mMFTNOdWf3jX6qE8uc2+0MELWFUwyoS7swX6QBJ5UjvVrXdv0CyT+iXdL7DqiDSXy1Te6sFjVtEiFGVHfCQ=="
+        }
+      }
     },
     "ad262d4e-1a34-496d-9f64-802bc05ea4fd": {
       "uuid": "ad262d4e-1a34-496d-9f64-802bc05ea4fd",
@@ -8052,8 +8063,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T00:55:37.909174Z",
+    "timestamp": "2026-09-20T00:57:05.361847Z",
     "agent_id": "79Ig",
-    "agent_seq": 1017
+    "agent_seq": 1018
   }
 }
