@@ -178,14 +178,20 @@ pub fn lookup_compact(code: &str) -> Option<String> {
 /// The first real sentence of a fix section, tolerant of markdown list
 /// openers and dotted abbreviations (consolidated-review F3).
 fn first_fix_sentence(fix: &str) -> String {
-    // First non-empty line, with leading list markers stripped: "1. ", "- ",
-    // "* ", and bold markers.
-    let line = fix
+    // First PARAGRAPH (lines up to the first blank), joined — a sentence that
+    // spans the page's hard wrap must not truncate mid-phrase (review F8) —
+    // with leading list markers stripped: "1. ", "- ", "* ", and bold markers
+    // stripped throughout (a bold lead-in's closing ** would otherwise ride
+    // along and defeat the sentence-end scan).
+    let paragraph = fix
         .lines()
         .map(str::trim)
-        .find(|l| !l.is_empty())
-        .unwrap_or_default();
-    let mut s = line;
+        .skip_while(|l| l.is_empty())
+        .take_while(|l| !l.is_empty())
+        .collect::<Vec<_>>()
+        .join(" ")
+        .replace("**", "");
+    let mut s = paragraph.as_str();
     loop {
         let before = s;
         s = s.trim_start_matches(['-', '*', ' ']).trim_start();
@@ -199,7 +205,7 @@ fn first_fix_sentence(fix: &str) -> String {
             break;
         }
     }
-    let s = s.trim_start_matches("**").trim_start();
+    let s = s.trim_start();
     // Sentence end: a '.' followed by whitespace or end-of-line — unless it
     // is the closing dot of a dotted abbreviation ("e.g.", "i.e."), which the
     // letter-dot-letter-dot shape identifies (the char two back is a '.').
@@ -342,8 +348,8 @@ mod tests {
                 "{code}: degenerate compact hint {hint:?} in {line:?}"
             );
             assert!(
-                !hint.starts_with(['-', '*']),
-                "{code}: unstripped list marker in hint {hint:?}"
+                !hint.starts_with(['-', '*']) && !hint.contains("**"),
+                "{code}: unstripped list/bold marker in hint {hint:?}"
             );
         }
     }
