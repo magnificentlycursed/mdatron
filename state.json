@@ -2350,11 +2350,12 @@
       "uuid": "5036a175-b563-417b-bc1a-aca16891ec5f",
       "display_id": 186,
       "title": "docs: FAQ — prior-art comparison questions + influences & acknowledgments section (operator-ruled 2026-09-19, concurrent with GH52 lanes)",
-      "status": "open",
+      "status": "closed",
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-20T00:34:59.669773Z",
-      "updated_at": "2026-09-20T00:43:33.259152Z",
+      "updated_at": "2026-09-20T00:44:36.930377Z",
+      "closed_at": "2026-09-20T00:44:36.930369Z",
       "labels": [
         "docs"
       ]
@@ -7995,8 +7996,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T00:43:42.787040Z",
+    "timestamp": "2026-09-20T00:44:36.930377Z",
     "agent_id": "79Ig",
-    "agent_seq": 1005
+    "agent_seq": 1006
   }
 }
