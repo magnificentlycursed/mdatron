@@ -70,13 +70,18 @@ including the rejections, is recorded in the project's review history.
 ## What are crosslink and vsdd?
 
 Development infrastructure and method, not parts of mdatron. mdatron is
-developed under the vsdd methodology (a sibling project by the same owner):
+developed under the VSDD methodology, authored by Dollspace
+([whitepaper](https://gist.github.com/dollspace-gay/d8d3bc3ecf4188df049d7a4726bb2a00)):
 specification before implementation, independent verification, and cold-context
-adversarial review before anything merges. Work is tracked with
+adversarial review before anything merges.
+[vsdd-cli](https://github.com/magnificentlycursed/vsdd-cli), a sibling project
+by mdatron's owner, is the methodology harness implementing that whitepaper.
+Work is tracked with
 [crosslink](https://github.com/Corvidae-Coding-Projects/crosslink) (MIT), a
-local-first issue tracker and knowledge base built for AI-assisted development;
-we use it daily and file issues upstream. Neither ships in this crate — the
-package payload is allowlisted and CI fails if internal apparatus leaks in.
+local-first issue tracker and knowledge base built for AI-assisted development,
+also by Dollspace; we use it daily and file issues upstream. None of these ship
+in this crate — the package payload is allowlisted and CI fails if internal
+apparatus leaks in.
 
 ## Is mdatron affiliated with the tools and standards it validates or cites?
 
@@ -112,9 +117,14 @@ the review log). With gratitude:
   constraints. See [the book's page](https://www.honeycomb.io/observability-engineering-oreilly-book);
   buy it from [your local bookstore](http://www.indiebound.org/book/9781098179922)
   or [Amazon](https://www.amazon.com/dp/1098179927).
-- **[crosslink](https://github.com/Corvidae-Coding-Projects/crosslink)** (MIT) —
-  the issue tracking and knowledge infrastructure this project is developed
-  with, and an upstream we contribute issues to.
-- **[The vsdd methodology](https://github.com/magnificentlycursed/vsdd-cli)** —
-  the development discipline itself; mdatron is its first self-hosted proving
-  ground.
+- **[crosslink](https://github.com/Corvidae-Coding-Projects/crosslink)** (MIT,
+  by [Dollspace](https://github.com/dollspace-gay)) — the issue tracking and
+  knowledge infrastructure this project is developed with, and an upstream we
+  contribute issues to.
+- **The VSDD methodology**
+  ([whitepaper](https://gist.github.com/dollspace-gay/d8d3bc3ecf4188df049d7a4726bb2a00),
+  by [Dollspace](https://github.com/dollspace-gay)) — the development
+  discipline itself.
+  [vsdd-cli](https://github.com/magnificentlycursed/vsdd-cli), by mdatron's
+  owner, is the methodology harness implementing the whitepaper; mdatron is the
+  discipline's first self-hosted proving ground.
