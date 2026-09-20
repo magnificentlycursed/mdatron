@@ -37,11 +37,11 @@ pub struct ProjectConfig {
     /// Globs whose matching files the vocabulary family (the naming register)
     /// scans (#97). Kept separate from `file_globs` — mirroring
     /// `require_frontmatter` — so the register applies to forward-looking
-    /// governance prose while a historical archive (e.g. the review-log, whose
-    /// retired finding-handle scheme is frozen evidence) stays governed by
-    /// route and frontmatter only. Empty (the default) falls back to every
-    /// walked file, preserving prior behavior for configs that predate this
-    /// field.
+    /// governance prose while the rest of a corpus (e.g. a historical archive
+    /// whose retired naming scheme is frozen evidence, as mdatron's own
+    /// since-archived review-log was) stays governed by route and frontmatter
+    /// only. Empty (the default) falls back to every walked file, preserving
+    /// prior behavior for configs that predate this field.
     #[serde(default)]
     pub vocabulary_globs: Vec<String>,
 }
