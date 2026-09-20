@@ -2222,9 +2222,12 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-09-19T22:15:11.079839Z",
-      "updated_at": "2026-09-20T00:10:21.052271Z",
+      "updated_at": "2026-09-20T00:10:28.090310Z",
       "labels": [
         "enhancement"
+      ],
+      "blockers": [
+        "c279283e-4eda-48c4-b703-b7843fd1bec0"
       ],
       "related": [
         "f21336ca-f031-48da-ab68-018e700d4db1"
@@ -7858,8 +7861,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T00:10:21.052271Z",
+    "timestamp": "2026-09-20T00:10:28.090310Z",
     "agent_id": "79Ig",
-    "agent_seq": 981
+    "agent_seq": 982
   }
 }
