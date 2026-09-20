@@ -1,6 +1,6 @@
 {
   "next_display_id": 188,
-  "next_comment_id": 515,
+  "next_comment_id": 516,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -4854,8 +4854,17 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-09-20T00:53:45.402672Z",
-      "updated_at": "2026-09-20T00:57:05.361847Z",
+      "updated_at": "2026-09-20T00:59:54.688181Z",
       "comments": {
+        "0cf39847-2a4c-4544-a7dd-8fb098977426": {
+          "display_id": 515,
+          "author": "79Ig",
+          "content": "OPERATOR CONTEXT (2026-09-19): (1) vsdd-cli no longer produces review-log-style reviews — review-log/ is HISTORICAL BAGGAGE; its only live edge is being the self-validation corpus, and a frozen corpus is a weak gate. Evaluate RETARGET-then-ARCHIVE: self-hosting gate survives (DESIGN principle) but retargets to the LIVING corpus (docs/, README, future examples/); review-log then archives out of the working tree (git history preserves; #181 case-study-receipts consumer weighed). (2) docs/methodology*.md are STOPGAPS until vsdd-cli is dogfooded here — disposition KEEP-UNTIL-VSDD-CLI-ALPHA with a retirement checklist (vocabulary_globs, methodology_seams tests, CI amendment scan), not KEEP-forever.",
+          "created_at": "2026-09-20T00:59:54.674683Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA+xCNIgllGy2BojVbDYHk1D3cFoRcd4PnNNUimnVGMjiUy6crXNSCSgdoMkg/16Qvw8HfGOn4K+8r6/TiDwXgAg=="
+        },
         "a06d9730-8644-4e71-bc05-344d202a9c18": {
           "display_id": 514,
           "author": "79Ig",
@@ -8063,8 +8072,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T00:57:05.361847Z",
+    "timestamp": "2026-09-20T00:59:54.688181Z",
     "agent_id": "79Ig",
-    "agent_seq": 1018
+    "agent_seq": 1019
   }
 }
