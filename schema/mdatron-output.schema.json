@@ -212,7 +212,7 @@
         "fingerprint": {
           "type": "string",
           "pattern": "^v1:[0-9a-f]{32}$",
-          "description": "A line-churn-stable identity for cross-run trending: v1 = sha256 (truncated to 16 bytes) over the finding's code, root-relative forward-slashed path, summary, each quoted region's label and content in order, and a 0-based occurrence ordinal that distinguishes otherwise-identical findings in one run. Line/column are deliberately excluded so the fingerprint survives document churn; removing the first of two identical findings transfers its identity to the survivor (the SARIF partialFingerprints tradeoff). A future algorithm change mints a v2 prefix."
+          "description": "A line-churn-stable identity for cross-run trending: v1 = sha256 (truncated to 16 bytes) over the finding's code, root-relative forward-slashed path, summary, each identity-bearing quoted region's label and content in order — a region quoting platform-variant engine prose (e.g. an OS error message) is excluded, so the same defect fingerprints identically across platforms — and a 0-based occurrence ordinal that distinguishes otherwise-identical findings in one run. Line/column are deliberately excluded so the fingerprint survives document churn; removing the first of two identical findings transfers its identity to the survivor (the SARIF partialFingerprints tradeoff). A future algorithm change mints a v2 prefix."
         },
         "quoted": {
           "type": "array",
