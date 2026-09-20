@@ -92,19 +92,29 @@ reasons* — the rejections are what make it curation rather than imitation. The
 audit records live in the project's design history (`DESIGN.md` citations and
 the review log). With gratitude:
 
-- **Schematron** (ISO/IEC 19757-3, Rick Jelliffe and the DSDL community) — the
-  assertion-over-documents posture and SVRL's what-was-checked reporting.
-- **SARIF 2.1.0** (OASIS) — results vs. notifications, `partialFingerprints`,
-  the `$schema` contract pin.
-- **Ruff** (Astral) — registry-as-generator; drift impossible by construction.
-- **Cedar** (AWS) and **Open Policy Agent** — validate-before-deploy and
-  refusal-over-reinterpretation.
-- **lychee** — reference for the link-check family's scope decisions.
-- **rustc** (the Rust project) — the diagnostic format and the `--explain`
-  pedagogy.
-- ***Observability Engineering*, 2nd ed.** (O'Reilly) — the telemetry design
-  inputs above, evaluated against this project's determinism constraints.
-- **crosslink** (MIT) — the issue tracking and knowledge infrastructure this
-  project is developed with, and an upstream we contribute issues to.
-- **The vsdd methodology** — the development discipline itself; mdatron is its
-  first self-hosted proving ground.
+- **[Schematron](https://github.com/Schematron/schematron)** (ISO/IEC 19757-3,
+  Rick Jelliffe and the DSDL community) — the assertion-over-documents posture
+  and SVRL's what-was-checked reporting.
+- **[SARIF 2.1.0](https://github.com/oasis-tcs/sarif-spec)** (OASIS) — results
+  vs. notifications, `partialFingerprints`, the `$schema` contract pin.
+- **[Ruff](https://github.com/astral-sh/ruff)** (Astral) —
+  registry-as-generator; drift impossible by construction.
+- **[Cedar](https://github.com/cedar-policy/cedar)** (AWS) and
+  **[Open Policy Agent](https://github.com/open-policy-agent/opa)** —
+  validate-before-deploy and refusal-over-reinterpretation.
+- **[lychee](https://github.com/lycheeverse/lychee)** — reference for the
+  link-check family's scope decisions.
+- **[rustc](https://github.com/rust-lang/rust)** (the Rust project) — the
+  diagnostic format and the `--explain` pedagogy.
+- ***Observability Engineering*, 2nd ed.**, by Charity Majors, Liz Fong-Jones,
+  George Miranda, and Austin Parker (O'Reilly, ISBN 9781098179922) — the
+  telemetry design inputs above, evaluated against this project's determinism
+  constraints. See [the book's page](https://www.honeycomb.io/observability-engineering-oreilly-book);
+  buy it from [your local bookstore](http://www.indiebound.org/book/9781098179922)
+  or [Amazon](https://www.amazon.com/dp/1098179927).
+- **[crosslink](https://github.com/Corvidae-Coding-Projects/crosslink)** (MIT) —
+  the issue tracking and knowledge infrastructure this project is developed
+  with, and an upstream we contribute issues to.
+- **[The vsdd methodology](https://github.com/magnificentlycursed/vsdd-cli)** —
+  the development discipline itself; mdatron is its first self-hosted proving
+  ground.
