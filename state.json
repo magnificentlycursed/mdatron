@@ -1,5 +1,5 @@
 {
-  "next_display_id": 188,
+  "next_display_id": 189,
   "next_comment_id": 517,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -109,6 +109,7 @@
     "986583e5-b23b-4c73-9613-4b4abe579a54": 154,
     "9a9d6a89-465b-47fe-bacb-e0589ebccf91": 89,
     "9bd3c0b2-d7fc-48ba-aa0f-bdc122f3eac6": 134,
+    "9c778edd-4f92-46ae-95f7-20360a2ff15f": 188,
     "9e14b0dd-b125-4e1c-a9eb-0c15086a3f1e": 10,
     "9e78b47b-77c9-44f9-9419-b4977f1f46ca": 82,
     "9ee63c25-b225-4882-a3cd-2469994d2bce": 37,
@@ -4251,6 +4252,16 @@
         }
       }
     },
+    "9c778edd-4f92-46ae-95f7-20360a2ff15f": {
+      "uuid": "9c778edd-4f92-46ae-95f7-20360a2ff15f",
+      "display_id": 188,
+      "title": "Bootstrap-period exit criteria (carried out of BOOTSTRAP-MITIGATION.md before its deletion, #187): formal exit at v1.0.0 — vsdd-cli Step-5 coupling, BootstrapPeriodExited event, revisit the cargo-install bootstrap install path in README",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-09-20T01:06:15.299161Z",
+      "updated_at": "2026-09-20T01:06:15.299161Z"
+    },
     "9e14b0dd-b125-4e1c-a9eb-0c15086a3f1e": {
       "uuid": "9e14b0dd-b125-4e1c-a9eb-0c15086a3f1e",
       "display_id": 10,
@@ -8081,8 +8092,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T01:05:22.762341Z",
+    "timestamp": "2026-09-20T01:06:15.299161Z",
     "agent_id": "79Ig",
-    "agent_seq": 1020
+    "agent_seq": 1021
   }
 }
