@@ -168,6 +168,28 @@ fn repo_register_stays_scoped_to_the_methodology_docs() {
     );
 }
 
+// Vacuity floor for the self-hosting gate (#187 part 2): the gate was
+// retargeted from the frozen review archive to the LIVING corpus (docs/** +
+// README), and a wrong-but-compiling `file_globs` edit that empties the
+// jurisdiction would otherwise pass silently — a clean run over zero files is
+// indistinguishable from a clean corpus at the exit-code level. The floor is
+// 15: the corpus is 21 files at retarget time (docs/** = 20 + README), so 15
+// leaves slack for legitimate deletions while a near-empty walk fails loudly.
+// Only the walked COUNT is asserted — findings are the CI gate's business, so
+// a mid-edit dirty doc does not fail the unit suite here.
+#[test]
+fn self_validation_walks_a_healthy_corpus() {
+    use mdatron::verify::{verify_report, VerifyConfig};
+    let cfg = VerifyConfig::from_project(repo()).expect("the repo declares its jurisdiction");
+    let report = verify_report(&cfg).expect("the self-validation pipeline runs");
+    assert!(
+        report.files_checked >= 15,
+        "the self-hosting gate walked only {} files — the jurisdiction has \
+         gone near-empty (wrong glob?); the living corpus is ~21 files",
+        report.files_checked
+    );
+}
+
 // Checker-edit dodge: the seam script is version-controlled and its behavior is
 // pinned by these tests, so a change that weakened it would have to also defeat
 // these seeds. Guard: the hook exists and is the gate.

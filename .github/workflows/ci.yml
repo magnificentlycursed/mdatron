@@ -177,11 +177,13 @@ jobs:
         run: cargo deny check bans licenses sources
 
   self-validate:
-    # The self-hosting gate (#46): mdatron verifies its OWN typed-markdown
-    # corpus (review-log/*.md) against its OWN committed .mdatron/ config,
-    # using the mdatron built from this very checkout. A schema violation in
-    # any review-log entry fails the build — the blocking release gate. This
-    # is what let the throwaway bootstrap-validator be retired.
+    # The self-hosting gate (#46, retargeted by #187 part 2): mdatron verifies
+    # its OWN LIVING corpus — the shipped docs/ tree and the README, with the
+    # link family on — against its OWN committed .mdatron/ config, using the
+    # mdatron built from this very checkout. A dead link, dead anchor, route
+    # violation, or vocabulary finding in the living documentation fails the
+    # build — the blocking release gate, now watching the corpus that actually
+    # changes rather than the frozen review archive.
     name: Self-validation (mdatron verify on this repo)
     needs: lint
     runs-on: ubuntu-latest
@@ -234,7 +236,7 @@ jobs:
       - name: Managed partition intact (init is a no-op, not drift)
         run: cargo run -q -p mdatron --locked -- init --project-root .
 
-      # The gate: every review-log entry must satisfy schemas/review-entry.json.
+      # The gate: the living corpus (docs/** + README) verifies clean.
       # --deny-warnings: the gate takes its own documented escalation (GH #48
       # lane-G review) — a warnings-only run (e.g. W0048, a reference check
       # skipped over an unverifiable target) must fail this gate, not pass it.
@@ -245,7 +247,7 @@ jobs:
     # Publish rehearsal (#123, roast SHO3): green code-CI says nothing about what
     # the crate ARTIFACT contains. This job proves the package is publishable AND
     # that the include-allowlist holds — the internal apparatus (.claude/,
-    # .crosslink/ incl. a committed key, review-log/, .vsdd/, .mdatron/) must NOT
+    # .crosslink/ incl. a committed key, .vsdd/, .mdatron/) must NOT
     # ship. Without this gate, the LICENSE + 221-file-bloat blockers were invisible.
     name: Package rehearsal (cargo publish --dry-run + payload allowlist)
     needs: lint
@@ -270,7 +272,7 @@ jobs:
           # docs/limits.md is hard-required by a SHIPPED test (limits::docs_limits_table_matches_shipped);
           # without it, `cargo test` from the published crate fails (GH #48 lane E).
           echo "$files" | grep -qx 'docs/limits.md' || { echo '::error::docs/limits.md missing from package payload — a shipped test reads it'; exit 1; }
-          if echo "$files" | grep -Eq '^(\.claude/|\.crosslink/|review-log/|\.vsdd/|\.mdatron/|REPLACE$|BOOTSTRAP-|dsl-falsifiability)'; then
+          if echo "$files" | grep -Eq '^(\.claude/|\.crosslink/|\.vsdd/|\.mdatron/|REPLACE$|BOOTSTRAP-|dsl-falsifiability)'; then
             echo '::error::internal apparatus leaked into the crate payload — tighten Cargo.toml include'
             exit 1
           fi

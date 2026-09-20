@@ -1,11 +1,22 @@
 # mdatron route table — the closed-world allowlist over the governed tree (#83).
 # Adopter-owned data; engine-shipped strict schema. Every walked file must be
-# claimed by exactly one route; the review-log naming grammar pins the
-# YYYY-MM-DD-slug convention (the slug incident is the motivating evidence).
+# claimed by exactly one route.
 routes:
-- files: "review-log/**/*.md"
+# The LIVING docs corpus (#187 part 2): route-only governance with the link
+# family on — dead links and dead anchors in the shipped documentation block
+# from day one. No frontmatter requirement (phase 1; the link family needs
+# none). `docs/[!m]*.md` claims everything under docs/ EXCEPT the methodology
+# pair (route `*` crosses `/`, so `docs/dependencies/**` is covered; the
+# `[!m]` class excludes `methodology*`, which the standing methodology route
+# below claims — two routes claiming one file is an error by contract). A
+# future docs path whose first segment-start letter is `m` will land unrouted
+# (E0030) — loud and fail-closed, a deliberate routing decision.
+- files: "docs/[!m]*.md"
   governed_by: DESIGN.md
-  naming: "^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9-]+\\.md$"
+  links: true
+- files: "README.md"
+  governed_by: DESIGN.md
+  links: true
 # The methodology docs that govern mdatron's own development (#96/#97). Claimed
 # so the closed-world walk has no unrouted file; governed by DESIGN.md, the root
 # governing document.
