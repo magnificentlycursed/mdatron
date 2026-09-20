@@ -2222,11 +2222,12 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-09-19T22:15:11.079839Z",
-      "updated_at": "2026-09-20T00:10:28.090310Z",
+      "updated_at": "2026-09-20T00:10:34.409118Z",
       "labels": [
         "enhancement"
       ],
       "blockers": [
+        "383a5b82-13fb-44f2-bb14-9b2cf0bf8fbb",
         "c279283e-4eda-48c4-b703-b7843fd1bec0"
       ],
       "related": [
@@ -7861,8 +7862,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T00:10:28.090310Z",
+    "timestamp": "2026-09-20T00:10:34.409118Z",
     "agent_id": "79Ig",
-    "agent_seq": 982
+    "agent_seq": 983
   }
 }
