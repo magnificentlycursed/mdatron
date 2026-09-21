@@ -1044,7 +1044,7 @@ fn readme_exists_at_repo_root() {
 }
 
 #[test]
-fn readme_contains_seven_required_topic_headings() {
+fn readme_contains_the_required_topic_headings() {
     let readme = readme_text();
     // Filter to markdown heading lines (start with '#') before substring-matching.
     // Per crosslink #13 QE/F1: the prior substring-anywhere match would have
@@ -1055,12 +1055,15 @@ fn readme_contains_seven_required_topic_headings() {
         .filter(|l| l.trim_start().starts_with('#'))
         .map(|l| l.to_lowercase())
         .collect();
+    // The "Relationship to vsdd" heading was retired 2026-09-21 (operator
+    // deletion-test ruling: the section answered a question no crates.io
+    // reader has; its reusable payload — the subprocess composition pattern —
+    // moved to the FAQ). The remaining five are the shipped-reader map.
     let required_topics = [
         ("Install", "install"),
         ("First run", "first run"),
         ("Schema example (Layer 1)", "schema"),
         ("Pattern example (Layer 2)", "pattern"),
-        ("Relationship to vsdd", "vsdd"),
         ("Where to go next", "next"),
     ];
     for (name, fragment) in required_topics {

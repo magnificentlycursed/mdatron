@@ -68,6 +68,24 @@ context freely — a closed SemVer envelope buys fields one at a time, and the
 default envelope's byte-determinism outranks telemetry width. The evaluation,
 including the rejections, is recorded in the project's review history.
 
+## How do I build a tool on top of mdatron?
+
+Compose it as a subprocess, never as a library: spawn `mdatron verify --json`
+and parse the single JSON object on stdout against the published envelope
+schema (`mdatron schema` prints it; pin the `envelope_schema` field's `$id`).
+The envelope carries everything a wrapper needs — pipeline status with an
+in-band failure reason, per-family activity so "checked nothing" is never
+mistaken for "clean", trust-marked quoted regions, and line-churn-stable
+fingerprints — and its versioning is SemVer'd independently of the crate, so
+a wrapper pins the contract it was built against. Keep diagnostic namespaces
+strictly separate: mdatron emits `MDATRON-*` codes; your tool emits its own
+prefix (declare it in a code catalog and mdatron will keep your corpus
+honest about it). Ship your schemas and patterns as files your installer
+drops into the adopter's `.mdatron/` — the methodology lives in data, the
+engine stays generic. This is the pattern mdatron's first downstream consumer
+uses, and every design decision in the envelope was made with a wrapper in
+mind.
+
 ## What are crosslink and vsdd?
 
 Development infrastructure and method, not parts of mdatron. mdatron is

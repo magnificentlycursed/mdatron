@@ -13,9 +13,8 @@ mdatron validates markdown documents in two layers:
 - **Layer 2 — Semantic.** A small Schematron-derived DSL over cross-field,
   cross-file, and cross-document constraints. The 80% of validation value
   that JSON Schema cannot express: "the number of rows in this table matches
-  the count declared in frontmatter," "every domain listed here is registered
-  in `.vsdd/registry/`," "every link target resolves to a heading in the
-  project."
+  the count declared in frontmatter," "every owner listed here appears in the
+  team registry," "every link target resolves to a heading in the project."
 
 Where mdatron fits relative to neighbouring tooling: markdownlint enforces
 style; Vale catches prose-quality concerns; dprint and mdformat reformat;
@@ -509,34 +508,6 @@ The adoption sequence, each step optional after the first:
    that verifies itself is the intended end state (this repo's own
    `self-validate` CI job is the worked example).
 
-## Relationship to vsdd
-
-**mdatron is methodology-agnostic.** The Layer 1 + Layer 2 architecture is
-useful for any "typed markdown documents with cross-reference integrity"
-project — Architecture Decision Records, RFC collections, structured
-changelogs, methodology specs. If you're not adopting VSDD, you can stop
-reading this section here.
-
-If you *are* adopting VSDD: [vsdd](https://github.com/magnificentlycursed/vsdd-cli) is the first downstream
-adopter of mdatron and the source of the methodology vocabulary (phase
-primers, domain prompts, finding artifacts, the VSDD whitepaper alignment).
-vsdd composes mdatron in two ways:
-
-- **vsdd's `verify` subcommand spawns `mdatron verify --json`** as a
-  subprocess and parses the output object on stdout against mdatron's published
-  envelope schema (`schema/mdatron-output.schema.json`). Error-code namespaces
-  stay strictly separate: mdatron emits `MDATRON-Exxxx`, vsdd emits `VSDD-Exxxx`.
-  No proxy, no intercept.
-- **vsdd ships its own JSON Schemas and DSL patterns** that adopters deploy
-  into `.mdatron/schemas/` and `.mdatron/patterns/` via `vsdd init`. The
-  methodology is encoded as mdatron schemas + patterns; mdatron is the
-  engine, not the methodology.
-
-A generalized examples library (artifact-class schemas for non-VSDD adopters)
-is deferred until real adopters supply the evidence of what shapes they need —
-the standing record of that decision lives in [`DESIGN.md`](./DESIGN.md)
-§ References.
-
 ## Where to go next
 
 - [`DESIGN.md`](./DESIGN.md) — the standing design: behavioral contracts,
@@ -556,13 +527,6 @@ the standing record of that decision lives in [`DESIGN.md`](./DESIGN.md)
   (frontmatter, confinement, schema, init, jurisdiction, route, pin,
   vocabulary, and citation codes); the catalog grows by one entry per
   newly-emitted code
-- [vsdd-cli](https://github.com/magnificentlycursed/vsdd-cli) — if you are adopting VSDD, the vsdd toolkit
-  composes mdatron + ships the methodology artifacts; `vsdd init` deploys
-  both
-- [The VSDD whitepaper](
-  https://gist.github.com/dollspace-gay/d8d3bc3ecf4188df049d7a4726bb2a00) —
-  the methodology vsdd operationalizes; authored by
-  [@dollspace.gay](https://bsky.app/profile/dollspace.gay)
 
 ## License
 
