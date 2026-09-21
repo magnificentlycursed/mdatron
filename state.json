@@ -1877,11 +1877,12 @@
       "uuid": "383a5b82-13fb-44f2-bb14-9b2cf0bf8fbb",
       "display_id": 183,
       "title": "GH52 lane B (majors 3-6): mdatron_dsl_version gate, deny_unknown_fields on DSL input structs, 'in' operator narrowed to array-only per its own reference, CI release/** + tag gauntlet legs",
-      "status": "open",
+      "status": "closed",
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-09-20T00:09:49.874040Z",
-      "updated_at": "2026-09-20T01:19:34.305675Z",
+      "updated_at": "2026-09-21T22:25:06.620786Z",
+      "closed_at": "2026-09-21T22:25:06.620778Z",
       "comments": {
         "24ffc771-664a-441c-81a1-2e97e0d6823a": {
           "display_id": 507,
@@ -8360,8 +8361,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-21T22:24:58.966172Z",
+    "timestamp": "2026-09-21T22:25:06.620786Z",
     "agent_id": "79Ig",
-    "agent_seq": 1069
+    "agent_seq": 1070
   }
 }
