@@ -7127,11 +7127,12 @@
       "uuid": "e26c0e8d-f45e-4f04-9cd9-8376a53f2b37",
       "display_id": 195,
       "title": "README: cut the vsdd/vsdd-cli section and pointers (operator ruling 2026-09-21) — generalize the composition pattern into the FAQ",
-      "status": "open",
+      "status": "closed",
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-21T22:10:28.280708Z",
-      "updated_at": "2026-09-21T22:10:35.184649Z",
+      "updated_at": "2026-09-21T22:12:41.989492Z",
+      "closed_at": "2026-09-21T22:12:41.989482Z",
       "labels": [
         "docs"
       ]
@@ -8335,8 +8336,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-21T22:10:49.365886Z",
+    "timestamp": "2026-09-21T22:12:41.989492Z",
     "agent_id": "79Ig",
-    "agent_seq": 1052
+    "agent_seq": 1053
   }
 }
