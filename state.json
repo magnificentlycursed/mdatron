@@ -5709,11 +5709,12 @@
       "uuid": "bb28326a-e7fd-4bea-9e0b-6aaa5db0c099",
       "display_id": 177,
       "title": "per-finding fingerprints for cross-run identity (sarif partialFingerprints gap, corroborated by observability-engineering-audit input 3)",
-      "status": "open",
+      "status": "closed",
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-09-19T22:04:55.795826Z",
-      "updated_at": "2026-09-20T00:06:03.820870Z",
+      "updated_at": "2026-09-21T22:24:22.379521Z",
+      "closed_at": "2026-09-21T22:24:22.379512Z",
       "labels": [
         "enhancement"
       ],
@@ -8364,8 +8365,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-21T22:24:14.980099Z",
+    "timestamp": "2026-09-21T22:24:22.379521Z",
     "agent_id": "79Ig",
-    "agent_seq": 1063
+    "agent_seq": 1064
   }
 }
