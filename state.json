@@ -2314,11 +2314,12 @@
       "uuid": "4ebc561b-c68f-472e-8fee-f763332bf311",
       "display_id": 180,
       "title": "documentation coverage + discoverability: audit and close the 0.6.0 gaps (README/docs vs shipped surface; machine-discovery incl. the MCP/LSP question)",
-      "status": "open",
+      "status": "closed",
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-09-19T22:15:11.079839Z",
-      "updated_at": "2026-09-21T22:25:49.503462Z",
+      "updated_at": "2026-09-21T22:25:57.148715Z",
+      "closed_at": "2026-09-21T22:25:57.148704Z",
       "labels": [
         "enhancement"
       ],
@@ -8363,8 +8364,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-21T22:25:49.503462Z",
+    "timestamp": "2026-09-21T22:25:57.148715Z",
     "agent_id": "79Ig",
-    "agent_seq": 1075
+    "agent_seq": 1076
   }
 }
