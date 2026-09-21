@@ -916,11 +916,12 @@
       "uuid": "1f3bc3ea-d9a5-4d3f-b230-b2ca1b8f9697",
       "display_id": 178,
       "title": "ci: stop the push/pull_request double-run concurrency-cancel tax (every 0.6.0-cycle PR needed a manual rerun; observability-engineering-audit input 4)",
-      "status": "open",
+      "status": "closed",
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-19T22:05:07.907628Z",
-      "updated_at": "2026-09-19T22:19:05.135952Z",
+      "updated_at": "2026-09-21T22:24:30.183993Z",
+      "closed_at": "2026-09-21T22:24:30.183983Z",
       "labels": [
         "process"
       ],
@@ -8365,8 +8366,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-21T22:24:22.379521Z",
+    "timestamp": "2026-09-21T22:24:30.183993Z",
     "agent_id": "79Ig",
-    "agent_seq": 1064
+    "agent_seq": 1065
   }
 }
