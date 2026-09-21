@@ -3351,11 +3351,12 @@
       "uuid": "77a19061-d782-4ef5-9203-8010f6762888",
       "display_id": 175,
       "title": "envelope run telemetry: duration dimensions (closes the DESIGN latency-measurement deferral; observability-engineering-audit input 1)",
-      "status": "open",
+      "status": "closed",
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-19T22:04:21.969915Z",
-      "updated_at": "2026-09-20T00:05:56.049878Z",
+      "updated_at": "2026-09-21T22:24:07.407183Z",
+      "closed_at": "2026-09-21T22:24:07.407175Z",
       "labels": [
         "enhancement"
       ],
@@ -8362,8 +8363,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-21T22:15:14.683056Z",
+    "timestamp": "2026-09-21T22:24:07.407183Z",
     "agent_id": "79Ig",
-    "agent_seq": 1061
+    "agent_seq": 1062
   }
 }
