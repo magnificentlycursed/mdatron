@@ -16,8 +16,18 @@ mod explain;
 
 #[derive(Parser, Debug)]
 #[command(name = "mdatron", about, version, long_about = None)]
-#[command(after_help = "Descended from Schematron (ISO/IEC 19757-3). \
-                       Not related to the TRON blockchain.")]
+#[command(after_help = "The working loop (#180 discoverability):
+  mdatron init                     scaffold .mdatron/ in a new project
+  mdatron verify                   check the tree; rustc-shaped diagnostics
+  mdatron explain <code>           the fix for any diagnostic (--list for all)
+  mdatron verify --json            the versioned machine envelope (agents/CI)
+  mdatron docs                     the bundled DSL reference (also: limits, faq)
+  mdatron schema                   the published envelope JSON Schema
+
+Exit contract: 0 clean, 1 findings, 2 pipeline failure — anything else is an
+engine defect; please report it.
+
+Descended from Schematron (ISO/IEC 19757-3).")]
 struct Cli {
     #[command(subcommand)]
     command: Command,
@@ -74,6 +84,19 @@ enum Command {
         /// `1`, a clean run `0`, and a pipeline failure `2`, unchanged.
         #[arg(long = "deny-warnings", visible_alias = "strict")]
         deny_warnings: bool,
+
+        /// Include run-phase wall-clock timings in the JSON envelope (#175):
+        /// an optional `timings` object with `total_ms`/`load_ms`/`capture_ms`/
+        /// `check_ms`. Requires --json — timings ride ONLY in the envelope, so
+        /// without it the flag would silently do nothing (cold-review R4). The
+        /// explicit --compact conflict closes clap's requires-waiver (R6:
+        /// `compact` conflicts with `json`, and clap 4.5 waives an arg's
+        /// `requires` when another present arg conflicts the required arg away
+        /// — so `--timings --compact` was accepted and silently dropped
+        /// timings). Off by default so the default envelope stays
+        /// deterministic (timings are its sole non-deterministic zone).
+        #[arg(long = "timings", requires = "json", conflicts_with = "compact")]
+        timings: bool,
     },
 
     /// Show extended documentation for an error code (rustc --explain pattern).
@@ -92,8 +115,10 @@ enum Command {
         list: bool,
 
         /// Emit the explain page as a structured JSON object on stdout
-        /// (per crosslink #13 AIE/F7). Without this flag, the markdown body
-        /// is printed verbatim.
+        /// (per crosslink #13 AIE/F7); with --list, the catalog as a JSON
+        /// array of {code, summary} objects (#180 — previously the flag was
+        /// silently ignored under --list). Without this flag, the markdown
+        /// body (or the plain list) is printed verbatim.
         #[arg(long = "json")]
         json: bool,
 
@@ -140,6 +165,16 @@ enum Command {
     /// (#127) — so a binary-only consumer can pin and validate against it without
     /// a repo checkout. Kept in lockstep with `mdatron_output_version`.
     Schema,
+
+    /// Print bundled documentation on stdout (#180 discoverability): the
+    /// complete DSL reference (default), the declared-limits table, or the
+    /// FAQ — the same files the crate ships, so a binary-only `cargo install`
+    /// consumer reads them without a repo checkout (`mdatron docs | less`).
+    Docs {
+        /// Which document to print.
+        #[arg(value_parser = ["dsl", "limits", "faq"], default_value = "dsl")]
+        topic: String,
+    },
 }
 
 fn parse_explain_code(s: &str) -> Result<String, String> {
@@ -199,6 +234,7 @@ fn main() -> ExitCode {
             quiet,
             changed,
             deny_warnings,
+            timings,
         } => cmd_verify(
             project_root,
             schemas,
@@ -209,6 +245,7 @@ fn main() -> ExitCode {
             quiet,
             changed,
             deny_warnings,
+            timings,
         ),
         Command::Explain {
             code,
@@ -227,6 +264,7 @@ fn main() -> ExitCode {
             quiet,
         } => cmd_init(project_root, quiet),
         Command::Schema => cmd_schema(),
+        Command::Docs { topic } => cmd_docs(&topic),
     }
 }
 
@@ -234,8 +272,42 @@ fn main() -> ExitCode {
 /// consumer can `mdatron schema > mdatron-output.schema.json` and validate the
 /// `verify --json` envelope against it.
 fn cmd_schema() -> ExitCode {
-    print!("{}", mdatron::output::OUTPUT_SCHEMA);
-    ExitCode::SUCCESS
+    print_page(mdatron::output::OUTPUT_SCHEMA)
+}
+
+/// Write a full page to stdout, tolerating a closed pipe (consolidated-review
+/// F4): `mdatron docs | less` quit early — the README's own documented usage —
+/// used to panic on EPIPE and exit 101, violating the 0/1/2 exit contract the
+/// same branch pins. A broken pipe on a print-only surface is the CONSUMER
+/// saying "enough": graceful success, not an engine defect. Any other write
+/// error stays loud (exit 2).
+fn print_page(body: &str) -> ExitCode {
+    use std::io::Write;
+    let mut out = std::io::stdout().lock();
+    match out.write_all(body.as_bytes()).and_then(|()| out.flush()) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => ExitCode::SUCCESS,
+        Err(e) => {
+            eprintln!(
+                "error[MDATRON-E0080]: writing to stdout failed\n   = note: {}",
+                stderr_safe(&e, &[])
+            );
+            ExitCode::from(2)
+        }
+    }
+}
+
+/// Print a bundled documentation file to stdout (#180 discoverability). The
+/// files are embedded at build time from the same paths the crate package
+/// ships, so a `cargo install` consumer reads them with no repo checkout.
+/// clap's value_parser closes the topic set, so the match is total.
+fn cmd_docs(topic: &str) -> ExitCode {
+    let body = match topic {
+        "limits" => include_str!("../docs/limits.md"),
+        "faq" => include_str!("../docs/faq.md"),
+        _ => include_str!("../docs/dsl-reference.md"),
+    };
+    print_page(body)
 }
 
 fn cmd_pin(project_root: Option<PathBuf>, update: bool, dry_run: bool, quiet: bool) -> ExitCode {
@@ -468,6 +540,7 @@ fn cmd_verify(
     quiet: bool,
     changed: Option<PathBuf>,
     deny_warnings: bool,
+    timings: bool,
 ) -> ExitCode {
     use mdatron::output::{Families, Output, PipelineError, PipelineStatus};
 
@@ -497,23 +570,25 @@ fn cmd_verify(
         c.file_globs = files;
         Ok(c)
     };
-    let (mut findings, families, files_checked, pipeline_status, pipeline_err) = match config_result
-    {
-        Err(e) => (
-            Vec::new(),
-            Families::all_inactive(),
-            0,
-            PipelineStatus::Failed,
-            Some(VerifyError::Config(e.to_string())),
-        ),
-        Ok(mut config) => {
-            if let Some(s) = schemas {
-                config.schemas_dir = s;
-            }
-            if let Some(p) = patterns {
-                config.patterns_dir = p;
-            }
-            let result = match &changed {
+    let (mut findings, families, files_checked, pipeline_status, pipeline_err, inputs, run_timings) =
+        match config_result {
+            Err(e) => (
+                Vec::new(),
+                Families::all_inactive(),
+                0,
+                PipelineStatus::Failed,
+                Some(VerifyError::Config(e.to_string())),
+                std::collections::BTreeMap::new(),
+                None,
+            ),
+            Ok(mut config) => {
+                if let Some(s) = schemas {
+                    config.schemas_dir = s;
+                }
+                if let Some(p) = patterns {
+                    config.patterns_dir = p;
+                }
+                let result = match &changed {
                 // Incremental (#102): verify the changed file + dependents and
                 // emit the visited-file trace to stderr (control-escaped so an
                 // adverse filename cannot inject trace lines). A .mdatron/ change
@@ -550,25 +625,32 @@ fn cmd_verify(
                 }),
                 None => verify_report(&config),
             };
-            match result {
-                Ok(r) => (
-                    r.findings,
-                    r.families,
-                    r.files_checked,
-                    PipelineStatus::Ok,
-                    None,
-                ),
-                // A failed pipeline reports no family as invoked.
-                Err(e) => (
-                    Vec::new(),
-                    Families::all_inactive(),
-                    0,
-                    PipelineStatus::Failed,
-                    Some(e),
-                ),
+                match result {
+                    Ok(r) => (
+                        r.findings,
+                        r.families,
+                        r.files_checked,
+                        PipelineStatus::Ok,
+                        None,
+                        r.inputs,
+                        Some(r.timings),
+                    ),
+                    // A failed pipeline reports no family as invoked, and its
+                    // #176 lineage is ALWAYS empty — some inputs may have been
+                    // read before the failure, but partial lineage is
+                    // deliberately not attested (cold-review R3).
+                    Err(e) => (
+                        Vec::new(),
+                        Families::all_inactive(),
+                        0,
+                        PipelineStatus::Failed,
+                        Some(e),
+                        std::collections::BTreeMap::new(),
+                        None,
+                    ),
+                }
             }
-        }
-    };
+        };
 
     // #113 (vsdd item 7): advertise `mdatron explain <code>` only when a page
     // actually resolves. A pattern-rule finding carries an adopter-defined code
@@ -624,7 +706,12 @@ fn cmd_verify(
         pipeline_error,
         families,
         env!("CARGO_PKG_VERSION"),
-    );
+    )
+    .with_inputs(inputs)
+    // #175: timings are the envelope's sole non-deterministic zone — emitted
+    // only under --timings, so the default envelope stays byte-identical
+    // across runs on an unchanged tree.
+    .with_timings(if timings { run_timings } else { None });
 
     // BC-5 stream contract: --json puts the output on stdout; otherwise diagnostics
     // are rustc-shaped on stderr.
@@ -770,6 +857,7 @@ fn pipeline_error_finding(e: &VerifyError, roots: &[&Path]) -> Finding {
         },
         explain_ref: None,
         quoted: vec![QuotedRegion {
+            platform_variant: true,
             label: "detail".into(),
             content: relativize_root_prefix(e.to_string(), roots),
         }],
@@ -787,10 +875,42 @@ fn cmd_explain(code: Option<&str>, list: bool, json: bool, compact: bool) -> Exi
     if list {
         match explain::catalog() {
             Ok(entries) => {
-                for (c, summary) in entries {
-                    println!("{c} — {summary}");
+                if json {
+                    // #180: --list previously ignored --json silently — the
+                    // same silent-no-op class the --timings gate closed.
+                    let arr: Vec<serde_json::Value> = entries
+                        .iter()
+                        .map(|(c, s)| serde_json::json!({ "code": c, "summary": s }))
+                        .collect();
+                    match serde_json::to_string(&arr) {
+                        Ok(line) => return print_page(&format!("{line}\n")),
+                        Err(e) => {
+                            eprintln!(
+                                "error[MDATRON-E0080]: output serialization failed\n   = note: {}",
+                                stderr_safe(&e, &[])
+                            );
+                            return ExitCode::from(2);
+                        }
+                    }
+                } else if compact {
+                    // One compact line per code (the same form `explain
+                    // --compact <code>` emits), so an agent can bulk-load the
+                    // catalog into a context budget.
+                    let mut buf = String::new();
+                    for (c, _) in &entries {
+                        if let Some(line) = explain::lookup_compact(c) {
+                            buf.push_str(&line);
+                            buf.push('\n');
+                        }
+                    }
+                    return print_page(&buf);
+                } else {
+                    let mut buf = String::new();
+                    for (c, summary) in entries {
+                        buf.push_str(&format!("{c} — {summary}\n"));
+                    }
+                    return print_page(&buf);
                 }
-                return ExitCode::from(0);
             }
             Err(e) => {
                 // #167: routed through the print-boundary escape for
@@ -807,15 +927,13 @@ fn cmd_explain(code: Option<&str>, list: bool, json: bool, compact: bool) -> Exi
     let code = code.expect("a code is required unless --list");
     if compact {
         if let Some(line) = explain::lookup_compact(code) {
-            println!("{line}");
-            return ExitCode::from(0);
+            return print_page(&format!("{line}\n"));
         }
     } else if json {
         if let Some(structured) = explain::lookup_structured(code) {
             match serde_json::to_string(&structured) {
                 Ok(line) => {
-                    println!("{line}");
-                    return ExitCode::from(0);
+                    return print_page(&format!("{line}\n"));
                 }
                 Err(e) => {
                     eprintln!(
@@ -829,17 +947,14 @@ fn cmd_explain(code: Option<&str>, list: bool, json: bool, compact: bool) -> Exi
     } else if let Some(page) = explain::lookup(code) {
         // Normalize trailing whitespace + write exactly one trailing newline.
         // Per crosslink #13 SE/F1.
-        println!("{}", page.trim_end());
+        let mut buf = format!("{}\n", page.trim_end());
         // Per crosslink #12 UX/F1: if this code has a migration note (its
         // semantic shifted across emission sites), surface it AFTER the
         // page so operators recalling the prior meaning see the bridge.
         if let Some(note) = explain::migration_note(code) {
-            println!();
-            println!("## Migration note");
-            println!();
-            println!("{note}");
+            buf.push_str(&format!("\n## Migration note\n\n{note}\n"));
         }
-        return ExitCode::from(0);
+        return print_page(&buf);
     }
     // #167 audit find: `code` is operator argv echoed to stderr — escape it at
     // the print boundary like every other non-engine interpolation.

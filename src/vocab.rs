@@ -4,8 +4,9 @@
 //! `.mdatron/vocabulary.yaml` is an engine-defined interface parsed strictly.
 //! Each section activates its own scan when present: `terms` drives the
 //! coinage and reserved-word checks (`MDATRON-E0090` unregistered coinage —
-//! bold-introduced terms absent from the registry, the bootstrap validator's
-//! proven heuristic; `MDATRON-E0092` reserved-word use — reserved means held,
+//! bold-introduced terms absent from the registry, a heuristic proven by the
+//! project's pre-engine bootstrap validation, 2026-06;
+//! `MDATRON-E0092` reserved-word use — reserved means held,
 //! not usable; draft-status terms are exempt from strict findings per
 //! contract). `label_schemes.allow` drives the invented-label-scheme check
 //! (`MDATRON-E0091`: letter-plus-number clusters outside the allowlist — the
@@ -99,6 +100,9 @@ pub struct LoadedVocab {
     /// Terms declared both `registered` and `draft` (#95). They resolve to
     /// draft (the permissive status); each names a `MDATRON-W0044` warning.
     draft_conflicts: Vec<String>,
+    /// sha256 (lowercase hex) of the exact `vocabulary.yaml` bytes `load` read
+    /// (#176, the envelope's input lineage).
+    pub digest: String,
 }
 
 /// Structured reference-ID schemes exempt from the `E0091` invented-label-scheme
@@ -206,6 +210,7 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedVocab>, Error> {
         cluster: regex_lite::Regex::new(r"\b[A-Z]{1,7}(?:-[A-Z]{0,7})?[0-9]{1,4}\b")
             .expect("engine cluster detector compiles"),
         draft_conflicts,
+        digest: crate::init::sha256_hex(content.as_bytes()),
     }))
 }
 
@@ -230,6 +235,7 @@ pub fn registry_findings(vocab: &LoadedVocab, vocab_path: &Path, findings: &mut 
             },
             explain_ref: Some("MDATRON-W0044".into()),
             quoted: vec![QuotedRegion {
+                platform_variant: false,
                 label: "term".into(),
                 content: term.clone(),
             }],
@@ -270,6 +276,7 @@ pub fn check_file(
                      (draft-status terms are exempt; register the coinage or \
                      unbold the emphasis)",
                     vec![QuotedRegion {
+                        platform_variant: false,
                         label: "term".into(),
                         content: term.clone(),
                     }],
@@ -291,6 +298,7 @@ pub fn check_file(
                      held for a registered future sense, not usable — the use \
                      is surfaced for review",
                     vec![QuotedRegion {
+                        platform_variant: false,
                         label: "term".into(),
                         content: term.clone(),
                     }],
@@ -337,6 +345,7 @@ pub fn check_file(
                      scheme; invented schemes proliferate faster than review \
                      can police them",
                     vec![QuotedRegion {
+                        platform_variant: false,
                         label: "cluster".into(),
                         content: cluster.to_string(),
                     }],
@@ -362,10 +371,12 @@ pub fn check_file(
                 "prose matches a listed register anti-pattern",
                 vec![
                     QuotedRegion {
+                        platform_variant: false,
                         label: "matched".into(),
                         content: m.as_str().to_string(),
                     },
                     QuotedRegion {
+                        platform_variant: false,
                         label: "register".into(),
                         content: register.clone(),
                     },
@@ -410,10 +421,12 @@ pub fn check_file(
                             ),
                             vec![
                                 QuotedRegion {
+                                    platform_variant: false,
                                     label: "claim".into(),
                                     content: line.trim().to_string(),
                                 },
                                 QuotedRegion {
+                                    platform_variant: false,
                                     label: "field".into(),
                                     content: field.clone(),
                                 },

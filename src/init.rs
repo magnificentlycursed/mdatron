@@ -365,14 +365,17 @@ pub fn drift_findings(project_root: &Path, drifts: &[Drift]) -> Vec<Finding> {
             explain_ref: Some("MDATRON-E0060".into()),
             quoted: vec![
                 QuotedRegion {
+                    platform_variant: false,
                     label: "file".into(),
                     content: d.file.clone(),
                 },
                 QuotedRegion {
+                    platform_variant: false,
                     label: "recorded".into(),
                     content: short(&d.expected_sha256).to_string(),
                 },
                 QuotedRegion {
+                    platform_variant: false,
                     label: "found".into(),
                     content: short(&d.actual_sha256).to_string(),
                 },

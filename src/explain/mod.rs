@@ -1,7 +1,7 @@
 //! Embedded `mdatron explain CODE` catalog.
 //!
 //! v0.1.x catalog: MDATRON-E0001, E0002, E0010, E0011, E0012, E0050, E0060, E0070,
-//! E0080, W0040; route family E0030, E0031, E0032, W0041; pin family E0061, E0062, E0063, W0042, L0001; vocabulary family E0090-E0094; citation family E0100, E0101; link family E0110, E0111; marker family E0112, E0114; code-catalog family E0113; section-structural family E0120, E0121, E0122; DSL rule field-reference validation E0021. The catalog grows by one entry per newly-emitted code per the
+//! E0080, W0040; schema-load family E0040; route family E0030, E0031, E0032, W0041; pin family E0061, E0062, E0063, W0042, L0001; vocabulary family E0090-E0094; citation family E0100, E0101; link family E0110, E0111; marker family E0112, E0114; code-catalog family E0113; section-structural family E0120, E0121, E0122; DSL rule field-reference validation E0021. The catalog grows by one entry per newly-emitted code per the
 //! Phase 0 DESIGN open question #2 SO disposition (2026-06-02); the
 //! path-confinement trio (E0010/E0011/E0012) landed with the confinement
 //! rework (the path-confinement defect issue in this tracker).
@@ -32,6 +32,7 @@ const E0050: &str = include_str!("MDATRON-E0050.md");
 const E0060: &str = include_str!("MDATRON-E0060.md");
 const E0070: &str = include_str!("MDATRON-E0070.md");
 const E0080: &str = include_str!("MDATRON-E0080.md");
+const E0040: &str = include_str!("MDATRON-E0040.md");
 const W0040: &str = include_str!("MDATRON-W0040.md");
 const E0030: &str = include_str!("MDATRON-E0030.md");
 const E0031: &str = include_str!("MDATRON-E0031.md");
@@ -101,6 +102,7 @@ pub fn lookup(code: &str) -> Option<&'static str> {
         "MDATRON-E0060" => Some(E0060),
         "MDATRON-E0070" => Some(E0070),
         "MDATRON-E0080" => Some(E0080),
+        "MDATRON-E0040" => Some(E0040),
         "MDATRON-W0040" => Some(W0040),
         "MDATRON-E0030" => Some(E0030),
         "MDATRON-E0031" => Some(E0031),
@@ -158,17 +160,67 @@ pub fn lookup_compact(code: &str) -> Option<String> {
         .and_then(|l| l.split_once('\u{2014}').or_else(|| l.split_once("-")))
         .map(|(_, after)| after.trim().to_string())
         .unwrap_or_else(|| page.code.clone());
-    // First sentence of "How to fix" (up to first . or newline).
-    let first_sentence = page
-        .how_to_fix
-        .split(['.', '\n'])
-        .next()
-        .map(|s| s.trim().to_string())
-        .unwrap_or_default();
+    // First sentence of "How to fix". The naive split-on-'.' produced
+    // degenerate hints on pages whose fix section opens with a numbered list
+    // ("1. Do X" → "1") or whose first sentence carries an abbreviation
+    // ("(e.g." → cut mid-parenthetical) — consolidated-review F3, exposed in
+    // bulk by `explain --list --compact`. So: strip list markers first, then
+    // end the sentence only at a '.' followed by whitespace/EOL, skipping
+    // periods inside "e.g."/"i.e."-style abbreviations (a '.' preceded and
+    // followed by a lowercase letter).
+    let first_sentence = first_fix_sentence(&page.how_to_fix);
     Some(format!(
         "{} {}: {} — {}",
         page.code, page.severity, summary, first_sentence
     ))
+}
+
+/// The first real sentence of a fix section, tolerant of markdown list
+/// openers and dotted abbreviations (consolidated-review F3).
+fn first_fix_sentence(fix: &str) -> String {
+    // First PARAGRAPH (lines up to the first blank), joined — a sentence that
+    // spans the page's hard wrap must not truncate mid-phrase (review F8) —
+    // with leading list markers stripped: "1. ", "- ", "* ", and bold markers
+    // stripped throughout (a bold lead-in's closing ** would otherwise ride
+    // along and defeat the sentence-end scan).
+    let paragraph = fix
+        .lines()
+        .map(str::trim)
+        .skip_while(|l| l.is_empty())
+        .take_while(|l| !l.is_empty())
+        .collect::<Vec<_>>()
+        .join(" ")
+        .replace("**", "");
+    let mut s = paragraph.as_str();
+    loop {
+        let before = s;
+        s = s.trim_start_matches(['-', '*', ' ']).trim_start();
+        if let Some(rest) = s.strip_prefix(|c: char| c.is_ascii_digit()) {
+            if let Some(rest) = rest.strip_prefix(". ") {
+                s = rest;
+                continue;
+            }
+        }
+        if s == before {
+            break;
+        }
+    }
+    let s = s.trim_start();
+    // Sentence end: a '.' followed by whitespace or end-of-line — unless it
+    // is the closing dot of a dotted abbreviation ("e.g.", "i.e."), which the
+    // letter-dot-letter-dot shape identifies (the char two back is a '.').
+    let bytes = s.as_bytes();
+    for (i, &b) in bytes.iter().enumerate() {
+        if b != b'.' {
+            continue;
+        }
+        let ends_here = bytes.get(i + 1).is_none_or(|&n| n == b' ' || n == b'\n');
+        let abbreviation_tail = i >= 2 && bytes[i - 2] == b'.';
+        if ends_here && !abbreviation_tail {
+            return s[..i].trim().to_string();
+        }
+    }
+    s.trim().to_string()
 }
 
 /// Look up + parse the explain page into the structured [`ExplainPage`] form.
@@ -277,6 +329,31 @@ fn extract_section(markdown: &str, heading: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
+
+    // RED GATE (consolidated-review F3): `explain --list --compact` bulk-loads
+    // every code's one-liner, so no page may yield a degenerate hint — the
+    // naive first-sentence split produced "— 1" on numbered-list fix sections
+    // and cut mid-abbreviation ("(e.g.") on others.
+    #[test]
+    fn every_compact_line_carries_a_real_fix_hint() {
+        for (code, _) in catalog().expect("catalog parses") {
+            let line =
+                lookup_compact(&code).unwrap_or_else(|| panic!("{code}: compact form renders"));
+            let hint = line
+                .rsplit_once(" \u{2014} ")
+                .map(|(_, h)| h)
+                .unwrap_or_default();
+            assert!(
+                hint.len() >= 8 && !hint.chars().all(|c| c.is_ascii_digit()),
+                "{code}: degenerate compact hint {hint:?} in {line:?}"
+            );
+            assert!(
+                !hint.starts_with(['-', '*']) && !hint.contains("**"),
+                "{code}: unstripped list/bold marker in hint {hint:?}"
+            );
+        }
+    }
+
     use super::*;
 
     // #164: the hand-maintained BASELINE array was dissolved — the code set is now

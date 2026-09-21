@@ -57,11 +57,47 @@ pub struct ValidationError {
     pub quoted: Vec<QuotedRegion>,
 }
 
+/// The one schema dialect mdatron enforces (GH #52 blocker 1). Accepted
+/// `$schema` values: absent (the forced 2020-12 default applies), or this URI
+/// with or without the trailing `#` — the two spellings the `jsonschema` crate
+/// itself recognizes for 2020-12.
+const SUPPORTED_DIALECT: &str = "https://json-schema.org/draft/2020-12/schema";
+
 impl Schema {
     /// Compile a schema from its parsed JSON representation.
     ///
-    /// Returns an error if the schema is not valid JSON Schema draft 2020-12.
+    /// Returns an error if the schema is not valid JSON Schema draft 2020-12 —
+    /// including a schema that DECLARES any other dialect (GH #52 blocker 1,
+    /// `MDATRON-E0040`): `.with_draft(Draft202012)` is only a default, the
+    /// crate honors an embedded `$schema`, and under this build's
+    /// `default-features = false` a draft-07 schema compiled to an EMPTY
+    /// validator — every document passed, silently. Doctrine is
+    /// as-written-first + loud refusal: silently revalidating a
+    /// draft-07-authored schema under 2020-12 semantics would reinterpret the
+    /// author's declared dialect, so an unsupported `$schema` is refused at
+    /// load instead.
     pub fn compile(schema_json: &JsonValue) -> Result<Self, Error> {
+        match schema_json.get("$schema") {
+            None => {}
+            Some(JsonValue::String(dialect))
+                if dialect == SUPPORTED_DIALECT
+                    || dialect.strip_suffix('#') == Some(SUPPORTED_DIALECT) => {}
+            Some(other) => {
+                let found = match other {
+                    JsonValue::String(s) => s.clone(),
+                    v => v.to_string(),
+                };
+                return Err(Error::Config(format!(
+                    "MDATRON-E0040 unsupported-schema-dialect: this schema declares \
+                     $schema '{found}', but mdatron enforces JSON Schema draft \
+                     2020-12 only ('{SUPPORTED_DIALECT}'); an unsupported declared \
+                     dialect is refused at load rather than silently reinterpreted \
+                     (a draft-07 schema compiled to a validator that enforced \
+                     NOTHING). Re-author the schema as 2020-12 and declare it, or \
+                     drop the $schema field to use the enforced default"
+                )));
+            }
+        }
         // #135 (roast C1): validate `pattern`/`patternProperties` with the
         // LINEAR-time `regex` engine, not the default backtracking `fancy-regex`.
         // A backtracking engine on adopter-authored patterns over contributor
@@ -197,6 +233,7 @@ fn describe(e: &jsonschema::ValidationError) -> (String, Vec<QuotedRegion>) {
     // The failing document value, compactly serialized, as a quoted region.
     let found = || {
         vec![QuotedRegion {
+            platform_variant: false,
             label: "found".into(),
             content: serde_json::to_string(e.instance())
                 .unwrap_or_else(|_| "<unserializable value>".into()),
@@ -213,6 +250,7 @@ fn describe(e: &jsonschema::ValidationError) -> (String, Vec<QuotedRegion>) {
             (
                 format!("unexpected {plural} not permitted by the schema{at}"),
                 vec![QuotedRegion {
+                    platform_variant: false,
                     label: "unexpected".into(),
                     content: unexpected.join("\n"),
                 }],

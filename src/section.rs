@@ -303,6 +303,7 @@ pub fn check_file(
                          section spec (matching is exact on level and text), so \
                          its count assertion cannot be evaluated",
                         vec![QuotedRegion {
+                            platform_variant: false,
                             label: "section".into(),
                             content: section.clone(),
                         }],
@@ -331,6 +332,7 @@ pub fn check_file(
                                 pred.describe()
                             ),
                             vec![QuotedRegion {
+                                platform_variant: false,
                                 label: "section".into(),
                                 content: section.clone(),
                             }],
@@ -363,6 +365,7 @@ pub fn check_file(
                              and text), so the disjointness assertion cannot be \
                              evaluated",
                             vec![QuotedRegion {
+                                platform_variant: false,
                                 label: "section".into(),
                                 content: op.section.clone(),
                             }],
@@ -402,14 +405,17 @@ pub fn check_file(
                         "two sections that must have disjoint ids share one or more",
                         vec![
                             QuotedRegion {
+                                platform_variant: false,
                                 label: "section a".into(),
                                 content: a.section.clone(),
                             },
                             QuotedRegion {
+                                platform_variant: false,
                                 label: "section b".into(),
                                 content: b.section.clone(),
                             },
                             QuotedRegion {
+                                platform_variant: false,
                                 label: "shared ids".into(),
                                 content: shared,
                             },

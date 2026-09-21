@@ -298,7 +298,7 @@ mod tests {
     /// A one-rule pattern whose `assert` carries the `key()` calls.
     fn rule_pattern(context: ContextSelector, assert: &str) -> PatternFile {
         PatternFile {
-            mdatron_dsl_version: 1,
+            mdatron_dsl_version: Some(1),
             pattern: Pattern {
                 id: "p".into(),
                 description: None,
@@ -345,7 +345,7 @@ mod tests {
 
     fn pat(rules: Vec<Rule>) -> PatternFile {
         PatternFile {
-            mdatron_dsl_version: 1,
+            mdatron_dsl_version: Some(1),
             pattern: Pattern {
                 id: "p".into(),
                 description: None,

@@ -83,8 +83,12 @@ const MAX_EXPR_DEPTH: usize = crate::limits::SHIPPED.expr_depth;
 struct Parser<'a> {
     input: &'a str,
     pos: usize,
-    /// Live recursion depth through the two unbounded roots (`parse_or_expr` via
-    /// parens, `parse_not_expr` via `not`-chains); bounded by [`MAX_EXPR_DEPTH`].
+    /// Live recursion depth through the three unbounded roots — `parse_or_expr`
+    /// (parens, quantifier bodies, call args), `parse_not_expr` (`not` chains),
+    /// and `parse_array_literal` (nested `[[[…`, GH #52 blocker 3: the array
+    /// cycle previously bypassed the guard and `'['`×80000 aborted with an
+    /// uncatchable SIGABRT) — bounded by [`MAX_EXPR_DEPTH`]. Invariant: every
+    /// recursion path through `parse_primary` crosses one of those `enter()`s.
     depth: usize,
 }
 
@@ -141,20 +145,23 @@ impl<'a> Parser<'a> {
     }
 
     /// Consume a keyword (word followed by non-identifier boundary).
+    /// Char-boundary-SAFE (GH #52 blocker 2): the old `&self.input[self.pos..
+    /// self.pos + kw.len()]` sliced mid-char when a multibyte char followed —
+    /// `assert: "$self.count — required"` panicked inside the em-dash (exit
+    /// 101, empty envelope). `starts_with` never slices; after it matches, the
+    /// ASCII keyword's end IS a char boundary, so the boundary inspection of
+    /// the following char is safe.
     fn consume_keyword(&mut self, kw: &str) -> bool {
-        let end = self.pos + kw.len();
-        if end > self.input.len() {
+        let rest = &self.input[self.pos..];
+        if !rest.starts_with(kw) {
             return false;
         }
-        if &self.input[self.pos..end] != kw {
-            return false;
-        }
-        if let Some(c) = self.input[end..].chars().next() {
+        if let Some(c) = rest[kw.len()..].chars().next() {
             if c.is_alphanumeric() || c == '_' {
                 return false;
             }
         }
-        self.pos = end;
+        self.pos += kw.len();
         true
     }
 
@@ -484,7 +491,19 @@ impl<'a> Parser<'a> {
         Ok(Expr::Lit(Value::Int(n)))
     }
 
+    /// Guarded like the other recursion roots (GH #52 blocker 3): the
+    /// `parse_array_literal → parse_primary → parse_array_literal` cycle never
+    /// crossed `enter()`, so nested `[[[…` bypassed `MAX_EXPR_DEPTH` and
+    /// overflowed the stack — an uncatchable SIGABRT (exit 134, no envelope)
+    /// where parens and `not` chains already yielded a bounded `ParseError`.
     fn parse_array_literal(&mut self) -> Result<Expr, ParseError> {
+        self.enter()?;
+        let r = self.parse_array_literal_inner();
+        self.leave();
+        r
+    }
+
+    fn parse_array_literal_inner(&mut self) -> Result<Expr, ParseError> {
         let start = self.pos;
         if !self.consume_str("[") {
             return Err(ParseError::new(start, "expected '['"));
@@ -589,9 +608,51 @@ mod tests {
                 .contains("maximum depth"),
             "deep not-chain must be a bounded ParseError"
         );
+        // RED GATE (GH #52 blocker 3): the ARRAY recursion root — the one the
+        // #124 guard missed. `'['`×N previously bypassed enter() entirely and
+        // overflowed the stack (uncatchable SIGABRT, exit 134, no envelope);
+        // it must be the same bounded ParseError as parens and not-chains.
+        let deep_arrays = "[".repeat(300);
+        assert!(
+            parse_expression(&deep_arrays)
+                .unwrap_err()
+                .message
+                .contains("maximum depth"),
+            "deep array nesting must be a bounded ParseError"
+        );
         // A legitimately-nested expression well under the limit still parses.
         let ok = format!("{}$self.x == 1{}", "(".repeat(20), ")".repeat(20));
         assert!(parse_expression(&ok).is_ok(), "normal nesting still parses");
+        // Nested array literals under the limit still parse (a nested array
+        // IS a literal value): the guard bounds, never breaks, the shape.
+        assert!(
+            parse_expression("[[1, 2], [3]]").is_ok(),
+            "shallow nested arrays still parse under the guard"
+        );
+    }
+
+    // RED GATE (GH #52 blocker 2): a multibyte char adjacent to a keyword
+    // probe position must yield a ParseError, never a char-boundary PANIC —
+    // `consume_keyword` previously sliced `input[pos..pos+kw.len()]` mid-char
+    // (exit 101, empty envelope, raw Rust panic on the agent's stderr).
+    #[test]
+    fn multibyte_after_expression_is_a_parse_error_not_a_panic() {
+        // The reviewer's em-dash repro: the `or`/`and`/`in` keyword probes land
+        // on '—' (3 bytes) right after the parsed expression.
+        let e = parse_expression("$self.count — required").unwrap_err();
+        assert!(
+            e.message.contains("trailing input"),
+            "em-dash typo is a diagnostic, not a panic; got {e}"
+        );
+        // The euro repro: 'o€' — starts_with(\"or\") must not slice into '€'.
+        let e = parse_expression("$a o€").unwrap_err();
+        assert!(
+            e.message.contains("trailing input"),
+            "multibyte after a keyword prefix is a diagnostic; got {e}"
+        );
+        // Controls: real keywords still consume across the fix.
+        assert!(parse_expression("$a or $b").is_ok());
+        assert!(parse_expression("$a and not $b").is_ok());
     }
 
     fn arr(values: impl IntoIterator<Item = Value>) -> Value {

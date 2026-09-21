@@ -12,7 +12,7 @@ via `openat` with `O_NOFOLLOW | O_CLOEXEC | O_DIRECTORY`, so a symlinked
 intermediate component is refused exactly like a symlinked leaf (DESIGN.md
 § Verification is fast where it is invoked; the swap-proof guarantee). Only the
 Unix implementation links libc; the non-unix fallback (documented weaker
-carve-out, #56/#64) uses std alone.
+carve-out, pending a handle-based Windows walk) uses std alone.
 
 **Alternatives considered:**
 
@@ -23,7 +23,7 @@ carve-out, #56/#64) uses std alone.
   libc surface used here is small (`openat`, a few flags, error codes) and
   keeps the unsafe block auditable and minimal.
 
-## PE supply-chain notes
+## Supply-chain notes
 
 - **Version pin:** `libc = "0.2"` under `[target.'cfg(unix)'.dependencies]`.
 - **Maintainer trust:** rust-lang; the canonical FFI bindings crate.
@@ -36,18 +36,8 @@ carve-out, #56/#64) uses std alone.
   boundary). The `unsafe` FFI calls carry SAFETY comments; misclassification
   stays fail-closed (a failed open denies access, never grants it).
 
-## SO approval
+## Approval
 
 - **Scope justification:** the openat surface is what makes confinement
   handle-decided rather than path-decided — a core security property; the dep
   is Unix-scoped and minimal.
-
-## Co-authorship attribution
-
-Per VSDD-E0100 discipline:
-
-```
-Co-authored-by: Solution Owner <so@vsdd-domains>
-Co-authored-by: Platform Engineer <pe@vsdd-domains>
-Co-authored-by: Security <security@vsdd-domains>
-```

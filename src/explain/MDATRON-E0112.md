@@ -20,7 +20,7 @@ a `- ` list item (`list-item-bold-name`) — optionally scoped to a
 config, project-root-relative and held to the confinement contract. Marker
 checking is per-route opt-in.
 
-A second shape of this finding (GH #48): the pattern **matched a line but its
+A second shape of this finding: the pattern **matched a line but its
 capture group captured no name** — an optional capture group
 (`^Provenance:( .+)?$`) that did not participate in the match. Such a line
 names nothing to resolve, which previously was a silent skip; it now reports
@@ -31,7 +31,7 @@ An **absent** target document also reports here: every reference into a missing
 target is dead. A target that is **present but unverifiable** (non-UTF8,
 opened-but-unreadable) is different — those references report
 `MDATRON-W0048` (reference-target-unverified) instead, because the check was
-skipped, not failed. One conflation is accepted residue (#103): a target whose
+skipped, not failed. One conflation is accepted residue: a target whose
 *open itself* is refused (e.g. permission denied) is indistinguishable from an
 absent one at capture time and reports as dead here — if this finding surprises
 you, check the target's permissions as well as its existence.

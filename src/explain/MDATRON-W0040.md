@@ -17,7 +17,7 @@ but a file with no block at all used to be silently identical to "not
 governed". Inside the globs you have declared must-have-frontmatter, absence is
 now a warning.
 
-The check is opt-in (#80 D2): with no `require_frontmatter` key in the config,
+The check is opt-in: with no `require_frontmatter` key in the config,
 no file warns. Files outside the declared globs never warn, whatever they
 contain.
 

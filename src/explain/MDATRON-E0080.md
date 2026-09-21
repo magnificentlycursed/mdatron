@@ -13,7 +13,7 @@ completion; no finding-level diagnostics were emitted for the project files.
 
 `E0080` is a single code spanning several failure senses. Under `--json` the
 envelope carries a structured `pipeline_error` object that names the specific
-sense so a machine consumer need not parse prose (#112):
+sense so a machine consumer need not parse prose:
 
 ```json
 "pipeline_error": { "code": "MDATRON-E0080", "kind": "config", "message": "…" }
@@ -24,7 +24,7 @@ sense so a machine consumer need not parse prose (#112):
 `frontmatter`, `index_build`, `expr_parse` (a rule expression failed to parse —
 including an over-deep expression past `MAX_EXPR_DEPTH`), `eval` (a rule
 expression), and `bound_exceeded` (a declared input resource bound — per-file or
-aggregate byte size, or structural nesting depth — was exceeded, #124). The
+aggregate byte size, or structural nesting depth — was exceeded). The
 object is present only when `pipeline_status` is `failed`, and — unlike the
 stderr `= note:` — it survives `--quiet`, so `--json --quiet` (the CI mode)
 receives the reason in-band.

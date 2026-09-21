@@ -2,8 +2,7 @@
 
 **A Rust CLI that validates markdown documents using JSON Schema (frontmatter)
 and a small Schematron-derived DSL (cross-field rules).** Descended from XML's
-Schematron (ISO/IEC 19757-3); not related to the TRON blockchain despite the
-`-tron` suffix.
+Schematron (ISO/IEC 19757-3).
 
 mdatron validates markdown documents in two layers:
 
@@ -14,9 +13,8 @@ mdatron validates markdown documents in two layers:
 - **Layer 2 — Semantic.** A small Schematron-derived DSL over cross-field,
   cross-file, and cross-document constraints. The 80% of validation value
   that JSON Schema cannot express: "the number of rows in this table matches
-  the count declared in frontmatter," "every domain listed here is registered
-  in `.vsdd/registry/`," "every link target resolves to a heading in the
-  project."
+  the count declared in frontmatter," "every owner listed here appears in the
+  team registry," "every link target resolves to a heading in the project."
 
 Where mdatron fits relative to neighbouring tooling: markdownlint enforces
 style; Vale catches prose-quality concerns; dprint and mdformat reformat;
@@ -24,6 +22,14 @@ mdatron is the only validator built around the typed-frontmatter + cross-
 document rules pattern. Errors are rustc-shaped — codes, source spans,
 `= help:` hints, `= explain:` references to per-code prose, structured JSON
 output for machine consumers.
+
+Why it matters now: when agents write and read your documents, a document
+stops being prose and becomes **cache** — derived state that everything
+downstream trusts. *Observability Engineering* (2nd ed.) frames the test for
+any such document: can you validate it where it lives? Can your coworker? Can
+an agent? mdatron is the "yes" to all three — the validation runs in CI, from
+one committed configuration, with output built for both human and machine
+readers.
 
 ## Install
 
@@ -39,7 +45,7 @@ cargo install mdatron --locked
 Pin the minor to avoid an unintended breaking upgrade in CI:
 
 ```
-cargo install mdatron --locked --version "0.5"
+cargo install mdatron --locked --version "0.6"
 ```
 
 `--locked` pins transitive dependencies to the shipped `Cargo.lock`; recommended
@@ -101,8 +107,15 @@ mdatron verify: 1 error(s), 0 warning(s) across 1 finding(s)
 ```
 
 The `= explain:` line is copyable: paste `mdatron explain MDATRON-E0050` into
-your shell to read the per-code prose. Pipeline failures (missing config,
-malformed pattern file, IO failure) print on stderr and exit 2. Two machine
+your shell to read the per-code prose — it names the fix (here: remove the
+undeclared property, or declare it in the schema). Apply it and re-run:
+`mdatron verify` → `clean`. That loop — violation, coded diagnostic, explain
+page, fix, clean — is the working rhythm, for you and equally for an agent
+reading the machine forms below. Pipeline failures (missing config,
+malformed pattern file, IO failure) print on stderr and exit 2. The exit
+contract is exactly three values: `0` clean, `1` findings at error severity,
+`2` pipeline failure — anything else (a raw panic code, a signal abort) is an
+engine defect, never a documented mode; please report it. Two machine
 forms share the same findings: `--json` emits a single output object on
 stdout, and `--compact` emits one size-capped block per finding (512 bytes,
 a contract limit) for agent-context consumers; add `--quiet` to silence the
@@ -124,6 +137,20 @@ currently `3.0.0`). The load-bearing fields for a machine consumer:
 - `findings[].code` / `.severity` / `.location`; and `findings[].quoted[]`,
   which carries adopter-derived text marked `origin: "adopter"`, `trusted: false`
   so a consumer never mistakes document content for engine output.
+- `findings[].fingerprint` — a line-churn-stable `v1:` identity for cross-run
+  trending: the same defect keeps the same fingerprint across reflows and
+  across operating systems, so a baseline or a trend line keys on it, not on
+  line numbers.
+- `envelope_schema` — the published schema's `$id`, verbatim: the exact
+  contract this envelope was produced under.
+- `inputs` — governance-input lineage: each configuration input the run
+  actually read, mapped to a `sha256:` digest of the bytes it consumed —
+  attest *which* configuration produced a verdict, and detect config drift
+  between runs.
+- `timings` — optional, only under `verify --json --timings`: per-phase
+  wall-clock (`load`/`capture`/`check`/`total`, milliseconds). Flag-gated so
+  the default envelope stays byte-identical across runs on an unchanged tree
+  (determinism is a contract property).
 
 Pin and validate against the schema at
 [`schema/mdatron-output.schema.json`](schema/mdatron-output.schema.json); a
@@ -217,7 +244,7 @@ not be in the future." That is Layer 2 territory — DSL patterns at
 
 <!-- mdatron-roundtrip:pattern-start -->
 ```yaml
-mdatron_dsl_version: 1
+mdatron_dsl_version: 1      # optional (absent = v1); unsupported versions refuse at load
 pattern:
   id: blog-validation
   rules:
@@ -251,9 +278,9 @@ governed tree:
 
 ```yaml
 routes:
-- files: "review-log/**/*.md"
+- files: "docs/adr/**/*.md"
   governed_by: DESIGN.md
-  naming: "^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9-]+\\.md$"   # optional
+  naming: "^[0-9]{4}-[a-z0-9-]+\\.md$"                   # optional
   citations: true                                        # optional, see below
   links: true                                            # optional, see below
   link_root: true                                        # optional: resolve /root-relative links (needs links)
@@ -283,10 +310,45 @@ governing document and re-pin: `mdatron pin --update` (preview with
 **heading-delimited span** — the hash covers that heading through just before
 the next heading of the same or higher level, so an edit elsewhere in the file
 doesn't trip it; a `section:` whose heading can't be found is loud (`E0063`).
-Un-pinning persists as a justified `unpinned:` tombstone that stays loud as an
-informational lint (`L0001`); an unjustified one warns (`W0042`).
+Un-pinning persists as a justified `unpinned:` tombstone — justified means it
+carries both a `reason` and an `owner` — that stays loud as an informational
+lint (`L0001`); one missing either field warns (`W0042`):
 
-**Vocabulary** (`vocabulary.yaml`) — registry-driven prose scan: unregistered
+```yaml
+unpinned:
+- governing: contract.md
+  file: plan/build-plan.md
+  reason: "plan superseded by ROADMAP.md 2026-09-01; kept for history"
+  owner: "docs-maintainers"
+```
+
+**Vocabulary** (`vocabulary.yaml`) — registry-driven prose scan. A coined term
+with a definition but no codified governance drifts until it is lost — the
+authors of *Observability Engineering* coined "observability" precisely and
+watched vendors redefine it out from under them; this family is that
+codification for your project's own terms. The registry:
+
+```yaml
+mdatron_format_version: 1
+terms:
+  - term: "governed tree"
+    status: registered        # a coined term, formally registered
+    sense: "the file set inside the declared jurisdiction"
+  - term: "spend shape"
+    status: draft             # draft terms are exempt from strict findings
+    sense: "how a review round's agent budget is declared"
+  - term: "contract"
+    status: reserved          # reserved: use outside the sense flags E0092
+    sense: "a versioned behavioral commitment, never a soft promise"
+label_schemes:
+  allow:
+    - "^C\\d+$"               # local scheme: C1, C2, ...
+anti_patterns:
+  - pattern: "very unique"
+    register: "say 'unique' — uniqueness does not grade"
+```
+
+What it flags: unregistered
 bold-introduced coinages (`E0090`, draft-status exempt), letter-plus-number
 label clusters outside your allowlist (`E0091` — structured reference-IDs
 `REQ-<n>`/`AC-<n>`/`ADR-<n>`/`RFC-<n>`/`Q<n>` are exempt by default and unioned
@@ -361,11 +423,20 @@ own every-code-resolves-in-explain: declare your code namespace and every code
 token cited in the corpus must resolve to it.
 
 ```yaml
+mdatron_format_version: 1     # required on this file (born in 0.6.0)
 catalogs:
   - namespace: "ADOPTER-"     # the ownership prefix
     comprehensive: true       # this catalog is the sole authority for the prefix
     codes: ["E0010", "W0180"] # the declared legal set (class letter + digits)
 ```
+
+Every adopter input file carries `mdatron_format_version` — the **input**
+contract's own version axis (independent of the DSL's `mdatron_dsl_version`
+and the JSON `mdatron_output_version`), so a future format change breaks
+legibly instead of mis-parsing silently. It is **required** on files born in
+0.6.0 (this one) and **optional** on `routes.yaml`/`vocabulary.yaml`/
+`pins.yaml` (absent = the v1 legacy baseline; a 0.5.0-authored file still
+parses); `pin --update` stamps it going forward.
 
 Under a `comprehensive` catalog, a cited token that isn't declared blocks
 (`E0113`, orphaned-adopter-code) — the fix for codes left dangling after a
@@ -437,52 +508,25 @@ The adoption sequence, each step optional after the first:
    that verifies itself is the intended end state (this repo's own
    `self-validate` CI job is the worked example).
 
-## Relationship to vsdd
-
-**mdatron is methodology-agnostic.** The Layer 1 + Layer 2 architecture is
-useful for any "typed markdown documents with cross-reference integrity"
-project — Architecture Decision Records, RFC collections, structured
-changelogs, methodology specs. If you're not adopting VSDD, you can stop
-reading this section here.
-
-If you *are* adopting VSDD: [vsdd](https://github.com/magnificentlycursed/vsdd-cli) is the first downstream
-adopter of mdatron and the source of the methodology vocabulary (phase
-primers, domain prompts, finding artifacts, the VSDD whitepaper alignment).
-vsdd composes mdatron in two ways:
-
-- **vsdd's `verify` subcommand spawns `mdatron verify --json`** as a
-  subprocess and parses the output object on stdout against mdatron's published
-  envelope schema (`schema/mdatron-output.schema.json`). Error-code namespaces
-  stay strictly separate: mdatron emits `MDATRON-Exxxx`, vsdd emits `VSDD-Exxxx`.
-  No proxy, no intercept.
-- **vsdd ships its own JSON Schemas and DSL patterns** that adopters deploy
-  into `.mdatron/schemas/` and `.mdatron/patterns/` via `vsdd init`. The
-  methodology is encoded as mdatron schemas + patterns; mdatron is the
-  engine, not the methodology.
-
-A generalized examples library (artifact-class schemas for non-VSDD adopters)
-is deferred to adopter evidence per the absorption ledger — see
-[`DESIGN.md`](./DESIGN.md) § References.
-
 ## Where to go next
 
 - [`DESIGN.md`](./DESIGN.md) — the standing design: behavioral contracts,
   the nine check families, output marking discipline, path confinement,
   governance-data governance
 - [`docs/dsl-reference.md`](./docs/dsl-reference.md) — the complete Layer 2
-  construct inventory with evaluation semantics; validated by a cold-context
-  authoring campaign at 100% one-pass (`dsl-falsifiability-report.md`)
+  construct inventory with evaluation semantics; held to the implementation
+  continuously by CI tripwires (the construct-inventory check and the
+  operator-semantics pins), so an engine construct absent from the reference —
+  or reference semantics the engine does not implement — fails the build
+- [`docs/faq.md`](./docs/faq.md) — prior-art comparisons, influences, and
+  frequently asked questions
+- [`docs/limits.md`](./docs/limits.md) — every declared input and enumeration
+  bound (file sizes, nesting depths, walk budgets, the concurrent-invocation
+  count), shipped as data and held to the implementation by a test
 - `mdatron explain <code>` — per-code prose for every emitted diagnostic
   (frontmatter, confinement, schema, init, jurisdiction, route, pin,
   vocabulary, and citation codes); the catalog grows by one entry per
   newly-emitted code
-- [vsdd-cli](https://github.com/magnificentlycursed/vsdd-cli) — if you are adopting VSDD, the vsdd toolkit
-  composes mdatron + ships the methodology artifacts; `vsdd init` deploys
-  both
-- [The VSDD whitepaper](
-  https://gist.github.com/dollspace-gay/d8d3bc3ecf4188df049d7a4726bb2a00) —
-  the methodology vsdd operationalizes; authored by
-  [@dollspace.gay](https://bsky.app/profile/dollspace.gay)
 
 ## License
 

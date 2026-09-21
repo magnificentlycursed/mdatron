@@ -6,7 +6,7 @@ rust-version = "1.88"
 license = "MIT"
 authors = ["magnificentlycursed"]
 repository = "https://github.com/magnificentlycursed/mdatron"
-description = "Typed-markdown validator with rustc-shaped diagnostics (descended from Schematron, not related to the TRON blockchain)"
+description = "Typed-markdown validator with rustc-shaped diagnostics (descended from Schematron)"
 keywords = ["markdown", "schema", "validation", "schematron", "linter"]
 categories = ["command-line-utilities", "development-tools"]
 readme = "README.md"
@@ -31,6 +31,9 @@ include = [
     # step asserts its presence in the payload.
     "docs/limits.md",
     "docs/dependencies/*.md",
+    # Prior-art comparisons + influences (#187): crates.io-reader material,
+    # linked from the README's docs list.
+    "docs/faq.md",
 ]
 
 # Single-crate, binary-first (#81, operator ruling 2026-07-22 executing the
@@ -75,3 +78,14 @@ pulldown-cmark = { version = "0.13.4", default-features = false }
 # std exposes no openat surface; needed for the per-component no-follow open
 # in confine (DESIGN.md § Verification is fast where it is invoked).
 libc = "0.2"
+
+[dev-dependencies]
+# proptest: the property-based parser-robustness harness (GH #52 major 1,
+# crosslink #184) — every input parser (expr, pattern YAML, frontmatter, schema
+# compile, the four loaders) is driven with hostile generated input under the
+# never-panic property, MSRV-clean on the pinned 1.88 toolchain (unlike
+# cargo-fuzz/libFuzzer, which requires nightly). default-features = false +
+# std drops the fork/timeout runners (rusty-fork, wait-timeout, tempfile) we
+# do not want: an abort inside a property must fail the harness loudly, not be
+# absorbed by a forked child. See docs/dependencies/proptest.md.
+proptest = { version = "1", default-features = false, features = ["std"] }

@@ -98,7 +98,8 @@ pub enum Expr {
     Or(Box<Expr>, Box<Expr>),
     /// `not a`
     Not(Box<Expr>),
-    /// `a in b` — element-of for arrays; substring-of for strings; key-of for objects.
+    /// `a in b` — array membership ONLY; a `Null` or non-array right side is
+    /// an evaluation error (GH #52 major 6 — matches the packaged reference).
     In(Box<Expr>, Box<Expr>),
     /// `a not_in b` — negation of `in`.
     NotIn(Box<Expr>, Box<Expr>),
@@ -472,31 +473,22 @@ fn expect_string(v: Value) -> Result<String, EvalError> {
     }
 }
 
-/// `in` semantics: needle in haystack.
-/// - Array haystack: element equality.
-/// - String haystack with string needle: substring containment.
-/// - Object haystack with string needle: key presence.
-/// - Null haystack: always false (lookup-miss-propagation).
+/// `in` semantics: ARRAY MEMBERSHIP ONLY — element equality against an array
+/// haystack; a `Null` or any non-array right side is an evaluation error.
+/// Narrowed to match the packaged reference VERBATIM (GH #52 major 6;
+/// `docs/dsl-reference.md`: "`x in coll` requires `coll` to evaluate to an
+/// array; a `Null` or non-array right side is an evaluation error — guard
+/// with `defined()` first"). The previously-implemented substring-of-string
+/// and key-of-object forms were undocumented semantic surface adopters could
+/// freeze into the contract unversioned, and the silent `Null → false` made
+/// `"x" in $self.<absent>` a vacuous rule — the silent class E0021 exists to
+/// kill (narrowed-lane doctrine: the doc IS the contract).
 fn value_in(needle: &Value, haystack: &Value) -> Result<bool, EvalError> {
     match haystack {
         Value::Array(arr) => Ok(arr.contains(needle)),
-        Value::Str(s) => match needle {
-            Value::Str(n) => Ok(s.contains(n.as_str())),
-            other => Err(EvalError::TypeMismatch {
-                expected: "string (string haystack requires string needle)",
-                got: type_name_str(other),
-            }),
-        },
-        Value::Object(o) => match needle {
-            Value::Str(n) => Ok(o.contains_key(n)),
-            other => Err(EvalError::TypeMismatch {
-                expected: "string (object haystack requires string key)",
-                got: type_name_str(other),
-            }),
-        },
-        Value::Null => Ok(false),
         other => Err(EvalError::TypeMismatch {
-            expected: "array, string, or object",
+            expected: "array (the `in`/`not_in` right side; guard a possibly-absent \
+                       field with defined() first)",
             got: type_name_str(other),
         }),
     }
@@ -731,18 +723,58 @@ mod tests {
         assert_eq!(result, Value::Bool(false));
     }
 
+    // RED GATES (GH #52 major 6): fixture pins for the packaged reference's
+    // EXACT operator semantics ("`x in coll` requires `coll` to evaluate to an
+    // array; a `Null` or non-array right side is an evaluation error"). These
+    // are the doc↔semantics drift tripwire for `in`: a re-widened haystack
+    // form fails here before it can silently re-enter the contract. Pre-fix,
+    // Null yielded a silent `false` (`"x" in $self.<absent>` was a vacuous
+    // rule) and string/object haystacks carried undocumented semantics.
     #[test]
-    fn in_with_null_haystack_returns_false() {
+    fn in_with_null_haystack_is_an_eval_error() {
         let cv = null_ctx();
-        let result = evaluate(
+        let err = evaluate(
             &Expr::In(
                 Box::new(Expr::Lit(s("x"))),
                 Box::new(Expr::Lit(Value::Null)),
             ),
             &ctx(&cv),
         )
-        .unwrap();
-        assert_eq!(result, Value::Bool(false));
+        .unwrap_err();
+        assert!(
+            format!("{err}").contains("array"),
+            "Null right side is an eval error naming the required type; got {err}"
+        );
+    }
+
+    #[test]
+    fn in_with_string_haystack_is_an_eval_error() {
+        // The undocumented substring form is GONE: strings are not haystacks.
+        let cv = null_ctx();
+        let err = evaluate(
+            &Expr::In(
+                Box::new(Expr::Lit(s("ell"))),
+                Box::new(Expr::Lit(s("hello"))),
+            ),
+            &ctx(&cv),
+        )
+        .unwrap_err();
+        assert!(format!("{err}").contains("array"), "got {err}");
+    }
+
+    #[test]
+    fn in_with_object_haystack_is_an_eval_error() {
+        // The undocumented key-of form is GONE: objects are not haystacks.
+        let cv = null_ctx();
+        let err = evaluate(
+            &Expr::In(
+                Box::new(Expr::Lit(s("k"))),
+                Box::new(Expr::Lit(obj([("k", s("v"))]))),
+            ),
+            &ctx(&cv),
+        )
+        .unwrap_err();
+        assert!(format!("{err}").contains("array"), "got {err}");
     }
 
     #[test]

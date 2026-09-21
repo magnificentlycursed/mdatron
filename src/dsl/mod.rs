@@ -6,7 +6,10 @@
 //! `difference`, `concat`, `join`), arithmetic and comparison, `let:` bindings,
 //! `{{expr}}` message interpolation, and the path-confined cross-file `key()` index
 //! (`index`). Scope is cross-file and registry validation; body-content extraction
-//! is out of scope (see the DSL falsifiability report and V1-SHIP-CRITERIA).
+//! is out of scope (a ratified narrowing; expansion is gated on a falsifiability
+//! run meeting the 80% one-pass bar). The packaged `docs/dsl-reference.md` is
+//! held to this implementation continuously by CI tripwires — the
+//! construct-inventory check and the operator-semantics pins.
 //!
 //! See DESIGN.md § Cross-file semantics stay narrowed for the implemented surface (the canonical construct inventory).
 

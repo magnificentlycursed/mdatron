@@ -381,6 +381,7 @@ fn marker_finding(
         },
         explain_ref: Some(code.to_string()),
         quoted: vec![QuotedRegion {
+            platform_variant: false,
             label: label.into(),
             content: quoted.into(),
         }],

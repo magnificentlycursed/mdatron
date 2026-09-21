@@ -443,6 +443,71 @@ fn explain_accepts_short_code_and_lists_catalog() {
     );
 }
 
+// #180 (the CLI discovery trio): `explain --list --json` used to silently
+// ignore the --json flag — the same silent-no-op class the --timings gate
+// closed. It now emits the catalog as a JSON array of {code, summary}, and
+// `--list --compact` emits the per-code compact lines.
+#[test]
+fn explain_list_honors_json_and_compact() {
+    let out = run(&["explain", "--list", "--json"]);
+    assert_eq!(out.status.code(), Some(0));
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let arr: serde_json::Value =
+        serde_json::from_str(&stdout).expect("--list --json emits parseable JSON");
+    let entries = arr.as_array().expect("a JSON array");
+    assert!(entries.len() > 10, "the array enumerates the catalog");
+    assert!(
+        entries.iter().all(|e| e
+            .get("code")
+            .is_some_and(|c| c.as_str().is_some_and(|s| s.starts_with("MDATRON-")))
+            && e.get("summary").is_some()),
+        "every entry carries code + summary: {stdout}"
+    );
+
+    let out = run(&["explain", "--list", "--compact"]);
+    assert_eq!(out.status.code(), Some(0));
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        stdout.lines().count() > 10 && stdout.contains("MDATRON-E0050"),
+        "--list --compact emits one compact line per code: {stdout}"
+    );
+}
+
+// #180 (the CLI discovery trio): `mdatron docs` prints the bundled reference
+// files verbatim, so a binary-only install reads them with no checkout.
+#[test]
+fn docs_subcommand_prints_bundled_references() {
+    let out = run(&["docs"]);
+    assert_eq!(out.status.code(), Some(0));
+    assert!(
+        String::from_utf8_lossy(&out.stdout).contains("# mdatron DSL reference"),
+        "default topic is the DSL reference"
+    );
+
+    let out = run(&["docs", "limits"]);
+    assert_eq!(out.status.code(), Some(0));
+    assert!(
+        String::from_utf8_lossy(&out.stdout)
+            .to_lowercase()
+            .contains("limit"),
+        "the limits table prints"
+    );
+
+    let out = run(&["docs", "faq"]);
+    assert_eq!(out.status.code(), Some(0));
+    assert!(
+        String::from_utf8_lossy(&out.stdout).contains("# FAQ"),
+        "the FAQ prints"
+    );
+
+    let out = run(&["docs", "nonsense"]);
+    assert_ne!(
+        out.status.code(),
+        Some(0),
+        "an unknown topic is a loud usage error, never a silent default"
+    );
+}
+
 // #117 (vsdd item, W4): `--json` without `-q` used to emit the machine envelope
 // on stdout AND re-render every finding as human TTY text on stderr — a ~1.7x
 // token cost for an agent capturing both streams, and fully redundant with the
@@ -979,7 +1044,7 @@ fn readme_exists_at_repo_root() {
 }
 
 #[test]
-fn readme_contains_seven_required_topic_headings() {
+fn readme_contains_the_required_topic_headings() {
     let readme = readme_text();
     // Filter to markdown heading lines (start with '#') before substring-matching.
     // Per crosslink #13 QE/F1: the prior substring-anywhere match would have
@@ -990,12 +1055,15 @@ fn readme_contains_seven_required_topic_headings() {
         .filter(|l| l.trim_start().starts_with('#'))
         .map(|l| l.to_lowercase())
         .collect();
+    // The "Relationship to vsdd" heading was retired 2026-09-21 (operator
+    // deletion-test ruling: the section answered a question no crates.io
+    // reader has; its reusable payload — the subprocess composition pattern —
+    // moved to the FAQ). The remaining five are the shipped-reader map.
     let required_topics = [
         ("Install", "install"),
         ("First run", "first run"),
         ("Schema example (Layer 1)", "schema"),
         ("Pattern example (Layer 2)", "pattern"),
-        ("Relationship to vsdd", "vsdd"),
         ("Where to go next", "next"),
     ];
     for (name, fragment) in required_topics {
@@ -1009,36 +1077,33 @@ fn readme_contains_seven_required_topic_headings() {
 }
 
 #[test]
-fn readme_contains_tron_disambiguation_sentence() {
+fn readme_states_the_schematron_lineage_up_front() {
+    // Operator ruling 2026-09-20: the TRON-blockchain disambiguation is
+    // retired from all prose (this test's predecessor pinned it). What stays
+    // pinned is the affirmative half: the Schematron lineage appears in the
+    // README's opening section — it is the name's actual story and the
+    // prior-art posture the FAQ builds on.
     let readme = readme_text();
-    let lower = readme.to_lowercase();
-    assert!(
-        lower.contains("tron"),
-        "mdatron/README.md must contain the TRON-blockchain disambiguation \
-         (TW-F3); got readme without 'tron' substring"
-    );
-    // The discipline per DESIGN.md § Summary (the disambiguation discipline) is the first README sentence
-    // states this explicitly — assert the disambiguation appears in the
-    // first ~30 lines (section 1 region).
     let head: String = readme.lines().take(30).collect::<Vec<_>>().join("\n");
-    let head_lower = head.to_lowercase();
     assert!(
-        head_lower.contains("tron")
-            && (head_lower.contains("schematron") || head_lower.contains("blockchain")),
-        "mdatron/README.md section 1 must disambiguate from TRON blockchain \
-         (cite Schematron lineage OR explicitly mention the blockchain); \
+        head.to_lowercase().contains("schematron"),
+        "mdatron/README.md section 1 must state the Schematron lineage; \
          got section 1: {head}"
     );
 }
 
 #[test]
-fn readme_cites_cargo_install_path_for_bootstrap_period() {
+fn readme_cites_the_crates_io_install_path() {
+    // The bootstrap-period predecessor of this test mandated the
+    // `cargo install --path` checkout text — and kept mandating it after
+    // 0.5.0 published to crates.io, a test ENFORCING stale content (the
+    // #187 deletion-test audit's find; GH #52 major 7 confirmed the class).
+    // The current contract: the primary install path is crates.io.
     let readme = readme_text();
     assert!(
-        readme.contains("cargo install --path"),
-        "mdatron/README.md install section must cite `cargo install --path ...` \
-         for the bootstrap period (Phase 6 of the binary-first plan switches \
-         to crates.io); got readme without the bootstrap install command"
+        readme.contains("cargo install mdatron --locked"),
+        "mdatron/README.md install section must lead with the crates.io \
+         install command; got readme without `cargo install mdatron --locked`"
     );
 }
 

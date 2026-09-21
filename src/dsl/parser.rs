@@ -32,7 +32,7 @@ pattern:
       message: "phase must be phase-1a"
 "#;
         let pf = parse_pattern_file(yaml).expect("minimal pattern parses");
-        assert_eq!(pf.mdatron_dsl_version, 1);
+        assert_eq!(pf.mdatron_dsl_version, Some(1));
         assert_eq!(pf.pattern.id, "my-pattern");
         assert_eq!(pf.pattern.rules.len(), 1);
         let rule = &pf.pattern.rules[0];
@@ -40,6 +40,83 @@ pattern:
         assert_eq!(rule.code, "TEST-E0001");
         assert!(matches!(&rule.context, ContextSelector::Bare(s) if s == "phase-primer"));
         assert!(rule.let_bindings.is_empty());
+    }
+
+    /// Wrap one `context:` value in a minimal pattern file.
+    fn pattern_with_context(context_yaml: &str) -> String {
+        format!(
+            "mdatron_dsl_version: 1\npattern:\n  id: p\n  rules:\n    - id: r\n      \
+             context: {context_yaml}\n      assert: \"true\"\n      code: T-E0001\n      \
+             message: m\n"
+        )
+    }
+
+    // RED GATE (GH #52 lane-B review B1): the untagged Combined arm accepted
+    // ANY mapping as `{None, None}` — a typo'd key INSIDE `context:` silently
+    // rewrote the rule's scope to match-everything (verified pre-fix:
+    // `schema_clas:` fired on every governed file, `paht:` dropped the path
+    // confinement, `{}` matched everything). Each construction now refuses
+    // loudly, naming the unknown or empty field.
+    #[test]
+    fn context_mapping_typos_and_empty_refuse_loudly() {
+        let cases = [
+            (
+                "typo-schema_class",
+                "{ schema_clas: notblog }",
+                "schema_clas",
+            ),
+            (
+                "typo-path",
+                "{ schema_class: blog, paht: \"docs/**\" }",
+                "paht",
+            ),
+            ("empty", "{}", "empty context"),
+        ];
+        for (label, context, expect) in cases {
+            let err = parse_pattern_file(&pattern_with_context(context))
+                .expect_err("a malformed context mapping must refuse");
+            let msg = format!("{err}");
+            assert!(
+                msg.contains(expect),
+                "{label}: the refusal names the defect ({expect}); got {msg}"
+            );
+        }
+    }
+
+    // CONTROL MATRIX (B1): every valid context form still parses to the same
+    // selector it always did — the strictness closes the typo hole without
+    // narrowing the legal surface.
+    #[test]
+    fn valid_context_forms_still_parse() {
+        let bare = parse_pattern_file(&pattern_with_context("phase-primer")).unwrap();
+        assert!(matches!(
+            &bare.pattern.rules[0].context,
+            ContextSelector::Bare(s) if s == "phase-primer"
+        ));
+        let glob = parse_pattern_file(&pattern_with_context("\"docs/**/*.md\"")).unwrap();
+        assert!(
+            matches!(&glob.pattern.rules[0].context, ContextSelector::Bare(s) if s == "docs/**/*.md")
+        );
+        let class_only =
+            parse_pattern_file(&pattern_with_context("{ schema_class: blog }")).unwrap();
+        assert!(matches!(
+            &class_only.pattern.rules[0].context,
+            ContextSelector::Combined { schema_class: Some(c), path: None } if c == "blog"
+        ));
+        let path_only = parse_pattern_file(&pattern_with_context("{ path: \"docs/**\" }")).unwrap();
+        assert!(matches!(
+            &path_only.pattern.rules[0].context,
+            ContextSelector::Combined { schema_class: None, path: Some(p) } if p == "docs/**"
+        ));
+        let combined = parse_pattern_file(&pattern_with_context(
+            "{ schema_class: blog, path: \"docs/**\" }",
+        ))
+        .unwrap();
+        assert!(matches!(
+            &combined.pattern.rules[0].context,
+            ContextSelector::Combined { schema_class: Some(c), path: Some(p) }
+                if c == "blog" && p == "docs/**"
+        ));
     }
 
     #[test]

@@ -68,6 +68,56 @@ pub(crate) fn check_input_format_version(
     }
 }
 
+/// The highest DSL version this engine understands (`mdatron_dsl_version`,
+/// the DSL's own axis — distinct from the input-format axis above).
+pub(crate) const SUPPORTED_DSL_VERSION: u32 = 1;
+
+/// A lenient probe reading ONLY `mdatron_dsl_version` (the DSL twin of
+/// [`FormatProbe`]): pattern files are `deny_unknown_fields` (GH #52 major 4),
+/// so an unknown-future sibling would fail the strict parse atomically and
+/// the version could never surface — the probe runs first.
+#[derive(Debug, Deserialize)]
+struct DslProbe {
+    #[serde(default)]
+    mdatron_dsl_version: Option<u32>,
+}
+
+/// Probe a pattern file for its declared `mdatron_dsl_version` and check it
+/// against the engine's supported range (GH #52 major 3 — the field was read
+/// but never validated: a v99 pattern ran silently as v1, the one format
+/// whose version axis was inert against the DEF5 legible-break goal).
+/// Absent = the v1 legacy baseline (pattern files predate 0.6.0, consistent
+/// with `routes.yaml`/`vocabulary.yaml`/`pins.yaml`); `0` and any
+/// greater-than-supported value refuse loudly, mirroring
+/// [`check_input_format_version`]'s message shape.
+pub(crate) fn check_dsl_version(content: &str, file: &str) -> Result<(), Error> {
+    // Lane-B review B3: a probe deserialize failure DEFERS to the strict
+    // parse that always runs next, rather than misattributing a plain YAML
+    // syntax error as a version-read failure ("cannot read
+    // mdatron_dsl_version from …"). The probe is strictly more lenient than
+    // the strict parse, so probe-fail ⇒ strict-fail: nothing passes silently,
+    // and every error carries the canonical parse attribution — a syntax
+    // error reports as the pattern-file parse error, and a wrong-typed
+    // version field reports field-precisely from the strict parse. `file`
+    // stays in the signature for the version-refusal messages below.
+    let Ok(probe) = serde_yaml_ng::from_str::<DslProbe>(content) else {
+        return Ok(());
+    };
+    match probe.mdatron_dsl_version {
+        // Absent: the v1 legacy baseline (pre-0.6.0-authored pattern files).
+        None => Ok(()),
+        Some(0) => Err(Error::Config(format!(
+            "'{file}' declares mdatron_dsl_version 0; DSL versions start at 1"
+        ))),
+        Some(v) if v > SUPPORTED_DSL_VERSION => Err(Error::Config(format!(
+            "'{file}' declares mdatron_dsl_version {v}, but this mdatron supports up to \
+             {SUPPORTED_DSL_VERSION} — upgrade mdatron, or use a pattern file written for \
+             v{SUPPORTED_DSL_VERSION}"
+        ))),
+        Some(_) => Ok(()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

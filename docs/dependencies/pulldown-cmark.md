@@ -1,12 +1,12 @@
 # pulldown-cmark
 
-**Status:** Approved. Adopted for the link-check family (#155, vsdd GH#28 — the lychee reference-arch review).
+**Status:** Approved. Adopted for the link-check family, 2026-08-02, after a comparative architecture review against lychee (the mature Rust link checker).
 
 **Pinned version:** `^0.13.4` (resolves to 0.13.4) with `default-features = false` — the default `getopts`/`html` features exist only for the crate's bundled `pulldown-cmark` example binary (an arg-parsing CLI) and its HTML renderer, neither of which the link family builds. Dropping them removes three crates from the tree (`getopts`, `unicode-width`, `pulldown-cmark-escape`) and leaves the full event-parser API (`Parser`, `Event`, `Tag`, `TagEnd`, `LinkType`) intact — those types live in `lib.rs` unconditionally; only the `html` rendering module is feature-gated.
 
 ## Why this dependency
 
-The link-check family (#155) has to recognise CommonMark link constructs to find and resolve link targets — and getting this right requires a real CommonMark event stream, not a scanner:
+The link-check family has to recognise CommonMark link constructs to find and resolve link targets — and getting this right requires a real CommonMark event stream, not a scanner:
 
 - **Reference-style links** `[text][ref]` and their separate `[ref]: url` definitions — a two-part construct a regex line-scanner cannot correctly pair.
 - **Image links** `![alt](src)` and reference images `![alt][ref]`.
@@ -20,7 +20,7 @@ Markdown is a declared **trust boundary** in this project. DESIGN.md's threat mo
 - **`markdown-rs` (a.k.a. `markdown` 1.x):** a capable pure-Rust CommonMark/MDX parser with an AST API. Reasonable, but less battle-tested at scale than pulldown-cmark and oriented toward AST/MDX construction rather than a minimal-allocation event stream. pulldown-cmark's streaming pull model (an `Iterator` of events, minimal allocation and copying) is a better fit for a linear pass that only harvests link/image tags, and its 127M-download install base makes it the lower-risk supply-chain choice.
 - **Hand-rolled scanning (regex/byte scanner):** rejected. To correctly mask code spans/fences, pair reference definitions, and handle escapes and nested brackets, a scanner has to re-derive a CommonMark parser — badly. That re-derivation *is* the false-negative source this dependency exists to eliminate, and it would be its own falsifiability burden (every CommonMark edge case becomes a bespoke test we own). Note the project already refuses this pattern elsewhere (regex-lite's record rejects a bespoke matcher dialect for the same reason).
 
-## PE supply-chain notes
+## Supply-chain notes
 
 - **Version pin discipline:** `pulldown-cmark = { version = "0.13.4", default-features = false }` → resolves to 0.13.4 (latest stable, published 2026-05-20; 55 published versions, active release cadence). `default-features = false` is the deliberate minimal-surface choice (see the pin note above).
 - **Maintainer trust:** the `pulldown-cmark` GitHub org (`github.com/raphlinus/pulldown-cmark`). Original author **Raph Levien** (`raphlinus`); since 2023 driven by Martín Pozo, Michael Howell, Roope Salmi, and Martin Geisler. crates.io owners: `raphlinus`, `marcusklaas`, `Martin1887`. A community org (not corporate-owned), and one of the most-depended-upon text-processing crates in the ecosystem: **127.7M all-time downloads, ~38.5M recent** — it is the CommonMark engine behind mdBook, docs.rs / rustdoc, and much of the Rust documentation toolchain.
@@ -47,17 +47,7 @@ Markdown is a declared **trust boundary** in this project. DESIGN.md's threat mo
   - It is nonetheless designed for linear-ish throughput (it is the parser chosen precisely for large-document toolchains like mdBook/docs.rs, and avoids the naive-CommonMark superlinear blowups). Combined with mdatron's existing per-file byte bound (`MAX_FILE_BYTES`) and aggregate-snapshot bound, a bounded input is a bounded parse — there is no unbounded-work surface introduced.
   - Adopting a hardened, CommonMark-conformant parser *is* the trust-boundary hardening the DESIGN "parsers are a trust boundary" designation asks for: it retires bespoke markdown scanning (whose edge-case gaps are silent-false-negative security/correctness bugs) in favour of the ecosystem-standard grammar implementation.
 
-## SO approval
+## Approval
 
-- **Operator-attribution:** the operator ratified adopting `pulldown-cmark` for #155 (vsdd GH#28 — the lychee reference-arch review) on **2026-08-02**.
+- **Operator-attribution:** the project operator ratified adopting `pulldown-cmark` for the link-check family on **2026-08-02**, following the comparative review against lychee.
 - **Scope justification:** one streaming parser, adopted `default-features = false` (2 new crates, both permissively licensed and already-audited-clean), retiring the accreting hand-rolled markdown scanners in the link-check family. Proportionate: it replaces bespoke parsing whose false-negative surface is a correctness *and* trust-boundary liability with the ecosystem-standard CommonMark engine.
-
-## Co-authorship attribution
-
-Per VSDD-E0100 discipline:
-
-```
-Co-authored-by: Solution Owner <so@vsdd-domains>
-Co-authored-by: Platform Engineer <pe@vsdd-domains>
-Co-authored-by: Security <security@vsdd-domains>
-```

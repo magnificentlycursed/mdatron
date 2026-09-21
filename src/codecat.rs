@@ -74,6 +74,9 @@ pub struct CodeCatalog {
 pub struct LoadedCatalogs {
     pub catalogs: Vec<CodeCatalog>,
     pub findings: Vec<Finding>,
+    /// sha256 (lowercase hex) of the exact `code-catalogs.yaml` bytes `load`
+    /// read (#176, the envelope's input lineage).
+    pub digest: String,
 }
 
 /// Load `.mdatron/code-catalogs.yaml`. `Ok(None)` when absent (family inactive);
@@ -140,6 +143,7 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedCatalogs>, Error> {
     Ok(Some(LoadedCatalogs {
         catalogs,
         findings: Vec::new(),
+        digest: crate::init::sha256_hex(content.as_bytes()),
     }))
 }
 
@@ -260,6 +264,7 @@ fn orphan_finding(path: &Path, content: &str, offset: usize, token: &str) -> Fin
         },
         explain_ref: Some("MDATRON-E0113".into()),
         quoted: vec![QuotedRegion {
+            platform_variant: false,
             label: "code".into(),
             content: token.into(),
         }],

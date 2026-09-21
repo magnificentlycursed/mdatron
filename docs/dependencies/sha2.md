@@ -6,7 +6,8 @@
 
 ## Why this dependency
 
-Provides `Sha256` for the `mdatron init` managed-partition manifest (#74). The
+Provides `Sha256` for the `mdatron init` managed-partition manifest (adopted
+with the managed-manifest work, 2026-07). The
 manifest records each engine-deployed managed file with its sha256 content hash;
 on re-run, `init` recomputes and compares to detect drift (`MDATRON-E0060`).
 
@@ -26,7 +27,7 @@ required.
 - Hand-rolled sha256: rejected — writing a cryptographic primitive by hand is
   exactly the kind of thing that should be a vetted, audited dependency.
 
-## PE supply-chain notes
+## Supply-chain notes
 
 - **Version pin discipline:** workspace-level `sha2 = "0.10"`; resolves to
   0.10.9.
@@ -52,7 +53,7 @@ required.
   implementation with runtime CPU-feature detection (`cpufeatures`); no C
   toolchain dependency.
 
-## SO approval
+## Approval
 
 - **Operator-attribution:** Solution Owner confirms sha256 content hashing is
   foundational for the init managed-partition governance contract; reusing the
@@ -60,13 +61,3 @@ required.
   scope-minimal choice.
 - **Scope justification:** one hash function for drift detection; `sha2` is the
   minimal, idiomatic RustCrypto crate for it. Dep cost is proportionate.
-
-## Co-authorship attribution
-
-Per VSDD-E0100 discipline:
-
-```
-Co-authored-by: Solution Owner <so@vsdd-domains>
-Co-authored-by: Platform Engineer <pe@vsdd-domains>
-Co-authored-by: Security <security@vsdd-domains>
-```

@@ -24,7 +24,7 @@ This is the project-level companion to `MDATRON-W0045` (a per-file unrouted
 exists so they never double-report the same file:
 
 - The directory is **present** (empty or populated) and a file declares a class
-  nothing serves → **W0045**, per file (since #111 this fires even when the
+  nothing serves → **W0045**, per file (this fires even when the
   directory — and `patterns/` — is empty; the declaration is itself the request
   that went unserved).
 - The directory is **missing** entirely → **W0047**, once at the project level,

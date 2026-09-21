@@ -14,18 +14,43 @@ name: CI
 
 on:
   push:
-    # main plus the working-branch namespaces; crosslink/** tracker branches
-    # (hub, knowledge, agents, ...) are intentionally excluded — they carry no
-    # buildable source.
-    branches: [main, "feature/**", "chore/**", "docs/**"]
+    # main + release/** + tags (#178 as amended by GH #52 major 5): #178 cut
+    # push-CI to main only so a working branch under PR gets exactly ONE run
+    # (pull_request) instead of a push+PR pair cancelling each other in the
+    # same concurrency group (stranding required contexts as CANCELLED —
+    # Ch18's "retries are a tail-latency tax", live). That rationale is
+    # unchanged — but it accidentally left the RELEASE surface with no CI at
+    # all: a release/** push triggered nothing, and no tag re-ran the
+    # gauntlet on the tagged tree, so the blocking self-verify release gate
+    # physically could not fire where releases are cut. Push-CI verifies
+    # merges to main and release/** plus tags; PRs (to main or release/**
+    # bases, B4) get their one pull_request run. A branch that wants CI
+    # before its PR exists opens a draft PR. crosslink/** tracker branches
+    # stay excluded — no buildable source.
+    branches: [main, "release/**"]
+    tags: ["v*"]
   pull_request:
-    branches: [main]
+    # main + release/** BASES (lane-B review B4): a PR targeting a release
+    # branch gets CI like any other PR — and still exactly ONE run, since the
+    # push trigger does not cover PR head branches.
+    branches: [main, "release/**"]
+  # Manual dispatch runs the whole gauntlet PLUS the deep parser-robustness
+  # profile (GH #52 major 1 — the on-demand deep-fuzz surface; the per-PR run
+  # is a bounded, seeded smoke).
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  # The group is discriminated by EVENT (GH #52 lane-B review B6): the release
+  # back-merge PR (head release/X, base main) is the one place a push-covered
+  # ref is also a PR head — without event_name both runs share a group and
+  # cancel each other, stranding required contexts as CANCELLED (the same
+  # pathology the main-only push narrowing fixed for feature branches,
+  # relocated onto the release lane). One duplicate run in that rare overlap
+  # is the accepted cost.
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 env:
@@ -83,6 +108,44 @@ jobs:
       - name: Test
         run: cargo test --workspace --locked --verbose
 
+  # Parser-robustness gate (GH #52 major 1, crosslink #184): the input parsers
+  # are a declared trust boundary, and blockers 2/3 (a parser panic and a
+  # parser abort) reached a green RC because no CI job fed them malformed
+  # input. This job drives every input parser with hostile generated input
+  # (proptest, MSRV-clean on 1.88 — no nightly anywhere) under the never-panic
+  # property, plus deterministic revert-detector seeds for the fixed classes.
+  # BOUNDED per PR: a pinned RNG seed + 1024 cases (about ten seconds). The
+  # deep profile runs only on manual workflow_dispatch — and deepens the pure
+  # parser properties only: the file-backed loader property pins its own
+  # tighter case count, which overrides the env (deliberate; lane-C C8). NOT
+  # in the required-check set (operator decision, parked).
+  parser-robustness:
+    name: Parser robustness (bounded property fuzz)
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install Rust toolchain (pinned to the project MSRV)
+        uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master
+        with:
+          toolchain: "1.88"
+
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+
+      - name: Bounded property fuzz (seeded, deterministic)
+        env:
+          PROPTEST_CASES: "1024"
+          PROPTEST_RNG_SEED: "20260919"
+        run: cargo test --locked --test parser_robustness
+
+      - name: Deep property fuzz (on-demand only)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          PROPTEST_CASES: "16384"
+        run: cargo test --locked --test parser_robustness
+
   audit:
     name: Security audit (cargo-audit + cargo-deny)
     needs: lint
@@ -116,11 +179,13 @@ jobs:
         run: cargo deny check bans licenses sources
 
   self-validate:
-    # The self-hosting gate (#46): mdatron verifies its OWN typed-markdown
-    # corpus (review-log/*.md) against its OWN committed .mdatron/ config,
-    # using the mdatron built from this very checkout. A schema violation in
-    # any review-log entry fails the build — the blocking release gate. This
-    # is what let the throwaway bootstrap-validator be retired.
+    # The self-hosting gate (#46, retargeted by #187 part 2): mdatron verifies
+    # its OWN LIVING corpus — the shipped docs/ tree and the README, with the
+    # link family on — against its OWN committed .mdatron/ config, using the
+    # mdatron built from this very checkout. A dead link, dead anchor, route
+    # violation, or vocabulary finding in the living documentation fails the
+    # build — the blocking release gate, now watching the corpus that actually
+    # changes rather than the frozen review archive.
     name: Self-validation (mdatron verify on this repo)
     needs: lint
     runs-on: ubuntu-latest
@@ -173,7 +238,7 @@ jobs:
       - name: Managed partition intact (init is a no-op, not drift)
         run: cargo run -q -p mdatron --locked -- init --project-root .
 
-      # The gate: every review-log entry must satisfy schemas/review-entry.json.
+      # The gate: the living corpus (docs/** + README) verifies clean.
       # --deny-warnings: the gate takes its own documented escalation (GH #48
       # lane-G review) — a warnings-only run (e.g. W0048, a reference check
       # skipped over an unverifiable target) must fail this gate, not pass it.
@@ -184,7 +249,7 @@ jobs:
     # Publish rehearsal (#123, roast SHO3): green code-CI says nothing about what
     # the crate ARTIFACT contains. This job proves the package is publishable AND
     # that the include-allowlist holds — the internal apparatus (.claude/,
-    # .crosslink/ incl. a committed key, review-log/, .vsdd/, .mdatron/) must NOT
+    # .crosslink/ incl. a committed key, .vsdd/, .mdatron/) must NOT
     # ship. Without this gate, the LICENSE + 221-file-bloat blockers were invisible.
     name: Package rehearsal (cargo publish --dry-run + payload allowlist)
     needs: lint
@@ -209,7 +274,7 @@ jobs:
           # docs/limits.md is hard-required by a SHIPPED test (limits::docs_limits_table_matches_shipped);
           # without it, `cargo test` from the published crate fails (GH #48 lane E).
           echo "$files" | grep -qx 'docs/limits.md' || { echo '::error::docs/limits.md missing from package payload — a shipped test reads it'; exit 1; }
-          if echo "$files" | grep -Eq '^(\.claude/|\.crosslink/|review-log/|\.vsdd/|\.mdatron/|REPLACE$|BOOTSTRAP-|dsl-falsifiability)'; then
+          if echo "$files" | grep -Eq '^(\.claude/|\.crosslink/|\.vsdd/|\.mdatron/|REPLACE$|BOOTSTRAP-|dsl-falsifiability)'; then
             echo '::error::internal apparatus leaked into the crate payload — tighten Cargo.toml include'
             exit 1
           fi

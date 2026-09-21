@@ -12,7 +12,7 @@ declarations like:
 ```yaml
 keys:
   - name: domain-prompts
-    source: .claude/commands/vsdd-domain-*.md
+    source: docs/registry/*.yaml
     select: $.frontmatter
     indexed_by: $.domain_slug
 ```
@@ -27,7 +27,7 @@ expands the pattern into a list of matching file paths under the project root.
   stream; our use case is the inverse (expand one glob to its matching files)
 - Hand-rolled: rejected — globs with `**` recursion are subtle; standard impl is safer
 
-## PE supply-chain notes
+## Supply-chain notes
 
 - Workspace dep: `glob = "0.3"`; resolves to 0.3.x
 - Maintainer: rust-lang-nursery; effectively part of the Rust ecosystem governance
@@ -44,5 +44,5 @@ expands the pattern into a list of matching file paths under the project root.
 
 ## Attribution
 
-Single-agent claude-opus-4-7 investigation per the attribution-honesty discipline
-(vsdd-cli crosslink issue #6).
+Single-author investigation; no ceremonial co-author trailers — this
+record is the actual investigation.

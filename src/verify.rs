@@ -51,6 +51,10 @@ pub struct VerifyConfig {
     /// Globs whose matching files the vocabulary family scans (#97). Empty
     /// falls back to every walked file (prior behavior).
     pub vocabulary_globs: Vec<String>,
+    /// sha256 (lowercase hex) of the `.mdatron/config.yaml` bytes
+    /// `from_project` read (#176, the envelope's input lineage). `None` for an
+    /// ad-hoc `--files`/`new` config, which reads no config file.
+    pub config_digest: Option<String>,
 }
 
 impl VerifyConfig {
@@ -64,6 +68,7 @@ impl VerifyConfig {
             file_globs: vec!["**/*.md".to_string()],
             require_frontmatter: Vec::new(),
             vocabulary_globs: Vec::new(),
+            config_digest: None,
         }
     }
 
@@ -111,6 +116,7 @@ impl VerifyConfig {
         cfg.file_globs = pc.file_globs;
         cfg.require_frontmatter = pc.require_frontmatter;
         cfg.vocabulary_globs = pc.vocabulary_globs;
+        cfg.config_digest = Some(pc.digest);
         Ok(cfg)
     }
 }
@@ -266,6 +272,22 @@ pub struct VerifyReport {
     /// happened to produce findings (#105). A clean run over N files reports N;
     /// an empty jurisdiction reports 0.
     pub files_checked: u32,
+    /// Run-phase wall-clock timings (#175) — always measured (four `Instant`
+    /// reads); the CLI emits them into the envelope only under `--timings`, so
+    /// the default envelope stays deterministic.
+    pub timings: crate::output::Timings,
+    /// Governance-input lineage (#176): the inputs this run consumed, each
+    /// mapped to a `sha256:<lowercase-hex>` digest of the bytes it read.
+    pub inputs: BTreeMap<String, String>,
+}
+
+/// The run-level metadata `run_inner` collects alongside its findings (#175/
+/// #176): phase timings and the input-lineage digests. Owned by the wrapper so
+/// direct-drive test call sites of [`run`] stay untouched.
+#[derive(Default)]
+struct RunMeta {
+    timings: crate::output::Timings,
+    inputs: BTreeMap<String, String>,
 }
 
 /// A completed incremental run (#102): the report plus the observable
@@ -299,11 +321,14 @@ pub fn verify(config: &VerifyConfig) -> Result<Vec<Finding>, VerifyError> {
 /// when its data was supplied and it ran this pass — independent of whether it
 /// produced findings.
 pub fn verify_report(config: &VerifyConfig) -> Result<VerifyReport, VerifyError> {
-    let (findings, families, _visited, files_checked) = run(config, None, None)?;
+    let mut meta = RunMeta::default();
+    let (findings, families, _visited, files_checked) = run_inner(config, None, None, &mut meta)?;
     Ok(VerifyReport {
         findings,
         families,
         files_checked,
+        timings: meta.timings,
+        inputs: meta.inputs,
     })
 }
 
@@ -316,15 +341,36 @@ pub fn verify_incremental(
     config: &VerifyConfig,
     changed: &Path,
 ) -> Result<IncrementalReport, VerifyError> {
-    let (findings, families, visited, files_checked) = run(config, Some(changed), None)?;
+    let mut meta = RunMeta::default();
+    let (findings, families, visited, files_checked) =
+        run_inner(config, Some(changed), None, &mut meta)?;
     Ok(IncrementalReport {
         report: VerifyReport {
             findings,
             families,
             files_checked,
+            timings: meta.timings,
+            inputs: meta.inputs,
         },
         visited,
     })
+}
+
+/// [`run_inner`] with the run metadata discarded — the direct-drive test
+/// surface (seam callbacks, family probes) that predates #175/#176 and does
+/// not consult timings or input lineage.
+#[cfg(test)]
+fn run(
+    config: &VerifyConfig,
+    changed: Option<&Path>,
+    on_capture_complete: Option<&dyn Fn()>,
+) -> RunResult {
+    run_inner(
+        config,
+        changed,
+        on_capture_complete,
+        &mut RunMeta::default(),
+    )
 }
 
 /// The verification pipeline. `changed == None` runs whole-tree; `Some(path)`
@@ -332,11 +378,22 @@ pub fn verify_incremental(
 /// only the findings located in that scope, so the result equals the whole-tree
 /// result filtered to the scope. A `.mdatron/` change forces whole-tree.
 /// Returns `(findings, families, visited)`; `visited` is `None` for whole-tree.
-fn run(
+/// `meta` collects the run's phase timings (#175, `Instant`s at the natural
+/// phase boundaries: load → capture at the governed walk, capture → check at
+/// the capture-complete seam) and the input-lineage digests (#176).
+fn run_inner(
     config: &VerifyConfig,
     changed: Option<&Path>,
     on_capture_complete: Option<&dyn Fn()>,
+    meta: &mut RunMeta,
 ) -> RunResult {
+    let t_run = std::time::Instant::now();
+    // #176 input lineage: the config digest was captured when from_project
+    // read the file (ad-hoc --files configs read none).
+    if let Some(d) = &config.config_digest {
+        meta.inputs
+            .insert("config.yaml".into(), format!("sha256:{d}"));
+    }
     // BC-4 pipeline-fail detection: refuse to proceed when neither schemas nor patterns
     // directories exist. A project without either has nothing to validate against; this
     // is a configuration error, not a clean run with zero findings.
@@ -352,8 +409,16 @@ fn run(
     // surfaced as W0047 on a whole-tree pass. A present-but-empty dir is a
     // deliberate opt-out, not drift, so only true absence is flagged.
     let schemas_dir_missing = !config.schemas_dir.is_dir();
-    let schemas = load_schemas(&config.schemas_dir)?;
-    let (patterns, rule_locations) = load_patterns(&config.patterns_dir)?;
+    let (schemas, schemas_digest) = load_schemas(&config.schemas_dir)?;
+    let (patterns, rule_locations, patterns_digest) = load_patterns(&config.patterns_dir)?;
+    // #176 input lineage: one aggregate digest per input directory (sorted
+    // names + per-file content digests), keyed only when the dir held files.
+    if let Some(d) = schemas_digest {
+        meta.inputs.insert("schemas".into(), format!("sha256:{d}"));
+    }
+    if let Some(d) = patterns_digest {
+        meta.inputs.insert("patterns".into(), format!("sha256:{d}"));
+    }
 
     // Canonicalize the project root so globs joined against it produce absolute
     // patterns. This avoids cwd ambiguity when callers pass a relative root.
@@ -459,6 +524,24 @@ fn run(
         Ok(c) => c,
         Err(e) => return Err(VerifyError::Config(e.to_string())),
     };
+    // #176 input lineage: each present-and-read governance file's digest, from
+    // the very bytes its loader read (absent inputs carry no key).
+    if let Some(r) = &routes {
+        meta.inputs
+            .insert("routes.yaml".into(), format!("sha256:{}", r.digest));
+    }
+    if let Some(p) = &pin_data {
+        meta.inputs
+            .insert("pins.yaml".into(), format!("sha256:{}", p.digest));
+    }
+    if let Some(v) = &vocab {
+        meta.inputs
+            .insert("vocabulary.yaml".into(), format!("sha256:{}", v.digest));
+    }
+    if let Some(c) = &catalogs {
+        meta.inputs
+            .insert("code-catalogs.yaml".into(), format!("sha256:{}", c.digest));
+    }
     // Capture data-presence per family BEFORE the Options are consumed (#90);
     // the tri-state families object (#107) is built after the walk, since
     // vocabulary's `inert` state needs the scope-hit count.
@@ -491,7 +574,10 @@ fn run(
     // before any document is walked (Cedar's validate-before-deploy posture).
     // Each rule's `$self.<field>` references are checked against the frontmatter
     // schema its context binds; a path naming an undeclared property under a
-    // closed object hard-gates as E0021. Conservative by construction — see
+    // closed object hard-gates as E0021, and an expression that does not PARSE
+    // is a load-time ExprParse pipeline error (GH #52 blocker 2 blast radius —
+    // no longer deferred to eval time, where a rule with no matching document
+    // shipped it silently). Conservative by construction — see
     // `validate_rule_field_refs`.
     validate_rule_field_refs(
         &config.patterns_dir,
@@ -499,7 +585,7 @@ fn run(
         &schemas,
         &rule_locations,
         &mut findings,
-    );
+    )?;
 
     // Keep the pins for after the scope filter: a pin finding locates at
     // pins.yaml but is ABOUT the pinned file, so incremental includes it by the
@@ -535,6 +621,10 @@ fn run(
     // rather than walking fewer files than the adopter declared, silently. The
     // dead-glob test is per disk match, not per newly-inserted file — a glob that
     // only re-matches an already-collected file is redundant, not dead.
+    // Phase boundary (#175): loading ends here; the governed walk + snapshot
+    // build (the capture phase) begins.
+    meta.timings.load_ms = t_run.elapsed().as_millis() as u64;
+    let t_capture = std::time::Instant::now();
     let mut governed: Vec<(PathBuf, PathBuf)> = Vec::new();
     let mut seen: BTreeSet<PathBuf> = BTreeSet::new();
     let mut dead_globs: Vec<String> = Vec::new();
@@ -614,6 +704,7 @@ fn run(
                     },
                     explain_ref: Some(code.into()),
                     quoted: vec![QuotedRegion {
+                        platform_variant: false,
                         label: "escaping-path".into(),
                         content: rel.to_string_lossy().into_owned(),
                     }],
@@ -661,6 +752,7 @@ fn run(
                     },
                     explain_ref: Some("MDATRON-E0012".into()),
                     quoted: vec![QuotedRegion {
+                        platform_variant: false,
                         label: "component".into(),
                         content: component,
                     }],
@@ -871,6 +963,9 @@ fn run(
         }
     }
 
+    // Phase boundary (#175): capture ends at the seam (measured BEFORE the
+    // test callback below, so a parked seam never inflates capture time).
+    meta.timings.capture_ms = t_capture.elapsed().as_millis() as u64;
     // Capture-complete seam (#103): the snapshot is sealed — every input this
     // run will consult is captured, and a later capture is an engine error,
     // not a silent filesystem reopen. A test injects a mutation here to prove
@@ -879,6 +974,9 @@ fn run(
     if let Some(cb) = on_capture_complete {
         cb();
     }
+    // Phase (#175): the per-file loop + cross-file checks, through the end of
+    // the run (sorting/relativization included).
+    let t_check = std::time::Instant::now();
 
     // #98: track whether a scoped register matched any walked file. Whole-tree
     // only — W0043 is `.mdatron/`-located (never in an incremental scope) and
@@ -1021,6 +1119,7 @@ fn run(
                 },
                 explain_ref: Some("MDATRON-W0046".into()),
                 quoted: vec![QuotedRegion {
+                    platform_variant: false,
                     label: "glob".into(),
                     content: pattern.clone(),
                 }],
@@ -1058,6 +1157,7 @@ fn run(
                 },
                 explain_ref: Some("MDATRON-W0051".into()),
                 quoted: vec![QuotedRegion {
+                    platform_variant: false,
                     label: "glob".into(),
                     content: pat.as_str().to_string(),
                 }],
@@ -1241,6 +1341,9 @@ fn run(
             .cmp(&b.location.file)
             .then_with(|| a.code.cmp(&b.code))
     });
+    // Phase close (#175).
+    meta.timings.check_ms = t_check.elapsed().as_millis() as u64;
+    meta.timings.total_ms = t_run.elapsed().as_millis() as u64;
     Ok((findings, families, scope, files_checked))
 }
 
@@ -1307,6 +1410,7 @@ fn unreadable_body_finding(path: &Path, cause: &str) -> Finding {
         },
         explain_ref: Some("MDATRON-E0003".into()),
         quoted: vec![QuotedRegion {
+            platform_variant: true,
             label: "cause".into(),
             content: cause.into(),
         }],
@@ -1350,14 +1454,17 @@ fn index_source_degraded_finding(project_root: &Path, d: &crate::dsl::DegradedSo
         explain_ref: Some("MDATRON-W0049".into()),
         quoted: vec![
             QuotedRegion {
+                platform_variant: false,
                 label: "index".into(),
                 content: d.key_name.clone(),
             },
             QuotedRegion {
+                platform_variant: false,
                 label: "source".into(),
                 content: d.source_display.clone(),
             },
             QuotedRegion {
+                platform_variant: true,
                 label: "reason".into(),
                 content: d.reason.clone(),
             },
@@ -1434,10 +1541,15 @@ fn confine_and_compile_globs(globs: &[String], field: &str) -> Result<FileScope,
 
 // ── Schema + pattern loading ───────────────────────────────────────────────────
 
-fn load_schemas(dir: &Path) -> Result<BTreeMap<String, Schema>, VerifyError> {
+/// Load the schemas directory. Also returns the #176 aggregate lineage digest
+/// — sha256 over the sorted relative filenames and each file's content digest
+/// (`Some` only when at least one schema file was read; deterministic across
+/// platforms — sorted names, no path separators inside a flat dir).
+fn load_schemas(dir: &Path) -> Result<(BTreeMap<String, Schema>, Option<String>), VerifyError> {
     let mut out = BTreeMap::new();
+    let mut digests: Vec<(String, String)> = Vec::new();
     if !dir.is_dir() {
-        return Ok(out);
+        return Ok((out, None));
     }
     for entry in std::fs::read_dir(dir).map_err(|e| VerifyError::Io {
         path: dir.to_string_lossy().into_owned(),
@@ -1472,9 +1584,38 @@ fn load_schemas(dir: &Path) -> Result<BTreeMap<String, Schema>, VerifyError> {
             path: path.to_string_lossy().into_owned(),
             error: e.to_string(),
         })?;
+        let name = path
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        digests.push((name, crate::init::sha256_hex(content.as_bytes())));
         out.insert(schema_class, schema);
     }
-    Ok(out)
+    Ok((out, aggregate_digest(digests)))
+}
+
+/// The #176 aggregate digest of one input directory: each `(relative filename,
+/// content sha256)` pair, sorted by filename, folded as `"{name}\0{sha}\0"`
+/// into one sha256. `None` when the directory held no files (absent/empty dirs
+/// omit their lineage key). The framing byte is NUL — illegal in filenames on
+/// every platform — so a crafted filename cannot smuggle a frame boundary and
+/// make one file fold identically to two (cold-review R2: `\n` IS a legal unix
+/// filename byte, so `"a.json\n<sha>\nb.json"` collided with the honest
+/// two-file pair). Filenames in these flat dirs also carry no path
+/// separators, so the forward-slash requirement is trivially met.
+fn aggregate_digest(mut entries: Vec<(String, String)>) -> Option<String> {
+    if entries.is_empty() {
+        return None;
+    }
+    entries.sort();
+    let mut acc = String::new();
+    for (name, sha) in &entries {
+        acc.push_str(name);
+        acc.push('\0');
+        acc.push_str(sha);
+        acc.push('\0');
+    }
+    Some(crate::init::sha256_hex(acc.as_bytes()))
 }
 
 /// Per-rule source locations, parallel to the `Vec<PatternFile>` returned
@@ -1494,11 +1635,14 @@ fn load_schemas(dir: &Path) -> Result<BTreeMap<String, Schema>, VerifyError> {
 /// pinpoint it.
 type RuleLocations = Vec<Vec<Location>>;
 
-fn load_patterns(dir: &Path) -> Result<(Vec<PatternFile>, RuleLocations), VerifyError> {
+fn load_patterns(
+    dir: &Path,
+) -> Result<(Vec<PatternFile>, RuleLocations, Option<String>), VerifyError> {
     let mut out = Vec::new();
     let mut locations: RuleLocations = Vec::new();
+    let mut digests: Vec<(String, String)> = Vec::new();
     if !dir.is_dir() {
-        return Ok((out, locations));
+        return Ok((out, locations, None));
     }
     for entry in std::fs::read_dir(dir).map_err(|e| VerifyError::Io {
         path: dir.to_string_lossy().into_owned(),
@@ -1517,14 +1661,35 @@ fn load_patterns(dir: &Path) -> Result<(Vec<PatternFile>, RuleLocations), Verify
             path: path.to_string_lossy().into_owned(),
             error: e.to_string(),
         })?;
+        // GH #52 major 3 (DEF5 for the DSL axis): the lenient version probe
+        // runs BEFORE the strict deny-unknown-fields parse, so an
+        // unknown-future-version pattern file breaks legibly ("declares v99,
+        // supports v1"), never as an opaque unknown-sibling serde error — and
+        // a v0/v99 file no longer runs silently as v1.
+        crate::format_version::check_dsl_version(
+            &content,
+            &path
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_else(|| path.to_string_lossy().into_owned()),
+        )
+        .map_err(|e| VerifyError::PatternLoad {
+            path: path.to_string_lossy().into_owned(),
+            error: e.to_string(),
+        })?;
         let pf = parse_pattern_file(&content).map_err(|e| VerifyError::PatternLoad {
             path: path.to_string_lossy().into_owned(),
             error: e.to_string(),
         })?;
         locations.push(resolve_file_rule_locations(&content, &path, &pf));
+        let name = path
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        digests.push((name, crate::init::sha256_hex(content.as_bytes())));
         out.push(pf);
     }
-    Ok((out, locations))
+    Ok((out, locations, aggregate_digest(digests)))
 }
 
 /// Resolve one [`Location`] per rule in `pf`, positionally aligned to
@@ -1684,7 +1849,7 @@ fn validate_rule_field_refs(
     schemas: &BTreeMap<String, Schema>,
     rule_locations: &RuleLocations,
     findings: &mut Vec<Finding>,
-) {
+) -> Result<(), VerifyError> {
     // `rule_locations` is parallel to `patterns` (one inner vec per file, one
     // entry per rule position), so a rule's span is resolved by its file AND its
     // index — never by a globally-colliding (pattern_id, rule_id) key (#118).
@@ -1694,6 +1859,39 @@ fn validate_rule_field_refs(
         .zip(rule_locations.iter().chain(std::iter::repeat(&empty)))
     {
         for (rule_idx, rule) in pf.pattern.rules.iter().enumerate() {
+            // Every expression the rule evaluates: each let-binding value in
+            // order, then the assertion itself.
+            let sources = rule
+                .let_bindings
+                .iter()
+                .map(|(name, v)| (format!("let.{name}"), v.as_str()))
+                .chain(std::iter::once((
+                    "assert".to_string(),
+                    rule.assert.as_str(),
+                )));
+            // GH #52 blocker 2 (the #156 blast radius) + lane-A review A1:
+            // EVERY rule's expressions are parse-validated here, loudly,
+            // BEFORE the schema-class guard — parsing needs no schema, and a
+            // path-glob-context rule (which the guard skips) with an
+            // unparseable expression previously shipped silently whenever its
+            // glob matched no file. The refusal is the same ExprParse the eval
+            // path raises, just at load (Cedar's validate-before-deploy) —
+            // and before the char-boundary fix, this very call PANICKED on a
+            // multibyte typo (exit 101, empty envelope) instead of erroring.
+            let mut exprs = Vec::new();
+            for (field, src) in sources {
+                let expr = parse_expression(src).map_err(|e| VerifyError::ExprParse {
+                    pattern_id: pf.pattern.id.clone(),
+                    rule_id: rule.id.clone(),
+                    field,
+                    error: e.message,
+                })?;
+                exprs.push(expr);
+            }
+            // The schema-dependent checks stay behind the guard: a path-glob
+            // context binds $self to whatever the matched files route to (not
+            // knowable at load), so field-ref and comparison validation would
+            // be unsound there.
             let Some(schema_class) = context_schema_class(&rule.context) else {
                 continue;
             };
@@ -1703,30 +1901,11 @@ fn validate_rule_field_refs(
             // The precise source span of this rule in its own pattern file (#118),
             // resolved once and shared by every finding the rule produces.
             let location = rule_location(rule_locs, rule_idx, patterns_dir);
-            // Every expression the rule evaluates: each let-binding value in
-            // order, then the assertion itself.
-            let sources = rule
-                .let_bindings
-                .iter()
-                .map(|(_, v)| v.as_str())
-                .chain(std::iter::once(rule.assert.as_str()));
             let mut paths: Vec<Vec<String>> = Vec::new();
-            for src in sources {
-                // A parse failure here is not a field typo; the same parse runs
-                // at eval time and surfaces as `ExprParse` against a matching
-                // document. Skip it rather than double-reporting.
-                if let Ok(expr) = parse_expression(src) {
-                    collect_self_paths(&expr, &mut paths);
-                    // #156: Cedar-style comparison type-check + dead-clause.
-                    check_rule_comparisons(
-                        &expr,
-                        schema,
-                        &location,
-                        &pf.pattern.id,
-                        rule,
-                        findings,
-                    );
-                }
+            for expr in &exprs {
+                collect_self_paths(expr, &mut paths);
+                // #156: Cedar-style comparison type-check + dead-clause.
+                check_rule_comparisons(expr, schema, &location, &pf.pattern.id, rule, findings);
             }
             paths.sort();
             paths.dedup();
@@ -1743,6 +1922,7 @@ fn validate_rule_field_refs(
             }
         }
     }
+    Ok(())
 }
 
 /// The schema_class a rule's context statically binds `$self` to: a bare
@@ -2042,18 +2222,22 @@ fn comparison_type_finding(
         explain_ref: Some("MDATRON-E0022".to_string()),
         quoted: vec![
             QuotedRegion {
+                platform_variant: false,
                 label: "pattern".into(),
                 content: pattern_id.into(),
             },
             QuotedRegion {
+                platform_variant: false,
                 label: "rule".into(),
                 content: rule.id.clone(),
             },
             QuotedRegion {
+                platform_variant: false,
                 label: "left".into(),
                 content: left.0.into(),
             },
             QuotedRegion {
+                platform_variant: false,
                 label: "right".into(),
                 content: right.0.into(),
             },
@@ -2086,18 +2270,22 @@ fn dead_clause_finding(
         explain_ref: Some("MDATRON-W0050".to_string()),
         quoted: vec![
             QuotedRegion {
+                platform_variant: false,
                 label: "pattern".into(),
                 content: pattern_id.into(),
             },
             QuotedRegion {
+                platform_variant: false,
                 label: "rule".into(),
                 content: rule.id.clone(),
             },
             QuotedRegion {
+                platform_variant: false,
                 label: "field".into(),
                 content: field.into(),
             },
             QuotedRegion {
+                platform_variant: false,
                 label: "literal".into(),
                 content: literal.into(),
             },
@@ -2134,22 +2322,27 @@ fn field_ref_finding(
         explain_ref: Some("MDATRON-E0021".to_string()),
         quoted: vec![
             QuotedRegion {
+                platform_variant: false,
                 label: "pattern".into(),
                 content: pattern_id.into(),
             },
             QuotedRegion {
+                platform_variant: false,
                 label: "rule".into(),
                 content: rule.id.clone(),
             },
             QuotedRegion {
+                platform_variant: false,
                 label: "reference".into(),
                 content: dotted,
             },
             QuotedRegion {
+                platform_variant: false,
                 label: "undeclared property".into(),
                 content: path.last().cloned().unwrap_or_default(),
             },
             QuotedRegion {
+                platform_variant: false,
                 label: "schema".into(),
                 content: schema_class.to_string(),
             },
@@ -2215,6 +2408,7 @@ fn verify_file(
                 },
                 explain_ref: Some("MDATRON-E0001".into()),
                 quoted: vec![QuotedRegion {
+                    platform_variant: false,
                     label: "parse error".into(),
                     content: e.to_string(),
                 }],
@@ -2455,6 +2649,7 @@ fn verify_file(
                 },
                 explain_ref: Some("MDATRON-W0045".into()),
                 quoted: vec![QuotedRegion {
+                    platform_variant: false,
                     label: "schema_class".into(),
                     content: schema_class.clone(),
                 }],
@@ -2632,6 +2827,7 @@ fn interpolate_message(
                 out.push_str(&label);
                 out.push(']');
                 quoted.push(QuotedRegion {
+                    platform_variant: false,
                     label,
                     content: format_value(&value),
                 });
@@ -2740,6 +2936,310 @@ mod tests {
             findings.is_empty(),
             "expected no findings; got {findings:?}"
         );
+    }
+
+    // RED GATE (#176 cold-review R2): the aggregate lineage fold is framed by
+    // NUL (illegal in filenames on every platform), so a crafted filename
+    // cannot smuggle a frame boundary. Under the old `\n` framing, ONE file
+    // named `"a.json\n{sha_a}\nb.json"` folded byte-identically to the honest
+    // two-file directory `a.json` + `b.json` — the same inputs digest for
+    // different configuration. Pure-function drive; no filesystem needed.
+    #[test]
+    fn aggregate_digest_framing_resists_crafted_filenames() {
+        let sha_a = crate::init::sha256_hex(b"CA");
+        let sha_b = crate::init::sha256_hex(b"CB");
+        let honest = aggregate_digest(vec![
+            ("a.json".to_string(), sha_a.clone()),
+            ("b.json".to_string(), sha_b.clone()),
+        ]);
+        let crafted = aggregate_digest(vec![(format!("a.json\n{sha_a}\nb.json"), sha_b)]);
+        assert_ne!(
+            honest, crafted,
+            "a newline-smuggling filename must not fold identically to two \
+             honest files"
+        );
+    }
+
+    // RED GATE (GH #52 blocker 1 + major 2): a schema declaring ANY
+    // non-2020-12 `$schema` dialect is refused loudly at load
+    // (MDATRON-E0040, a schema-load pipeline error → exit 2) — pre-fix, a
+    // draft-07 schema compiled clean to a validator that enforced NOTHING:
+    // enum + additionalProperties violations passed silently, exit 0.
+    #[test]
+    fn non_2020_12_schema_dialects_are_refused_at_load() {
+        let dialects = [
+            ("d07", "http://json-schema.org/draft-07/schema#"),
+            ("d06", "http://json-schema.org/draft-06/schema#"),
+            ("d04", "http://json-schema.org/draft-04/schema#"),
+            ("d2019", "https://json-schema.org/draft/2019-09/schema"),
+            ("dunknown", "https://example.com/my-own-dialect/schema"),
+        ];
+        for (label, uri) in dialects {
+            let proj = TempProject::new(&format!("dialect-{label}"));
+            proj.write(
+                ".mdatron/schemas/doc.json",
+                &format!(
+                    r#"{{"$schema":"{uri}","type":"object","properties":{{"schema_class":{{"const":"doc"}},"name":{{"enum":["a","b"]}}}},"additionalProperties":false}}"#
+                ),
+            );
+            // The reviewer's repro shape: a document VIOLATING enum +
+            // additionalProperties — it must never silently pass.
+            proj.write("doc.md", "---\nschema_class: doc\nname: zzz\n---\n");
+            let err = format!("{}", verify(&VerifyConfig::new(&proj.0)).unwrap_err());
+            assert!(
+                err.contains("MDATRON-E0040") && err.contains(uri) && err.contains("2020-12"),
+                "{label}: the refusal names the code, the found dialect, and \
+                 the supported one; got {err}"
+            );
+        }
+    }
+
+    // CONTROL (GH #52 major 2): the supported dialect — declared with or
+    // without the trailing `#`, or absent entirely — still ENFORCES: the
+    // violating document fires E0050, proving the refusal never traded
+    // fail-open for enforce-nothing-under-a-new-name.
+    #[test]
+    fn supported_dialect_and_absent_schema_still_enforce() {
+        let cases = [
+            (
+                "declared",
+                r#""$schema":"https://json-schema.org/draft/2020-12/schema","#,
+            ),
+            (
+                "declared-hash",
+                r#""$schema":"https://json-schema.org/draft/2020-12/schema#","#,
+            ),
+            ("absent", ""),
+        ];
+        for (label, dollar_schema) in cases {
+            let proj = TempProject::new(&format!("dialect-ok-{label}"));
+            proj.write(
+                ".mdatron/schemas/doc.json",
+                &format!(
+                    r#"{{{dollar_schema}"type":"object","properties":{{"schema_class":{{"const":"doc"}},"name":{{"enum":["a","b"]}}}},"additionalProperties":false}}"#
+                ),
+            );
+            proj.write("doc.md", "---\nschema_class: doc\nname: zzz\n---\n");
+            let findings = verify(&VerifyConfig::new(&proj.0)).unwrap();
+            assert!(
+                findings.iter().any(|f| f.code == "MDATRON-E0050"),
+                "{label}: the 2020-12 path still enforces (E0050 fires); got {findings:?}"
+            );
+        }
+    }
+
+    // RED GATE (GH #52 blocker 2, the #156 load-time blast radius): a pattern
+    // whose `assert:` carries a multibyte typo (an em-dash) previously
+    // PANICKED at load on a char-boundary slice — exit 101, raw Rust panic on
+    // stderr, empty envelope — even when the only document in the tree does
+    // NOT match the rule's context (#156 parses every rule expression at
+    // load, before any document is walked). It must be the loud expression
+    // parse diagnostic instead.
+    #[test]
+    fn multibyte_assert_typo_is_a_load_diagnostic_not_a_panic() {
+        let proj = TempProject::new("emdash-assert");
+        proj.write(
+            ".mdatron/schemas/doc.json",
+            r#"{"type":"object","properties":{"schema_class":{"const":"doc"}}}"#,
+        );
+        proj.write(
+            ".mdatron/patterns/p.yaml",
+            "mdatron_dsl_version: 1\npattern:\n  id: p\n  rules:\n    - id: r\n      \
+             context: doc\n      assert: \"$self.count — required\"\n      \
+             code: T-E0001\n      message: m\n",
+        );
+        // A NON-matching document — the blast radius the roast confirmed.
+        proj.write("doc.md", "---\nschema_class: other\n---\n");
+        let err = format!("{}", verify(&VerifyConfig::new(&proj.0)).unwrap_err());
+        assert!(
+            err.contains("parse error"),
+            "a bounded parse diagnostic, never a panic; got {err}"
+        );
+    }
+
+    // RED GATE (GH #52 lane-A cold review A1): parse validation reaches
+    // PATH-GLOB-context rules too. The schema-class guard skips glob contexts
+    // (their $self binding is unknowable at load — sound for field-ref
+    // checks), but the original blocker-2 fix parsed only guarded rules, so a
+    // glob-context rule with an unparseable expression shipped SILENTLY
+    // whenever its glob matched no file (exit 0, zero findings — e.g. a rule
+    // targeting docs/adr/** in a repo with no ADRs yet). Parsing needs no
+    // schema; it now runs for every rule before the guard.
+    #[test]
+    fn glob_context_rule_with_unparseable_expression_refuses_at_load() {
+        let proj = TempProject::new("glob-emdash-assert");
+        proj.write(
+            ".mdatron/schemas/doc.json",
+            r#"{"type":"object","properties":{"schema_class":{"const":"doc"}}}"#,
+        );
+        proj.write(
+            ".mdatron/patterns/p.yaml",
+            "mdatron_dsl_version: 1\npattern:\n  id: p\n  rules:\n    - id: r\n      \
+             context: \"docs/adr/**\"\n      assert: \"$self.count — required\"\n      \
+             code: T-E0001\n      message: m\n",
+        );
+        // NO file matches the glob — the exact silent window A1 demonstrated.
+        proj.write("doc.md", "---\nschema_class: doc\n---\n");
+        let err = format!("{}", verify(&VerifyConfig::new(&proj.0)).unwrap_err());
+        assert!(
+            err.contains("parse error"),
+            "an unparseable glob-context rule must refuse at load even with \
+             no matching file; got {err}"
+        );
+        // Control: a well-formed glob-context rule with no matching file is
+        // NOT an error — the fix validates syntax, not reach.
+        let ok = TempProject::new("glob-ok-assert");
+        ok.write(
+            ".mdatron/schemas/doc.json",
+            r#"{"type":"object","properties":{"schema_class":{"const":"doc"}}}"#,
+        );
+        ok.write(
+            ".mdatron/patterns/p.yaml",
+            "mdatron_dsl_version: 1\npattern:\n  id: p\n  rules:\n    - id: r\n      \
+             context: \"docs/adr/**\"\n      assert: \"defined($self.count)\"\n      \
+             code: T-E0001\n      message: m\n",
+        );
+        ok.write("doc.md", "---\nschema_class: doc\n---\n");
+        let findings = verify(&VerifyConfig::new(&ok.0)).unwrap();
+        assert!(
+            findings.is_empty(),
+            "a parseable glob-context rule with no matching file stays clean; got {findings:?}"
+        );
+    }
+
+    /// A minimal pattern project for the DSL-loader gates (GH #52 majors 3+4):
+    /// `header` replaces the version line, `extra_rule_lines` append inside the
+    /// rule mapping.
+    fn dsl_gate_project(label: &str, pattern_yaml: &str) -> TempProject {
+        let proj = TempProject::new(label);
+        proj.write(".mdatron/schemas/.keep.json", "{}");
+        proj.write(".mdatron/patterns/p.yaml", pattern_yaml);
+        proj.write("doc.md", "---\nfoo: bar\n---\n");
+        proj
+    }
+
+    const DSL_GATE_BODY: &str = "pattern:\n  id: p\n  rules:\n    - id: r\n      \
+                                 context: \"**/*.md\"\n      assert: \"false\"\n      \
+                                 code: T-E0001\n      message: m\n";
+
+    // RED GATE (GH #52 major 3): `mdatron_dsl_version` is now VALIDATED —
+    // previously 0, 1, and 99 all ran identically (the one format whose
+    // version field was inert against the DEF5 legible-break goal). Version 1
+    // and ABSENT (the v1 legacy baseline, like routes/vocab/pins) both load;
+    // 0 and 99 refuse loudly naming the found and supported versions.
+    #[test]
+    fn dsl_version_is_gated_like_the_other_input_formats() {
+        // v1 and absent both load: the rule fires (assert false).
+        for (label, header) in [("v1", "mdatron_dsl_version: 1\n"), ("absent", "")] {
+            let proj = dsl_gate_project(
+                &format!("dslver-{label}"),
+                &format!("{header}{DSL_GATE_BODY}"),
+            );
+            let findings = verify(&VerifyConfig::new(&proj.0)).unwrap();
+            assert!(
+                findings.iter().any(|f| f.code == "T-E0001"),
+                "{label}: the pattern loads and its rule fires; got {findings:?}"
+            );
+        }
+        // 0 and 99 refuse loudly, as a legible envelope surface (a pattern_load
+        // pipeline error naming both versions), never a bare serde error.
+        for (label, header, expect) in [
+            ("v0", "mdatron_dsl_version: 0\n", "start at 1"),
+            ("v99", "mdatron_dsl_version: 99\n", "supports up to 1"),
+        ] {
+            let proj = dsl_gate_project(
+                &format!("dslver-{label}"),
+                &format!("{header}{DSL_GATE_BODY}"),
+            );
+            let err = format!("{}", verify(&VerifyConfig::new(&proj.0)).unwrap_err());
+            assert!(
+                err.contains("mdatron_dsl_version") && err.contains(expect),
+                "{label}: a legible version refusal; got {err}"
+            );
+        }
+        // The DEF5 legible-break property: a FUTURE file with an unknown
+        // sibling still reports the VERSION (the lenient probe runs before
+        // the strict deny-unknown-fields parse), not an opaque serde error.
+        let proj = dsl_gate_project(
+            "dslver-future",
+            &format!("mdatron_dsl_version: 99\nfuture_top_level_thing: x\n{DSL_GATE_BODY}"),
+        );
+        let err = format!("{}", verify(&VerifyConfig::new(&proj.0)).unwrap_err());
+        assert!(
+            err.contains("supports up to 1"),
+            "the version surfaces ahead of the unknown sibling; got {err}"
+        );
+    }
+
+    // RED GATE (GH #52 lane-B review B3): a plain YAML-SYNTAX error in a
+    // pattern file reports as the pattern-file parse error, never
+    // misattributed as a version-read failure — the lenient version probe
+    // defers its own deserialize failures to the strict parse that always
+    // runs next.
+    #[test]
+    fn broken_pattern_yaml_reports_as_a_parse_error_not_a_version_error() {
+        let proj = dsl_gate_project("dslver-broken-yaml", "pattern: [unclosed\n");
+        let err = format!("{}", verify(&VerifyConfig::new(&proj.0)).unwrap_err());
+        assert!(
+            err.contains("pattern load error"),
+            "the canonical parse attribution; got {err}"
+        );
+        assert!(
+            !err.contains("mdatron_dsl_version"),
+            "a syntax error is not a version-read failure; got {err}"
+        );
+    }
+
+    // RED GATE (GH #52 major 4): the DSL structs are `deny_unknown_fields`
+    // like the five sibling input formats — a typo'd key at ANY level (file,
+    // pattern, rule, key decl, location) refuses loudly instead of being
+    // silently dropped (`locaton:` used to silently drop a rule's
+    // finding-location override).
+    #[test]
+    fn unknown_pattern_keys_refuse_at_every_level() {
+        let cases: [(&str, String); 5] = [
+            (
+                "file",
+                format!("mdatron_dsl_version: 1\nbogus_top: x\n{DSL_GATE_BODY}"),
+            ),
+            (
+                "pattern",
+                "mdatron_dsl_version: 1\npattern:\n  id: p\n  bogus_pattern: x\n  rules:\n    \
+                 - id: r\n      context: \"**/*.md\"\n      assert: \"false\"\n      \
+                 code: T-E0001\n      message: m\n"
+                    .into(),
+            ),
+            (
+                "rule",
+                "mdatron_dsl_version: 1\npattern:\n  id: p\n  rules:\n    - id: r\n      \
+                 context: \"**/*.md\"\n      assert: \"false\"\n      code: T-E0001\n      \
+                 message: m\n      locaton:\n        field: f\n"
+                    .into(),
+            ),
+            (
+                "keydecl",
+                "mdatron_dsl_version: 1\npattern:\n  id: p\n  keys:\n    - name: k\n      \
+                 source: r.yaml\n      select: $\n      indexed_by: $key\n      bogus_key: x\n  \
+                 rules:\n    - id: r\n      context: \"**/*.md\"\n      assert: \"false\"\n      \
+                 code: T-E0001\n      message: m\n"
+                    .into(),
+            ),
+            (
+                "location",
+                "mdatron_dsl_version: 1\npattern:\n  id: p\n  rules:\n    - id: r\n      \
+                 context: \"**/*.md\"\n      assert: \"false\"\n      code: T-E0001\n      \
+                 message: m\n      location:\n        feild: f\n"
+                    .into(),
+            ),
+        ];
+        for (label, yaml) in cases {
+            let proj = dsl_gate_project(&format!("denyuk-{label}"), &yaml);
+            let err = format!("{}", verify(&VerifyConfig::new(&proj.0)).unwrap_err());
+            assert!(
+                err.contains("unknown field"),
+                "{label}: an unknown key refuses loudly; got {err}"
+            );
+        }
     }
 
     // RED GATE (#77, consumer raise 3): config.yaml `file_globs` are the
