@@ -3620,11 +3620,12 @@
       "uuid": "81ede3c0-97f1-43d6-b336-5018865cf29a",
       "display_id": 179,
       "title": "docs: README/DESIGN positioning from the Ch32 thesis (documents become cache; the guardrail framing; the can-an-agent-validate-it test)",
-      "status": "open",
+      "status": "closed",
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-09-19T22:06:59.731270Z",
-      "updated_at": "2026-09-19T22:19:13.222807Z",
+      "updated_at": "2026-09-21T22:24:42.674623Z",
+      "closed_at": "2026-09-21T22:24:42.674614Z",
       "labels": [
         "enhancement"
       ],
@@ -8362,8 +8363,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-21T22:24:36.659557Z",
+    "timestamp": "2026-09-21T22:24:42.674623Z",
     "agent_id": "79Ig",
-    "agent_seq": 1066
+    "agent_seq": 1067
   }
 }
