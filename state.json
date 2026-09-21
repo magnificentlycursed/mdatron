@@ -293,11 +293,12 @@
       "uuid": "03beb708-b15d-4522-950e-3fdaa3a3d16b",
       "display_id": 196,
       "title": "hook-config allowlist frozen at a stale default set: crosslink quick/session commands piped to tail/head fail the every-subcommand rule and the block message prescribes the blocked remedy (no honest path) — sync allowed_bash_prefixes to the hook's current DEFAULT_ALLOWED_BASH",
-      "status": "open",
+      "status": "closed",
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-09-21T22:14:10.847607Z",
-      "updated_at": "2026-09-21T22:15:00.901668Z",
+      "updated_at": "2026-09-21T22:15:07.927607Z",
+      "closed_at": "2026-09-21T22:15:07.927598Z",
       "labels": [
         "bug"
       ],
@@ -8365,8 +8366,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-21T22:15:00.901668Z",
+    "timestamp": "2026-09-21T22:15:07.927607Z",
     "agent_id": "79Ig",
-    "agent_seq": 1059
+    "agent_seq": 1060
   }
 }
