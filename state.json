@@ -1,5 +1,5 @@
 {
-  "next_display_id": 195,
+  "next_display_id": 196,
   "next_comment_id": 533,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -168,6 +168,7 @@
     "df97fa67-a0e9-46f5-b742-43663606453b": 157,
     "e055a0eb-e767-4ca7-8248-7c695b3c501a": 166,
     "e06b1201-7654-4266-ad6b-93d5c3daabf9": 12,
+    "e26c0e8d-f45e-4f04-9cd9-8376a53f2b37": 195,
     "e4347785-d8d9-445f-b83e-3986f4904b7c": 86,
     "e504525f-77cd-4dfc-94f1-ba221ebab2f2": 22,
     "e5469003-6d79-499a-9c31-6a24b24e594f": 33,
@@ -7118,6 +7119,16 @@
         }
       }
     },
+    "e26c0e8d-f45e-4f04-9cd9-8376a53f2b37": {
+      "uuid": "e26c0e8d-f45e-4f04-9cd9-8376a53f2b37",
+      "display_id": 195,
+      "title": "README: cut the vsdd/vsdd-cli section and pointers (operator ruling 2026-09-21) — generalize the composition pattern into the FAQ",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-09-21T22:10:28.280708Z",
+      "updated_at": "2026-09-21T22:10:28.280708Z"
+    },
     "e4347785-d8d9-445f-b83e-3986f4904b7c": {
       "uuid": "e4347785-d8d9-445f-b83e-3986f4904b7c",
       "display_id": 86,
@@ -8317,8 +8328,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-20T09:42:37.408230Z",
+    "timestamp": "2026-09-21T22:10:28.280708Z",
     "agent_id": "79Ig",
-    "agent_seq": 1049
+    "agent_seq": 1050
   }
 }
