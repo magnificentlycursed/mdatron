@@ -284,15 +284,43 @@ pub fn catalog() -> Result<Vec<(String, String)>, String> {
 /// E0000-series convention; this table grows by one entry per future
 /// rename event with the previous meaning preserved as the durable
 /// migration record.
-pub const MIGRATION_NOTES: &[(&str, &str)] = &[(
-    "MDATRON-E0001",
-    "Pre-Phase-1 bootstrap snapshots emitted this code for \
+pub const MIGRATION_NOTES: &[(&str, &str)] = &[
+    (
+        "MDATRON-E0001",
+        "Pre-Phase-1 bootstrap snapshots emitted this code for \
          frontmatter-schema-violation; from Phase 1 onward, E0001 is \
          exclusively frontmatter-parse-failed and schema-violation \
          moved to MDATRON-E0050. If you saw E0001 in pre-Phase-1 \
          output and the message body said 'schema-violation', see \
          `mdatron explain MDATRON-E0050`.",
-)];
+    ),
+    (
+        "MDATRON-E0061",
+        "0.7.0 renamed the quoted-region label `governing` to `governed_by` \
+         (the pins.yaml key was renamed the same way; the old key is still \
+         accepted and `pin --update` rewrites it). The finding's meaning is \
+         unchanged; because quoted labels are fingerprint inputs, every \
+         E0061 fingerprint turned over ONCE at 0.7.0 — a consumer diffing \
+         0.6.x fingerprints against 0.7.0 sees that one-time shift, not a \
+         new defect.",
+    ),
+    (
+        "MDATRON-E0062",
+        "0.7.0 renamed the quoted-region label `governing` to `governed_by` \
+         (the pins.yaml key was renamed the same way; the old key is still \
+         accepted and `pin --update` rewrites it). The finding's meaning is \
+         unchanged; because quoted labels are fingerprint inputs, every \
+         E0062 fingerprint turned over ONCE at 0.7.0.",
+    ),
+    (
+        "MDATRON-E0093",
+        "0.7.0 renamed the quoted-region label `register` to `guidance` (the \
+         vocabulary.yaml `anti_patterns[].register` key was renamed the same \
+         way; the old key is still accepted). The finding's meaning is \
+         unchanged; because quoted labels are fingerprint inputs, every \
+         E0093 fingerprint turned over ONCE at 0.7.0.",
+    ),
+];
 
 /// Look up the migration note for a code, if one exists.
 pub fn migration_note(code: &str) -> Option<&'static str> {

@@ -103,18 +103,10 @@ struct RawMarkerRule {
     target_section: Option<String>,
 }
 
-/// The element class a marker reference resolves against (#147). Configurable
-/// per vsdd GH#22's "generic cut"; `frontmatter-key` is reserved for a later
-/// cut.
-#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq, Hash)]
-#[serde(rename_all = "kebab-case")]
-pub enum ElementClass {
-    /// A markdown heading, resolved by its text (name-equality).
-    Heading,
-    /// The leading `**bold**` name of a `- ` list item (vsdd's live shape:
-    /// `- **Slice 1 — …** …`, referenced by that leading name).
-    ListItemBoldName,
-}
+/// The element class a marker reference resolves against — the shared
+/// [`crate::markup::ElementClass`] (`heading`, `h1`…`h6`, `list-item-bold-name`;
+/// unified across the marker and section families in 0.7.0, #204).
+pub use crate::markup::ElementClass;
 
 /// The loaded route table: the active entries plus the per-entry findings
 /// produced during load (confinement refusals, absent governing documents).

@@ -3576,7 +3576,7 @@ mod tests {
         proj.write(
             ".mdatron/pins.yaml",
             &format!(
-                "pins:\n- governing: GOVERNING.md\n  file: governed.md\n  sha256: \"{sha}\"\n"
+                "pins:\n- governed_by: GOVERNING.md\n  file: governed.md\n  sha256: \"{sha}\"\n"
             ),
         );
         proj
@@ -3623,7 +3623,7 @@ mod tests {
         proj.write(
             ".mdatron/pins.yaml",
             &format!(
-                "pins:\n- governing: GOVERNING.md\n  file: governed.md\n  section: {section:?}\n  sha256: \"{sha}\"\n"
+                "pins:\n- governed_by: GOVERNING.md\n  file: governed.md\n  section: {section:?}\n  sha256: \"{sha}\"\n"
             ),
         );
         proj
@@ -3855,11 +3855,11 @@ mod tests {
     fn escaping_pin_entries_are_rejected() {
         for (pins, code) in [
             (
-                "pins:\n- governing: GOVERNING.md\n  file: \"../escape.md\"\n  sha256: \"00\"\n",
+                "pins:\n- governed_by: GOVERNING.md\n  file: \"../escape.md\"\n  sha256: \"00\"\n",
                 "MDATRON-E0011",
             ),
             (
-                "pins:\n- governing: GOVERNING.md\n  file: \"/etc/passwd\"\n  sha256: \"00\"\n",
+                "pins:\n- governed_by: GOVERNING.md\n  file: \"/etc/passwd\"\n  sha256: \"00\"\n",
                 "MDATRON-E0010",
             ),
         ] {
@@ -3883,7 +3883,7 @@ mod tests {
         let proj = pinned_project("pin-unpinned", "content\n");
         proj.write(
             ".mdatron/pins.yaml",
-            "pins: []\nunpinned:\n- file: governed.md\n  governing: GOVERNING.md\n  reason: \"governance moved to route naming\"\n  owner: operator\n- file: other.md\n  governing: GOVERNING.md\n",
+            "pins: []\nunpinned:\n- file: governed.md\n  governed_by: GOVERNING.md\n  reason: \"governance moved to route naming\"\n  owner: operator\n- file: other.md\n  governed_by: GOVERNING.md\n",
         );
         let cfg = VerifyConfig::from_project(&proj.0).unwrap();
         let findings = verify(&cfg).unwrap();
@@ -4007,7 +4007,7 @@ mod tests {
 
         let proj2 = vocab_project(
             "vocab-inline-e0093",
-            "anti_patterns:\n- pattern: \"very unique\"\n  register: hedged-absolute\n",
+            "anti_patterns:\n- pattern: \"very unique\"\n  guidance: hedged-absolute\n",
             "Quoting `very unique` verbatim is a citation; saying very unique is not.\n",
         );
         let cfg2 = VerifyConfig::from_project(&proj2.0).unwrap();
@@ -4617,7 +4617,7 @@ pattern:
     fn register_anti_pattern_flagged() {
         let proj = vocab_project(
             "vocab-anti",
-            "anti_patterns:\n- pattern: \"very unique\"\n  register: hedged-absolute\n",
+            "anti_patterns:\n- pattern: \"very unique\"\n  guidance: hedged-absolute\n",
             "This is a very unique approach.\n",
         );
         let cfg = VerifyConfig::from_project(&proj.0).unwrap();
@@ -6638,10 +6638,10 @@ catalogs:
       count: ">= 1"
     - disjoint:
         - section: "## Requirements"
-          id_from: h3-heading
+          element: h3
           id_pattern: 'Slice (\d+)'
         - section: "## Completed phases"
-          id_from: bullet-lead
+          element: list-item-bold-name
           id_pattern: 'Slice (\d+)'
 "###;
 
@@ -7033,7 +7033,7 @@ pattern:
         // A pin over docs/x.md with a deliberately wrong sha -> stale (E0061).
         proj.write(
             ".mdatron/pins.yaml",
-            "pins:\n- governing: docs/other.md\n  file: docs/x.md\n  sha256: \
+            "pins:\n- governed_by: docs/other.md\n  file: docs/x.md\n  sha256: \
              0000000000000000000000000000000000000000000000000000000000000000\n",
         );
         let cfg = VerifyConfig::from_project(&proj.0).unwrap();
@@ -7150,7 +7150,7 @@ pattern:
         let sha = format!("{:x}", Sha256::digest(content.as_bytes()));
         proj.write(
             ".mdatron/pins.yaml",
-            &format!("pins:\n- governing: docs/gov.md\n  file: docs/x.md\n  sha256: {sha}\n"),
+            &format!("pins:\n- governed_by: docs/gov.md\n  file: docs/x.md\n  sha256: {sha}\n"),
         );
         let cfg = VerifyConfig::from_project(&proj.0).unwrap();
 
@@ -7364,7 +7364,7 @@ pattern:
         proj.write("pinned.txt", &big);
         proj.write(
             ".mdatron/pins.yaml",
-            "pins:\n- governing: docs/gov.md\n  file: pinned.txt\n  sha256: \
+            "pins:\n- governed_by: docs/gov.md\n  file: pinned.txt\n  sha256: \
              0000000000000000000000000000000000000000000000000000000000000000\n",
         );
         let cfg = VerifyConfig::from_project(&proj.0).unwrap();
@@ -7924,7 +7924,7 @@ pattern:
         assert_eq!(codes_of(&findings, "MDATRON-E0112"), 0, "{findings:?}");
 
         let pin = crate::pin::Pin {
-            governing: "docs/gov.md".into(),
+            governed_by: "docs/gov.md".into(),
             file: "docs/x.md".into(),
             section: None,
             sha256: "00".repeat(32),

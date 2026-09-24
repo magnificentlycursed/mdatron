@@ -6,7 +6,7 @@
 
 ## What this means
 
-Governed prose matches a listed register anti-pattern: a phrasing the adopter has ruled out of the project's register (hedged absolutes, filler intensifiers, whatever the registry lists). The matched text is quoted beneath the diagnostic; the register label names the rule.
+Governed prose matches a listed register anti-pattern: a phrasing the adopter has ruled out of the project's register (hedged absolutes, filler intensifiers, whatever the registry lists). The matched text is quoted beneath the diagnostic, and the `guidance` region carries the corrective wording the adopter registered with the pattern.
 
 ## How to fix
 

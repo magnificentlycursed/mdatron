@@ -22,7 +22,7 @@ mod explain;
   mdatron explain <code>           the fix for any diagnostic (--list for all)
   mdatron verify --json            the versioned machine envelope (agents/CI)
   mdatron docs                     the bundled DSL reference (also: limits, faq)
-  mdatron schema                   the published envelope JSON Schema
+  mdatron envelope-schema          the published envelope JSON Schema
 
 Exit contract: 0 clean, 1 findings, 2 pipeline failure — anything else is an
 engine defect; please report it.
@@ -53,7 +53,7 @@ enum Command {
         /// jurisdiction. Without --files, jurisdiction comes from
         /// .mdatron/config.yaml's `file_globs`; an absent or globless config is
         /// refused (jurisdiction is never guessed). (#125/#126)
-        #[arg(long = "files", value_name = "GLOB", num_args = 1..)]
+        #[arg(long = "files", visible_alias = "file-globs", value_name = "GLOB", num_args = 1..)]
         files: Vec<String>,
 
         /// Emit the versioned JSON output envelope on stdout
@@ -163,8 +163,11 @@ enum Command {
 
     /// Print the published `verify --json` output-envelope JSON Schema on stdout
     /// (#127) — so a binary-only consumer can pin and validate against it without
-    /// a repo checkout. Kept in lockstep with `mdatron_output_version`.
-    Schema,
+    /// a repo checkout. Kept in lockstep with `mdatron_output_version`. (`schema`
+    /// is the retired 0.6.0 name, kept as an alias — the bare word otherwise
+    /// means the frontmatter schema family.)
+    #[command(name = "envelope-schema", visible_alias = "schema")]
+    EnvelopeSchema,
 
     /// Print bundled documentation on stdout (#180 discoverability): the
     /// complete DSL reference (default), the declared-limits table, or the
@@ -263,13 +266,13 @@ fn main() -> ExitCode {
             project_root,
             quiet,
         } => cmd_init(project_root, quiet),
-        Command::Schema => cmd_schema(),
+        Command::EnvelopeSchema => cmd_schema(),
         Command::Docs { topic } => cmd_docs(&topic),
     }
 }
 
 /// Print the embedded output-envelope schema to stdout (#127). A binary-only
-/// consumer can `mdatron schema > mdatron-output.schema.json` and validate the
+/// consumer can `mdatron envelope-schema > mdatron-output.schema.json` and validate the
 /// `verify --json` envelope against it.
 fn cmd_schema() -> ExitCode {
     print_page(mdatron::output::OUTPUT_SCHEMA)

@@ -39,4 +39,10 @@ Format: `old-name → new-name` | input file | aliased since | alias removable i
 
 | old → new | input file | aliased since | alias removable in |
 |-----------|------------|---------------|--------------------|
-| _(none yet)_ | — | — | — |
+| `id_from` → `element` (section-rule `disjoint` operands) | `routes.yaml` | 0.7.0 | format v2 |
+| `h3-heading` → `h3` (element value) | `routes.yaml` | 0.7.0 | format v2 |
+| `bullet-lead` → `list-item-bold-name` (element value) | `routes.yaml` | 0.7.0 | format v2 |
+| `governing` → `governed_by` (`pins[]` and `unpinned[]`; `pin --update` rewrites) | `pins.yaml` | 0.7.0 | format v2 |
+| `register` → `guidance` (`anti_patterns[]`) | `vocabulary.yaml` | 0.7.0 | format v2 |
+| `mdatron schema` → `mdatron envelope-schema` (subcommand; `schema` stays a visible alias) | CLI | 0.7.0 | — (CLI aliases are free) |
+| `--files` → `--file-globs` (`--files` stays a visible alias) | CLI | 0.7.0 | — (CLI aliases are free) |

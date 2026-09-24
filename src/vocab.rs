@@ -77,7 +77,12 @@ struct RawLabelSchemes {
 #[serde(deny_unknown_fields)]
 struct RawAntiPattern {
     pattern: String,
-    register: String,
+    /// The corrective wording surfaced with an `E0093` match. `register` is the
+    /// retired 0.6.0 key (it collided with the naming register itself and with
+    /// the linguistic-register sense in the code's name); accepted as an alias
+    /// per `docs/field-rename-ledger.md`.
+    #[serde(alias = "register")]
+    guidance: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -170,7 +175,7 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedVocab>, Error> {
     let anti = raw
         .anti_patterns
         .iter()
-        .map(|a| Ok((compile(&a.pattern, "anti_pattern")?, a.register.clone())))
+        .map(|a| Ok((compile(&a.pattern, "anti_pattern")?, a.guidance.clone())))
         .collect::<Result<Vec<_>, Error>>()?;
 
     // #95 (DESIGN § agnosticism conflict outcome): group terms by name; a term
@@ -355,7 +360,7 @@ pub fn check_file(
     }
 
     // ── register anti-patterns ─────────────────────────────────────────────
-    for (pattern, register) in &vocab.anti {
+    for (pattern, guidance) in &vocab.anti {
         for m in pattern.find_iter(body) {
             if crate::markup::in_code_span(&code_ranges, m.start()) || in_fenced(m.start()) {
                 continue;
@@ -377,8 +382,8 @@ pub fn check_file(
                     },
                     QuotedRegion {
                         platform_variant: false,
-                        label: "register".into(),
-                        content: register.clone(),
+                        label: "guidance".into(),
+                        content: guidance.clone(),
                     },
                 ],
             ));
@@ -671,7 +676,7 @@ mod tests {
     #[test]
     fn anti_pattern_inside_a_fence_is_masked_outside_still_fires() {
         let vocab =
-            "anti_patterns:\n- pattern: \"layer: chassis\"\n  register: deprecated-config\n";
+            "anti_patterns:\n- pattern: \"layer: chassis\"\n  guidance: deprecated-config\n";
         let fenced = "Migration doc.\n\n```yaml\nlayer: chassis\n```\n\nDone.\n";
         assert_eq!(
             codes_in(vocab, fenced, "anti-fenced"),
@@ -683,6 +688,18 @@ mod tests {
             codes_in(vocab, live, "anti-live"),
             vec!["MDATRON-E0093".to_string()],
             "the same text outside the fence still fires"
+        );
+    }
+
+    // #204 D3: the retired `register:` key on an anti-pattern is accepted as an
+    // alias of `guidance:` (docs/field-rename-ledger.md) — an existing
+    // vocabulary.yaml keeps loading and its anti-patterns keep firing.
+    #[test]
+    fn anti_pattern_register_key_is_an_accepted_alias_of_guidance() {
+        let vocab = "anti_patterns:\n- pattern: \"very unique\"\n  register: say unique\n";
+        assert_eq!(
+            codes_in(vocab, "This is very unique.\n", "anti-alias"),
+            vec!["MDATRON-E0093".to_string()]
         );
     }
 

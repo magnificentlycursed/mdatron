@@ -50,7 +50,11 @@ struct RawPins {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct RawPin {
-    governing: String,
+    /// The governing document attesting this pin (the route table's `governed_by`
+    /// relation, one spelling). `governing` is the retired 0.6.0 key, accepted
+    /// as an alias; `pin --update` rewrites it (`docs/field-rename-ledger.md`).
+    #[serde(alias = "governing")]
+    governed_by: String,
     file: String,
     /// Optional heading (e.g. `"## Decomposition (phase 1c)"`) scoping the pin to
     /// that section's span rather than the whole file (#146). Absent = whole-file
@@ -65,7 +69,8 @@ struct RawPin {
 #[serde(deny_unknown_fields)]
 struct RawUnpinned {
     file: String,
-    governing: String,
+    #[serde(alias = "governing")]
+    governed_by: String,
     #[serde(default)]
     reason: String,
     #[serde(default)]
@@ -74,7 +79,7 @@ struct RawUnpinned {
 
 /// A validated, active pin entry.
 pub struct Pin {
-    pub governing: String,
+    pub governed_by: String,
     pub file: String,
     /// The section this pin scopes to (a heading spec), or `None` for whole-file.
     pub section: Option<String>,
@@ -117,7 +122,7 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedPins>, Error> {
 
     for entry in raw.pins {
         let mut confined_ok = true;
-        for (field, value) in [("governing", &entry.governing), ("file", &entry.file)] {
+        for (field, value) in [("governed_by", &entry.governed_by), ("file", &entry.file)] {
             if let Err(v) = confine_lexically(Path::new(value)) {
                 findings.push(confinement_finding(&path, field, value, &v));
                 confined_ok = false;
@@ -127,7 +132,7 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedPins>, Error> {
             continue; // dropped: fail-closed
         }
         pins.push(Pin {
-            governing: entry.governing,
+            governed_by: entry.governed_by,
             file: entry.file,
             section: entry.section,
             sha256: entry.sha256,
@@ -259,8 +264,8 @@ pub fn check(
                             },
                             QuotedRegion {
                                 platform_variant: false,
-                                label: "governing".into(),
-                                content: pin.governing.clone(),
+                                label: "governed_by".into(),
+                                content: pin.governed_by.clone(),
                             },
                             QuotedRegion {
                                 platform_variant: false,
@@ -503,8 +508,8 @@ fn target_unopenable(pins_path: &Path, pin: &Pin) -> Finding {
             },
             QuotedRegion {
                 platform_variant: false,
-                label: "governing".into(),
-                content: pin.governing.clone(),
+                label: "governed_by".into(),
+                content: pin.governed_by.clone(),
             },
         ],
     }
@@ -600,7 +605,7 @@ mod tests {
             std::fs::write(
                 root.join(".mdatron").join(PINS_NAME),
                 format!(
-                    "pins:\n- governing: GOVERNING.md\n  file: governed.md\n  sha256: \"{sha}\"\n"
+                    "pins:\n- governed_by: GOVERNING.md\n  file: governed.md\n  sha256: \"{sha}\"\n"
                 ),
             )
             .unwrap();
@@ -660,7 +665,7 @@ mod tests {
         // a control byte past the YAML layer).
         std::fs::write(
             proj.0.join(".mdatron").join("pins.yaml"),
-            "pins:\n- file: \"../esc\\x1b[31mRED.md\"\n  governing: GOVERNING.md\n  sha256: abc\n",
+            "pins:\n- file: \"../esc\\x1b[31mRED.md\"\n  governed_by: GOVERNING.md\n  sha256: abc\n",
         )
         .unwrap();
         let err = update(&proj.0, true).unwrap_err();

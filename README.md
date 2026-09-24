@@ -154,7 +154,7 @@ currently `3.0.0`). The load-bearing fields for a machine consumer:
 
 Pin and validate against the schema at
 [`schema/mdatron-output.schema.json`](schema/mdatron-output.schema.json); a
-binary-only install can print it with `mdatron schema`. `mdatron explain --list`
+binary-only install can print it with `mdatron envelope-schema`. `mdatron explain --list`
 enumerates every diagnostic code; `mdatron explain <code>` (the short form
 `E0050` works too) shows a code's page.
 
@@ -345,7 +345,7 @@ label_schemes:
     - "^C\\d+$"               # local scheme: C1, C2, ...
 anti_patterns:
   - pattern: "very unique"
-    register: "say 'unique' — uniqueness does not grade"
+    guidance: "say 'unique' — uniqueness does not grade"
 ```
 
 What it flags: unregistered
@@ -466,21 +466,23 @@ routes:
       # a slice is open XOR complete — ids extracted per element, never a full-span scan
       - disjoint:
           - section: "## Requirements"
-            id_from: h3-heading          # id from the H3 heading text
+            element: h3                  # ids from the H3 heading text
             id_pattern: 'Slice (\d+)'
           - section: "## Completed phases"
-            id_from: bullet-lead         # id from the `- **bold**` lead
+            element: list-item-bold-name # ids from the `- **bold**` lead
             id_pattern: 'Slice (\d+)'
 ```
 
-A count rule counts the `element`-level headings in the `section`'s span (until
-the next heading of the same or higher level) whose line matches `match`, and
-asserts the `count` predicate (`>= 1`, `== 1`, …); a violation is `E0120`. A
-`disjoint` rule extracts an id (the `id_pattern`'s first capture) from each
-section's declared element and asserts the two sets share none; an overlap is
-`E0121`. Ids come **only** from the declared element (H3 heading text, or a
-bullet's bold lead), never surrounding prose — so a body mention of an id
-doesn't cause a false overlap. A `section` spec that matches no heading in the
+A count rule counts the elements of the `element` class in the `section`'s span
+(until the next heading of the same or higher level) whose line matches `match`,
+and asserts the `count` predicate (`>= 1`, `== 1`, …); a violation is `E0120`.
+`element` is the one vocabulary marker rules use too: `heading` (a heading of
+any level), `h1`…`h6` (one level), or `list-item-bold-name` (the `**bold**` lead
+of a `- ` list item). A `disjoint` rule extracts an id (the `id_pattern`'s first
+capture) from each section's declared element and asserts the two sets share
+none; an overlap is `E0121`. Ids come **only** from the declared element (an `h3`
+heading's text, or a `list-item-bold-name` bullet's bold lead), never
+surrounding prose — so a body mention of an id doesn't cause a false overlap. A `section` spec that matches no heading in the
 document blocks (`E0122`, section-not-found; matching is exact on level and
 text) instead of silently passing, and the assertion is not evaluated; when a
 heading occurs more than once, the rule evaluates over **all** matching spans

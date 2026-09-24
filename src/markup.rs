@@ -14,6 +14,8 @@
 //! - [`fenced_ranges`] — the byte ranges covered by fenced blocks, for a
 //!   scanner that matches over the whole body at once (the vocabulary family).
 //! - [`atx_heading`] — parse an ATX heading's level+text.
+//! - [`ElementClass`] — the one by-name element vocabulary (`heading`, `h1`…`h6`,
+//!   `list-item-bold-name`) the marker and section families resolve against.
 //! - [`section_span`] — the byte span of one heading-delimited section (pin #146).
 //! - [`heading_slugs`] / [`slugify`] — a body's heading anchors (ATX + setext,
 //!   with GitHub `-N` disambiguation and explicit HTML anchors, via a CommonMark
@@ -32,6 +34,82 @@
 //! contract (mdatron is binary-first; the lib carries no API-stability promise).
 
 use std::collections::{HashMap, HashSet};
+
+use serde::Deserialize;
+
+/// The by-name element class a marker rule or a section rule resolves against
+/// (#147 / #157). One enum, one value set, shared by marker `element`,
+/// section-count `element`, and section-disjoint `element` (unified in 0.7.0
+/// per the ontology review, #204 D2-1 — the same idea had three spellings):
+///
+/// - `heading` — an ATX heading of ANY level, named by its text.
+/// - `h1` … `h6` — an ATX heading of exactly that level.
+/// - `list-item-bold-name` — the leading `**bold**` name of a `- ` list item
+///   (vsdd's live shape: `- **Slice 1 — …** …`, referenced by that name).
+///
+/// The retired spellings `h3-heading` and `bullet-lead` (the 0.6.0
+/// section-disjoint `id_from` values) are accepted as aliases per
+/// `docs/field-rename-ledger.md`. `frontmatter-key` stays reserved for a later
+/// cut.
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "kebab-case")]
+pub enum ElementClass {
+    Heading,
+    H1,
+    H2,
+    #[serde(alias = "h3-heading")]
+    H3,
+    H4,
+    H5,
+    H6,
+    #[serde(alias = "bullet-lead")]
+    ListItemBoldName,
+}
+
+impl ElementClass {
+    /// The element name `line` carries for this class, or `None` when the line
+    /// is not an element of the class: the heading text for the heading
+    /// classes (any level for `heading`, the exact level for `h1`…`h6`), the
+    /// bold lead for `list-item-bold-name`. Fence discipline is the caller's
+    /// (feed it [`non_fenced_lines`]).
+    pub(crate) fn name_in(self, line: &str) -> Option<&str> {
+        match self {
+            Self::Heading => atx_heading(line).map(|(_, t)| t),
+            Self::ListItemBoldName => list_item_bold_name(line),
+            exact => atx_heading(line)
+                .filter(|(l, _)| Some(*l) == exact.heading_level())
+                .map(|(_, t)| t),
+        }
+    }
+
+    /// The exact heading level of `h1`…`h6`; `None` for the classes that are
+    /// not level-specific.
+    fn heading_level(self) -> Option<usize> {
+        match self {
+            Self::H1 => Some(1),
+            Self::H2 => Some(2),
+            Self::H3 => Some(3),
+            Self::H4 => Some(4),
+            Self::H5 => Some(5),
+            Self::H6 => Some(6),
+            Self::Heading | Self::ListItemBoldName => None,
+        }
+    }
+
+    /// The adopter-facing spelling — the `element:` value — for messages.
+    pub(crate) fn as_str(self) -> &'static str {
+        match self {
+            Self::Heading => "heading",
+            Self::H1 => "h1",
+            Self::H2 => "h2",
+            Self::H3 => "h3",
+            Self::H4 => "h4",
+            Self::H5 => "h5",
+            Self::H6 => "h6",
+            Self::ListItemBoldName => "list-item-bold-name",
+        }
+    }
+}
 
 /// Iterate the lines of `body` that are **not** inside a fenced code block,
 /// yielding each line's byte offset within `body` and its content (trailing

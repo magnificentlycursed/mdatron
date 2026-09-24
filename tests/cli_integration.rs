@@ -402,15 +402,54 @@ fn deny_warnings_escalates_a_warnings_only_run() {
 // binary-only consumer can pin/validate without a repo checkout.
 #[test]
 fn schema_subcommand_prints_the_published_envelope_schema() {
-    let out = run(&["schema"]);
-    assert_eq!(out.status.code(), Some(0));
-    let v: serde_json::Value =
-        serde_json::from_slice(&out.stdout).expect("valid JSON Schema on stdout");
-    assert_eq!(
-        v["properties"]["mdatron_output_version"]["const"], "3.0.0",
-        "schema is in lockstep with OUTPUT_VERSION"
+    // #204 D3: `envelope-schema` is the 0.7.0 name (the bare word otherwise
+    // means the frontmatter schema family); `schema` stays a visible alias.
+    for sub in ["envelope-schema", "schema"] {
+        let out = run(&[sub]);
+        assert_eq!(out.status.code(), Some(0), "{sub}");
+        let v: serde_json::Value =
+            serde_json::from_slice(&out.stdout).expect("valid JSON Schema on stdout");
+        assert_eq!(
+            v["properties"]["mdatron_output_version"]["const"], "3.0.0",
+            "schema is in lockstep with OUTPUT_VERSION"
+        );
+        assert!(v["$id"].as_str().unwrap().contains("mdatron-output"));
+    }
+    let help = run(&["--help"]);
+    let help = String::from_utf8_lossy(&help.stdout);
+    assert!(
+        help.contains("envelope-schema") && help.contains("[alias: schema]"),
+        "the new name and its alias are both discoverable: {help}"
     );
-    assert!(v["$id"].as_str().unwrap().contains("mdatron-output"));
+}
+
+// #204 D3: `--file-globs` names what `--files` always meant (the jurisdiction
+// glob list — config.yaml's `file_globs`); both spellings are accepted and the
+// alias is visible in help.
+#[test]
+fn file_globs_is_a_visible_alias_of_files() {
+    let proj = TempProject::new("file-globs-alias");
+    proj.seed_blog_schema();
+    proj.seed_clean_md("a.md");
+    for flag in ["--files", "--file-globs"] {
+        let out = Command::new(mdatron_bin())
+            .args(["verify", "--project-root"])
+            .arg(proj.path())
+            .args([flag, "a.md"])
+            .output()
+            .expect("mdatron binary executes");
+        assert_eq!(
+            out.status.code(),
+            Some(0),
+            "{flag}: {}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+    }
+    let help = run(&["verify", "--help"]);
+    assert!(
+        String::from_utf8_lossy(&help.stdout).contains("--file-globs"),
+        "the alias is visible in help"
+    );
 }
 
 // #117 (vsdd W4): `mdatron explain` accepts a short code (`E0050` -> the MDATRON
@@ -652,7 +691,7 @@ fn pin_update_repins_and_dry_run_does_not_write() {
     proj.write("governed.md", "v1\n");
     proj.write(
         ".mdatron/pins.yaml",
-        "pins:\n- governing: GOVERNING.md\n  file: governed.md\n  sha256: \"stale\"\n",
+        "pins:\n- governed_by: GOVERNING.md\n  file: governed.md\n  sha256: \"stale\"\n",
     );
     let run_pin = |args: &[&str]| {
         Command::new(mdatron_bin())
@@ -682,6 +721,61 @@ fn pin_update_repins_and_dry_run_does_not_write() {
     assert!(!record.contains("stale"), "hash rewritten: {record}");
 }
 
+// #204 D2-2: the retired `governing:` key still loads (a serde alias), and
+// `pin --update` rewrites the record — pins[] and unpinned[] alike — in the
+// 0.7.0 `governed_by` spelling: the rename ledger's "old name accepted, the
+// tool rewrites" discipline, end to end through the binary.
+#[test]
+fn pin_update_rewrites_the_retired_governing_key() {
+    let proj = TempProject::new("pin-alias");
+    std::fs::create_dir_all(proj.path().join(".mdatron/schemas")).unwrap();
+    proj.write("GOVERNING.md", "# gov\n");
+    proj.write("governed.md", "v1\n");
+    proj.write(
+        ".mdatron/pins.yaml",
+        "pins:\n- governing: GOVERNING.md\n  file: governed.md\n  sha256: \"stale\"\n\
+         unpinned:\n- file: other.md\n  governing: GOVERNING.md\n  reason: moved\n  owner: me\n",
+    );
+    let run_pin = |args: &[&str]| {
+        Command::new(mdatron_bin())
+            .args(["pin", "--project-root"])
+            .arg(proj.path())
+            .args(args)
+            .output()
+            .expect("mdatron binary executes")
+    };
+    let out = run_pin(&[]);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(
+        out.status.code(),
+        Some(1),
+        "the aliased key loads and the stale hash is E0061, not a parse refusal: {stderr}"
+    );
+    assert!(stderr.contains("MDATRON-E0061"), "{stderr}");
+    let out = run_pin(&["--update"]);
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let record = std::fs::read_to_string(proj.path().join(".mdatron/pins.yaml")).unwrap();
+    assert!(
+        !record.contains("governing:"),
+        "the retired key does not survive a rewrite: {record}"
+    );
+    assert_eq!(
+        record.matches("governed_by: GOVERNING.md").count(),
+        2,
+        "both pins[] and unpinned[] are rewritten in the 0.7.0 spelling: {record}"
+    );
+    assert_eq!(
+        run_pin(&[]).status.code(),
+        Some(0),
+        "the rewritten record is clean"
+    );
+}
+
 // #64 cold-review W2: a junction-rooted project (`mklink /J C:\proj D:\real`)
 // pins like any other. The CLI canonicalizes the root before the confine walk
 // sees it; the walk itself refuses a reparse point AS the root (fail-closed),
@@ -697,7 +791,7 @@ fn pin_update_through_junction_root_updates_the_pin() {
     proj.write("governed.md", "v1\n");
     proj.write(
         ".mdatron/pins.yaml",
-        "pins:\n- governing: GOVERNING.md\n  file: governed.md\n  sha256: \"stale\"\n",
+        "pins:\n- governed_by: GOVERNING.md\n  file: governed.md\n  sha256: \"stale\"\n",
     );
     let nanos = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -776,7 +870,7 @@ fn pin_dry_run_survives_multibyte_sha_and_escapes_control_bytes() {
     proj.write("governed.md", "content\n");
     proj.write(
         ".mdatron/pins.yaml",
-        "pins:\n- governing: GOVERNING.md\n  file: governed.md\n  sha256: \"0123456789a\u{e9}0stale\"\n",
+        "pins:\n- governed_by: GOVERNING.md\n  file: governed.md\n  sha256: \"0123456789a\u{e9}0stale\"\n",
     );
     let out = Command::new(mdatron_bin())
         .args(["pin", "--project-root"])
@@ -815,7 +909,7 @@ fn pin_dry_run_escapes_control_bytes_in_file_names() {
     proj.write("governed-\u{1b}[31mred.md", "content\n");
     proj.write(
         ".mdatron/pins.yaml",
-        "pins:\n- governing: GOVERNING.md\n  file: \"governed-\\x1b[31mred.md\"\n  sha256: \"0123456789a\u{e9}0stale\"\n",
+        "pins:\n- governed_by: GOVERNING.md\n  file: \"governed-\\x1b[31mred.md\"\n  sha256: \"0123456789a\u{e9}0stale\"\n",
     );
     let out = Command::new(mdatron_bin())
         .args(["pin", "--project-root"])

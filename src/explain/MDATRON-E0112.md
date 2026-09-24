@@ -14,8 +14,9 @@ Marker rules are the name-anchor sibling of `citations` (which covers
 **name-equality** — a trailing `.` on the target is tolerated, so
 `- **Slice 1 — …the guardrail.**` resolves from `Provenance: Slice 1 — …the
 guardrail`. The name is matched against the target document's elements of the
-rule's `element` class — a markdown `heading`, or the leading `**bold**` name of
-a `- ` list item (`list-item-bold-name`) — optionally scoped to a
+rule's `element` class — a markdown `heading` of any level, `h1`…`h6` for one
+level, or the leading `**bold**` name of a `- ` list item
+(`list-item-bold-name`) — optionally scoped to a
 `target_section` (that heading's span). The target document is named in the rule
 config, project-root-relative and held to the confinement contract. Marker
 checking is per-route opt-in.
