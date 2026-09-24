@@ -685,9 +685,10 @@ fn cmd_verify(
     // file: `cannot parse '<abs>'`). Strip any root prefix from the final message
     // as a catch-all so no `pipeline_error.message` leaks the host layout — a
     // completeness guarantee no per-source fix can promise for future messages.
-    // Uses a trailing-separator match, so it relativizes `<root>/x` to `x` without
-    // mangling an unrelated path. Both the original and canonicalized roots are
-    // stripped (pre-canonicalization errors carry the former).
+    // Uses a trailing-separator match, so it relativizes `<root>/x` to `x`. Both
+    // the original and canonicalized roots are offered (pre-canonicalization
+    // errors carry the former); only ABSOLUTE ones are stripped (#185 L1 — a
+    // relative root's short prefix would mangle unrelated adopter text).
     let relativize_message =
         |msg: String| relativize_root_prefix(msg, &[root.as_path(), canonical_root.as_path()]);
     let pipeline_error = pipeline_err.as_ref().map(|e| PipelineError {
@@ -716,7 +717,7 @@ fn cmd_verify(
     // BC-5 stream contract: --json puts the output on stdout; otherwise diagnostics
     // are rustc-shaped on stderr.
     if json {
-        match serde_json::to_string(&output) {
+        match mdatron::output::to_js_safe_json(&output) {
             Ok(line) => println!("{line}"),
             Err(e) => {
                 if !quiet {
@@ -795,13 +796,21 @@ fn print_finding(f: &Finding) {
     eprintln!("{}", f.format_tty());
 }
 
-/// Strip any `<root>/` prefix (original or canonicalized) from a free-form error
-/// message so no agent-facing render leaks the host layout (the DEF4 contract,
-/// #134/#140). A trailing-separator match relativizes `<root>/x` to `x` without
-/// mangling an unrelated path. Shared by the JSON envelope and the compact/tty
-/// pipeline-error render so all three forms are host-layout-free.
+/// Strip any ABSOLUTE `<root>/` prefix (original or canonicalized) from a
+/// free-form error message so no agent-facing render leaks the host layout (the
+/// DEF4 contract, #134/#140). A trailing-separator match relativizes `<root>/x`
+/// to `x`. RELATIVE roots are skipped (#185 L1): a `--project-root docs` used to
+/// yield the prefix `docs/`, which the substring replace then cut out of
+/// arbitrary adopter content mid-string — an invalid glob `docs/a**b` rendered
+/// as `a**b`. A relative root leaks no host layout, and the canonicalized root
+/// is always absolute, so the DEF4 strip still holds. Shared by the JSON
+/// envelope and the compact/tty pipeline-error render so all three forms are
+/// host-layout-free.
 fn relativize_root_prefix(mut msg: String, roots: &[&Path]) -> String {
     for r in roots {
+        if !r.is_absolute() {
+            continue;
+        }
         let pref = format!("{}{}", r.to_string_lossy(), std::path::MAIN_SEPARATOR);
         msg = msg.replace(&pref, "");
     }
@@ -882,7 +891,7 @@ fn cmd_explain(code: Option<&str>, list: bool, json: bool, compact: bool) -> Exi
                         .iter()
                         .map(|(c, s)| serde_json::json!({ "code": c, "summary": s }))
                         .collect();
-                    match serde_json::to_string(&arr) {
+                    match mdatron::output::to_js_safe_json(&arr) {
                         Ok(line) => return print_page(&format!("{line}\n")),
                         Err(e) => {
                             eprintln!(
@@ -931,7 +940,7 @@ fn cmd_explain(code: Option<&str>, list: bool, json: bool, compact: bool) -> Exi
         }
     } else if json {
         if let Some(structured) = explain::lookup_structured(code) {
-            match serde_json::to_string(&structured) {
+            match mdatron::output::to_js_safe_json(&structured) {
                 Ok(line) => {
                     return print_page(&format!("{line}\n"));
                 }

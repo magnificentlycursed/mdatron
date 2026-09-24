@@ -215,8 +215,13 @@ pub struct QuotedRegion {
     /// Engine-authored label naming what the quoted content is (e.g. `"found"`).
     pub label: String,
     /// The raw adopter-derived text. Rendered through [`render_quoted`] in TTY /
-    /// compact; carried verbatim (control chars JSON-escaped by the serializer)
-    /// in the envelope.
+    /// compact; carried verbatim in the envelope, where the machine-JSON text
+    /// escapes the full hazardous partition (#185 L1): `"`, `\`, and the C0
+    /// controls (serde_json's own escapes) PLUS the line/paragraph separators
+    /// U+2028/U+2029 and the C1 controls U+0080..=U+009F (the JS-safe formatter,
+    /// `output::to_js_safe_json`) — always as `\uXXXX` escapes, so a decoding
+    /// consumer receives the identical chars while the JSON text itself is
+    /// safe to embed in JS or echo to a terminal.
     pub content: String,
     /// INTERNAL provenance marker (#177 cold-review R7), never serialized —
     /// the custom [`Serialize`] impl below does not emit it, so the envelope

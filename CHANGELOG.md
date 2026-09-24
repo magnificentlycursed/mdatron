@@ -9,6 +9,11 @@ mdatron is descended from Schematron (ISO/IEC 19757-3).
 
 ## [Unreleased]
 
+## [Unreleased]
+
+### Fixed
+- **machine JSON is JS-safe: separator and C1 escapes, decoding identically** (#185, the GH #52 minor + lane-A A2): `serde_json` escapes only `"`, `\`, and the C0 controls, so a raw U+2028/U+2029 line/paragraph separator or a C1 control (U+0080–U+009F) in any envelope string — a `quoted[].content` value, a `pipeline_error.message`, a summary — survived into the JSON text raw: the classic JSON-in-JS / terminal-re-injection hazard for an agent embedding the envelope. Every machine-JSON emission (the verify envelope, `explain --json`, `explain --list --json`) now routes through one JS-safe formatter (`output::to_js_safe_json`, a `serde_json` `Formatter` that additionally emits those code points as `\uXXXX`). **Semantics unchanged:** only the JSON *text* differs, and only for strings containing those chars — a decoding consumer receives the identical string, so envelope 3.0.0 needs no schema change and no version bump; the default repo envelope is byte-identical. Also: a **relative `--project-root`** no longer mangles adopter text — the host-layout relativizer substring-stripped `docs/` out of free-form errors mid-string (an invalid glob `docs/a**b` rendered as `a**b`); only an absolute root is a leak, so relative roots are skipped. And two contract tripwires gained end-to-end teeth: the three output forms are compared as finding-code **multisets** over a real run (the unit check could not see a form that dropped a finding), and REAL envelopes — findings, clean, failed-pipeline, `--timings` — are validated against the published schema (the unit check validated hand-built objects only).
+
 ## [0.6.0] - 2026-09-21
 
 ### Added

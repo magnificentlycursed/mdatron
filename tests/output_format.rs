@@ -434,6 +434,281 @@ fn refused_in_haystack_is_an_eval_pipeline_error_end_to_end() {
     );
 }
 
+// ── #185 L1: contract hygiene (post-0.6.0; envelope 3.0.0 is a live contract) ──
+
+/// A verify run WITHOUT --json: rustc-shaped findings on stderr.
+fn run_verify_tty(proj: &TempProject, extra: &[&str]) -> Output {
+    Command::new(mdatron_bin())
+        .args(["verify", "--project-root"])
+        .arg(proj.path())
+        .args(extra)
+        .output()
+        .expect("mdatron binary executes")
+}
+
+/// The published envelope schema, compiled from the repo file (the output.rs
+/// helper is #[cfg(test)]-private to the lib).
+fn published_schema() -> jsonschema::Validator {
+    let schema: serde_json::Value =
+        serde_json::from_str(include_str!("../schema/mdatron-output.schema.json")).unwrap();
+    jsonschema::options()
+        .with_draft(jsonschema::Draft::Draft202012)
+        .build(&schema)
+        .expect("published schema compiles")
+}
+
+fn assert_validates(env: &serde_json::Value, label: &str) {
+    let errs: Vec<String> = published_schema()
+        .iter_errors(env)
+        .map(|e| format!("{e} at {}", e.instance_path()))
+        .collect();
+    assert!(
+        errs.is_empty(),
+        "{label}: real envelope failed the published schema:\n{}",
+        errs.join("\n")
+    );
+}
+
+/// A fixture yielding three DISTINCT codes across three severities: E0050
+/// (schema violation), W0041 (naming grammar the files fail), L0001 (a
+/// justified unpinned tombstone).
+fn three_code_fixture(label: &str) -> TempProject {
+    let proj = TempProject::new(label);
+    proj.seed_minimal();
+    proj.seed_failing_md("bad.md");
+    proj.write("GOVERNING.md", "# gov\n");
+    proj.write(
+        ".mdatron/routes.yaml",
+        "routes:\n- files: \"**/*.md\"\n  governed_by: GOVERNING.md\n  naming: \"^post-[0-9]+\\\\.md$\"\n",
+    );
+    proj.write(
+        ".mdatron/pins.yaml",
+        "pins: []\nunpinned:\n- file: old.md\n  governing: GOVERNING.md\n  reason: retired\n  owner: op\n",
+    );
+    proj
+}
+
+/// The code token of a compact block's head line (`E[CODE] …`) or a TTY
+/// header line (`error[CODE]: …`), if the line is one.
+fn code_in_header(line: &str) -> Option<&str> {
+    let is_compact =
+        line.len() > 1 && line.starts_with(['E', 'W', 'L']) && line[1..].starts_with('[');
+    let is_tty =
+        line.starts_with("error[") || line.starts_with("warning[") || line.starts_with("info[");
+    if !(is_compact || is_tty) {
+        return None;
+    }
+    let open = line.find('[')?;
+    let close = line[open..].find(']')? + open;
+    let code = &line[open + 1..close];
+    // TTY headers carry a `:` right after the bracket; compact heads a space.
+    (is_compact || line[close + 1..].starts_with(':')).then_some(code)
+}
+
+// RED GATE (#185 L1 item 1 — the #52 minor / lane-A A2): the machine JSON text
+// escapes the Unicode line/paragraph separators and the C1 controls that
+// serde_json leaves raw, so an envelope is safe to embed in JS or echo to a
+// terminal — while a decoding consumer receives the IDENTICAL string (the
+// round-trip below), so envelope 3.0.0's semantics are untouched.
+#[test]
+fn envelope_json_text_escapes_separators_and_c1_but_decodes_identically() {
+    let proj = TempProject::new("js-safe-quoted");
+    proj.write(
+        ".mdatron/schemas/blog.json",
+        r#"{"type":"object","required":["schema_class"],"properties":{"schema_class":{"const":"blog"},"name":{"enum":["a"]}},"additionalProperties":false}"#,
+    );
+    // YAML decodes the escapes: the VALUE carries a raw U+2028 and a raw NEL.
+    proj.write(
+        "post.md",
+        "---\nschema_class: blog\nname: \"x\\u2028y\\u0085z\"\n---\n# ok\n",
+    );
+    let out = run_verify_json(&proj);
+    assert_eq!(out.status.code(), Some(1), "the enum violation fires");
+    let raw = &out.stdout;
+    assert!(
+        !raw.windows(3).any(|w| w == [0xE2, 0x80, 0xA8])
+            && !raw.windows(2).any(|w| w == [0xC2, 0x85]),
+        "no raw U+2028 / NEL bytes in the JSON text"
+    );
+    let text = String::from_utf8_lossy(raw);
+    assert!(
+        text.contains("\\u2028") && text.contains("\\u0085"),
+        "the separators/C1 ride as \\u escapes; got {text}"
+    );
+    // Round-trip: the decoded quoted content carries the original chars.
+    let env = parse_output(&out);
+    let quoted: Vec<&str> = env["findings"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .flat_map(|f| f["quoted"].as_array().into_iter().flatten())
+        .filter_map(|q| q["content"].as_str())
+        .collect();
+    assert!(
+        quoted.iter().any(|c| c.contains("x\u{2028}y\u{85}z")),
+        "a decoding consumer gets the identical string; quoted={quoted:?}"
+    );
+    assert_validates(&env, "js-safe findings run");
+}
+
+// RED GATE (#185 L1 item 1, the lane-A A2 repro): a separator smuggled into a
+// rule expression surfaces in `pipeline_error.message` escaped, not raw.
+#[test]
+fn pipeline_error_message_escapes_separators() {
+    let proj = TempProject::new("js-safe-pipeline");
+    proj.write(
+        ".mdatron/patterns/p.yaml",
+        "mdatron_dsl_version: 1\npattern:\n  id: p\n  rules:\n    - id: r\n      \
+         context: \"**/*.md\"\n      assert: \"$a b\\u2028c\"\n      code: T-E0001\n      \
+         message: m\n",
+    );
+    proj.write("doc.md", "---\nfoo: bar\n---\n");
+    let out = run_verify_json(&proj);
+    assert_eq!(
+        out.status.code(),
+        Some(2),
+        "an unparseable assert is a pipeline error"
+    );
+    let raw = &out.stdout;
+    assert!(
+        !raw.windows(3).any(|w| w == [0xE2, 0x80, 0xA8]),
+        "no raw U+2028 bytes in the JSON text"
+    );
+    assert!(String::from_utf8_lossy(raw).contains("\\u2028"));
+    let env = parse_output(&out);
+    let msg = env["pipeline_error"]["message"].as_str().unwrap();
+    assert!(
+        msg.contains("b\u{2028}c"),
+        "decodes to the original separator; got {msg:?}"
+    );
+    assert_validates(&env, "js-safe pipeline-error run");
+}
+
+// RED GATE (#185 L1 item 2): with a RELATIVE --project-root whose name
+// coincides with adopter text (`docs`), the host-layout relativizer used to
+// substring-strip `docs/` out of a free-form error mid-string — the invalid
+// glob `docs/a**b` rendered as `a**b` in BOTH the envelope and the TTY note.
+// Only an absolute root is a host-layout leak; relative roots are skipped.
+#[test]
+fn relative_project_root_never_mangles_adopter_text() {
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let parent = std::env::temp_dir().join(format!("mdatron-relroot-{nanos}"));
+    let root = parent.join("docs");
+    fs::create_dir_all(root.join(".mdatron")).unwrap();
+    fs::write(
+        root.join(".mdatron/config.yaml"),
+        "file_globs:\n  - \"docs/a**b\"\n",
+    )
+    .unwrap();
+    fs::create_dir_all(root.join(".mdatron/schemas")).unwrap();
+    fs::write(root.join(".mdatron/schemas/.keep.json"), "{}").unwrap();
+
+    let json = Command::new(mdatron_bin())
+        .current_dir(&parent)
+        .args(["verify", "--project-root", "docs", "--json"])
+        .output()
+        .expect("mdatron binary executes");
+    assert_eq!(
+        json.status.code(),
+        Some(2),
+        "an invalid glob is a pipeline failure"
+    );
+    let env = parse_output(&json);
+    let msg = env["pipeline_error"]["message"].as_str().unwrap();
+    assert!(
+        msg.contains("docs/a**b"),
+        "the adopter's glob text is intact in the envelope; got {msg:?}"
+    );
+    let tty = Command::new(mdatron_bin())
+        .current_dir(&parent)
+        .args(["verify", "--project-root", "docs"])
+        .output()
+        .expect("mdatron binary executes");
+    let stderr = String::from_utf8_lossy(&tty.stderr);
+    assert!(
+        stderr.contains("docs/a**b"),
+        "the adopter's glob text is intact in the TTY note; got {stderr}"
+    );
+    let _ = fs::remove_dir_all(&parent);
+}
+
+// RED GATE (#185 L1 item 3a): the three output forms agree on the FINDING SET
+// end to end — the unit tripwire checks each finding against its own render
+// and so cannot see a form that DROPS a finding. Real run, >= 3 distinct codes
+// across three severities, code MULTISETS compared across --json, --compact,
+// and TTY.
+#[test]
+fn three_output_forms_agree_on_a_real_run() {
+    let proj = three_code_fixture("three-forms");
+    let json_codes: Vec<String> = {
+        let env = parse_output(&run_verify_json(&proj));
+        env["findings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|f| f["code"].as_str().unwrap().to_string())
+            .collect()
+    };
+    let compact_codes: Vec<String> = {
+        let out = run_verify_tty(&proj, &["--compact"]);
+        String::from_utf8_lossy(&out.stdout)
+            .lines()
+            .filter_map(|l| code_in_header(l).map(str::to_string))
+            .collect()
+    };
+    let tty_codes: Vec<String> = {
+        let out = run_verify_tty(&proj, &[]);
+        String::from_utf8_lossy(&out.stderr)
+            .lines()
+            .filter_map(|l| code_in_header(l).map(str::to_string))
+            .collect()
+    };
+    let sorted = |mut v: Vec<String>| {
+        v.sort();
+        v
+    };
+    let (j, c, t) = (sorted(json_codes), sorted(compact_codes), sorted(tty_codes));
+    let distinct: std::collections::BTreeSet<&str> = j.iter().map(String::as_str).collect();
+    assert!(
+        distinct.len() >= 3
+            && distinct.contains("MDATRON-E0050")
+            && distinct.contains("MDATRON-W0041")
+            && distinct.contains("MDATRON-L0001"),
+        "the fixture yields three distinct codes; got {j:?}"
+    );
+    assert_eq!(j, c, "compact drops or invents a finding vs json");
+    assert_eq!(j, t, "tty drops or invents a finding vs json");
+}
+
+// RED GATE (#185 L1 item 3b): REAL run envelopes validate against the
+// published schema — the unit tripwire validates hand-built Outputs only.
+// Four shapes: a findings run, a clean run, a failed-pipeline run, and a
+// --timings run.
+#[test]
+fn real_envelopes_validate_against_the_published_schema() {
+    let findings = three_code_fixture("real-validate-findings");
+    assert_validates(&parse_output(&run_verify_json(&findings)), "findings run");
+
+    let clean = TempProject::new("real-validate-clean");
+    clean.seed_minimal();
+    clean.seed_clean_md("post.md");
+    assert_validates(&parse_output(&run_verify_json(&clean)), "clean run");
+    assert_validates(
+        &parse_output(&run_verify_json_with(&clean, &["--timings"])),
+        "timings run",
+    );
+
+    let failed = TempProject::new("real-validate-failed");
+    failed.write(".mdatron/config.yaml", "file_globs:\n  - \"docs/a**b\"\n");
+    failed.write(".mdatron/schemas/.keep.json", "{}");
+    let out = run_verify_json(&failed);
+    assert_eq!(out.status.code(), Some(2));
+    assert_validates(&parse_output(&out), "failed-pipeline run");
+}
+
 #[test]
 fn finding_code_prefix_matches_severity() {
     let proj = TempProject::new("bc3");
