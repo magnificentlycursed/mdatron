@@ -1,6 +1,6 @@
 {
   "next_display_id": 205,
-  "next_comment_id": 552,
+  "next_comment_id": 553,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "03beb708-b15d-4522-950e-3fdaa3a3d16b": 196,
@@ -2343,7 +2343,18 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-24T22:16:23.986226Z",
-      "updated_at": "2026-09-24T22:16:23.986226Z"
+      "updated_at": "2026-09-24T22:33:52.538193Z",
+      "comments": {
+        "a824c11e-3aaa-4a8f-be80-7e10f582b50e": {
+          "display_id": 552,
+          "author": "79Ig",
+          "content": "REVIEW DELIVERED (54 concepts, 12 synonym rows, 19 overload rows, 13 orphans, 5 leaks, 9 convention-drift rows; full report to be registered as knowledge page ontology-review-2026-09-24). ROOT CAUSE (R12): the project's own naming register has NO terms — .mdatron/vocabulary.yaml is label_schemes only, scoped to docs/methodology*.md; the ontology is registered nowhere machine-checkable, which is exactly the coined-term-without-codified-governance drift the Ch31 capture predicts. HEADLINE MAJORS: S1 the adopter's element-name report is a FIVE-way synonym (list-item-bold-name / bullet-lead / list_item_bold_name / 'bullet lead' / 'bold lead') plus heading vs h3-heading vs h3 — one key (element) with two value sets and a third set under id_from (O3); S2 governed_by (routes) vs governing (pins) for one relation; S7 'Layer 1/Layer 2' means two different things in the README and DESIGN has no Layer vocabulary at all; O1/O2 'governed' and 'governed tree' each carry two senses and the README's OWN sample vocabulary entry teaches the wrong one; O8 W0045 schema-class-unrouted has nothing to do with routes; O10 MDATRON-E0080 means three things (pipeline failure exit 2 / a never-captured-target FINDING exit 1 / CLI stderr failures) — a code-meaning contract issue; R8 the E0010/E0011 catalog headlines are NEVER emitted (three live spellings, none the catalog's); R1/R2 phases: is documented-but-unread and location: is parsed-but-undocumented — both violate dsl-reference's exact-match claim and slipped the inventory tripwire; R3 a DESIGN acceptance criterion (manifest tombstone emits a standing lint) is unmet — live self-verify lint_count 0; R6 the rule DSL has no families member so the envelope cannot say 'checked nothing' for rules; L1 tracker/review jargon in --help (GH#56 F6 confirms). PROPOSED DISPOSITION for 0.7.0 (operator ruling pending): (1) D1 register the canonical lexicon as terms (canonical = registered; retired aliases = reserved so E0092 fires on reappearance) + widen vocabulary_globs to README/DESIGN/docs — the doctrine fix that makes future drift loud; (2) D2-1/2 element unification (id_from→element; h3-heading→h3; bullet-lead→list-item-bold-name; aliases + ledger) and pins governing→governed_by (pin --update rewrites) — same files as the GH#56 route-docs lane, do together; (3) D2-3/4/5 code-meaning hygiene: split E0080 (new E0081 reference-target-not-captured, ENV-MINOR), collapse confinement summaries to one spelling + fix the catalog H1s, W0045→schema-class-unvalidated — all with migration notes (fingerprint shifts); (4) D2-6..9 cheap: TTY info→lint, help-text scrub, reason strings uniform + inert per family, families.rule_dsl member (ENV-MINOR → envelope 3.1.0); (5) R1/R2/R3 DSL-reference truth + the tombstone criterion; (6) D3 aliases; D4 define-don't-rename in DESIGN (roles adopter/consumer/operator/agent; jurisdiction vs governed tree; code/code body/code token).",
+          "created_at": "2026-09-24T22:33:52.523799Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAHFHSTXgOgRB8/3F83IYK0BEo2QFYBJRlThhi1tM/U5DsfwkHayJO6lmiUluaJ5yEk6wcLV7B9BayfhMEfkwjBA=="
+        }
+      }
     },
     "4ca77036-160b-443f-9480-bef7a625d82f": {
       "uuid": "4ca77036-160b-443f-9480-bef7a625d82f",
@@ -8624,8 +8635,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-24T22:27:10.022372Z",
+    "timestamp": "2026-09-24T22:33:52.538193Z",
     "agent_id": "79Ig",
-    "agent_seq": 1115
+    "agent_seq": 1116
   }
 }
