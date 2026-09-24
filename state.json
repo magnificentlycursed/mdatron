@@ -1,5 +1,5 @@
 {
-  "next_display_id": 204,
+  "next_display_id": 205,
   "next_comment_id": 551,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -59,6 +59,7 @@
     "44e04ea5-0edc-4919-bcf7-7c234a3c8954": 74,
     "48642aed-2145-4a65-b014-0df508ad37c5": 11,
     "49197eb8-d2b6-4462-9185-1e9065d2d847": 3,
+    "4be4a713-0fe0-45e4-9e07-9a859da5e49a": 204,
     "4ca77036-160b-443f-9480-bef7a625d82f": 170,
     "4dd99e1d-a2be-43b8-b748-53449ce44113": 152,
     "4ebc561b-c68f-472e-8fee-f763332bf311": 180,
@@ -2324,6 +2325,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAniNUdFB04wb7QOdEYCaxX2b2Z84Bloo+IWFud6cdaeL2aCz66ZXA6Esu7tJS6jfW2LU2WfxFmefHFSEZZBZPAA=="
         }
       }
+    },
+    "4be4a713-0fe0-45e4-9e07-9a859da5e49a": {
+      "uuid": "4be4a713-0fe0-45e4-9e07-9a859da5e49a",
+      "display_id": 204,
+      "title": "Ontological review of the codebase (operator request 2026-09-24): one concept, one name across DESIGN / code identifiers / config keys / envelope fields / diagnostic codes / explain pages / README — find synonyms, overloads, orphans, leaked internal names, and convention drift; classify renames by adopter-facing (SemVer + rename ledger) vs internal (free)",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-09-24T22:16:23.986226Z",
+      "updated_at": "2026-09-24T22:16:23.986226Z"
     },
     "4ca77036-160b-443f-9480-bef7a625d82f": {
       "uuid": "4ca77036-160b-443f-9480-bef7a625d82f",
@@ -8604,8 +8615,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-24T22:07:06.801357Z",
+    "timestamp": "2026-09-24T22:16:23.986226Z",
     "agent_id": "79Ig",
-    "agent_seq": 1113
+    "agent_seq": 1114
   }
 }
