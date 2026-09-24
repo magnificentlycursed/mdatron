@@ -1,6 +1,6 @@
 {
   "next_display_id": 201,
-  "next_comment_id": 543,
+  "next_comment_id": 544,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "03beb708-b15d-4522-950e-3fdaa3a3d16b": 196,
@@ -7934,8 +7934,17 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-20T00:10:00.982073Z",
-      "updated_at": "2026-09-24T01:11:57.874828Z",
+      "updated_at": "2026-09-24T02:12:01.645852Z",
       "comments": {
+        "175b261c-1c44-424e-a7ee-960bf4f24ef7": {
+          "display_id": 543,
+          "author": "79Ig",
+          "content": "COLD REVIEW round 1 (ff129c2): items 1 (JS-safe formatter) + 3 (tripwires) verified contract-safe — multibyte boundaries, object keys, only-separator/empty strings, DEL/NBSP not over-escaped, lowercase hex decoded by python/jq/node, byte-identical determinism, no straggler JSON emitters. Item 2 REGRESSED: the substring catch-all had been the accidental relativizer for schema_load/pattern_load paths built from the raw root pre-canonicalization; skipping relative roots renders './.mdatron/schemas' under --project-root . (0.6.0 rendered '.mdatron/schemas'). Bonus find: 0.6.0 LEAKED absolute host paths in config-error messages under a relative root (DEF4 violation in the published release) — ff129c2 fixed it silently. Fix round dispatched: canonicalize root once before deriving paths (H1), has_root/drop raw entry (H3), matrix red-gates incl. the leak pin (H4), duplicate Unreleased heading (H2), CHANGELOG honesty (H5), fixture Drop guard (H6). 15 candidates refuted.",
+          "created_at": "2026-09-24T02:12:01.600425Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA4NBQBqWoEXf5pSIQNRciefXNOpM1pzGe3RboRDBqelkT3rQlGijXWQnA6hKt5lamKEZ4LQBmXa2jmsK+2Bz/Cg=="
+        },
         "669ed969-87f2-45d6-a115-44865628dddf": {
           "display_id": 509,
           "author": "79Ig",
@@ -8493,8 +8502,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-24T01:11:57.874828Z",
+    "timestamp": "2026-09-24T02:12:01.645852Z",
     "agent_id": "79Ig",
-    "agent_seq": 1101
+    "agent_seq": 1102
   }
 }
