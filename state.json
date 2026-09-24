@@ -1,6 +1,6 @@
 {
   "next_display_id": 205,
-  "next_comment_id": 555,
+  "next_comment_id": 556,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "03beb708-b15d-4522-950e-3fdaa3a3d16b": 196,
@@ -2352,8 +2352,17 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-24T22:16:23.986226Z",
-      "updated_at": "2026-09-24T22:54:39.798987Z",
+      "updated_at": "2026-09-24T22:57:37.006801Z",
       "comments": {
+        "52c27011-4fc8-41e5-ad9a-3bab949b1f83": {
+          "display_id": 555,
+          "author": "79Ig",
+          "content": "LANE PLAN (0.7.0 ontology, ratified 2026-09-24): branch feature/204-ontology stacked on feature/64 (merged with origin/main). Ordered commits, each gated (fmt/clippy both targets/tests/self-verify --deny-warnings/deny) and independently verified before the next: (1) O-A key renames with serde aliases + ledger rows — section disjoint id_from->element (h3-heading->h3, bullet-lead->list-item-bold-name; one ElementClass shared by marker/count/disjoint; H3 hard-lock lifted), pins governing->governed_by (pin --update rewrites; quoted label follows), anti_patterns[].register alias guidance, manifest demoted[].path accepts file, CLI mdatron envelope-schema (schema visible_alias), --files visible_alias --file-globs. (2) O-B code-meaning hygiene — E0081 reference-target-not-captured split out of E0080 (pin/cite/link/marker/memo sites; E0080 pipeline-only; CLI stderr stops borrowing it), confinement summaries collapsed to absolute-path-refused/parent-segment-refused at the walk site + catalog + explain H1 + phantom key-source-symlink-refused gone, W0045 schema-class-unrouted->schema-class-unvalidated, TTY severity label info->lint; migration_note rows for every fingerprint shift. (3) O-C envelope 3.1.0 — families.rule_dsl member, reason strings uniform (.mdatron/<file> supplied / no .mdatron/<file>; no Layer jargon), inert branch per route-attached family, manifest demoted[] tombstone emits L0001 (DESIGN criterion R3 made true), schema + OUTPUT_VERSION + docs. (4) O-D DSL-reference truth — phases: and location: (R1/R2) resolved against dsl-reference's exact-match claim. (5) O-E prose — clap help scrub (L1), DESIGN definitions (D4: roles, jurisdiction vs governed tree, code/body/token, non-family bucket, activation table, Layer vocabulary retired), README sample O2 + S7, explain-page methodology-vocab scrub (L3), schema descriptions (L2), dead section citations (R10), SARIF residue (R11), L17 (R13). (6) D1 lexicon — .mdatron/vocabulary.yaml terms: canonical registered + retired aliases reserved; vocabulary_globs widened to README.md, DESIGN.md, docs/**; self-verify must stay clean, proving the sweep. (7) CHANGELOG + ledger. Then cold review rounds to MVR, PR stacked on #57, retarget to main after L2 merges.",
+          "created_at": "2026-09-24T22:57:36.994437Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAtPzhdfhbi9uTfunmUwBqmJC663BwdtiVrZ2Ciqgm2L94AQArvkdmBqL1qBl/NPTcnVpwSFK0hHRPmdlc33BzCQ=="
+        },
         "6baa7e8e-b05f-4e92-b686-8d93f22a2e4a": {
           "display_id": 554,
           "author": "79Ig",
@@ -8653,8 +8662,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-24T22:54:39.798987Z",
+    "timestamp": "2026-09-24T22:57:37.006801Z",
     "agent_id": "79Ig",
-    "agent_seq": 1118
+    "agent_seq": 1119
   }
 }
