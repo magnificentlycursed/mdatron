@@ -2549,11 +2549,12 @@
       "uuid": "535ce770-991b-4b76-b2e5-f7107912a629",
       "display_id": 198,
       "title": "Post-cut triage: group and prioritize the open post-0.6.0 items into lanes (operator request 2026-09-23)",
-      "status": "open",
+      "status": "closed",
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-24T00:54:18.914310Z",
-      "updated_at": "2026-09-24T00:57:28.133515Z",
+      "updated_at": "2026-09-24T00:57:36.816493Z",
+      "closed_at": "2026-09-24T00:57:36.816480Z",
       "labels": [
         "planning"
       ],
@@ -8483,8 +8484,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-24T00:57:28.133515Z",
+    "timestamp": "2026-09-24T00:57:36.816493Z",
     "agent_id": "79Ig",
-    "agent_seq": 1097
+    "agent_seq": 1098
   }
 }
