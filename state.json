@@ -1,5 +1,5 @@
 {
-  "next_display_id": 203,
+  "next_display_id": 204,
   "next_comment_id": 548,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -29,6 +29,7 @@
     "238317fa-9b8f-4ff1-9774-90c8dffb9a2e": 125,
     "2456d20a-0560-437f-81a0-2d54a1b96d80": 65,
     "262c8f3f-bab5-4796-b735-b24d9bf01ac9": 123,
+    "266badfe-b56b-409e-9f46-bdb0954f3adf": 203,
     "277a179b-fdda-44e7-a79b-f9e096e12789": 124,
     "27c148a2-87df-4d35-8f22-46b99666de3f": 130,
     "28577049-08ee-4b38-8981-24144f74842d": 193,
@@ -1245,6 +1246,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAUgWY3vtIezN1gSeVjCMcB/OTPkRUodK6wzkgezs3hc5QvhLGuuDXetgYa/wsfwYRYCvNYJi7nFpmGAzscWVQDA=="
         }
       }
+    },
+    "266badfe-b56b-409e-9f46-bdb0954f3adf": {
+      "uuid": "266badfe-b56b-409e-9f46-bdb0954f3adf",
+      "display_id": 203,
+      "title": "GH #56 adoption feedback (vsdd-cli 0.6.0 move): routes are the undocumented closed-world gateway to four families (major); 'routes supplied' undefined — routes: [] E0030s every file (major); code-catalog scan has no scope control (major); init seeds no shapes; compact hints are case labels not fixes; docs/help polish; GitHub Releases page stale; notes format to keep",
+      "status": "open",
+      "priority": "high",
+      "created_by": "79Ig",
+      "created_at": "2026-09-24T22:05:25.081803Z",
+      "updated_at": "2026-09-24T22:05:25.081803Z"
     },
     "277a179b-fdda-44e7-a79b-f9e096e12789": {
       "uuid": "277a179b-fdda-44e7-a79b-f9e096e12789",
@@ -8564,8 +8575,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-24T21:48:22.814382Z",
+    "timestamp": "2026-09-24T22:05:25.081803Z",
     "agent_id": "79Ig",
-    "agent_seq": 1109
+    "agent_seq": 1110
   }
 }
