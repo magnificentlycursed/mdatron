@@ -1,13 +1,234 @@
 # mdatron's own naming register (methodology §5), scoped by vocabulary_globs
-# (#97) to the governance docs that govern mdatron's development. This is the
-# dogfood: mdatron's own engine enforcing its own naming discipline on its own
-# prose.
+# (#97). This is the dogfood: mdatron's own engine enforcing its own naming
+# discipline on its own prose.
+#
+# terms: the canonical lexicon (DESIGN § Project declarations, Terms — ontology
+# review #204, 2026-09-24). A canonical spelling is `registered`; a retired
+# alias is `reserved`, so its reappearance in governed prose fires
+# MDATRON-E0092 — the drift the review found is now loud by construction.
 #
 # label_schemes.allow registers the permitted label schemes; a letter-plus-
 # number cluster outside them fires MDATRON-E0091 (the letter-cluster
 # prohibition, the register's flagship). mdatron's own diagnostic codes are the
 # one registered scheme that may appear in governance prose; a coined cluster
 # (a struck seam handle, an invented label) is not — it fires.
+mdatron_format_version: 1
+terms:
+  - term: "conformance engine"
+    status: registered
+    sense: "the product; not a validator or linter (those name the neighbouring tools)"
+  - term: "check family"
+    status: registered
+    sense: "one of the nine generic engines; its name is its envelope families key"
+  - term: "rule DSL"
+    status: registered
+    sense: "the pattern-file lane over frontmatter; not a family; envelope rule_dsl"
+  - term: "engine and configuration diagnostics"
+    status: registered
+    sense: "the codes outside every family; named, not a tenth family"
+  - term: "jurisdiction"
+    status: registered
+    sense: "the walked file set declared by file_globs or --file-globs; never guessed"
+  - term: "walked file"
+    status: registered
+    sense: "a file in the jurisdiction"
+  - term: "governed tree"
+    status: registered
+    sense: "the project-root directory every adopter-named path must resolve inside; never the jurisdiction"
+  - term: "governed file"
+    status: registered
+    sense: "a walked file claimed by a route or attested by a pin"
+  - term: "governing document"
+    status: registered
+    sense: "the document a route's or a pin's governed_by names"
+  - term: "target document"
+    status: registered
+    sense: "a marker rule's target_doc; a different edge from governed_by"
+  - term: "section"
+    status: registered
+    sense: "an ATX heading spec and the span it delimits (pins, section rules, target_section)"
+  - term: "element class"
+    status: registered
+    sense: "heading | h1..h6 | list-item-bold-name — what a marker or section rule resolves against"
+  - term: "pin record"
+    status: registered
+    sense: ".mdatron/pins.yaml"
+  - term: "init manifest"
+    status: registered
+    sense: ".mdatron/manifest.yaml, the record of the engine-managed partition"
+  - term: "tombstone"
+    status: registered
+    sense: "a standing removal record with reason and owner, in pins.yaml unpinned[] or the init manifest demoted[]"
+  - term: "governance weakening"
+    status: registered
+    sense: "a removal that unguards; tombstoned, and lint-loud (L0001) for as long as it stands"
+  - term: "naming register"
+    status: registered
+    sense: "the vocabulary family and its .mdatron/vocabulary.yaml"
+  - term: "guidance"
+    status: registered
+    sense: "the corrective wording on an anti-pattern (anti_patterns[].guidance)"
+  - term: "explain catalog"
+    status: registered
+    sense: "the engine's own code registry (schema/code-catalog.json; explain --list)"
+  - term: "code catalog"
+    status: registered
+    sense: "the adopter's .mdatron/code-catalogs.yaml"
+  - term: "diagnostic code"
+    status: registered
+    sense: "MDATRON-E0050 — the namespaced code a finding carries"
+  - term: "code body"
+    status: registered
+    sense: "E0050 — a diagnostic code without its namespace; what a code catalog's codes[] lists"
+  - term: "code token"
+    status: registered
+    sense: "a prefixed occurrence of a code in prose"
+  - term: "finding"
+    status: registered
+    sense: "an emitted validation outcome"
+  - term: "diagnostic"
+    status: registered
+    sense: "a finding's rendered form"
+  - term: "severity"
+    status: registered
+    sense: "error | warning | lint — one word on every surface"
+  - term: "pipeline failure"
+    status: registered
+    sense: "the run did not complete: exit 2, pipeline_error, MDATRON-E0080, no findings"
+  - term: "engine defect"
+    status: registered
+    sense: "an engine fault surfaced as a finding: MDATRON-E0081, a reference target never captured"
+  - term: "activity"
+    status: registered
+    sense: "a family's per-run tri-state (active | inert | inactive) with a reason"
+  - term: "adopter"
+    status: registered
+    sense: "who writes .mdatron/ data and the governed corpus"
+  - term: "consumer"
+    status: registered
+    sense: "who reads the envelope"
+  - term: "operator"
+    status: registered
+    sense: "the human at the terminal"
+  - term: "agent"
+    status: registered
+    sense: "the first consumer"
+  - term: "pattern file"
+    status: registered
+    sense: "a .mdatron/patterns/*.yaml file"
+  - term: "family data"
+    status: registered
+    sense: "the nine families' adopter-supplied inputs (never 'pattern data')"
+  - term: "scope glob"
+    status: registered
+    sense: "require_frontmatter and vocabulary_globs — predicates that narrow the walk"
+  - term: "capture-complete seam"
+    status: registered
+    sense: "the point after which the run reads only its immutable snapshot"
+  # Retired spellings: reserved, so a reappearance in governed prose fires E0092.
+  - term: "Layer 1"
+    status: reserved
+    sense: "retired pedagogy; say 'the schema family'"
+  - term: "Layer 2"
+    status: reserved
+    sense: "retired pedagogy; say 'the rule DSL' (or name the family)"
+  - term: "Layer-1"
+    status: reserved
+    sense: "retired pedagogy; say 'schema-family'"
+  - term: "Layer-2"
+    status: reserved
+    sense: "retired pedagogy; say 'rule-DSL'"
+  - term: "bullet lead"
+    status: reserved
+    sense: "retired alias of list-item-bold-name"
+  - term: "bold lead"
+    status: reserved
+    sense: "retired alias of list-item-bold-name"
+  - term: "pin manifest"
+    status: reserved
+    sense: "retired alias of pin record"
+  - term: "managed manifest"
+    status: reserved
+    sense: "retired alias of init manifest"
+  - term: "managed-partition manifest"
+    status: reserved
+    sense: "retired alias of init manifest"
+  - term: "golden code catalog"
+    status: reserved
+    sense: "retired alias of explain catalog"
+  - term: "pattern data"
+    status: reserved
+    sense: "retired; say 'family data'"
+  # Methodology register (§5): the terms the methodology docs coin.
+  - term: "issue lanes"
+    status: registered
+    sense: "the crosslink issues a layer of work runs its phases in"
+  - term: "1a design"
+    status: registered
+    sense: "phase 1a"
+  - term: "1b verification architecture"
+    status: registered
+    sense: "phase 1b"
+  - term: "1c decomposition"
+    status: registered
+    sense: "phase 1c"
+  - term: "2a red gate"
+    status: registered
+    sense: "phase 2a"
+  - term: "2b implement to green"
+    status: registered
+    sense: "phase 2b"
+  - term: "2c exit gate"
+    status: registered
+    sense: "phase 2c"
+  - term: "3 adversarial cold review"
+    status: registered
+    sense: "phase 3"
+  - term: "4 route findings"
+    status: registered
+    sense: "phase 4"
+  - term: "5 harden"
+    status: registered
+    sense: "phase 5"
+  - term: "6 exit"
+    status: registered
+    sense: "phase 6"
+  - term: "fix lane"
+    status: registered
+    sense: "the lane a routed finding is fixed in"
+  - term: "detective control"
+    status: registered
+    sense: "a binding grade: reads and reports; cannot block"
+  - term: "bypassable preventive control"
+    status: registered
+    sense: "a binding grade: a bypassable local block"
+  - term: "enforced preventive control"
+    status: registered
+    sense: "a binding grade: a server-side, unskippable block"
+  - term: "required status check"
+    status: registered
+    sense: "the GitHub merge gate an enforced preventive control rides on"
+  - term: "Tamper-proof"
+    status: registered
+    sense: "enforcement beyond all three binding grades"
+  - term: "CI-tested integrity"
+    status: registered
+    sense: "the durable third leg of hook enforcement"
+# Where bold introduces a term (E0090). The convention holds in the methodology
+# docs; elsewhere in the corpus bold is emphasis and `**Label:**` lead-ins.
+coinage_globs:
+  - "docs/methodology*.md"
 label_schemes:
   allow:
     - "^MDATRON-[EWL][0-9]{4}$"
+    # Bare code bodies (a registered term): the reserved-range table and the
+    # cost ledger name codes without the namespace.
+    - "^[EWL][0-9]{4}$"
+    # Reference-shaped clusters that name things rather than coin schemes:
+    # encodings, heading levels, advisories, version labels, DESIGN's own
+    # DEF-n decision labels.
+    - "^UTF-?(8|16|32)$"
+    - "^H[1-6]$"
+    - "^RUSTSEC-[0-9]{4}$"
+    - "^V[0-9]$"
+    - "^DEF[0-9]+$"

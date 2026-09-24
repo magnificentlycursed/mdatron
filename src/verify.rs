@@ -532,6 +532,12 @@ fn run_inner(
         Ok(c) => c,
         Err(e) => return Err(VerifyError::Config(e.to_string())),
     };
+    // #204 D1: the register's own coinage scope (where bold introduces a term),
+    // confined exactly like the config's scope globs.
+    let coinage_globs = confine_and_compile_globs(
+        vocab.as_ref().map(|v| v.coinage_globs()).unwrap_or(&[]),
+        "coinage_globs",
+    )?;
     // #176 input lineage: each present-and-read governance file's digest, from
     // the very bytes its loader read (absent inputs carry no key).
     if let Some(r) = &routes {
@@ -1008,6 +1014,7 @@ fn run_inner(
     // the incremental walk sees only part of the tree.
     let vocab_scoped = vocab.is_some() && !vocab_globs.is_empty();
     let mut vocab_scoped_hits = 0usize;
+    let mut coinage_hits = 0usize;
     // #204 R5: per route-attached family, how many walked files a route's
     // opt-in actually reached — an opt-in that claims no walked file is
     // `inert`, not `active` (the tri-state's audit claim was one family deep).
@@ -1057,6 +1064,12 @@ fn run_inner(
         if vocab_scoped && vocab_enabled {
             vocab_scoped_hits += 1;
         }
+        // Coinage applies inside `coinage_globs` (empty = wherever the register
+        // applies); counted so a coinage scope that reaches nothing is loud.
+        let vocab_coinage = coinage_globs.is_empty() || coinage_globs.matches_any(rel);
+        if vocab_enabled && !coinage_globs.is_empty() && vocab_coinage {
+            coinage_hits += 1;
+        }
         // Read from the immutable snapshot, never the filesystem (#103). A
         // symlinked file was refused at capture (its E0012 is recorded); a
         // captured-but-unreadable body (non-UTF8, or a read failure past the
@@ -1104,6 +1117,7 @@ fn run_inner(
             catalogs.as_deref().unwrap_or(&[]),
             &section_rules,
             vocab.as_ref().filter(|_| vocab_enabled),
+            vocab_coinage,
             &schemas,
             &patterns,
             &registry,
@@ -1260,6 +1274,35 @@ fn run_inner(
             ),
             location: Location {
                 file: config_path,
+                line: 1,
+                column: 0,
+            },
+            explain_ref: Some("MDATRON-W0043".into()),
+            quoted: Vec::new(),
+        });
+    }
+
+    // #204 D1: a `coinage_globs` list that reaches no scanned file silently
+    // disables the coinage check — the same fail-open class as a dead
+    // `vocabulary_globs`, reported under the same code, at the register.
+    if scope.is_none() && vocab.is_some() && !coinage_globs.is_empty() && coinage_hits == 0 {
+        findings.push(Finding {
+            code: "MDATRON-W0043".into(),
+            severity: Severity::Warning,
+            summary: "vocabulary-scope-matches-nothing".into(),
+            message: "the `coinage_globs` in .mdatron/vocabulary.yaml match no file \
+                      the register scans, so the bold-introduced-term check (E0090) \
+                      is inert — a mistyped glob would pass silently as if no \
+                      coinage existed"
+                .into(),
+            help: Some(
+                "correct the `coinage_globs` to cover the files where bold introduces \
+                 a term, or remove the list to apply the check wherever the register \
+                 applies"
+                    .into(),
+            ),
+            location: Location {
+                file: project_root.join(".mdatron").join(crate::vocab::VOCAB_NAME),
                 line: 1,
                 column: 0,
             },
@@ -2489,6 +2532,7 @@ fn verify_file(
     code_catalogs: &[crate::codecat::CodeCatalog],
     section_rules: &[&crate::section::Rule],
     vocab: Option<&crate::vocab::LoadedVocab>,
+    vocab_coinage: bool,
     schemas: &BTreeMap<String, Schema>,
     patterns: &[PatternFile],
     registry: &IndexRegistry,
@@ -2549,7 +2593,7 @@ fn verify_file(
             // asymmetry. Matching is on the root-relative path.
             // Vocabulary scans prose-only files too (whole content as body).
             if let Some(v) = vocab {
-                crate::vocab::check_file(v, path, content, 0, None, findings);
+                crate::vocab::check_file(v, path, content, 0, None, vocab_coinage, findings);
             }
             if cite_enabled {
                 crate::cite::check_file(snapshot, path, content, 0, findings);
@@ -2609,6 +2653,7 @@ fn verify_file(
             content,
             body_offset,
             Some(&frontmatter_value),
+            vocab_coinage,
             findings,
         );
     }
@@ -5354,6 +5399,71 @@ pattern:
             crate::output::FamilyActivity::Inert { .. } => "inert",
             crate::output::FamilyActivity::Inactive { .. } => "inactive",
         }
+    }
+
+    // #204 D1: `coinage_globs` scopes the bold-introduced-term check inside
+    // the register's own scope; a reserved word still fires everywhere the
+    // register scans; a coinage scope reaching nothing is W0043-loud.
+    #[test]
+    fn coinage_globs_scope_the_coinage_check_only() {
+        let seed = |label: &str, coinage: &str| {
+            let proj = TempProject::new(label);
+            proj.write(
+                ".mdatron/schemas/phase-primer.json",
+                minimal_phase_primer_schema(),
+            );
+            proj.write(".mdatron/config.yaml", "file_globs:\n  - \"**/*.md\"\n");
+            proj.write(
+                ".mdatron/vocabulary.yaml",
+                &format!(
+                    "terms:\n- term: old name\n  status: reserved\n  sense: retired\n{coinage}"
+                ),
+            );
+            proj.write("docs/a.md", "A **fresh coinage** and the old name.\n");
+            proj.write("notes/b.md", "Another **fresh coinage** here.\n");
+            proj
+        };
+        let scoped = seed("coinage-scoped", "coinage_globs:\n- \"notes/**\"\n");
+        let cfg = VerifyConfig::from_project(&scoped.0).unwrap();
+        let (findings, _f, _v, _n) = run(&cfg, None, None).unwrap();
+        let at = |code: &str| {
+            findings
+                .iter()
+                .filter(|f| f.code == code)
+                .map(|f| f.location.file.to_string_lossy().into_owned())
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(
+            at("MDATRON-E0090"),
+            vec!["notes/b.md".to_string()],
+            "{findings:?}"
+        );
+        assert_eq!(
+            at("MDATRON-E0092"),
+            vec!["docs/a.md".to_string()],
+            "{findings:?}"
+        );
+        assert_eq!(codes_of(&findings, "MDATRON-W0043"), 0);
+
+        let dead = seed("coinage-dead", "coinage_globs:\n- \"nowhere/**\"\n");
+        let cfg = VerifyConfig::from_project(&dead.0).unwrap();
+        let (findings, _f, _v, _n) = run(&cfg, None, None).unwrap();
+        assert_eq!(codes_of(&findings, "MDATRON-E0090"), 0, "{findings:?}");
+        let w = findings
+            .iter()
+            .find(|f| f.code == "MDATRON-W0043")
+            .expect("a dead coinage scope is loud");
+        assert!(w
+            .location
+            .file
+            .to_string_lossy()
+            .ends_with("vocabulary.yaml"));
+        assert!(w.message.contains("coinage_globs"));
+
+        let unscoped = seed("coinage-unscoped", "");
+        let cfg = VerifyConfig::from_project(&unscoped.0).unwrap();
+        let (findings, _f, _v, _n) = run(&cfg, None, None).unwrap();
+        assert_eq!(codes_of(&findings, "MDATRON-E0090"), 2, "{findings:?}");
     }
 
     // #204 R1/R2: the two parsed-but-inert pattern keys are announced at load

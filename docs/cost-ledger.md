@@ -2,7 +2,7 @@
 
 Usage record for the diagnostic-output cost contract (`DESIGN.md` § Output:
 "sizes are measured and recorded in the cost ledger"). The compact per-finding
-limit is **512 bytes** (contract limit, ratified 2026-07-25, tracker #80 D4).
+limit is **512 bytes** (contract limit, ratified 2026-07-25, tracker #80, decision 4).
 
 ## Compact per-finding sizes (measured)
 

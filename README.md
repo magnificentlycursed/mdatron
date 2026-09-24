@@ -343,6 +343,8 @@ terms:
   - term: "contract"
     status: reserved          # reserved: use outside the sense flags E0092
     sense: "a versioned behavioral commitment, never a soft promise"
+coinage_globs:                # where **bold** introduces a term (E0090);
+  - "docs/spec/**/*.md"       # absent = wherever the register scans
 label_schemes:
   allow:
     - "^C\\d+$"               # local scheme: C1, C2, ...
@@ -352,7 +354,9 @@ anti_patterns:
 ```
 
 What it flags: unregistered
-bold-introduced coinages (`E0090`, draft-status exempt), letter-plus-number
+bold-introduced coinages (`E0090`, draft-status exempt — inside `coinage_globs`
+when the registry sets them, since bold-means-coinage rarely holds across a
+whole corpus of `**Label:**` lead-ins and emphasis), letter-plus-number
 label clusters outside your allowlist (`E0091` — structured reference-IDs
 `REQ-<n>`/`AC-<n>`/`ADR-<n>`/`RFC-<n>`/`Q<n>` are exempt by default and unioned
 with your allowlist, so specs validate out of the box; add local schemes like
@@ -362,8 +366,9 @@ restating a configured frontmatter field's count and drifting from it
 (`E0094`). By default the scan covers every walked file; set `vocabulary_globs`
 in `config.yaml` (a scope list beside `require_frontmatter`) to restrict it —
 e.g. to apply the register to your live specs while leaving a historical archive
-walked and routed but unscanned. A `vocabulary_globs` that matches nothing is
-loud (`W0043`), so a mistyped glob can't silently disable the register. A term
+walked and routed but unscanned. A `vocabulary_globs` or `coinage_globs` that
+matches nothing is loud (`W0043`), so a mistyped glob can't silently disable a
+check. A term
 declared both `registered` and `draft` resolves to draft with a warning
 (`W0044`), so a conflicting declaration is surfaced, not silently resolved.
 
@@ -484,7 +489,7 @@ any level), `h1`…`h6` (one level), or `list-item-bold-name` (the `**bold**` le
 of a `- ` list item). A `disjoint` rule extracts an id (the `id_pattern`'s first
 capture) from each section's declared element and asserts the two sets share
 none; an overlap is `E0121`. Ids come **only** from the declared element (an `h3`
-heading's text, or a `list-item-bold-name` bullet's bold lead), never
+heading's text, or a `list-item-bold-name` bullet's bold name), never
 surrounding prose — so a body mention of an id doesn't cause a false overlap. A `section` spec that matches no heading in the
 document blocks (`E0122`, section-not-found; matching is exact on level and
 text) instead of silently passing, and the assertion is not evaluated; when a

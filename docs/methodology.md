@@ -28,9 +28,9 @@ sentence with practice):
 - **3 adversarial cold review** — independent, multi-lens, cold. Cold means
   no curated summary ever reaches a reviewer; warm on the raw artifact is
   acceptable, and true cold context is reserved for the terminal rounds. The
-  composition declares its **fan-out shape and hard agent-count ceiling**
-  before dispatch, and refutation happens **across rounds, never as a
-  per-finding verifier fan-out** (the named bypass) — a discipline founded on
+  composition declares its *fan-out shape and hard agent-count ceiling*
+  before dispatch, and refutation happens *across rounds, never as a
+  per-finding verifier fan-out* (the named bypass) — a discipline founded on
   this project's own overspend incidents (synced from vsdd-cli's
   declaration-completeness gate, #194).
 - **4 route findings** — see § 2.
@@ -49,7 +49,7 @@ finding, route it, then fix.
 
 The governing DESIGN is never hand-edited solo. A spec change re-enters phase
 1a under a declared composition (which domains/lenses review it) and a cold
-multi-lens review. Operator ratification is the **exit** of that process — not
+multi-lens review. Operator ratification is the *exit* of that process — not
 a substitute for it. A DESIGN commit cites the ratified review that authorized
 it.
 
@@ -77,7 +77,7 @@ same discipline applies to mdatron's development.
 The boundary has moved since this document was first written (checked against
 vsdd-cli's current design 2026-09-19, #194): the process-integrity status
 queries, init, and the routing gate (`vsdd gate` plus its CI workflow) have
-**shipped upstream** — adopting them here is an open operator decision, not a
+*shipped upstream* — adopting them here is an open operator decision, not a
 wait. Still genuinely unshippable: phase-answer derivation at full depth, the
 red-green gate commands, recorded dispatch, and tamper-proof enforcement
 against an agent that controls all local state — the last needs an independent
@@ -87,8 +87,8 @@ Do not wait on the tool for the rest.
 
 ## Enforcement, in one line
 
-Conduct alone drifts. The disciplines above are **bound or explicitly deferred
-by grade** — mdatron's own engine over the governed markdown, git-hook friction
+Conduct alone drifts. The disciplines above are *bound or explicitly deferred
+by grade* — mdatron's own engine over the governed markdown, git-hook friction
 at the act, and the required self-validation CI job as the durable leg (it
 re-derives the register and the amendment citations over the pushed range; the
 regression-corpus seeds additionally pin the checkers' own wiring, in a job that is

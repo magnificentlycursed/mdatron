@@ -18,8 +18,17 @@ is announced, not silently tolerated.
 absent) list is not this warning — that deliberately falls back to scanning
 every walked file.
 
+The same warning covers the registry's own `coinage_globs` (0.7.0): the files
+where `**bold**` introduces a term, so the coinage check (`MDATRON-E0090`) runs
+there and not over a corpus of `**Label:**` lead-ins and emphasis. A
+`coinage_globs` list that matches none of the files the register scans leaves
+the coinage check inert, and is announced here, located at `vocabulary.yaml`
+and naming the key in its message.
+
 ## How to fix
 
 Correct the `vocabulary_globs` so they cover the files the register should scan
 (check the glob against the paths under your `file_globs`), or remove the list
-entirely to apply the register to every walked file.
+entirely to apply the register to every walked file. For the `coinage_globs`
+variant, correct the list to cover the files where bold introduces a term, or
+remove it to apply the coinage check wherever the register applies.

@@ -7,7 +7,7 @@ old name — but the *shape* of the breakage differs by parse mode:
   `pins.yaml`, `code-catalogs.yaml`. An adopter file that still uses the old field
   name fails to parse with a **loud** unknown-field error.
 - **Lenient** (`.mdatron/config.yaml` / `ProjectConfig`): unknown fields are
-  tolerated (#80 D1). A rename here is *worse* — the old key is **silently
+  tolerated (#80, decision 1). A rename here is *worse* — the old key is **silently
   ignored** and the field falls back to its `#[serde(default)]` (empty). For
   `require_frontmatter`/`vocabulary_globs` that is precisely the fail-open class
   `MDATRON-W0051`/`W0043` exist to catch, but the rename itself slips in with the

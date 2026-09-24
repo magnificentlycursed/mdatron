@@ -77,7 +77,7 @@ needed to refuse every reparse kind after the open.
   grant. The `unsafe` calls (`NtCreateFile`, the `OBJECT_ATTRIBUTES` /
   `UNICODE_STRING` construction) carry SAFETY comments naming the invariants
   (valid handle, NUL-free UTF-16 name, struct lifetimes outliving the call).
-- **The refused class, stated honestly (cold-review W1):** it is wider than
+- **The refused class, stated honestly (cold-review finding 1):** it is wider than
   links. OneDrive Files-On-Demand placeholders (`IO_REPARSE_TAG_CLOUD*`),
   WOF / CompactOS-compressed files (`0x80000017`), Data Deduplication stubs
   (`0x80000013`), and ProjFS placeholders (`0x9000001C`) are reparse points

@@ -41,6 +41,14 @@ struct RawVocab {
     mdatron_format_version: Option<u32>,
     #[serde(default)]
     terms: Vec<RawTerm>,
+    /// Where `**bold**` introduces a term (the coinage check, `E0090`). Absent
+    /// or empty = every file the vocabulary family scans (`vocabulary_globs`).
+    /// The bold-means-coinage convention rarely holds across a whole corpus —
+    /// `**Status:**` labels and emphasis are not coinages — so a register that
+    /// governs a wide scope names the files where the convention does hold
+    /// (#204 D1). Root-relative globs, confined like `vocabulary_globs`.
+    #[serde(default)]
+    coinage_globs: Vec<String>,
     #[serde(default)]
     label_schemes: RawLabelSchemes,
     #[serde(default)]
@@ -94,6 +102,9 @@ struct RawNumericClaim {
 /// The compiled registry.
 pub struct LoadedVocab {
     terms: Vec<(String, TermStatus)>,
+    /// Raw `coinage_globs` (compiled + confined by the walk, like the config's
+    /// scope globs); empty = coinage applies wherever the register applies.
+    coinage_globs: Vec<String>,
     /// The active cluster allowlist: `Some` when a non-empty `label_schemes.allow`
     /// opts the scan in — the engine's [`DEFAULT_REF_ID_SCHEMES`] unioned with the
     /// adopter's patterns (#159). `None` (an absent/empty allowlist) leaves the
@@ -206,6 +217,7 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedVocab>, Error> {
 
     Ok(Some(LoadedVocab {
         terms,
+        coinage_globs: raw.coinage_globs,
         label_allow,
         anti,
         numeric: raw.numeric_claims.into_iter().map(|c| c.field).collect(),
@@ -248,23 +260,34 @@ pub fn registry_findings(vocab: &LoadedVocab, vocab_path: &Path, findings: &mut 
     }
 }
 
+impl LoadedVocab {
+    /// The register's `coinage_globs` as written (empty = every scanned file).
+    pub fn coinage_globs(&self) -> &[String] {
+        &self.coinage_globs
+    }
+}
+
 /// Scan one file's prose. `content` is the whole file; `body_offset` is where
 /// prose begins (after the frontmatter block; 0 when there is none);
 /// `frontmatter` feeds the numeric-claims comparison (claims are skipped
-/// without it).
+/// without it). `coinage` says whether this file is inside the register's
+/// `coinage_globs` (the caller decides against the confined walk): the
+/// bold-introduced-term check (`E0090`) runs only there, while reserved words,
+/// label clusters, anti-patterns, and numeric claims run on every scanned file.
 pub fn check_file(
     vocab: &LoadedVocab,
     path: &Path,
     content: &str,
     body_offset: usize,
     frontmatter: Option<&serde_yaml_ng::Value>,
+    coinage: bool,
     findings: &mut Vec<Finding>,
 ) {
     let body = &content[body_offset..];
 
     // ── coinage + reserved words (terms section supplied) ─────────────────
     if !vocab.terms.is_empty() {
-        for (start, term) in bold_spans(body) {
+        for (start, term) in bold_spans(body).into_iter().filter(|_| coinage) {
             let status = vocab
                 .terms
                 .iter()
@@ -600,7 +623,15 @@ mod tests {
         let proj = TempProj::new(label, vocab_yaml);
         let vocab = load(&proj.0).expect("vocab loads").expect("vocab present");
         let mut findings = Vec::new();
-        check_file(&vocab, Path::new("doc.md"), body, 0, None, &mut findings);
+        check_file(
+            &vocab,
+            Path::new("doc.md"),
+            body,
+            0,
+            None,
+            true,
+            &mut findings,
+        );
         let mut out: Vec<String> = findings
             .into_iter()
             .filter(|f| f.code == "MDATRON-E0091")
@@ -665,7 +696,15 @@ mod tests {
         let proj = TempProj::new(label, vocab_yaml);
         let vocab = load(&proj.0).expect("vocab loads").expect("vocab present");
         let mut findings = Vec::new();
-        check_file(&vocab, Path::new("doc.md"), body, 0, None, &mut findings);
+        check_file(
+            &vocab,
+            Path::new("doc.md"),
+            body,
+            0,
+            None,
+            true,
+            &mut findings,
+        );
         findings.into_iter().map(|f| f.code).collect()
     }
 
@@ -688,6 +727,28 @@ mod tests {
             codes_in(vocab, live, "anti-live"),
             vec!["MDATRON-E0093".to_string()],
             "the same text outside the fence still fires"
+        );
+    }
+
+    // #204 D1: `coinage` gates ONLY the bold-introduced-term check — a reserved
+    // word still fires in a file outside `coinage_globs`.
+    #[test]
+    fn coinage_flag_gates_e0090_but_not_reserved_words() {
+        let vocab = "terms:\n- term: old name\n  status: reserved\n  sense: retired\ncoinage_globs:\n- \"notes/**\"\n";
+        let proj = TempProj::new("coinage-flag", vocab);
+        let loaded = load(&proj.0).expect("loads").expect("present");
+        assert_eq!(loaded.coinage_globs(), ["notes/**"]);
+        let body = "A **new coinage** and the old name.\n";
+        let mut off = Vec::new();
+        check_file(&loaded, Path::new("doc.md"), body, 0, None, false, &mut off);
+        let mut on = Vec::new();
+        check_file(&loaded, Path::new("doc.md"), body, 0, None, true, &mut on);
+        let codes = |v: &Vec<Finding>| v.iter().map(|f| f.code.clone()).collect::<Vec<_>>();
+        assert_eq!(codes(&off), vec!["MDATRON-E0092".to_string()], "{off:?}");
+        assert_eq!(
+            codes(&on),
+            vec!["MDATRON-E0090".to_string(), "MDATRON-E0092".to_string()],
+            "{on:?}"
         );
     }
 
@@ -745,6 +806,7 @@ mod tests {
             "REQ-10 and W0070 appear here.",
             0,
             None,
+            true,
             &mut findings,
         );
         assert_eq!(

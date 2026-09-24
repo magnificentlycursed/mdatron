@@ -9,12 +9,17 @@
 file_globs:
   - "docs/**/*.md"
   - "README.md"
+  - "DESIGN.md"
   # Redundant with docs/**/*.md (the walk dedups by path; a glob that matches
   # on disk is never a W0046 dead glob) — kept so the methodology jurisdiction
   # stays declared in its own right alongside its vocabulary_globs twin below.
   - "docs/methodology*.md"
-# Vocabulary scope (#97): the naming register (methodology §5) applies only to
-# the forward-looking governance prose. Setting this list gates the WHOLE
-# vocabulary family (E0090-E0094) to the matched files.
+# Vocabulary scope (#97, widened by #204): the naming register — the canonical
+# lexicon of DESIGN § Project declarations (Terms) plus the methodology
+# register (§5) — applies to every living governance document: DESIGN, the
+# README, and the docs tree. Setting this list gates the WHOLE vocabulary
+# family (E0090-E0094) to the matched files.
 vocabulary_globs:
-  - "docs/methodology*.md"
+  - "DESIGN.md"
+  - "README.md"
+  - "docs/**/*.md"
