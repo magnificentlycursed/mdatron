@@ -1,4 +1,4 @@
-//! Citation family (#86; `DESIGN.md` § Five check families): file-and-line
+//! Citation family (#86; `DESIGN.md` § Nine check families): file-and-line
 //! citations in governed artifacts are verified against the snapshot of the
 //! working tree — the working tree is authoritative, uncommitted edits count,
 //! and no git subprocess is invoked.

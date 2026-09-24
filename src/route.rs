@@ -1,4 +1,4 @@
-//! Route family (#83; `DESIGN.md` § Five check families): the route table is
+//! Route family (#83; `DESIGN.md` § Nine check families): the route table is
 //! an **allowlist over the governed tree**.
 //!
 //! `.mdatron/routes.yaml` is an engine-defined interface parsed strictly
@@ -14,7 +14,7 @@
 //! `governed_by` — is held to the confinement contract; escapes are rejected
 //! under the path-confinement codes (`E0010` absolute, `E0011` parent segment,
 //! `E0012` symlink), existent and non-existent targets alike. Naming grammars
-//! compile on a linear-time engine (`regex_lite`; `DESIGN.md` L17 requires
+//! compile on a linear-time engine (`regex_lite`; `DESIGN.md` § Project declarations (linear-time pattern engines) requires
 //! linear-time matching for adopter-supplied patterns).
 
 use std::path::Path;
@@ -89,7 +89,7 @@ struct RawEntry {
 #[serde(deny_unknown_fields)]
 struct RawMarkerRule {
     /// Regex matched against each body line; its FIRST capture group is the
-    /// referenced `<name>`. Linear-time (`regex_lite`) per `DESIGN.md` L17.
+    /// referenced `<name>`. Linear-time (`regex_lite`) per `DESIGN.md` § Project declarations (linear-time pattern engines).
     pattern: String,
     /// The element class the captured name must resolve to in the target doc.
     element: ElementClass,
@@ -171,7 +171,7 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
     for entry in raw.routes {
         // Confinement of the files GLOB, decided on the pattern text alone
         // (parent segments are rejected in glob patterns too — BOUNDARY-
-        // PREAMBLE § 7 carried per DESIGN § Five check families).
+        // PREAMBLE § 7 carried per DESIGN § Nine check families).
         if let Err(v) = confine_lexically(Path::new(&entry.files)) {
             findings.push(confinement_finding(&path, "files", &entry.files, &v));
             continue; // dropped: fail-closed

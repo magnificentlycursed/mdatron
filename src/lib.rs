@@ -3,7 +3,7 @@
 //! mdatron is consumed **as a binary** (#81, operator ruling 2026-07-22
 //! executing the 2026-06-02 binary-first directive): the machine interface is
 //! `mdatron verify --json` / `mdatron explain --json`, with version discipline
-//! on the JSON envelope (DESIGN.md § Machine output is a public interface).
+//! on the JSON envelope (DESIGN.md § Diagnostics are a versioned contract).
 //! This lib target exists only so unit tests, the integration suites under
 //! `tests/`, and the load-bearing `compile_fail` doctests (confine, #53) can
 //! link the engine; it carries **no API-stability promise** and is not a

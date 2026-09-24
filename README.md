@@ -1,24 +1,25 @@
 # mdatron
 
-**A Rust CLI that validates markdown documents using JSON Schema (frontmatter)
-and a small Schematron-derived DSL (cross-field rules).** Descended from XML's
-Schematron (ISO/IEC 19757-3).
+**A Rust CLI conformance engine for typed markdown: JSON Schema over
+frontmatter, nine data-driven check families, and a small Schematron-derived
+DSL for cross-file rules.** Descended from XML's Schematron (ISO/IEC 19757-3).
 
-mdatron validates markdown documents in two layers:
+mdatron checks markdown documents on two axes:
 
-- **Layer 1 — Structural.** JSON Schema (draft 2020-12) over the frontmatter.
-  Required fields, enums, types, `additionalProperties: false`. Universal
-  vocabulary; zero learning curve for anyone who has authored an OpenAPI
-  schema, a Kubernetes CRD, or a tsconfig.
-- **Layer 2 — Semantic.** A small Schematron-derived DSL over cross-field,
-  cross-file, and cross-document constraints. The 80% of validation value
+- **Structure.** JSON Schema (draft 2020-12) over the frontmatter — the schema
+  family. Required fields, enums, types, `additionalProperties: false`.
+  Universal vocabulary; zero learning curve for anyone who has authored an
+  OpenAPI schema, a Kubernetes CRD, or a tsconfig.
+- **Semantics.** Cross-field, cross-file, and cross-document constraints — the
+  eight further check families, driven by adopter data, plus a small
+  Schematron-derived rule DSL over frontmatter. The 80% of validation value
   that JSON Schema cannot express: "the number of rows in this table matches
   the count declared in frontmatter," "every owner listed here appears in the
   team registry," "every link target resolves to a heading in the project."
 
 Where mdatron fits relative to neighbouring tooling: markdownlint enforces
 style; Vale catches prose-quality concerns; dprint and mdformat reformat;
-mdatron is the only validator built around the typed-frontmatter + cross-
+mdatron is the only conformance engine built around the typed-frontmatter + cross-
 document rules pattern. Errors are rustc-shaped — codes, source spans,
 `= help:` hints, `= explain:` references to per-code prose, structured JSON
 output for machine consumers.
@@ -62,7 +63,8 @@ mdatron --version
 
 Scaffold with `mdatron init`, which deploys the `.mdatron/` skeleton — the
 `schemas/` and `patterns/` directories, a seeded `config.yaml` (adopter-owned
-from then on), and the managed-partition manifest:
+from then on), and the init manifest (the record of the engine-managed
+partition):
 
 ```
 mkdir my-typed-docs && cd my-typed-docs
@@ -76,7 +78,7 @@ tools is never mdatron's to refuse. A tree with no config refuses loudly
 globs for an ad-hoc run without one. Re-running `init` is a no-op on an intact
 tree; a hand-modified *managed* file is refused with `MDATRON-E0060`.
 
-Drop a JSON Schema at `.mdatron/schemas/blog.json` (a Layer 1 example follows
+Drop a JSON Schema at `.mdatron/schemas/blog.json` (a schema example follows
 below), drop a markdown file with matching frontmatter inside your globs, and
 run:
 
@@ -169,7 +171,7 @@ Wire `mdatron verify` into your pre-commit hook so typed-document errors block
 the commit that introduces them. Make the wrapper **fail closed**: if the
 `mdatron` binary is missing — not yet installed, off `PATH`, or absent from the
 hook's shell environment — block the commit rather than skip the check
-silently. A validator that silently skips is invisible in exactly the moment it
+silently. A checker that silently skips is invisible in exactly the moment it
 is needed.
 
 ```sh
@@ -193,7 +195,7 @@ by design; a gate that must not pass an unverified reference needs this switch
 binary, findings, and pipeline failure. Reserve `git commit --no-verify` for a
 deliberate, visible bypass rather than letting a missing checker pass unseen.
 
-## Schema example (Layer 1)
+## Schema example (the schema family)
 
 A minimal blog-post schema that requires `schema_class`, `title`, and
 `published_on`; rejects extra frontmatter fields:
@@ -232,15 +234,15 @@ This file's frontmatter binds to the `blog` schema because the
 <!-- mdatron-roundtrip:md-end -->
 
 Drop both files into a project, run `mdatron verify`, and the file passes
-Layer 1. Add a frontmatter field the schema does not allow (e.g.,
-`extra: "nope"`) and Layer 1 emits `MDATRON-E0050:
+the schema family. Add a frontmatter field the schema does not allow (e.g.,
+`extra: "nope"`) and it emits `MDATRON-E0050:
 frontmatter-schema-violation`. Run `mdatron explain MDATRON-E0050` for the
 per-code prose.
 
-## Pattern example (Layer 2)
+## Pattern example (the rule DSL)
 
 JSON Schema is great for shapes but cannot express "this `published_on` must
-not be in the future." That is Layer 2 territory — DSL patterns at
+not be in the future." That is rule-DSL territory — DSL patterns at
 `.mdatron/patterns/<name>.yaml`:
 
 <!-- mdatron-roundtrip:pattern-start -->
@@ -268,10 +270,10 @@ DSL's scope is
 cross-file and registry validation; body-content extraction functions are
 out of scope.
 
-## Conformance families (Layer 2 data)
+## Check families
 
-The schema family (Layer 1) is the first of **nine** check families. Beyond it,
-eight generic Layer-2 engines activate on adopter data under `.mdatron/` — each
+The schema family is the first of **nine** check families. Beyond it, eight
+generic families activate on adopter data under `.mdatron/` — each
 inactive until its data exists, each strict-parsed, every path confined to the
 governed tree:
 
@@ -332,9 +334,9 @@ codification for your project's own terms. The registry:
 ```yaml
 mdatron_format_version: 1
 terms:
-  - term: "governed tree"
+  - term: "jurisdiction"
     status: registered        # a coined term, formally registered
-    sense: "the file set inside the declared jurisdiction"
+    sense: "the file set the declared file_globs walk"
   - term: "spend shape"
     status: draft             # draft terms are exempt from strict findings
     sense: "how a review round's agent budget is declared"
@@ -516,7 +518,7 @@ The adoption sequence, each step optional after the first:
 - [`DESIGN.md`](./DESIGN.md) — the standing design: behavioral contracts,
   the nine check families, output marking discipline, path confinement,
   governance-data governance
-- [`docs/dsl-reference.md`](./docs/dsl-reference.md) — the complete Layer 2
+- [`docs/dsl-reference.md`](./docs/dsl-reference.md) — the complete rule-DSL
   construct inventory with evaluation semantics; held to the implementation
   continuously by CI tripwires (the construct-inventory check and the
   operator-semantics pins), so an engine construct absent from the reference —

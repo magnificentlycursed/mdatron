@@ -35,7 +35,7 @@ conventions, not contracts, inside SARIF.
 
 The registry discipline: a diagnostic-code registry as the *generator* of
 derived artifacts, so drift is impossible by construction rather than caught by
-review. mdatron's golden code catalog — generated from the explain pages — is
+review. mdatron's explain catalog — generated from the explain pages — is
 the full application of that idiom; the tripwire that forces `docs/limits.md`
 to match shipped data is the weaker cousin (drift caught at test time rather
 than made impossible), and its promotion to a generated table is tracked.

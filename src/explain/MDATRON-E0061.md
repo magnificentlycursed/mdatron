@@ -9,10 +9,9 @@
 A file changed after its governing document pinned it: the sha256 recorded in
 `.mdatron/pins.yaml` no longer matches the file's content. The stale pin is the
 attention loop working — the point is not the hash, it is that the governing
-relationship must be re-read when the governed content moves. The motivating
-incident: an engine code-range table changed under a design document's open
-question and nothing signaled; this family exists so that class of drift
-blocks instead.
+relationship must be re-read when the governed content moves. The typical
+incident: a table changed under a design document that quoted it and nothing
+signaled; this family exists so that class of drift blocks instead.
 
 ## How to fix
 

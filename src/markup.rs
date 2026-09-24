@@ -195,7 +195,7 @@ pub(crate) fn heading_slugs(body: &str) -> HashSet<String> {
 /// `#x` target on GitHub. Both the raw id and its slugified form are added, so a
 /// non-slug-shaped id still resolves. The attribute scan is a linear-time regex
 /// over the engine-authored pattern (not an adopter-supplied one), so it carries
-/// no ReDoS surface (DESIGN L17).
+/// no ReDoS surface (DESIGN § Project declarations (linear-time pattern engines)).
 fn insert_html_anchors(html: &str, slugs: &mut HashSet<String>) {
     // HTML comments are not rendered and carry no anchors — strip them first so
     // an `id=`/`name=` inside `<!-- … -->` does not register a phantom target.
@@ -389,7 +389,7 @@ pub(crate) fn list_item_bold_name(line: &str) -> Option<&str> {
 }
 
 /// The heading-delimited span of `content` named by `heading_spec` (e.g.
-/// `"## Decomposition (phase 1c)"` — matched by level AND text): the byte slice
+/// `"## Requirements"` — matched by level AND text): the byte slice
 /// from that heading's line through just before the next heading of the same or
 /// higher level (heading line inclusive), or the rest of the document if none
 /// follows. `None` if the heading is not found. Fence-aware (a `#` inside a code

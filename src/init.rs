@@ -113,7 +113,7 @@ struct Manifest {
     version: u32,
     /// Engine-deployed files (path relative to `.mdatron/`) with their sha256.
     /// The manifest never lists itself (fixed point). The manifest DEFINES the
-    /// managed partition (DESIGN § Governance data is governed): drift checks
+    /// managed partition (DESIGN § Validation is data-driven (governance data is governed)): drift checks
     /// run over these entries as data, not over an engine-side list.
     managed: Vec<ManagedEntry>,
     /// Demotion tombstones: standing records of entries removed from the
@@ -150,7 +150,7 @@ pub struct LoadedManifest {
 
 /// Render the manifest's demotion tombstones as the standing governance-
 /// weakening findings — the second carrier of `MDATRON-L0001` beside
-/// `pins.yaml`'s `unpinned[]` (DESIGN § Governance data is governed: "a
+/// `pins.yaml`'s `unpinned[]` (DESIGN § Validation is data-driven (governance data is governed): "a
 /// tombstoned demotion stays loud through its standing annotation"; #204 R3 —
 /// through 0.6.0 only the pins carrier emitted the lint, so the DESIGN
 /// criterion was unmet). A tombstone without its justification is
@@ -261,7 +261,7 @@ pub fn init(project_root: &Path) -> Result<InitOutcome, InitError> {
             // The manifest is read from the tree, and it cannot hash itself
             // (fixed point) — so a hand-edit to it is not drift-caught. Hold its
             // managed paths to the same confinement contract as any governed
-            // path (DESIGN.md § Five check families): a path escaping .mdatron/
+            // path (DESIGN.md § Nine check families): a path escaping .mdatron/
             // is a manifest-integrity failure — refuse, read nothing outside the
             // partition.
             let confined = confine_lexically(Path::new(&entry.path)).map_err(|v| {
@@ -395,7 +395,9 @@ fn write_manifest(dir: &Path, manifest: &Manifest) -> Result<(), InitError> {
         path: manifest_path.to_string_lossy().into_owned(),
         error: e.to_string(),
     })?;
-    let body = format!("# mdatron managed-partition manifest — do not edit by hand.\n{yaml}");
+    let body = format!(
+        "# mdatron init manifest (the engine-managed partition) — do not edit by hand.\n{yaml}"
+    );
     // Atomic write (#126 DEF8): the manifest is rewritten in place on repair
     // (tombstones, re-hashed redeploys); a torn write would corrupt the
     // managed-partition record.

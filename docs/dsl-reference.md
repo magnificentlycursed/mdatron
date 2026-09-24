@@ -1,6 +1,6 @@
 # mdatron DSL reference
 
-The complete Layer-2 construct inventory (`DESIGN.md` § Cross-file semantics
+The complete rule-DSL construct inventory (`DESIGN.md` § Cross-file semantics
 stay narrowed). The DSL serves one lane: **cross-file and registry integrity
 over frontmatter**. Body-content extraction is excluded by design; there are no
 markdown-AST helpers, no regex functions, and no string-extraction functions.

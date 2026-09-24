@@ -19,7 +19,7 @@ tombstone has two carriers, and this finding fires from both:
 
 This informational finding fires from the standing annotation itself on every
 whole-tree verify — the weakening stays loud in the tool's own channel for as
-long as it stands (`DESIGN.md` § Governance data is governed). It is a record,
+long as it stands (`DESIGN.md` § Validation is data-driven (governance data is governed)). It is a record,
 not a defect. A tombstone missing its reason or owner is `MDATRON-W0042`
 instead.
 

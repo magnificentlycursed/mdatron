@@ -15,7 +15,7 @@ just before the next heading of the same or higher level, fence-aware) whose
 line matches, and asserts the predicate. This is the body-content counterpart of
 the DSL's frontmatter arity rule (`count(filter(...)) == N`), delivered as a
 fixed-semantics check because body-content extraction is excluded from the rule
-DSL. Live case from the first adopter: "at least one open H3 in `## Requirements`" — an
+DSL. Typical case: "at least one open H3 in `## Requirements`" — an
 empty section is the retire trigger, so the rule is `>= 1`, and this fires when
 the count leaves the required range.
 

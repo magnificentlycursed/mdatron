@@ -423,6 +423,51 @@ fn schema_subcommand_prints_the_published_envelope_schema() {
     );
 }
 
+// #204 L1: clap renders `///` doc comments verbatim, so tracker numbers and
+// review jargon ("(#125/#126)", "crosslink #13 SEC/F1", "vsdd W4") reached
+// every adopter's `--help`. The help surface is adopter-facing prose: no
+// tracker reference, no review-round vocabulary, on any subcommand.
+#[test]
+fn help_text_carries_no_tracker_or_review_jargon() {
+    let subs: [&[&str]; 7] = [
+        &["--help"],
+        &["verify", "--help"],
+        &["explain", "--help"],
+        &["pin", "--help"],
+        &["init", "--help"],
+        &["envelope-schema", "--help"],
+        &["docs", "--help"],
+    ];
+    for args in subs {
+        let out = run(args);
+        let help = String::from_utf8_lossy(&out.stdout);
+        let tracker_ref = help
+            .split('#')
+            .skip(1)
+            .any(|rest| rest.chars().next().is_some_and(|c| c.is_ascii_digit()));
+        assert!(
+            !tracker_ref,
+            "{args:?}: a `#<n>` tracker reference leaked into help:\n{help}"
+        );
+        for jargon in [
+            "crosslink",
+            "vsdd-cli",
+            "vsdd W",
+            "cold-review",
+            "roast",
+            "SEC/",
+            "AIE/",
+            "RT/",
+            "DESIGN §",
+        ] {
+            assert!(
+                !help.contains(jargon),
+                "{args:?}: review jargon {jargon:?} leaked into help:\n{help}"
+            );
+        }
+    }
+}
+
 // #204 D3: `--file-globs` names what `--files` always meant (the jurisdiction
 // glob list — config.yaml's `file_globs`); both spellings are accepted and the
 // alias is visible in help.

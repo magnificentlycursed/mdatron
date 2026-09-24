@@ -12,7 +12,7 @@ each with an `element` (`h3` — the id comes from H3 heading text; `heading` �
 from a heading of any level; or `list-item-bold-name` — from the `**bold**` lead
 of a `- ` list item; the same element vocabulary marker rules use) and an
 `id_pattern` (a regex whose first capture is the id); the engine extracts an id
-set from each and asserts the two share no element. Live case from the first adopter: a "slice"
+set from each and asserts the two share no element. Typical case: a "slice"
 is open **xor** complete — its id appears as an open-phase H3 in one section or
 as a completed bullet in another, never both.
 

@@ -9,8 +9,8 @@
 A `file:line` citation in a citation-checked artifact names content that does
 not exist in the working-tree snapshot. The working tree is authoritative:
 uncommitted content counts as live, no git history is consulted, and a
-citation into nothing is rejected — the motivating evidence is a review round
-where 7 of 8 findings cited absent code. Citation checking is per-route
+citation into nothing is rejected — exactly the drift an agent-written corpus
+accumulates when nothing checks its citations. Citation checking is per-route
 opt-in (`citations: true` in `.mdatron/routes.yaml`), so historical corpora
 whose citations were true when written stay archival.
 

@@ -7,7 +7,7 @@
 ## What this means
 
 The file's frontmatter declares a `schema_class:` field whose value does not
-match any schema registered in `.mdatron/schemas/`. mdatron cannot Layer 1
+match any schema registered in `.mdatron/schemas/`. the schema family cannot
 validate the file because the schema it would validate against does not exist.
 
 ## How to fix
@@ -22,7 +22,7 @@ Three corrective paths, listed in order of likelihood:
 3. **The class name is intentional but mdatron should ignore the file.** Move
    the file outside the configured `file_globs` in `.mdatron/config.yaml`, or
    remove the `schema_class:` line entirely (a file with no `schema_class`
-   skips Layer 1; Layer 2 patterns still apply via path-glob selectors).
+   skips the schema family; rule-DSL patterns still apply via path-glob selectors).
 
 ## See also
 

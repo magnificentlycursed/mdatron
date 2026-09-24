@@ -317,7 +317,7 @@ pub fn verify(config: &VerifyConfig) -> Result<Vec<Finding>, VerifyError> {
 }
 
 /// Run the verification pipeline and report both findings and per-family
-/// activity (`DESIGN.md` § Five check families; #90). A family is **active**
+/// activity (`DESIGN.md` § Nine check families; #90). A family is **active**
 /// when its data was supplied and it ran this pass — independent of whether it
 /// produced findings.
 pub fn verify_report(config: &VerifyConfig) -> Result<VerifyReport, VerifyError> {
@@ -2684,7 +2684,7 @@ fn verify_file(
                     summary: "frontmatter-schema-violation".into(),
                     // The message is engine-authored (schema-side data only); the
                     // failing document value / unexpected keys ride in `quoted`
-                    // for prefix-marked rendering, never inline (DESIGN §Output).
+                    // for prefix-marked rendering, never inline (DESIGN § Agents are the first consumer).
                     message: ve.message.clone(),
                     help: None,
                     location: Location {
@@ -2946,7 +2946,7 @@ fn interpolate_message(
                     .map_err(|e| format!("interpolation '{expr_str}' eval: {e}"))?;
                 // The interpolated value is adopter document content. Keep it out
                 // of the engine message — an inline value is a forgeable marking
-                // (DESIGN §Output). The message carries a `[see: <label>]`
+                // (DESIGN § Agents are the first consumer). The message carries a `[see: <label>]`
                 // cross-reference (#116, vsdd ruling on item 8 part 1); the value
                 // renders in the labeled, prefix-marked quoted block beneath it.
                 // The label drops the `$self.` prefix so it reads as a field name,
@@ -5531,7 +5531,7 @@ pattern:
         }
     }
 
-    // #204 R3 (DESIGN § Governance data is governed, acceptance criterion): a
+    // #204 R3 (DESIGN § Validation is data-driven (governance data is governed), acceptance criterion): a
     // tombstoned demotion in the init manifest emits the standing L0001 on a
     // whole-tree run — the second carrier beside pins.yaml's unpinned[] — and
     // one without its justification is W0042. The manifest's bytes join the
@@ -8779,7 +8779,7 @@ pattern:
         assert_eq!(findings[0].code, "MDATRON-E0050");
         // Engine-authored message names the constraint (schema-side), and the
         // failing document value is carried out-of-line in a quoted region — not
-        // inline in the message (DESIGN §Output marking discipline).
+        // inline in the message (DESIGN § Agents are the first consumer marking discipline).
         assert!(
             findings[0].message.contains("allowed options"),
             "message should describe the constraint: {}",
@@ -9140,7 +9140,7 @@ pattern:
         let project_v = Value::Null;
         let ctx = EvalContext::new(&self_v, &file_v, &project_v);
         let (message, quoted) = interpolate_message("got phase: {{$self.phase}}", &ctx).unwrap();
-        // The value stays out-of-line (DESIGN §Output — never inline); the message
+        // The value stays out-of-line (DESIGN § Agents are the first consumer — never inline); the message
         // carries a `[see: <label>]` cross-reference to the labeled quoted block
         // (#116, vsdd ruling on item 8 part 1). The label drops the `$self.`
         // prefix so it reads as a field name pointing at the `=phase:` block.

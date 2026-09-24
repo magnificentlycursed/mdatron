@@ -6,7 +6,7 @@
 
 ## What this means
 
-A letter-plus-number cluster in governed prose matches no allowed label scheme. The letter-cluster incident is the evidence: ad-hoc schemes (SEC-F3, AIE-F2, M4) recurred past written correction until nothing mechanical policed them. The engine detects the cluster shape; the adopter's allowlist says which schemes are sanctioned.
+A letter-plus-number cluster in governed prose matches no allowed label scheme. Ad-hoc schemes recur past written correction until something mechanical polices them. The engine detects the cluster shape; the adopter's allowlist says which schemes are sanctioned.
 
 Structured **reference-IDs** under long-standing spec conventions — `REQ-<n>`, `AC-<n>`, `ADR-<n>`, `RFC-<n>`, `Q<n>`/`Q-<n>` — are exempt **by default**: those IDs *reference* numbered spec items rather than coin a label scheme, so the engine's default allow-set covers them out of the box (unioned with your `label_schemes.allow` whenever the cluster scan is active). This flag therefore fires on a cluster that is neither a sanctioned local scheme *nor* one of those standard reference-ID forms.
 

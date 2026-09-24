@@ -8,8 +8,7 @@
 
 A file that `mdatron init` deploys and manages was modified after
 initialization. The managed partition is the set of engine-owned files listed
-in `.mdatron/manifest.yaml` with their sha256 content hashes (`DESIGN.md` §
-Governance data is governed). On a re-run, `mdatron init` recomputes each
+in `.mdatron/manifest.yaml` with their sha256 content hashes (`DESIGN.md` § Validation is data-driven (governance data is governed)). On a re-run, `mdatron init` recomputes each
 managed file's hash and compares it to the manifest; a mismatch is drift, and
 `init` refuses rather than silently overwrite your edit or trust a changed
 engine-owned file.
@@ -44,4 +43,4 @@ by repository commit review, not by the engine.
 
 ## See also
 
-- the mdatron design reference, § Governance data is governed (in the project repository)
+- the mdatron design reference, § Validation is data-driven (governance data is governed) (in the project repository)

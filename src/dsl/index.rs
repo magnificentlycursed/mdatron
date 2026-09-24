@@ -18,7 +18,7 @@
 //! live in an [`IndexRegistry`] keyed by `name`. Rules reference indices via the
 //! `key()` standard-library function (`key("authors", "jane-doe")`).
 //!
-//! Path-confinement (DESIGN.md § Five check families; carried from
+//! Path-confinement (DESIGN.md § Nine check families; carried from
 //! BOUNDARY-PREAMBLE § 7): sources are confined lexically before any
 //! filesystem access — absolute paths and parent segments are rejected
 //! whether or not the target exists — and every read goes through a
@@ -512,7 +512,7 @@ fn walk_segments(
             match entry.file_type {
                 // A directory is never a source file; skip it. Files and
                 // symlinks are included — a symlink is refused at open time
-                // (closed-world no-follow, DESIGN.md § Five check families).
+                // (closed-world no-follow, DESIGN.md § Nine check families).
                 confine::EntryType::Dir | confine::EntryType::Other => {}
                 confine::EntryType::File | confine::EntryType::Symlink => {
                     out.push(prefix.join(&entry.name));
@@ -1219,7 +1219,7 @@ mod tests {
     #[test]
     fn glob_matched_symlink_refused() {
         // Glob expansion may match a symlink; the handle-based open still
-        // refuses it (closed-world no-follow, DESIGN.md § Five check families).
+        // refuses it (closed-world no-follow, DESIGN.md § Nine check families).
         let temp = TempDir::new("glob-symlink");
         let outside = TempDir::new("glob-symlink-target");
         outside.write("target.yaml", "k: v\n");

@@ -1,4 +1,4 @@
-//! Vocabulary family (#85; `DESIGN.md` § Five check families): prose in
+//! Vocabulary family (#85; `DESIGN.md` § Nine check families): prose in
 //! governed artifacts is scanned against a supplied registry.
 //!
 //! `.mdatron/vocabulary.yaml` is an engine-defined interface parsed strictly.
@@ -17,7 +17,7 @@
 //! field references only, no free inference.
 //!
 //! All adopter patterns compile on the linear-time engine (`regex_lite`,
-//! `DESIGN.md` L17); matched prose rides quoted regions, never inline; finding
+//! `DESIGN.md` § Project declarations (linear-time pattern engines)); matched prose rides quoted regions, never inline; finding
 //! locations carry the precise source line.
 
 use std::path::Path;
@@ -96,7 +96,7 @@ pub struct LoadedVocab {
     terms: Vec<(String, TermStatus)>,
     /// The active cluster allowlist: `Some` when a non-empty `label_schemes.allow`
     /// opts the scan in — the engine's [`DEFAULT_REF_ID_SCHEMES`] unioned with the
-    /// consumer's patterns (#159). `None` (an absent/empty allowlist) leaves the
+    /// adopter's patterns (#159). `None` (an absent/empty allowlist) leaves the
     /// cluster scan disabled.
     label_allow: Option<Vec<regex_lite::Regex>>,
     anti: Vec<(regex_lite::Regex, String)>,
@@ -115,7 +115,7 @@ pub struct LoadedVocab {
 /// standardized spec conventions — IEEE/ISO requirement IDs, architecture
 /// decision records, RFCs — whose IDs *reference* numbered items rather than coin
 /// a label scheme, so flagging them as invented is a false positive (327 of 336
-/// E0091 findings on the first consumer's spec corpus were this class). Unioned
+/// E0091 findings on the first adopter's spec corpus were this class). Unioned
 /// into every active cluster allowlist (see [`load`]) so spec corpora validate
 /// out of the box; a consumer extends the set for local schemes via
 /// `label_schemes.allow` (e.g. `^C\d+$`). Deliberately conservative — multi-
@@ -157,7 +157,7 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedVocab>, Error> {
     // The cluster scan activates only on a non-empty consumer allowlist (an
     // absent/empty one leaves it off — unchanged, so the defaults never
     // newly-activate the scan on anyone). When active, the engine's default
-    // reference-ID schemes are UNIONED with the consumer's patterns (#159), so a
+    // reference-ID schemes are UNIONED with the adopter's patterns (#159), so a
     // spec's REQ-N/AC-N/… IDs are exempt out of the box and a consumer supplies
     // only its local schemes.
     let label_allow = if raw.label_schemes.allow.is_empty() {

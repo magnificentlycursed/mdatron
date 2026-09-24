@@ -34,7 +34,7 @@
 //! `Slice 3` bullet and report a false overlap. Ids come only from the declared
 //! element, never the surrounding prose.
 //!
-//! Adopter patterns compile on the linear-time engine (`regex_lite`, DESIGN L17).
+//! Adopter patterns compile on the linear-time engine (`regex_lite`, DESIGN § Project declarations (linear-time pattern engines)).
 
 use std::collections::HashSet;
 use std::path::Path;

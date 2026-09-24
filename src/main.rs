@@ -16,7 +16,7 @@ mod explain;
 
 #[derive(Parser, Debug)]
 #[command(name = "mdatron", about, version, long_about = None)]
-#[command(after_help = "The working loop (#180 discoverability):
+#[command(after_help = "The working loop:
   mdatron init                     scaffold .mdatron/ in a new project
   mdatron verify                   check the tree; rustc-shaped diagnostics
   mdatron explain <code>           the fix for any diagnostic (--list for all)
@@ -52,17 +52,17 @@ enum Command {
         /// File globs (relative to project root) — an explicit, ad-hoc
         /// jurisdiction. Without --files, jurisdiction comes from
         /// .mdatron/config.yaml's `file_globs`; an absent or globless config is
-        /// refused (jurisdiction is never guessed). (#125/#126)
+        /// refused (jurisdiction is never guessed).
         #[arg(long = "files", visible_alias = "file-globs", value_name = "GLOB", num_args = 1..)]
         files: Vec<String>,
 
         /// Emit the versioned JSON output envelope on stdout
-        /// (schema: schema/mdatron-output.schema.json). (#126)
+        /// (schema: schema/mdatron-output.schema.json).
         #[arg(long = "json")]
         json: bool,
 
         /// Emit the compact agent-context form on stdout: one size-capped block
-        /// per finding (512 bytes, DESIGN §Output; #80 D4), adopter content
+        /// per finding (512 bytes, a contract limit), adopter content
         /// prefix-marked, truncation at line boundaries with an elision marker.
         #[arg(long = "compact", conflicts_with = "json")]
         compact: bool,
@@ -71,65 +71,63 @@ enum Command {
         #[arg(long = "quiet", short = 'q')]
         quiet: bool,
 
-        /// Incremental mode (#102): verify only this changed file and its
+        /// Incremental mode: verify only this changed file and its
         /// transitive dependents, reporting the same findings a whole-tree run
         /// would for those files. A change under `.mdatron/` falls back to a
         /// whole-tree run. The verified (visited) file set prints to stderr.
         #[arg(long = "changed", value_name = "FILE")]
         changed: Option<PathBuf>,
 
-        /// Escalate warnings to a failing exit (#121, requested by vsdd-cli): a
-        /// warnings-only run exits `1` instead of `0`, so a consumer wiring
+        /// Escalate warnings to a failing exit: a
+        /// warnings-only run exits `1` instead of `0`, so an adopter wiring
         /// `verify` as a hard gate need not parse the envelope. Errors still exit
         /// `1`, a clean run `0`, and a pipeline failure `2`, unchanged.
         #[arg(long = "deny-warnings", visible_alias = "strict")]
         deny_warnings: bool,
 
-        /// Include run-phase wall-clock timings in the JSON envelope (#175):
-        /// an optional `timings` object with `total_ms`/`load_ms`/`capture_ms`/
-        /// `check_ms`. Requires --json — timings ride ONLY in the envelope, so
-        /// without it the flag would silently do nothing (cold-review R4). The
-        /// explicit --compact conflict closes clap's requires-waiver (R6:
-        /// `compact` conflicts with `json`, and clap 4.5 waives an arg's
-        /// `requires` when another present arg conflicts the required arg away
-        /// — so `--timings --compact` was accepted and silently dropped
-        /// timings). Off by default so the default envelope stays
-        /// deterministic (timings are its sole non-deterministic zone).
+        /// Include run-phase wall-clock timings in the JSON envelope: an
+        /// optional `timings` object with `total_ms`/`load_ms`/`capture_ms`/
+        /// `check_ms`. Requires --json (timings ride only in the envelope) and
+        /// conflicts with --compact. Off by default so the default envelope
+        /// stays deterministic (timings are its sole non-deterministic zone).
+        // The explicit --compact conflict closes clap's requires-waiver:
+        // `compact` conflicts with `json`, and clap 4.5 waives an arg's
+        // `requires` when another present arg conflicts the required arg away
+        // — so `--timings --compact` was once accepted and silently dropped
+        // timings (#175 cold-review R4/R6).
         #[arg(long = "timings", requires = "json", conflicts_with = "compact")]
         timings: bool,
     },
 
-    /// Show extended documentation for an error code (rustc --explain pattern).
+    /// Show extended documentation for a diagnostic code (rustc --explain pattern).
     Explain {
-        /// The error code, e.g. MDATRON-E0001 or VSDD-E0017.
+        /// The diagnostic code, e.g. MDATRON-E0001 or VSDD-E0017.
         /// Must match `^[A-Z][A-Z0-9]*-[ELW][0-9]{4}$` — operator-pasted from
-        /// diagnostic output. Rejects ANSI escapes and shell-meta injection
-        /// (crosslink #13 SEC/F1 + RT/F2 convergence).
+        /// diagnostic output. Rejects ANSI escapes and shell-meta injection.
         #[arg(value_parser = parse_explain_code, required_unless_present = "list")]
         code: Option<String>,
 
         /// List every code in mdatron's explain catalog (`code — summary`),
         /// sorted, then exit — so an operator can discover codes without a full
-        /// code in hand (#117, vsdd W4).
+        /// code in hand.
         #[arg(long = "list")]
         list: bool,
 
-        /// Emit the explain page as a structured JSON object on stdout
-        /// (per crosslink #13 AIE/F7); with --list, the catalog as a JSON
-        /// array of {code, summary} objects (#180 — previously the flag was
-        /// silently ignored under --list). Without this flag, the markdown
-        /// body (or the plain list) is printed verbatim.
+        /// Emit the explain page as a structured JSON object on stdout; with
+        /// --list, the catalog as a JSON array of {code, summary} objects.
+        /// Without this flag, the markdown body (or the plain list) is printed
+        /// verbatim.
         #[arg(long = "json")]
         json: bool,
 
         /// Emit a one-line compact form: `<code> <severity>: <summary> —
         /// <first-sentence-of-fix>`. Suitable for agent-loop hot paths +
-        /// PostToolUse hook context budgets (per crosslink #13 AIE/F2).
+        /// PostToolUse hook context budgets.
         #[arg(long = "compact", conflicts_with = "json")]
         compact: bool,
     },
 
-    /// Verify the pin record, or recompute it with --update (#84).
+    /// Verify the pin record, or recompute it with --update.
     Pin {
         /// Project root. Defaults to the current directory.
         #[arg(long = "project-root", value_name = "DIR")]
@@ -149,7 +147,7 @@ enum Command {
         quiet: bool,
     },
 
-    /// Scaffold the `.mdatron/` skeleton and its managed manifest. Idempotent;
+    /// Scaffold the `.mdatron/` skeleton and its init manifest. Idempotent;
     /// refuses a hand-modified managed file with MDATRON-E0060.
     Init {
         /// Project root. Defaults to the current directory.
@@ -162,14 +160,14 @@ enum Command {
     },
 
     /// Print the published `verify --json` output-envelope JSON Schema on stdout
-    /// (#127) — so a binary-only consumer can pin and validate against it without
+    /// — so a binary-only consumer can pin and validate against it without
     /// a repo checkout. Kept in lockstep with `mdatron_output_version`. (`schema`
     /// is the retired 0.6.0 name, kept as an alias — the bare word otherwise
     /// means the frontmatter schema family.)
     #[command(name = "envelope-schema", visible_alias = "schema")]
     EnvelopeSchema,
 
-    /// Print bundled documentation on stdout (#180 discoverability): the
+    /// Print bundled documentation on stdout: the
     /// complete DSL reference (default), the declared-limits table, or the
     /// FAQ — the same files the crate ships, so a binary-only `cargo install`
     /// consumer reads them without a repo checkout (`mdatron docs | less`).

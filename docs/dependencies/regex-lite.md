@@ -7,7 +7,7 @@
 ## Why this dependency
 
 Naming-grammar matching for the route family (`W0041 name-underivable`)
-and, later, vocabulary-family label schemes and anti-patterns. DESIGN L17
+and, later, vocabulary-family label schemes and anti-patterns. DESIGN § Project declarations (linear-time pattern engines)
 requires adopter-supplied regular expressions to run on **linear-time engines**
 under the step budget — `regex-lite` (like its big sibling `regex`) is a
 finite-automata engine with no backtracking, so adopter patterns cannot be

@@ -6,7 +6,7 @@ rust-version = "1.88"
 license = "MIT"
 authors = ["magnificentlycursed"]
 repository = "https://github.com/magnificentlycursed/mdatron"
-description = "Typed-markdown validator with rustc-shaped diagnostics (descended from Schematron)"
+description = "Typed-markdown conformance engine with rustc-shaped diagnostics (descended from Schematron)"
 keywords = ["markdown", "schema", "validation", "schematron", "linter"]
 categories = ["command-line-utilities", "development-tools"]
 readme = "README.md"
@@ -53,7 +53,7 @@ serde_yaml_ng = "0.10"
 # saphyr: position-tracking YAML parse, used only on the schema-violation error
 # path to resolve a JSON pointer to a source line (#65). Happy path is serde_yaml_ng.
 saphyr = "0.0.11"
-# sha256 content hashes for the init managed-partition manifest (#74). DESIGN.md
+# sha256 content hashes for the init manifest (#74). DESIGN.md
 # ratifies sha256 for pins; see the dependency investigation on #74.
 sha2 = "0.10"
 serde_json = "1"
@@ -63,7 +63,7 @@ jsonschema = { version = "0.49", default-features = false }
 glob = "0.3"
 # regex-lite: naming-grammar matching for the route family (#83) and, later,
 # vocabulary label schemes. Zero-dependency, linear-time (no backtracking) —
-# DESIGN L17 requires linear-time engines for adopter-supplied patterns. See
+# DESIGN § Project declarations requires linear-time engines for adopter-supplied patterns. See
 # docs/dependencies/regex-lite.md.
 regex-lite = "0.1"
 # pulldown-cmark: CommonMark pull parser for the link-check family (#155). Markdown
