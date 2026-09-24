@@ -1,6 +1,6 @@
 {
   "next_display_id": 205,
-  "next_comment_id": 553,
+  "next_comment_id": 554,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "03beb708-b15d-4522-950e-3fdaa3a3d16b": 196,
@@ -1865,7 +1865,7 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-07-21T03:53:35.156084Z",
-      "updated_at": "2026-09-24T22:27:10.022372Z",
+      "updated_at": "2026-09-24T22:41:02.133467Z",
       "labels": [
         "security"
       ],
@@ -1890,6 +1890,15 @@
           "kind": "decision",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA03vAzjwaE9aVoNjxfUGeiqziCVhkI1NLuSop5iUDrHki4cztv46msBV41affS6ZKpQek1ih5kAhUkEJ0eLHcDg=="
+        },
+        "8265a008-2076-4b9c-8a52-51f352c93a65": {
+          "display_id": 553,
+          "author": "79Ig",
+          "content": "FIX ROUND 1 committed (cececba, +676/-159): W1 reparse classes named at all sites (tag carried; cloud/WOF/dedup/ProjFS/unknown honest wording); W2 canonical root at the CLI source for verify/pin/init + pin's silent continue made loud + junction-root pin gate; W3 OBJ_DONT_REPARSE (std precedent); W4 DESIGN:114 clause; W5 DESIGN:70 NARROWED — 'symlink cycles cannot extend a walk' is true of the no-follow enumerations, the file_globs glob walk can descend a symlinked dir with every reached file refused at open (amendment ratified per the cold review + #64 decision); W6 cross-target clippy in CI Lint; W7/W8 gates; W9 ':' refused; W10 attributes via GetFileInformationByHandle; W11-13 nits. Independently verified: unix suite 10/10, cross-target clippy clean, cargo deny clean, self-verify clean. Reviewer closure verification dispatched; operator push pending for windows-latest.",
+          "created_at": "2026-09-24T22:41:02.120820Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAuoUcg97IbZarGI5bJtTzm1uMZ24Qeo5xmsbM0ma9gyQBfDto2IrjwqiWz2Flg63+VeAVcQwwS/BTgvXNgbMfDQ=="
         },
         "90fabbe0-1788-4e97-8e3a-6fd4ff4621d2": {
           "display_id": 550,
@@ -8635,8 +8644,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-24T22:33:52.538193Z",
+    "timestamp": "2026-09-24T22:41:02.133467Z",
     "agent_id": "79Ig",
-    "agent_seq": 1116
+    "agent_seq": 1117
   }
 }
