@@ -32,6 +32,7 @@ const E0050: &str = include_str!("MDATRON-E0050.md");
 const E0060: &str = include_str!("MDATRON-E0060.md");
 const E0070: &str = include_str!("MDATRON-E0070.md");
 const E0080: &str = include_str!("MDATRON-E0080.md");
+const E0081: &str = include_str!("MDATRON-E0081.md");
 const E0040: &str = include_str!("MDATRON-E0040.md");
 const W0040: &str = include_str!("MDATRON-W0040.md");
 const E0030: &str = include_str!("MDATRON-E0030.md");
@@ -102,6 +103,7 @@ pub fn lookup(code: &str) -> Option<&'static str> {
         "MDATRON-E0060" => Some(E0060),
         "MDATRON-E0070" => Some(E0070),
         "MDATRON-E0080" => Some(E0080),
+        "MDATRON-E0081" => Some(E0081),
         "MDATRON-E0040" => Some(E0040),
         "MDATRON-W0040" => Some(W0040),
         "MDATRON-E0030" => Some(E0030),
@@ -311,6 +313,52 @@ pub const MIGRATION_NOTES: &[(&str, &str)] = &[
          accepted and `pin --update` rewrites it). The finding's meaning is \
          unchanged; because quoted labels are fingerprint inputs, every \
          E0062 fingerprint turned over ONCE at 0.7.0.",
+    ),
+    (
+        "MDATRON-E0010",
+        "0.7.0 collapsed this code's headline to ONE spelling, \
+         `absolute-path-refused`: through 0.6.0 the catalog and this page said \
+         `key-source-absolute-path` (a headline no finding ever carried), the \
+         file_globs walk said `governed-path-absolute`, and the family \
+         surfaces said `absolute-path-refused`. The meaning is unchanged. \
+         Fingerprints of the walk-site shape turned over once, and on the \
+         pins.yaml surface the quoted label `governing` became `governed_by`.",
+    ),
+    (
+        "MDATRON-E0011",
+        "0.7.0 collapsed this code's headline to ONE spelling, \
+         `parent-segment-refused`: through 0.6.0 the catalog and this page said \
+         `key-source-parent-traversal` (a headline no finding ever carried), \
+         the file_globs walk said `governed-path-parent-traversal`, and the \
+         family surfaces said `parent-segment-refused`. The meaning is \
+         unchanged. Fingerprints of the walk-site shape turned over once, and \
+         on the pins.yaml surface the quoted label `governing` became \
+         `governed_by`.",
+    ),
+    (
+        "MDATRON-E0012",
+        "0.7.0 renamed the pins.yaml surface's quoted-region label `governing` \
+         to `governed_by`, so E0012 fingerprints raised from a pin record \
+         turned over once; the headline `symlinked-component-refused` and the \
+         meaning are unchanged. (`key-source-symlink-refused`, named in older \
+         engine comments, was never an emitted headline.)",
+    ),
+    (
+        "MDATRON-W0045",
+        "0.7.0 renamed this warning's headline from `schema-class-unrouted` to \
+         `schema-class-unvalidated`: it has nothing to do with routes.yaml — a \
+         declared schema_class that no schema and no rule context validates. \
+         The meaning is unchanged; fingerprints turned over once.",
+    ),
+    (
+        "MDATRON-E0080",
+        "Through 0.6.0 this code carried TWO meanings: the pipeline failure \
+         (exit 2, no findings) and a FINDING (exit 1) for a pin, citation, \
+         link, or marker target the run never captured. From 0.7.0 the \
+         finding is `MDATRON-E0081` (reference-target-not-captured) and E0080 \
+         is only ever the did-not-run failure. If you saw E0080 as a finding \
+         with 'never captured into the run snapshot' in its message, see \
+         `mdatron explain MDATRON-E0081`.",
     ),
     (
         "MDATRON-E0093",

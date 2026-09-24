@@ -1,4 +1,4 @@
-# MDATRON-E0011 — key-source-parent-traversal
+# MDATRON-E0011 — parent-segment-refused
 
 **Severity:** error
 **Status:** accepted

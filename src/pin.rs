@@ -316,9 +316,9 @@ pub fn check(
             // verdict against a healthy file would be a false attestation.
             None => {
                 findings.push(Finding {
-                    code: "MDATRON-E0080".into(),
+                    code: "MDATRON-E0081".into(),
                     severity: Severity::Error,
-                    summary: "pipeline-orchestration-failure".into(),
+                    summary: "reference-target-not-captured".into(),
                     message: "this pin's target was never captured into the run \
                               snapshot — an engine defect in target discovery, \
                               not a defect in the pin record; please report it \
@@ -326,7 +326,7 @@ pub fn check(
                         .into(),
                     help: None,
                     location: Location::whole_file(&pins_path),
-                    explain_ref: Some("MDATRON-E0080".into()),
+                    explain_ref: Some("MDATRON-E0081".into()),
                     quoted: vec![QuotedRegion {
                         platform_variant: false,
                         label: "file".into(),

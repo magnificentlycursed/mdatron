@@ -396,8 +396,8 @@ fn resolve_link(
                 path,
                 content,
                 at,
-                "MDATRON-E0080",
-                "pipeline-orchestration-failure",
+                "MDATRON-E0081",
+                "reference-target-not-captured",
                 "this link's target was never captured into the run snapshot — \
                  an engine defect in target discovery, not a defect in this \
                  document; please report it upstream",

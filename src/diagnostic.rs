@@ -20,12 +20,14 @@ pub enum Severity {
 
 impl Severity {
     /// The string used in TTY-style diagnostic output (rustc convention):
-    /// `Error` → `"error"`, `Warning` → `"warning"`, `Lint` → `"info"`.
+    /// `Error` → `"error"`, `Warning` → `"warning"`, `Lint` → `"lint"` — the
+    /// same three words the envelope's `severity` enum and `explain` use (#204:
+    /// the TTY header said `info` through 0.6.0, the one surface that did).
     pub fn label(self) -> &'static str {
         match self {
             Self::Error => "error",
             Self::Warning => "warning",
-            Self::Lint => "info",
+            Self::Lint => "lint",
         }
     }
 }
@@ -1074,9 +1076,10 @@ mod tests {
     }
 
     #[test]
-    fn severity_lint_label_is_info() {
-        // Lint maps to "info" per rustc convention (info-level diagnostics).
-        assert_eq!(Severity::Lint.label(), "info");
+    fn severity_lint_label_is_lint() {
+        // #204 S10: one word for the severity on every surface — the envelope
+        // enum, `explain`, and the TTY header all say `lint`.
+        assert_eq!(Severity::Lint.label(), "lint");
     }
 
     #[test]

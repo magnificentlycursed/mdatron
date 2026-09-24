@@ -269,18 +269,18 @@ pub enum IndexError {
     #[error("file parse at '{path}': {error}")]
     Parse { path: String, error: String },
 
-    /// Maps to MDATRON-E0010: key-source-absolute-path per DESIGN.md § Five
-    /// check families (carried from BOUNDARY-PREAMBLE § 7).
+    /// Maps to MDATRON-E0010 (absolute-path-refused) — DESIGN.md's path
+    /// confinement, decided lexically on the `keys:` source text.
     #[error("path confinement: absolute source path '{path}' is rejected; sources resolve relative to the project root (MDATRON-E0010)")]
     AbsoluteSource { path: String },
 
-    /// Maps to MDATRON-E0011: key-source-parent-traversal per DESIGN.md § Five
-    /// check families (carried from BOUNDARY-PREAMBLE § 7). Decided lexically,
-    /// so non-existent targets are rejected on the same basis as existing ones.
+    /// Maps to MDATRON-E0011 (parent-segment-refused) — DESIGN.md's path
+    /// confinement. Decided lexically, so non-existent targets are rejected on
+    /// the same basis as existing ones.
     #[error("path traversal: '{path}' escapes project root (MDATRON-E0011)")]
     PathTraversal { path: String },
 
-    /// Maps to MDATRON-E0012: key-source-symlink-refused. No-follow resolution
+    /// Maps to MDATRON-E0012 (symlinked-component-refused). No-follow resolution
     /// refuses a symlink — on Windows, any reparse point — at any component,
     /// whatever its target. `reparse` names a non-symlink class (" — a
     /// cloud-file placeholder (…)"), empty for a plain link (#64 W1).

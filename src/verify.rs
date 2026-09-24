@@ -675,10 +675,10 @@ fn run_inner(
             Err(v) => {
                 let (code, summary) = match v {
                     crate::confine::LexicalViolation::Absolute => {
-                        ("MDATRON-E0010", "governed-path-absolute")
+                        ("MDATRON-E0010", "absolute-path-refused")
                     }
                     crate::confine::LexicalViolation::ParentSegment => {
-                        ("MDATRON-E0011", "governed-path-parent-traversal")
+                        ("MDATRON-E0011", "parent-segment-refused")
                     }
                 };
                 findings.push(Finding {
@@ -991,7 +991,7 @@ fn run_inner(
     // schema nor a rule context? With the schemas dir missing entirely, that is
     // an unserved Layer-1 request (W0047) even where W0045's has-infra gate stays
     // its hand.
-    let mut any_unrouted_schema_class = false;
+    let mut any_unvalidated_schema_class = false;
     // The RUN-level reference memo (GH #48 finding 8): one per run() invocation
     // — created here, dropped at return, so incremental runs share no cross-run
     // state. Cross-file targets (marker member sets, link anchor slugs) are
@@ -1057,7 +1057,7 @@ fn run_inner(
             // Symlinked: refused at capture, its E0012 already recorded.
             Some(crate::snapshot::Captured::SymlinkRefused { .. }) | None => continue,
         };
-        any_unrouted_schema_class |= verify_file(
+        any_unvalidated_schema_class |= verify_file(
             path,
             content,
             &snapshot,
@@ -1174,7 +1174,7 @@ fn run_inner(
         // loud. Gated on an actual unrouted class so a Schematron-only project
         // (whose schema_class selects a rule context) is not nagged for the
         // schemas dir it never needed.
-        if schemas_dir_missing && any_unrouted_schema_class {
+        if schemas_dir_missing && any_unvalidated_schema_class {
             findings.push(Finding {
                 code: "MDATRON-W0047".into(),
                 severity: Severity::Warning,
@@ -2629,14 +2629,14 @@ fn verify_file(
     //
     // The raw (dir-independent) signal is returned so `run` can raise W0047 when
     // the schemas dir is missing entirely.
-    let unrouted_schema_class =
+    let unvalidated_schema_class =
         schema_class_opt.is_some() && !schema_matched && !any_context_matched;
     if let Some(schema_class) = &schema_class_opt {
-        if !schemas_dir_missing && unrouted_schema_class {
+        if !schemas_dir_missing && unvalidated_schema_class {
             findings.push(Finding {
                 code: "MDATRON-W0045".into(),
                 severity: Severity::Warning,
-                summary: "schema-class-unrouted".into(),
+                summary: "schema-class-unvalidated".into(),
                 message: "this file declares a schema_class that matches no \
                           schema and no rule context, so nothing validated it"
                     .into(),
@@ -2659,7 +2659,7 @@ fn verify_file(
             });
         }
     }
-    Ok(unrouted_schema_class)
+    Ok(unvalidated_schema_class)
 }
 
 struct RuleContext<'a> {
@@ -4811,7 +4811,7 @@ pattern:
     // #106 (audit signal): a schema_class that routes to no schema AND no rule
     // context is flagged (W0045), not silently unvalidated.
     #[test]
-    fn unrouted_schema_class_is_flagged() {
+    fn unvalidated_schema_class_is_flagged() {
         let proj = TempProject::new("unrouted-class");
         proj.write(".mdatron/schemas/.keep.json", "{}");
         proj.write(
@@ -7900,7 +7900,7 @@ pattern:
             &mut memo,
             &mut findings,
         );
-        assert_eq!(codes_of(&findings, "MDATRON-E0080"), 1, "{findings:?}");
+        assert_eq!(codes_of(&findings, "MDATRON-E0081"), 1, "{findings:?}");
         assert_eq!(codes_of(&findings, "MDATRON-E0110"), 0, "{findings:?}");
 
         let rule = crate::route::MarkerRule {
@@ -7920,7 +7920,7 @@ pattern:
             &mut memo,
             &mut findings,
         );
-        assert_eq!(codes_of(&findings, "MDATRON-E0080"), 1, "{findings:?}");
+        assert_eq!(codes_of(&findings, "MDATRON-E0081"), 1, "{findings:?}");
         assert_eq!(codes_of(&findings, "MDATRON-E0112"), 0, "{findings:?}");
 
         let pin = crate::pin::Pin {
@@ -7931,7 +7931,7 @@ pattern:
         };
         let mut findings = Vec::new();
         crate::pin::check(Path::new("/no-root"), &[pin], &empty, &mut findings);
-        assert_eq!(codes_of(&findings, "MDATRON-E0080"), 1, "{findings:?}");
+        assert_eq!(codes_of(&findings, "MDATRON-E0081"), 1, "{findings:?}");
         assert_eq!(codes_of(&findings, "MDATRON-E0062"), 0, "{findings:?}");
     }
 
@@ -8243,7 +8243,7 @@ pattern:
             0,
             &mut findings,
         );
-        assert_eq!(codes_of(&findings, "MDATRON-E0080"), 1, "{findings:?}");
+        assert_eq!(codes_of(&findings, "MDATRON-E0081"), 1, "{findings:?}");
         assert_eq!(codes_of(&findings, "MDATRON-E0100"), 0, "{findings:?}");
     }
 

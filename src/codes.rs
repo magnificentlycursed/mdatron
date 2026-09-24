@@ -31,7 +31,9 @@
 /// - `MDATRON-E0060` — `E0069` Pin family (content-hash pins + managed-manifest
 ///   drift; section-scoped pins E0063, #146)
 /// - `MDATRON-E0070` — `E0079` IO failures during verify (v0.1.x)
-/// - `MDATRON-E0080` — `E0089` Pipeline orchestration failures (v0.1.x)
+/// - `MDATRON-E0080` — `E0089` Pipeline orchestration failures (v0.1.x); `E0081`
+///   reference-target-not-captured — a FINDING (exit 1) for a pin/citation/link/
+///   marker target the run never captured, split out of `E0080` in 0.7.0 (#204)
 /// - `MDATRON-E0090` — `E0099` Vocabulary family (registry violations)
 /// - `MDATRON-E0100` — `E0109` Citation family (citation conformance)
 /// - `MDATRON-E0110` — `E0119` Reference families: body links/anchors (link, #145);

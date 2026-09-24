@@ -253,8 +253,8 @@ fn resolve_members(
                 path,
                 "",
                 0,
-                "MDATRON-E0080",
-                "pipeline-orchestration-failure",
+                "MDATRON-E0081",
+                "reference-target-not-captured",
                 "this rule's target_doc was never captured into the run \
                  snapshot — an engine defect in target discovery, not a defect \
                  in this document; please report it upstream",

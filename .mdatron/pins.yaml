@@ -1,10 +1,11 @@
 # mdatron pin record — governing documents pin sha256 over governed files (#84).
 # Recompute with `mdatron pin --update`. This file cannot pin itself; its
 # integrity anchor is commit review (DESIGN § Governance data is governed).
+mdatron_format_version: 1
 pins:
 - governed_by: DESIGN.md
   file: src/codes.rs
-  sha256: 3e9f49e199083a5fea0d7dd5ecd8bfd8dbc87abd33c55e5998f9ab358df3009a
+  sha256: 9d1977ee756fddd3f840740d1b942e497ec17eb55f5d2908400ffb7f14c9f4b0
 - governed_by: DESIGN.md
   file: .mdatron/manifest.yaml
   sha256: 9f45745aceabf232a245efb598b9b1c78e29b936e123a3eaaa503dd9cb4756f9
