@@ -1,6 +1,6 @@
 {
   "next_display_id": 203,
-  "next_comment_id": 547,
+  "next_comment_id": 548,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "03beb708-b15d-4522-950e-3fdaa3a3d16b": 196,
@@ -7969,7 +7969,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-20T00:10:00.982073Z",
-      "updated_at": "2026-09-24T03:03:40.994519Z",
+      "updated_at": "2026-09-24T21:48:22.814382Z",
       "comments": {
         "175b261c-1c44-424e-a7ee-960bf4f24ef7": {
           "display_id": 543,
@@ -8006,6 +8006,15 @@
           "kind": "result",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAwIfI9G1f3Jc2NskXqQxfzU9OcG13jXQkjfEGRhBg1iNM/imYo9A+UbY2yUGqZF6FKwGZaMaP6OyzwL/YksOwCQ=="
+        },
+        "80a161a9-a4c1-42e3-b0ed-61f3ca2acbf9": {
+          "display_id": 547,
+          "author": "79Ig",
+          "content": "L1 MERGED to main (PR #55, 8/8 incl. windows-latest after the forward-slash fix). Per the operator's one-version ruling it ships in 0.7.0, not a 0.6.1 patch. This issue stays open for its remainder (lib pub-surface trim, doc-comment sweep, version-axis naming, set-op HashSet, [lints] table, dead cross-repo rustdoc paths, codes.rs VS+DD hack) — folded into L3.",
+          "created_at": "2026-09-24T21:48:22.801427Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAtf3BS537r2UwtUSD8RoK+KP+bL2pdDrbjYlqugkSGz+qQAHhQ1IR96hUbrB3fuun2zG4igI++sDryJ6mfuYABQ=="
         },
         "97f5e2e8-f8d1-468b-b9da-59da86a57783": {
           "display_id": 542,
@@ -8555,8 +8564,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-24T21:48:16.084499Z",
+    "timestamp": "2026-09-24T21:48:22.814382Z",
     "agent_id": "79Ig",
-    "agent_seq": 1108
+    "agent_seq": 1109
   }
 }
