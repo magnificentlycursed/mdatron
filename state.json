@@ -1,6 +1,6 @@
 {
   "next_display_id": 201,
-  "next_comment_id": 544,
+  "next_comment_id": 545,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "03beb708-b15d-4522-950e-3fdaa3a3d16b": 196,
@@ -7934,7 +7934,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-20T00:10:00.982073Z",
-      "updated_at": "2026-09-24T02:12:01.645852Z",
+      "updated_at": "2026-09-24T02:55:15.839419Z",
       "comments": {
         "175b261c-1c44-424e-a7ee-960bf4f24ef7": {
           "display_id": 543,
@@ -7944,6 +7944,15 @@
           "kind": "observation",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA4NBQBqWoEXf5pSIQNRciefXNOpM1pzGe3RboRDBqelkT3rQlGijXWQnA6hKt5lamKEZ4LQBmXa2jmsK+2Bz/Cg=="
+        },
+        "2520b0d6-4813-46a5-a6ba-05054bd6cb47": {
+          "display_id": 544,
+          "author": "79Ig",
+          "content": "FIX ROUND 1 committed (see commit): H1 at source (canonicalize once; std::path::absolute fallback for nonexistent roots), H3 has_root + raw entry dropped, H4 3x4 matrix red-gate proven red against ff129c2, H2/H5/H6. Independently verified: three root spellings render byte-equal with no host segment; self-verify stderr identical . vs $(pwd); 10 suites 0-failed. Reviewer closure verification next; then this lane is the 0.6.1 PATCH candidate (it closes a published DEF4 leak).",
+          "created_at": "2026-09-24T02:55:15.787963Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAeEDvcSPaF4Pt9ODXs/Y7Sc9hTnZXwNVnH8JY9JQlpUrL8G7ISeC907z693wL1q4omuO53axnszpfytA9nKZvCg=="
         },
         "669ed969-87f2-45d6-a115-44865628dddf": {
           "display_id": 509,
@@ -8502,8 +8511,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-24T02:12:01.645852Z",
+    "timestamp": "2026-09-24T02:55:15.839419Z",
     "agent_id": "79Ig",
-    "agent_seq": 1102
+    "agent_seq": 1103
   }
 }
