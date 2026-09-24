@@ -212,19 +212,20 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
                 // it); what a non-document governing target MEANS is a route
                 // question, not a confinement one.
                 Err(OpenViolation::NotRegular) => {}
-                Err(OpenViolation::Symlink { .. }) => {
+                Err(OpenViolation::Symlink { tag, .. }) => {
+                    let reparse = crate::confine::describe_reparse(tag);
                     findings.push(Finding {
                         code: "MDATRON-E0012".into(),
                         severity: Severity::Error,
                         summary: "symlinked-component-refused".into(),
-                        message: "a route's governing document resolves through a \
-                                  symbolic link; no-follow resolution refuses it"
-                            .into(),
-                        help: Some(
-                            "point governed_by at the real file inside the \
-                                    governed tree"
-                                .into(),
+                        message: format!(
+                            "a route's governing document resolves through {}; \
+                             no-follow resolution refuses it",
+                            reparse.what
                         ),
+                        help: Some(reparse.help.unwrap_or_else(|| {
+                            "point governed_by at the real file inside the governed tree".into()
+                        })),
                         location: Location::whole_file(&path),
                         explain_ref: Some("MDATRON-E0012".into()),
                         quoted: vec![QuotedRegion {

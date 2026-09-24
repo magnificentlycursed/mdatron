@@ -25,7 +25,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-use crate::confine::{confine_lexically, open_confined, LexicalViolation};
+use crate::confine::{confine_lexically, open_confined, LexicalViolation, OpenViolation};
 use crate::diagnostic::{Finding, Location, QuotedRegion, Severity};
 use crate::init::sha256_hex;
 use crate::Error;
@@ -276,15 +276,22 @@ pub fn check(
                     });
                 }
             }
-            Some(Captured::SymlinkRefused { .. }) => {
+            Some(Captured::SymlinkRefused { tag, .. }) => {
+                let reparse = crate::confine::describe_reparse(tag.as_ref().copied());
                 findings.push(Finding {
                     code: "MDATRON-E0012".into(),
                     severity: Severity::Error,
                     summary: "symlinked-component-refused".into(),
-                    message: "a pinned file resolves through a symbolic link; \
-                              no-follow resolution refuses it"
-                        .into(),
-                    help: Some("pin the real file inside the governed tree".into()),
+                    message: format!(
+                        "a pinned file resolves through {}; no-follow resolution \
+                         refuses it",
+                        reparse.what
+                    ),
+                    help: Some(
+                        reparse
+                            .help
+                            .unwrap_or_else(|| "pin the real file inside the governed tree".into()),
+                    ),
                     location: Location::whole_file(&pins_path),
                     explain_ref: Some("MDATRON-E0012".into()),
                     quoted: vec![QuotedRegion {
@@ -329,8 +336,10 @@ pub fn check(
 /// Recompute every active pin's sha256 from current content and rewrite
 /// `pins.yaml`, preserving `unpinned:` tombstones. Returns
 /// `(file, old_sha256, new_sha256)` for each entry that changed. Entries whose
-/// target cannot be read are left untouched and reported by the caller's next
-/// verify (`E0062`); recompute never invents a hash for an unreadable file.
+/// target is absent, a symlink, or not a regular file are left untouched and
+/// reported by the caller's next verify (`E0062` / `E0012`); any OTHER open
+/// failure is a LOUD error (#64 cold-review W2) — recompute never invents a
+/// hash for an unreadable file, and never skips one silently.
 /// A target exceeding the declared per-file input bound
 /// ([`crate::verify::MAX_FILE_BYTES`]) is a LOUD error naming the bound —
 /// verify aborts on such a file (`bound_exceeded`), so re-pinning it would
@@ -358,7 +367,17 @@ pub fn update(project_root: &Path, dry_run: bool) -> Result<Vec<(String, String,
         })?;
         let handle = match open_confined(project_root, &confined) {
             Ok(h) => h,
-            Err(_) => continue, // unreadable: leave the record; verify reports E0062
+            // Absent, or refused as a symlink / non-regular file: leave the
+            // record — the next verify reports it (E0062 / E0012).
+            Err(OpenViolation::Io(e)) if e.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(OpenViolation::Symlink { .. }) | Err(OpenViolation::NotRegular) => continue,
+            // Any OTHER open failure (permission, an unresolvable root, an I/O
+            // fault) is LOUD: a pin that cannot be recomputed is a reported
+            // state, not a silent skip (no-silent-degradation; #64 W2).
+            Err(OpenViolation::Io(e)) => {
+                let escaped = crate::diagnostic::escape_path_text(&entry.file);
+                return Err(Error::Config(format!("cannot re-pin '{escaped}': {e}")));
+            }
         };
         use std::io::Read;
         // Bounded read, aligned with verify's declared per-file cap (GH #48

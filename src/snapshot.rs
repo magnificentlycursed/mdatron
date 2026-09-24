@@ -86,9 +86,12 @@ pub enum Captured {
     OpenedUnreadable {
         error: String,
     },
-    /// No-follow resolution refused a symlinked component.
+    /// No-follow resolution refused a symlinked component — or, on Windows,
+    /// any reparse point; `tag` carries its reparse tag so the finding can
+    /// name the class (`None` on Unix, or when the tag could not be read).
     SymlinkRefused {
         component: PathBuf,
+        tag: Option<u32>,
     },
     /// The confined open itself failed — absent target or I/O refusal.
     OpenIo {
@@ -216,8 +219,8 @@ impl Snapshot {
                             }
                         }
                     }
-                    Err(OpenViolation::Symlink { component }) => {
-                        Captured::SymlinkRefused { component }
+                    Err(OpenViolation::Symlink { component, tag }) => {
+                        Captured::SymlinkRefused { component, tag }
                     }
                     // A FIFO/device/directory: it EXISTS but carries no
                     // verifiable content (and a FIFO read would block forever)

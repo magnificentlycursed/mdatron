@@ -63,10 +63,15 @@ pub enum LexicalViolation {
 /// A violation surfaced while opening a lexically-confined path.
 #[derive(Debug)]
 pub enum OpenViolation {
-    /// A component was a symbolic link. No-follow resolution refuses it
-    /// whatever its target — inside or outside the governed tree.
-    /// MDATRON-E0012 territory.
-    Symlink { component: PathBuf },
+    /// A component was a symbolic link — or, on Windows, any reparse point.
+    /// No-follow resolution refuses it whatever its target — inside or
+    /// outside the governed tree. `tag` is the Windows reparse tag so the
+    /// finding can name the class ([`describe_reparse`]); `None` on Unix, or
+    /// when the tag could not be read. MDATRON-E0012 territory.
+    Symlink {
+        component: PathBuf,
+        tag: Option<u32>,
+    },
     /// The leaf exists and opened, but is not a regular file — a FIFO, device,
     /// or directory. Refused before any read: a FIFO with no writer would
     /// otherwise park the process in a blocking `open`/`read` forever (a
@@ -117,10 +122,13 @@ pub fn confine_lexically(source: &Path) -> Result<ConfinedPath, LexicalViolation
 /// let _ = open_confined(Path::new("/tmp"), Path::new("../secret.yaml"));
 /// ```
 ///
-/// `root` is engine-supplied and trusted; symlinks in the root path itself
-/// (e.g. macOS `/var` → `/private/var`) are permitted. Every component of
-/// `rel` below it is opened relative to its parent directory's handle with
-/// no-follow semantics, so a symlink at any depth is refused.
+/// `root` is engine-supplied and trusted: on Unix, symlinks in the root path
+/// itself (e.g. macOS `/var` → `/private/var`) are followed; on Windows the
+/// root is opened without following reparse points and a root that IS one (a
+/// junction-rooted project) is refused — canonicalize the root first, as the
+/// CLI does for every subcommand (#64 W2). Every component of `rel` below it
+/// is opened relative to its parent directory's handle with no-follow
+/// semantics, so a symlink at any depth is refused.
 pub fn open_confined(root: &Path, rel: &ConfinedPath) -> Result<File, OpenViolation> {
     // Every component is Normal by the ConfinedPath invariant (established in
     // confine_lexically), so this is a straight projection to the names — no
@@ -207,6 +215,7 @@ fn open_confined_impl(root: &Path, components: &[&std::ffi::OsStr]) -> Result<Fi
             return if symlink {
                 Err(OpenViolation::Symlink {
                     component: PathBuf::from(name),
+                    tag: None,
                 })
             } else {
                 Err(OpenViolation::Io(err))
@@ -268,6 +277,7 @@ fn open_confined_impl(root: &Path, components: &[&std::ffi::OsStr]) -> Result<Fi
             Ok(meta) if meta.file_type().is_symlink() => {
                 return Err(OpenViolation::Symlink {
                     component: PathBuf::from(name),
+                    tag: None,
                 });
             }
             Ok(_) => {}
@@ -316,10 +326,15 @@ pub struct DirEntryInfo {
 /// closed-world enumeration.
 #[derive(Debug)]
 pub enum ListViolation {
-    /// A component of the listed path was a symbolic link. Refused no-follow
-    /// exactly as [`open_confined`] refuses a symlinked component — the
-    /// directory is never enumerated through. MDATRON-E0012 territory.
-    Symlink { component: PathBuf },
+    /// A component of the listed path was a symbolic link — or, on Windows,
+    /// any reparse point. Refused no-follow exactly as [`open_confined`]
+    /// refuses a symlinked component — the directory is never enumerated
+    /// through. `tag` as on [`OpenViolation::Symlink`]. MDATRON-E0012
+    /// territory.
+    Symlink {
+        component: PathBuf,
+        tag: Option<u32>,
+    },
     /// The directory (or a component of its path) does not exist. Kept
     /// distinct from other IO so glob enumeration can treat a missing
     /// directory as "no matches" (closed-world: enumerate what is present)
@@ -331,6 +346,135 @@ pub enum ListViolation {
     Io(io::Error),
 }
 
+// ── Reparse-point classes (#64 cold-review W1) ─────────────────────────────────
+//
+// Every reparse point refuses — the Windows walk decides on the attribute,
+// never on the tag — but the adopter deserves to know WHAT refused: a symlink
+// is fixed by replacing it, a OneDrive Files-On-Demand placeholder by
+// hydrating it, a WOF-compressed file by decompressing it. The tag rides the
+// violation from the walk (`None` on Unix, where the symlink is the only kind,
+// and `None` when the tag could not be read) into the E0012 message and help.
+
+/// Microsoft-assigned reparse tags (ntifs.h). Stable ABI values, spelled here
+/// so the classification needs no extra `windows-sys` namespace and renders
+/// on every platform.
+const IO_REPARSE_TAG_MOUNT_POINT: u32 = 0xA000_0003;
+const IO_REPARSE_TAG_SYMLINK: u32 = 0xA000_000C;
+const IO_REPARSE_TAG_DEDUP: u32 = 0x8000_0013;
+const IO_REPARSE_TAG_WOF: u32 = 0x8000_0017;
+const IO_REPARSE_TAG_CLOUD: u32 = 0x9000_001A;
+const IO_REPARSE_TAG_PROJFS: u32 = 0x9000_001C;
+/// The name-surrogate bit: the reparse point stands for another name (a
+/// symlink, a junction, a volume mount point).
+const REPARSE_TAG_NAME_SURROGATE: u32 = 0x2000_0000;
+/// The cloud-file family: `IO_REPARSE_TAG_CLOUD` plus `CLOUD_1..CLOUD_F`,
+/// which differ only in bits 12–15.
+const CLOUD_FAMILY_MASK: u32 = 0xFFFF_0FFF;
+
+/// What kind of reparse point a refused component was.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReparseClass {
+    /// A symbolic link, junction, or volume mount point — a name for another
+    /// place. Unix refusals (no tag) are always this class.
+    NameSurrogate,
+    /// A OneDrive / cloud-provider Files-On-Demand placeholder.
+    CloudPlaceholder,
+    /// A WOF-compressed file (`compact`, CompactOS).
+    WofCompressed,
+    /// A Data Deduplication stub.
+    Deduplicated,
+    /// A projected-filesystem placeholder (ProjFS; VFS for Git).
+    ProjectedFile,
+    /// A reparse tag mdatron does not name; refused all the same.
+    Unknown,
+}
+
+/// Classify a refused reparse point by its tag (`None` = a Unix symlink, or a
+/// Windows reparse point whose tag could not be read — treated as a link).
+pub fn classify_reparse(tag: Option<u32>) -> ReparseClass {
+    match tag {
+        None => ReparseClass::NameSurrogate,
+        Some(t) if t & CLOUD_FAMILY_MASK == IO_REPARSE_TAG_CLOUD => ReparseClass::CloudPlaceholder,
+        Some(IO_REPARSE_TAG_WOF) => ReparseClass::WofCompressed,
+        Some(IO_REPARSE_TAG_DEDUP) => ReparseClass::Deduplicated,
+        Some(IO_REPARSE_TAG_PROJFS) => ReparseClass::ProjectedFile,
+        Some(t) if t & REPARSE_TAG_NAME_SURROGATE != 0 => ReparseClass::NameSurrogate,
+        Some(_) => ReparseClass::Unknown,
+    }
+}
+
+/// The adopter-facing description of a refused reparse point.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReparseDescription {
+    /// A noun phrase for "resolves through …": `a symbolic link`, `a
+    /// cloud-file placeholder (reparse tag 0x9000001a)`, …
+    pub what: String,
+    /// A class-specific remedy, or `None` for the name-surrogate class, where
+    /// each finding site keeps its own "replace the symlink" wording.
+    pub help: Option<String>,
+}
+
+/// Describe a refused reparse point for an E0012 message and help. The
+/// refusal itself never varies by class — mdatron follows no reparse point —
+/// only the remedy does.
+pub fn describe_reparse(tag: Option<u32>) -> ReparseDescription {
+    let never = "mdatron never follows reparse points";
+    match (classify_reparse(tag), tag) {
+        (ReparseClass::NameSurrogate, None | Some(IO_REPARSE_TAG_SYMLINK)) => ReparseDescription {
+            what: "a symbolic link".into(),
+            help: None,
+        },
+        (ReparseClass::NameSurrogate, Some(IO_REPARSE_TAG_MOUNT_POINT)) => ReparseDescription {
+            what: "a junction or volume mount point (reparse tag 0xa0000003)".into(),
+            help: None,
+        },
+        (ReparseClass::NameSurrogate, Some(t)) => ReparseDescription {
+            what: format!("a name-surrogate reparse point (tag 0x{t:08x})"),
+            help: None,
+        },
+        (ReparseClass::CloudPlaceholder, Some(t)) => ReparseDescription {
+            what: format!("a cloud-file placeholder (reparse tag 0x{t:08x})"),
+            help: Some(format!(
+                "hydrate the file (OneDrive: 'Always keep on this device') or move the \
+                 project off the synced folder — {never}"
+            )),
+        },
+        (ReparseClass::WofCompressed, Some(t)) => ReparseDescription {
+            what: format!("a WOF-compressed file (reparse tag 0x{t:08x}; compact / CompactOS)"),
+            help: Some(format!(
+                "decompress it (`compact /u <file>`) or copy it out of the compressed \
+                 folder — {never}"
+            )),
+        },
+        (ReparseClass::Deduplicated, Some(t)) => ReparseDescription {
+            what: format!("a data-deduplicated file (reparse tag 0x{t:08x})"),
+            help: Some(format!(
+                "exclude the project from Data Deduplication or copy the file to a \
+                 non-deduplicated volume — {never}"
+            )),
+        },
+        (ReparseClass::ProjectedFile, Some(t)) => ReparseDescription {
+            what: format!(
+                "a projected-filesystem placeholder (reparse tag 0x{t:08x}; ProjFS / VFS for Git)"
+            ),
+            help: Some(format!(
+                "hydrate the file through its provider or copy it out of the \
+                 virtualized tree — {never}"
+            )),
+        },
+        (_, Some(t)) => ReparseDescription {
+            what: format!("a reparse point (tag 0x{t:08x}), refused; {never}"),
+            help: Some("replace it with a plain file or directory inside the governed tree".into()),
+        },
+        // Unreachable by construction (only NameSurrogate has a None tag), but
+        // an exhaustive match keeps the classification honest if a class grows.
+        (_, None) => ReparseDescription {
+            what: "a symbolic link".into(),
+            help: None,
+        },
+    }
+}
+
 /// List the immediate entries of `root`/`rel` through validated no-follow
 /// handles, returning each entry's name and no-follow file type.
 ///
@@ -339,8 +483,10 @@ pub enum ListViolation {
 /// directory is refused ([`ListViolation::Symlink`]) rather than followed —
 /// the closed-world discipline of `DESIGN.md` § Five check families. `rel` must
 /// be a [`confine_lexically`] result (relative, no parent segments); `root` is
-/// engine-supplied and trusted, so symlinks in the root path itself are
-/// permitted. Entries are returned in a deterministic (name-sorted) order.
+/// engine-supplied and trusted — on Unix symlinks in the root path itself are
+/// followed, on Windows a reparse point AS the root is refused (canonicalize
+/// first; the CLI does, #64 W2). Entries are returned in a deterministic
+/// (name-sorted) order.
 pub fn list_dir(root: &Path, rel: &Path) -> Result<Vec<DirEntryInfo>, ListViolation> {
     let components: Vec<&OsStr> = rel
         .components()
@@ -417,6 +563,7 @@ fn validate_dir_chain(
             if symlink {
                 return Err(ListViolation::Symlink {
                     component: PathBuf::from(name),
+                    tag: None,
                 });
             }
             if err.kind() == io::ErrorKind::NotFound {
@@ -554,6 +701,7 @@ fn validate_dir_chain(root: &Path, components: &[&OsStr]) -> Result<(), ListViol
             Ok(meta) if meta.file_type().is_symlink() => {
                 return Err(ListViolation::Symlink {
                     component: PathBuf::from(name),
+                    tag: None,
                 });
             }
             Ok(meta) if meta.is_dir() => {}
@@ -631,16 +779,21 @@ fn list_dir_impl(
 // library does not expose, hence the `windows-sys` binding
 // (docs/dependencies/windows-sys.md). Every component opens relative to the
 // handle that passed confinement, with `FILE_OPEN_REPARSE_POINT` so a reparse
-// point opens AS ITSELF and is never followed; the object is then classified
-// through the handle it returned (`GetFileInformationByHandleEx` /
-// `FileAttributeTagInfo`), and `FILE_ATTRIBUTE_REPARSE_POINT` refuses
-// REGARDLESS of reparse tag: symlinks, junctions, and volume mount points are
-// all reparse points and all refuse alike — there is no allowlist of "safe"
-// kinds. The walk is iterated blind (no local Windows; `windows-latest` CI is
-// the only executor), so it is FAIL-CLOSED by construction: any NTSTATUS other
-// than `STATUS_SUCCESS` denies, any unexpected object type denies, any
-// ambiguity denies. An untested bug can over-refuse (a loud E0012), never
-// grant. No error carries a path: the caller names the component.
+// point opens AS ITSELF and `OBJ_DONT_REPARSE` so the kernel refuses outright
+// (`STATUS_REPARSE_POINT_ENCOUNTERED`) should any filter still try to
+// traverse one — the same pairing std's `remove_dir_all` uses; the object is
+// then classified through the handle it returned (`GetFileInformationByHandle`,
+// and `FileAttributeTagInfo` for the tag once the reparse bit is set), and
+// `FILE_ATTRIBUTE_REPARSE_POINT` refuses REGARDLESS of reparse tag: symlinks,
+// junctions, volume mount points, cloud placeholders, compressed and
+// deduplicated stubs are all reparse points and all refuse alike — there is
+// no allowlist of "safe" kinds; the tag rides along only so the finding can
+// name the class. The walk is iterated blind (no local Windows;
+// `windows-latest` CI is the only executor), so it is FAIL-CLOSED by
+// construction: any NTSTATUS other than `STATUS_SUCCESS` denies, any
+// unexpected object type denies, any ambiguity denies. An untested bug can
+// over-refuse (a loud E0012), never grant. No error carries a path: the caller
+// names the component.
 #[cfg(windows)]
 mod win {
     use super::{DirEntryInfo, EntryType, ListViolation, OpenViolation};
@@ -660,23 +813,27 @@ mod win {
     };
     use windows_sys::Win32::Foundation::{
         RtlNtStatusToDosError, ERROR_NO_MORE_FILES, HANDLE, INVALID_HANDLE_VALUE, NTSTATUS,
-        OBJ_CASE_INSENSITIVE, STATUS_NOT_A_DIRECTORY, STATUS_SUCCESS, UNICODE_STRING,
+        OBJ_CASE_INSENSITIVE, OBJ_DONT_REPARSE, STATUS_NOT_A_DIRECTORY,
+        STATUS_REPARSE_POINT_ENCOUNTERED, STATUS_SUCCESS, UNICODE_STRING,
     };
     use windows_sys::Win32::Storage::FileSystem::{
         FileAttributeTagInfo, FileIdBothDirectoryInfo, FileIdBothDirectoryRestartInfo,
-        GetFileInformationByHandleEx, FILE_ATTRIBUTE_DEVICE, FILE_ATTRIBUTE_DIRECTORY,
-        FILE_ATTRIBUTE_REPARSE_POINT, FILE_ATTRIBUTE_TAG_INFO, FILE_FLAG_BACKUP_SEMANTICS,
-        FILE_FLAG_OPEN_REPARSE_POINT, FILE_ID_BOTH_DIR_INFO, FILE_LIST_DIRECTORY,
-        FILE_READ_ATTRIBUTES, FILE_READ_DATA, FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE,
-        FILE_TRAVERSE, SYNCHRONIZE,
+        GetFileInformationByHandle, GetFileInformationByHandleEx, BY_HANDLE_FILE_INFORMATION,
+        FILE_ATTRIBUTE_DEVICE, FILE_ATTRIBUTE_DIRECTORY, FILE_ATTRIBUTE_REPARSE_POINT,
+        FILE_ATTRIBUTE_TAG_INFO, FILE_FLAG_BACKUP_SEMANTICS, FILE_FLAG_OPEN_REPARSE_POINT,
+        FILE_ID_BOTH_DIR_INFO, FILE_LIST_DIRECTORY, FILE_READ_ATTRIBUTES, FILE_READ_DATA,
+        FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE, SYNCHRONIZE,
     };
     use windows_sys::Win32::System::IO::IO_STATUS_BLOCK;
 
     /// Access for a directory the walk descends through or enumerates: list +
-    /// attributes + traverse (the right a `RootDirectory`-relative open is
-    /// documented to need) + SYNCHRONIZE, required by the synchronous handle.
-    const DIR_ACCESS: u32 =
-        FILE_LIST_DIRECTORY | FILE_READ_ATTRIBUTES | FILE_TRAVERSE | SYNCHRONIZE;
+    /// SYNCHRONIZE (what std's `remove_dir_all` opens its `RootDirectory`
+    /// parents with) + attributes for the through-the-handle classification.
+    /// No `FILE_TRAVERSE`: that is a right the kernel checks on the directory
+    /// being traversed against the caller's token (and every ordinary token
+    /// bypasses it via SeChangeNotifyPrivilege), not something the parent
+    /// handle carries.
+    const DIR_ACCESS: u32 = FILE_LIST_DIRECTORY | FILE_READ_ATTRIBUTES | SYNCHRONIZE;
     /// Access for the leaf the caller reads.
     const LEAF_ACCESS: u32 = FILE_READ_DATA | FILE_READ_ATTRIBUTES | SYNCHRONIZE;
     /// Access for a classification-only re-open (see [`open_child_dir`]).
@@ -688,8 +845,11 @@ mod win {
     /// violation type ([`OpenViolation`] / [`ListViolation`]).
     enum Refusal {
         /// The component is a reparse point of ANY tag (symlink, junction,
-        /// mount point, …): opened as itself, never followed, refused.
-        Reparse,
+        /// mount point, cloud placeholder, …): opened as itself — or refused
+        /// by the kernel outright — never followed. `tag` names the class for
+        /// the finding; `None` when the kernel refused before a handle
+        /// existed or the tag query failed (the refusal stands either way).
+        Reparse { tag: Option<u32> },
         /// The open or the through-the-handle query failed; the error is the
         /// Win32 mapping of the NTSTATUS — never a path.
         Io(io::Error),
@@ -698,8 +858,9 @@ mod win {
     impl Refusal {
         fn into_open(self, component: &OsStr) -> OpenViolation {
             match self {
-                Refusal::Reparse => OpenViolation::Symlink {
+                Refusal::Reparse { tag } => OpenViolation::Symlink {
                     component: PathBuf::from(component),
+                    tag,
                 },
                 Refusal::Io(e) => OpenViolation::Io(e),
             }
@@ -707,8 +868,9 @@ mod win {
 
         fn into_list(self, component: &OsStr) -> ListViolation {
             match self {
-                Refusal::Reparse => ListViolation::Symlink {
+                Refusal::Reparse { tag } => ListViolation::Symlink {
                     component: PathBuf::from(component),
+                    tag,
                 },
                 Refusal::Io(e) if e.kind() == io::ErrorKind::NotFound => ListViolation::NotFound,
                 Refusal::Io(e) => ListViolation::Io(e),
@@ -734,6 +896,28 @@ mod win {
         }
     }
 
+    /// What a handle turned out to be, decided through the handle itself.
+    struct Object {
+        attributes: u32,
+        /// The reparse tag, queried only when the reparse bit is set; `None`
+        /// otherwise, or when the tag query failed (the bit alone refuses).
+        tag: Option<u32>,
+    }
+
+    impl Object {
+        fn is_reparse(&self) -> bool {
+            self.attributes & FILE_ATTRIBUTE_REPARSE_POINT != 0
+        }
+
+        fn is_directory(&self) -> bool {
+            self.attributes & FILE_ATTRIBUTE_DIRECTORY != 0
+        }
+
+        fn is_device(&self) -> bool {
+            self.attributes & FILE_ATTRIBUTE_DEVICE != 0
+        }
+    }
+
     fn invalid_input(msg: &'static str) -> io::Error {
         io::Error::new(io::ErrorKind::InvalidInput, msg)
     }
@@ -751,30 +935,25 @@ mod win {
         handle.as_raw_handle()
     }
 
-    fn is_reparse(attributes: u32) -> bool {
-        attributes & FILE_ATTRIBUTE_REPARSE_POINT != 0
-    }
-
-    fn is_directory(attributes: u32) -> bool {
-        attributes & FILE_ATTRIBUTE_DIRECTORY != 0
-    }
-
     /// A single path component as the NUL-free UTF-16 buffer an
     /// `OBJECT_ATTRIBUTES.ObjectName` names. RELATIVE by construction: a
-    /// separator, a NUL, an empty name, or `.`/`..` refuses here. The
-    /// [`super::ConfinedPath`] invariant already excludes all of these; this
-    /// is the belt-and-braces the FFI boundary keeps for itself — one
-    /// component can never name more than one object.
+    /// separator, a NUL, a `:` (an NT relative open reads `name:stream` as an
+    /// alternate data stream; no legitimate NTFS name contains one), an empty
+    /// name, or `.`/`..` refuses here. The [`super::ConfinedPath`] invariant
+    /// already excludes most of these; this is the belt-and-braces the FFI
+    /// boundary keeps for itself — one component can never name more than one
+    /// object, and never a stream of one.
     fn component_utf16(name: &OsStr) -> io::Result<Vec<u16>> {
         if name.is_empty() || name == "." || name == ".." {
             return Err(invalid_input("path component is empty or a dot segment"));
         }
         let wide: Vec<u16> = name.encode_wide().collect();
-        if wide
-            .iter()
-            .any(|&u| u == 0 || u == u16::from(b'\\') || u == u16::from(b'/'))
-        {
-            return Err(invalid_input("path component contains a separator or NUL"));
+        if wide.iter().any(|&u| {
+            u == 0 || u == u16::from(b'\\') || u == u16::from(b'/') || u == u16::from(b':')
+        }) {
+            return Err(invalid_input(
+                "path component contains a separator, a stream delimiter, or NUL",
+            ));
         }
         // UNICODE_STRING.Length is a BYTE count in a u16.
         if wide.len() * 2 > usize::from(u16::MAX) {
@@ -784,10 +963,10 @@ mod win {
     }
 
     /// Open the single component `name` relative to `parent` — a reparse point
-    /// opens AS ITSELF (`FILE_OPEN_REPARSE_POINT`), never followed — and
-    /// return the handle. Any NTSTATUS other than `STATUS_SUCCESS` is a
-    /// refusal; a handle the kernel hands back alongside a non-success status
-    /// is closed, never used.
+    /// opens AS ITSELF (`FILE_OPEN_REPARSE_POINT`) and is never traversed
+    /// (`OBJ_DONT_REPARSE`) — and return the handle. Any NTSTATUS other than
+    /// `STATUS_SUCCESS` is a refusal; a handle the kernel hands back alongside
+    /// a non-success status is closed, never used.
     fn nt_open_relative(
         parent: &OwnedHandle,
         name: &OsStr,
@@ -806,7 +985,7 @@ mod win {
             Length: std::mem::size_of::<OBJECT_ATTRIBUTES>() as u32,
             RootDirectory: raw(parent),
             ObjectName: &object_name,
-            Attributes: OBJ_CASE_INSENSITIVE,
+            Attributes: OBJ_CASE_INSENSITIVE | OBJ_DONT_REPARSE,
             SecurityDescriptor: ptr::null(),
             SecurityQualityOfService: ptr::null(),
         };
@@ -860,8 +1039,25 @@ mod win {
     }
 
     /// The attributes of the object BEHIND `handle`, queried through the
-    /// handle itself — never by path.
+    /// handle itself — never by path — via the basic `GetFileInformationByHandle`
+    /// every filesystem answers (the attribute-tag class below is NTFS-shaped:
+    /// a FAT32/exFAT volume or an exotic redirector may not serve it, and must
+    /// not refuse everything, root included, for that).
     fn attributes_of(handle: &OwnedHandle) -> io::Result<u32> {
+        let mut info = BY_HANDLE_FILE_INFORMATION::default();
+        // SAFETY: `handle` is live for the call; `info` is a live, correctly
+        // sized BY_HANDLE_FILE_INFORMATION the kernel fills in place.
+        let ok = unsafe { GetFileInformationByHandle(raw(handle), &mut info) };
+        if ok == 0 {
+            return Err(io::Error::last_os_error());
+        }
+        Ok(info.dwFileAttributes)
+    }
+
+    /// The reparse tag of the object behind `handle` — asked only once the
+    /// reparse bit is known to be set. A failure yields `None`: the bit alone
+    /// already refuses; the tag only names the class.
+    fn reparse_tag_of(handle: &OwnedHandle) -> Option<u32> {
         let mut info = FILE_ATTRIBUTE_TAG_INFO {
             FileAttributes: 0,
             ReparseTag: 0,
@@ -878,10 +1074,19 @@ mod win {
                 std::mem::size_of::<FILE_ATTRIBUTE_TAG_INFO>() as u32,
             )
         };
-        if ok == 0 {
-            return Err(io::Error::last_os_error());
-        }
-        Ok(info.FileAttributes)
+        (ok != 0).then_some(info.ReparseTag)
+    }
+
+    /// Classify the object behind `handle`: attributes always, the reparse
+    /// tag only when the reparse bit is set.
+    fn inspect(handle: &OwnedHandle) -> io::Result<Object> {
+        let attributes = attributes_of(handle)?;
+        let tag = if attributes & FILE_ATTRIBUTE_REPARSE_POINT != 0 {
+            reparse_tag_of(handle)
+        } else {
+            None
+        };
+        Ok(Object { attributes, tag })
     }
 
     /// Open the trusted, engine-supplied root as a directory handle — the ONE
@@ -889,9 +1094,10 @@ mod win {
     /// supplied; the danger is the components under it). Reparse points are
     /// not followed even here (`FILE_FLAG_OPEN_REPARSE_POINT`), and the handle
     /// is classified: a root that is itself a reparse point, or not a
-    /// directory, refuses. The pipeline passes the CANONICAL root
-    /// (`GetFinalPathNameByHandle`-resolved), so a junction-rooted project has
-    /// already been resolved to its real directory before it gets here.
+    /// directory, refuses. The CLI canonicalizes every subcommand's root
+    /// (`GetFinalPathNameByHandle`-resolved) before any walk, so a
+    /// junction-rooted project has already been resolved to its real directory
+    /// before it gets here (#64 cold-review W2).
     fn open_root(root: &Path) -> io::Result<OwnedHandle> {
         let file = std::fs::OpenOptions::new()
             .access_mode(DIR_ACCESS)
@@ -899,11 +1105,13 @@ mod win {
             .custom_flags(FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT)
             .open(root)?;
         let handle = OwnedHandle::from(file);
-        let attributes = attributes_of(&handle)?;
-        if is_reparse(attributes) {
-            return Err(invalid_input("governed root is a reparse point"));
+        let object = inspect(&handle)?;
+        if object.is_reparse() {
+            return Err(invalid_input(
+                "governed root is a reparse point (canonicalize the root first)",
+            ));
         }
-        if !is_directory(attributes) {
+        if !object.is_directory() {
             return Err(io::Error::new(
                 io::ErrorKind::NotADirectory,
                 "governed root is not a directory",
@@ -915,19 +1123,22 @@ mod win {
     /// Descend one component: open it relative to `parent` as a DIRECTORY
     /// (`FILE_DIRECTORY_FILE`, kernel-enforced), never following a reparse
     /// point, then classify the handle — a reparse point of any tag refuses.
+    /// `STATUS_REPARSE_POINT_ENCOUNTERED` (the kernel honoured
+    /// `OBJ_DONT_REPARSE` before a handle existed) refuses with no tag.
     /// `STATUS_NOT_A_DIRECTORY` is disambiguated by a classification-only
     /// re-open (no directory constraint, attributes access only) so a FILE
-    /// symlink squatting an intermediate reports as the symlink it is rather
-    /// than a bare not-a-directory — the unix walk's `fstatat` disambiguation,
-    /// handle-relative. Both branches refuse: the re-open can never grant.
+    /// symlink squatting an intermediate reports as the reparse point it is
+    /// rather than a bare not-a-directory — the unix walk's `fstatat`
+    /// disambiguation, handle-relative. Every branch refuses: the re-open can
+    /// never grant.
     fn open_child_dir(parent: &OwnedHandle, name: &OsStr) -> Result<OwnedHandle, Refusal> {
         match nt_open_relative(parent, name, DIR_ACCESS, FILE_DIRECTORY_FILE) {
             Ok(handle) => {
-                let attributes = attributes_of(&handle).map_err(Refusal::Io)?;
-                if is_reparse(attributes) {
-                    return Err(Refusal::Reparse);
+                let object = inspect(&handle).map_err(Refusal::Io)?;
+                if object.is_reparse() {
+                    return Err(Refusal::Reparse { tag: object.tag });
                 }
-                if !is_directory(attributes) {
+                if !object.is_directory() {
                     // The kernel enforced FILE_DIRECTORY_FILE; anything else
                     // here is an unexpected object type — refused.
                     return Err(Refusal::Io(io::Error::new(
@@ -937,15 +1148,16 @@ mod win {
                 }
                 Ok(handle)
             }
+            Err(NtFailure::Status(STATUS_REPARSE_POINT_ENCOUNTERED)) => {
+                Err(Refusal::Reparse { tag: None })
+            }
             Err(NtFailure::Status(STATUS_NOT_A_DIRECTORY)) => {
-                let reparse = nt_open_relative(parent, name, PROBE_ACCESS, 0)
+                let probe = nt_open_relative(parent, name, PROBE_ACCESS, 0)
                     .ok()
-                    .and_then(|probe| attributes_of(&probe).ok())
-                    .is_some_and(is_reparse);
-                Err(if reparse {
-                    Refusal::Reparse
-                } else {
-                    Refusal::Io(status_error(STATUS_NOT_A_DIRECTORY))
+                    .and_then(|probe| inspect(&probe).ok());
+                Err(match probe {
+                    Some(object) if object.is_reparse() => Refusal::Reparse { tag: object.tag },
+                    _ => Refusal::Io(status_error(STATUS_NOT_A_DIRECTORY)),
                 })
             }
             Err(failure) => Err(Refusal::Io(failure.into_io())),
@@ -963,18 +1175,29 @@ mod win {
         for name in intermediates {
             dir = open_child_dir(&dir, name).map_err(|r| r.into_open(name))?;
         }
-        let handle = nt_open_relative(&dir, leaf, LEAF_ACCESS, 0)
-            .map_err(|f| OpenViolation::Io(f.into_io()))?;
+        let handle = match nt_open_relative(&dir, leaf, LEAF_ACCESS, 0) {
+            Ok(handle) => handle,
+            // The kernel honoured OBJ_DONT_REPARSE before a handle existed:
+            // a reparse point, refused — its tag unknowable from here.
+            Err(NtFailure::Status(STATUS_REPARSE_POINT_ENCOUNTERED)) => {
+                return Err(OpenViolation::Symlink {
+                    component: PathBuf::from(leaf),
+                    tag: None,
+                })
+            }
+            Err(failure) => return Err(OpenViolation::Io(failure.into_io())),
+        };
         // The handle that passed confinement is the handle that is classified:
         // a reparse point of any tag refuses (E0012); a directory or a device
         // — anything that is not a plain file — is NotRegular, BEFORE any read.
-        let attributes = attributes_of(&handle).map_err(OpenViolation::Io)?;
-        if is_reparse(attributes) {
+        let object = inspect(&handle).map_err(OpenViolation::Io)?;
+        if object.is_reparse() {
             return Err(OpenViolation::Symlink {
                 component: PathBuf::from(leaf),
+                tag: object.tag,
             });
         }
-        if is_directory(attributes) || attributes & FILE_ATTRIBUTE_DEVICE != 0 {
+        if object.is_directory() || object.is_device() {
             return Err(OpenViolation::NotRegular);
         }
         Ok(File::from(handle))
@@ -1076,11 +1299,15 @@ mod win {
                     .collect();
                 let dot = u16::from(b'.');
                 if name != [dot] && name != [dot, dot] {
-                    let file_type = if is_reparse(entry.FileAttributes) {
+                    let object = Object {
+                        attributes: entry.FileAttributes,
+                        tag: None,
+                    };
+                    let file_type = if object.is_reparse() {
                         EntryType::Symlink
-                    } else if is_directory(entry.FileAttributes) {
+                    } else if object.is_directory() {
                         EntryType::Dir
-                    } else if entry.FileAttributes & FILE_ATTRIBUTE_DEVICE != 0 {
+                    } else if object.is_device() {
                         EntryType::Other
                     } else {
                         EntryType::File
@@ -1093,7 +1320,11 @@ mod win {
                 if entry.NextEntryOffset == 0 {
                     break;
                 }
-                offset += entry.NextEntryOffset as usize;
+                // A record chain that wraps (a 32-bit offset overflowing the
+                // usize walk) is malformed — refused, never re-read.
+                offset = offset
+                    .checked_add(entry.NextEntryOffset as usize)
+                    .ok_or_else(overrun)?;
             }
         }
         Ok(out)
@@ -1142,10 +1373,15 @@ pub(crate) mod test_symlink {
     /// junction gates pin the whole mount-point class. Needs no privilege.
     #[cfg(windows)]
     pub(crate) fn junction(target: &Path, link: &Path) {
+        use std::os::windows::process::CommandExt;
+        // cmd.exe parses its own command line: hand it ONE raw, quoted line so
+        // a space or `&` in a temp path can neither split nor inject it.
         let output = std::process::Command::new("cmd")
-            .args(["/C", "mklink", "/J"])
-            .arg(link)
-            .arg(target)
+            .raw_arg(format!(
+                "/C mklink /J \"{}\" \"{}\"",
+                link.display(),
+                target.display()
+            ))
             .output()
             .unwrap_or_else(|e| panic!("cmd /C mklink /J must run on this runner: {e}"));
         assert!(
@@ -1489,7 +1725,7 @@ mod tests {
 
         let err = open_confined(&root, &confined("alias.yaml")).unwrap_err();
         match err {
-            OpenViolation::Symlink { component } => {
+            OpenViolation::Symlink { component, .. } => {
                 assert_eq!(component, PathBuf::from("alias.yaml"));
             }
             other => panic!("expected Symlink, got {other:?}"),
@@ -1507,7 +1743,7 @@ mod tests {
 
         let err = open_confined(&root, &confined("sub/data.yaml")).unwrap_err();
         match err {
-            OpenViolation::Symlink { component } => {
+            OpenViolation::Symlink { component, .. } => {
                 assert_eq!(component, PathBuf::from("sub"));
             }
             other => panic!("expected Symlink, got {other:?}"),
@@ -1560,7 +1796,7 @@ mod tests {
 
         let err = list_dir(&root, Path::new("sub")).unwrap_err();
         match err {
-            ListViolation::Symlink { component } => assert_eq!(component, PathBuf::from("sub")),
+            ListViolation::Symlink { component, .. } => assert_eq!(component, PathBuf::from("sub")),
             other => panic!("expected Symlink refusal, got {other:?}"),
         }
         std::fs::remove_dir_all(&root).unwrap();
@@ -1605,7 +1841,9 @@ mod tests {
         test_symlink::dir(root.join("real"), root.join("alias"));
         let err = open_confined(&root, &confined("alias")).unwrap_err();
         match err {
-            OpenViolation::Symlink { component } => assert_eq!(component, PathBuf::from("alias")),
+            OpenViolation::Symlink { component, .. } => {
+                assert_eq!(component, PathBuf::from("alias"))
+            }
             other => panic!("expected Symlink, got {other:?}"),
         }
         std::fs::remove_dir_all(&root).unwrap();
@@ -1635,7 +1873,7 @@ mod tests {
 
         let err = open_confined(&root, &confined("sub/SECRET-OUTSIDE.yaml")).unwrap_err();
         match err {
-            OpenViolation::Symlink { component } => assert_eq!(component, PathBuf::from("sub")),
+            OpenViolation::Symlink { component, .. } => assert_eq!(component, PathBuf::from("sub")),
             other => panic!("a junction is a reparse point and refuses as one; got {other:?}"),
         }
         std::fs::remove_dir_all(&root).unwrap();
@@ -1651,7 +1889,9 @@ mod tests {
 
         let err = open_confined(&root, &confined("alias")).unwrap_err();
         match err {
-            OpenViolation::Symlink { component } => assert_eq!(component, PathBuf::from("alias")),
+            OpenViolation::Symlink { component, .. } => {
+                assert_eq!(component, PathBuf::from("alias"))
+            }
             other => panic!("a junction leaf refuses as a symlink; got {other:?}"),
         }
         std::fs::remove_dir_all(&root).unwrap();
@@ -1667,7 +1907,9 @@ mod tests {
 
         let err = list_dir(&root, Path::new("sub")).unwrap_err();
         match &err {
-            ListViolation::Symlink { component } => assert_eq!(component, &PathBuf::from("sub")),
+            ListViolation::Symlink { component, .. } => {
+                assert_eq!(component, &PathBuf::from("sub"))
+            }
             other => panic!("enumeration through a junction is refused; got {other:?}"),
         }
         assert!(
@@ -1707,5 +1949,94 @@ mod tests {
         let err = list_dir(&parent.join("j"), Path::new("")).unwrap_err();
         assert!(matches!(err, ListViolation::Io(_)), "got {err:?}");
         std::fs::remove_dir_all(&parent).unwrap();
+    }
+
+    /// #64 cold-review W7: a FILE symlink squatting an intermediate component
+    /// is refused AS A SYMLINK — on Linux `openat(O_DIRECTORY|O_NOFOLLOW)`
+    /// says ELOOP, on macOS ENOTDIR is disambiguated by `fstatat`, on Windows
+    /// `STATUS_NOT_A_DIRECTORY` is disambiguated by the classification probe —
+    /// for reads and for listing alike.
+    #[cfg(any(unix, windows))]
+    #[test]
+    fn file_symlink_as_intermediate_is_refused_as_symlink() {
+        let root = temp_root("file-link-mid");
+        let outside = temp_root("file-link-mid-outside");
+        std::fs::write(outside.join("file.yaml"), "k: v\n").unwrap();
+        test_symlink::file(outside.join("file.yaml"), root.join("sub"));
+
+        let err = open_confined(&root, &confined("sub/x.yaml")).unwrap_err();
+        match err {
+            OpenViolation::Symlink { component, .. } => assert_eq!(component, PathBuf::from("sub")),
+            other => {
+                panic!("a file symlink as an intermediate is a Symlink refusal; got {other:?}")
+            }
+        }
+        let err = list_dir(&root, Path::new("sub")).unwrap_err();
+        match err {
+            ListViolation::Symlink { component, .. } => assert_eq!(component, PathBuf::from("sub")),
+            other => panic!("listing through a file symlink is a Symlink refusal; got {other:?}"),
+        }
+        std::fs::remove_dir_all(&root).unwrap();
+        std::fs::remove_dir_all(&outside).unwrap();
+    }
+
+    /// #64 cold-review W8: ~1000 entries — more than one 64 KiB enumeration
+    /// buffer on Windows, so the restart → continuation refill branch runs
+    /// (on Unix, a long `readdir` stream) — listed completely, each once.
+    #[test]
+    fn list_dir_enumerates_a_thousand_entries_completely() {
+        let root = temp_root("list-thousand");
+        for i in 0..1000 {
+            std::fs::write(root.join(format!("entry-{i:04}.yaml")), "k: v\n").unwrap();
+        }
+        let entries = list_dir(&root, Path::new("")).unwrap();
+        assert_eq!(entries.len(), 1000, "every entry listed exactly once");
+        assert!(entries.iter().all(|e| e.file_type == EntryType::File));
+        assert_eq!(entries[0].name, "entry-0000.yaml");
+        assert_eq!(entries[999].name, "entry-0999.yaml");
+        let distinct: std::collections::BTreeSet<&OsStr> =
+            entries.iter().map(|e| e.name.as_os_str()).collect();
+        assert_eq!(
+            distinct.len(),
+            1000,
+            "no entry is repeated across buffer refills"
+        );
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    /// #64 cold-review W1: a refused reparse point is described as what it is
+    /// — the refusal never varies by class, only the remedy does.
+    #[test]
+    fn reparse_classes_are_named_with_their_own_remedy() {
+        use ReparseClass::*;
+        assert_eq!(classify_reparse(None), NameSurrogate);
+        assert_eq!(classify_reparse(Some(0xA000_000C)), NameSurrogate); // symlink
+        assert_eq!(classify_reparse(Some(0xA000_0003)), NameSurrogate); // junction / mount point
+        assert_eq!(classify_reparse(Some(0x9000_001A)), CloudPlaceholder);
+        assert_eq!(classify_reparse(Some(0x9000_301A)), CloudPlaceholder); // CLOUD_3
+        assert_eq!(classify_reparse(Some(0x8000_0017)), WofCompressed);
+        assert_eq!(classify_reparse(Some(0x8000_0013)), Deduplicated);
+        assert_eq!(classify_reparse(Some(0x9000_001C)), ProjectedFile);
+        assert_eq!(classify_reparse(Some(0x8000_0099)), Unknown);
+
+        let link = describe_reparse(None);
+        assert_eq!(link.what, "a symbolic link");
+        assert!(
+            link.help.is_none(),
+            "the symlink class keeps each site's own remedy"
+        );
+        assert!(describe_reparse(Some(0xA000_0003))
+            .what
+            .contains("junction"));
+        let cloud = describe_reparse(Some(0x9000_001A));
+        assert!(cloud.what.contains("cloud-file placeholder") && cloud.what.contains("0x9000001a"));
+        assert!(cloud.help.as_deref().is_some_and(|h| h.contains("hydrate")));
+        assert!(describe_reparse(Some(0x8000_0017))
+            .help
+            .as_deref()
+            .is_some_and(|h| h.contains("compact /u")));
+        let unknown = describe_reparse(Some(0x8000_0099));
+        assert!(unknown.what.contains("0x80000099") && unknown.what.contains("never follows"));
+        assert!(unknown.help.is_some());
     }
 }

@@ -68,6 +68,11 @@ jobs:
         with:
           toolchain: "1.88"
           components: rustfmt, clippy
+          # The Windows confine walk (#64) is the crate's only unsafe FFI and
+          # has no local executor; the cross-target clippy below is its
+          # -D warnings gate on every PR, independent of the windows-latest
+          # test job (which proves runtime behavior, not lint cleanliness).
+          targets: x86_64-pc-windows-msvc
 
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
 
@@ -76,6 +81,9 @@ jobs:
 
       - name: Clippy (deny warnings)
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+      - name: Clippy (Windows cross-check, deny warnings)
+        run: cargo clippy --workspace --all-targets --locked --target x86_64-pc-windows-msvc -- -D warnings
 
   test:
     name: Test (${{ matrix.os }})

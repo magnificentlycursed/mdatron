@@ -209,15 +209,19 @@ pub fn check_file(
                 f.severity = Severity::Warning;
                 findings.push(f);
             }
-            Some(Captured::SymlinkRefused { .. }) => {
+            Some(Captured::SymlinkRefused { tag, .. }) => {
+                let reparse = crate::confine::describe_reparse(tag.as_ref().copied());
                 findings.push(cite_finding(
                     path,
                     content,
                     at,
                     "MDATRON-E0012",
                     "symlinked-component-refused",
-                    "a citation's target resolves through a symbolic link; \
-                     no-follow resolution refuses it",
+                    &format!(
+                        "a citation's target resolves through {}; no-follow \
+                         resolution refuses it",
+                        reparse.what
+                    ),
                     &token,
                 ));
             }

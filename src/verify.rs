@@ -730,21 +730,24 @@ fn run_inner(
                     }
                 }
             }
-            crate::snapshot::Captured::SymlinkRefused { component } => {
+            crate::snapshot::Captured::SymlinkRefused { component, tag } => {
                 let component = component.to_string_lossy().into_owned();
+                // #64 W1: name the reparse class (a cloud placeholder is not
+                // fixed by "replacing the symlink"); the refusal is the same.
+                let reparse = crate::confine::describe_reparse(tag.as_ref().copied());
                 findings.push(Finding {
                     code: "MDATRON-E0012".into(),
                     severity: Severity::Error,
                     summary: "symlinked-component-refused".into(),
-                    message: "a governed file resolves through a symbolic link; \
-                              no-follow resolution refuses it (the handle that \
-                              passed confinement is the handle that is read)"
-                        .into(),
-                    help: Some(
-                        "replace the symlink with the real file inside the \
-                         governed tree"
-                            .into(),
+                    message: format!(
+                        "a governed file resolves through {}; no-follow resolution \
+                         refuses it (the handle that passed confinement is the \
+                         handle that is read)",
+                        reparse.what
                     ),
+                    help: Some(reparse.help.unwrap_or_else(|| {
+                        "replace the symlink with the real file inside the governed tree".into()
+                    })),
                     location: Location {
                         file: abs.clone(),
                         line: 1,
@@ -7746,10 +7749,15 @@ pattern:
     // cycle under the MAIN file_globs walk terminates promptly, every
     // cycle-path capture refused loudly (E0012) — no unbounded enumeration.
     // Unix-only by fixture, not by guarantee (#64): the main walk's `**`
-    // expansion follows the cycle until the OS path limit ends it; Windows'
-    // 32K-character limit makes that bound ~8x deeper, so the same fixture
-    // does not terminate within the watchdog there. The no-follow refusal it
-    // asserts is pinned on both platforms by the confine/index gates.
+    // expansion (glob::glob over file_globs) follows the cycle PATH-BASED on
+    // every platform and terminates only when the OS path limit ends it
+    // (~4 KiB on Unix). Windows' 32K-character verbatim limit would — by
+    // reasoning, not measurement; nobody has run this fixture there — make
+    // that bound ~8x deeper and likely blow the 10 s watchdog, so the gate is
+    // not flipped. The no-follow REFUSAL it asserts is pinned on both
+    // platforms by the confine/index gates; the engine's own closed-world
+    // walk (`list_dir`, the index/extras enumeration) never descends a
+    // symlink at all — that is the enumeration guarantee, not a file_globs one.
     #[cfg(unix)]
     #[test]
     fn main_walk_symlink_cycle_terminates_with_refusals() {

@@ -77,6 +77,20 @@ needed to refuse every reparse kind after the open.
   grant. The `unsafe` calls (`NtCreateFile`, the `OBJECT_ATTRIBUTES` /
   `UNICODE_STRING` construction) carry SAFETY comments naming the invariants
   (valid handle, NUL-free UTF-16 name, struct lifetimes outliving the call).
+- **The refused class, stated honestly (cold-review W1):** it is wider than
+  links. OneDrive Files-On-Demand placeholders (`IO_REPARSE_TAG_CLOUD*`),
+  WOF / CompactOS-compressed files (`0x80000017`), Data Deduplication stubs
+  (`0x80000013`), and ProjFS placeholders (`0x9000001C`) are reparse points
+  and are refused too — mdatron follows no reparse point of any tag. The tag
+  is read through the handle (`FileAttributeTagInfo`, only once the reparse
+  bit is set; the decision attribute itself comes from
+  `GetFileInformationByHandle`, which every filesystem answers) and carried
+  into the `E0012` message and help so each class is diagnosed with its own
+  remedy, never as a symlink to "replace"; the refusal never varies by class.
+  `OBJ_DONT_REPARSE` is set alongside `FILE_OPEN_REPARSE_POINT` (std's
+  `remove_dir_all` pairing) so the kernel itself refuses
+  `STATUS_REPARSE_POINT_ENCOUNTERED` should a filter ever try to traverse
+  one — refused with no tag.
 - **Refusals pinned in CI** (`windows-latest` red-gates): a symlinked
   intermediate directory, a symlinked leaf (file and directory), and a
   junction (as intermediate, as leaf, and enumerated) each refused without

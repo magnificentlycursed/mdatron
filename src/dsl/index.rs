@@ -165,10 +165,11 @@ impl IndexRegistry {
                             continue;
                         }
                     },
-                    Some(Captured::SymlinkRefused { component }) => {
+                    Some(Captured::SymlinkRefused { component, tag }) => {
                         return Err(IndexError::SymlinkRefused {
                             path: display_text,
                             component: escape_path_text(&component.to_string_lossy()),
+                            reparse: reparse_suffix(tag.as_ref().copied()),
                         })
                     }
                     // Config-scoped posture: an oversized index source is the
@@ -248,6 +249,15 @@ impl IndexRegistry {
     }
 }
 
+/// The E0012 message suffix naming a non-symlink reparse class (#64 W1):
+/// empty for a plain link, " — a cloud-file placeholder (reparse tag …)" etc.
+fn reparse_suffix(tag: Option<u32>) -> String {
+    match confine::classify_reparse(tag) {
+        confine::ReparseClass::NameSurrogate => String::new(),
+        _ => format!(" — {}", confine::describe_reparse(tag).what),
+    }
+}
+
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum IndexError {
     #[error("glob error in '{pattern}': {error}")]
@@ -271,9 +281,15 @@ pub enum IndexError {
     PathTraversal { path: String },
 
     /// Maps to MDATRON-E0012: key-source-symlink-refused. No-follow resolution
-    /// refuses a symlink at any component, whatever its target.
-    #[error("path confinement: symlink component '{component}' in '{path}' is refused under no-follow resolution (MDATRON-E0012)")]
-    SymlinkRefused { path: String, component: String },
+    /// refuses a symlink — on Windows, any reparse point — at any component,
+    /// whatever its target. `reparse` names a non-symlink class (" — a
+    /// cloud-file placeholder (…)"), empty for a plain link (#64 W1).
+    #[error("path confinement: symlink component '{component}' in '{path}' is refused under no-follow resolution (MDATRON-E0012){reparse}")]
+    SymlinkRefused {
+        path: String,
+        component: String,
+        reparse: String,
+    },
 
     /// The engine-owned enumeration walk exceeded a declared bound (entry or
     /// depth maximum). Closed-world discipline: enumeration is a bounded,
@@ -639,11 +655,12 @@ fn list_for_walk(
         // A missing directory matches nothing (closed-world: enumerate what is
         // present) — not a hard error.
         Err(confine::ListViolation::NotFound) => return Ok(Vec::new()),
-        Err(confine::ListViolation::Symlink { component }) => {
+        Err(confine::ListViolation::Symlink { component, tag }) => {
             let display = root.join(prefix);
             return Err(IndexError::SymlinkRefused {
                 path: escape_path_text(&display.to_string_lossy()),
                 component: escape_path_text(&component.to_string_lossy()),
+                reparse: reparse_suffix(tag),
             });
         }
         Err(confine::ListViolation::Io(e)) => {
