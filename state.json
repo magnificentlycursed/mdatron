@@ -1,5 +1,5 @@
 {
-  "next_display_id": 198,
+  "next_display_id": 199,
   "next_comment_id": 540,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -63,6 +63,7 @@
     "4fe1ca8e-6b24-4d43-86c1-7a29b108f3ac": 126,
     "5036a175-b563-417b-bc1a-aca16891ec5f": 186,
     "52ecc683-68d9-47ce-934f-0d9b43c371f4": 70,
+    "535ce770-991b-4b76-b2e5-f7107912a629": 198,
     "571fe228-1e58-4ec0-8edf-6ebced31ecd8": 155,
     "57311af8-98a9-4083-9f80-586f713d0089": 142,
     "588a808f-de8c-4824-8347-2ed0a5891594": 44,
@@ -2527,6 +2528,16 @@
       "labels": [
         "enhancement"
       ]
+    },
+    "535ce770-991b-4b76-b2e5-f7107912a629": {
+      "uuid": "535ce770-991b-4b76-b2e5-f7107912a629",
+      "display_id": 198,
+      "title": "Post-cut triage: group and prioritize the open post-0.6.0 items into lanes (operator request 2026-09-23)",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-09-24T00:54:18.914310Z",
+      "updated_at": "2026-09-24T00:54:18.914310Z"
     },
     "571fe228-1e58-4ec0-8edf-6ebced31ecd8": {
       "uuid": "571fe228-1e58-4ec0-8edf-6ebced31ecd8",
@@ -8423,8 +8434,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-24T00:49:51.073161Z",
+    "timestamp": "2026-09-24T00:54:18.914310Z",
     "agent_id": "79Ig",
-    "agent_seq": 1090
+    "agent_seq": 1091
   }
 }
