@@ -557,6 +557,20 @@ fn cmd_verify(
             return ExitCode::from(2);
         }
     };
+    // #185 cold-review H1: resolve the root to its canonical absolute form ONCE,
+    // before ANY path is derived from it. `VerifyConfig::new` joins schemas_dir /
+    // patterns_dir from the root AS PASSED, and the loaders (`config::load`,
+    // `route::load`, ...) bake that spelling into their free-form messages,
+    // while the pipeline canonicalizes only its own copy later — so a relative
+    // root (`.`, `docs`) produced error paths (`./.mdatron/schemas`) that the
+    // canonical-root `strip_prefix` relativizer could not strip: the same failure
+    // rendered differently by root spelling. The published 0.6.0 hid that behind
+    // the substring catch-all below (and under `docs` LEAKED the host path when
+    // the raw `docs/` strip ate a segment of the canonical path first). With one
+    // canonical root every derived path is canonical-rooted and relativizes
+    // deterministically; `--files` globs and `--changed` were always resolved
+    // against the pipeline's canonical root, so they are unaffected.
+    let root = canonical_project_root(root);
 
     // The committed .mdatron/config.yaml's file_globs are the consumer-authored
     // jurisdiction (#77); an ABSENT config refuses (#80 D1) — jurisdiction is
@@ -669,11 +683,10 @@ fn cmd_verify(
     }
 
     // DEF4 completion (#134, roast B1): relativize any absolute path the failure
-    // carries against the (canonicalized, as `run` does) root, so pipeline_error
-    // .message and the stderr note below do not leak the host layout — matching
-    // the relativized findings. A pre-canonicalization error keeps its path.
-    let canonical_root = root.canonicalize().unwrap_or_else(|_| root.clone());
-    let pipeline_err = pipeline_err.map(|e| e.relativize_paths(&canonical_root));
+    // carries against the canonical root (the one every derived path is rooted
+    // at, see above), so pipeline_error.message and the stderr note below do
+    // not leak the host layout — matching the relativized findings.
+    let pipeline_err = pipeline_err.map(|e| e.relativize_paths(&root));
 
     // A failed pipeline carries its reason INTO the envelope (#112): the stderr
     // note is suppressed by --quiet, so a --json --quiet consumer needs the cause
@@ -685,12 +698,11 @@ fn cmd_verify(
     // file: `cannot parse '<abs>'`). Strip any root prefix from the final message
     // as a catch-all so no `pipeline_error.message` leaks the host layout — a
     // completeness guarantee no per-source fix can promise for future messages.
-    // Uses a trailing-separator match, so it relativizes `<root>/x` to `x`. Both
-    // the original and canonicalized roots are offered (pre-canonicalization
-    // errors carry the former); only ABSOLUTE ones are stripped (#185 L1 — a
-    // relative root's short prefix would mangle unrelated adopter text).
-    let relativize_message =
-        |msg: String| relativize_root_prefix(msg, &[root.as_path(), canonical_root.as_path()]);
+    // Uses a trailing-separator match, so it relativizes `<root>/x` to `x`. Only
+    // the canonical root is offered (#185 H1): the as-passed spelling no longer
+    // reaches any message, and a relative spelling's short prefix (`docs/`) used
+    // to mangle unrelated adopter text mid-string (#185 L1).
+    let relativize_message = |msg: String| relativize_root_prefix(msg, &[root.as_path()]);
     let pipeline_error = pipeline_err.as_ref().map(|e| PipelineError {
         code: "MDATRON-E0080".into(),
         kind: e.kind().into(),
@@ -726,7 +738,7 @@ fn cmd_verify(
                     // other non-Finding stderr note.
                     eprintln!(
                         "error[MDATRON-E0080]: output serialization failed\n   = note: {}",
-                        stderr_safe(&e, &[root.as_path(), canonical_root.as_path()])
+                        stderr_safe(&e, &[root.as_path()])
                     );
                 }
                 return ExitCode::from(2);
@@ -741,8 +753,7 @@ fn cmd_verify(
         if let Some(e) = &pipeline_err {
             println!(
                 "{}",
-                pipeline_error_finding(e, &[root.as_path(), canonical_root.as_path()])
-                    .format_compact()
+                pipeline_error_finding(e, &[root.as_path()]).format_compact()
             );
         } else {
             for (i, f) in output.findings.iter().enumerate() {
@@ -760,7 +771,7 @@ fn cmd_verify(
     // (#117, vsdd W4). The human block is emitted only when NOT in --json mode.
     if !quiet && !json {
         if let Some(e) = &pipeline_err {
-            print_pipeline_error(e, &[root.as_path(), canonical_root.as_path()]);
+            print_pipeline_error(e, &[root.as_path()]);
         } else {
             for f in &output.findings {
                 print_finding(f);
@@ -796,19 +807,37 @@ fn print_finding(f: &Finding) {
     eprintln!("{}", f.format_tty());
 }
 
-/// Strip any ABSOLUTE `<root>/` prefix (original or canonicalized) from a
-/// free-form error message so no agent-facing render leaks the host layout (the
-/// DEF4 contract, #134/#140). A trailing-separator match relativizes `<root>/x`
-/// to `x`. RELATIVE roots are skipped (#185 L1): a `--project-root docs` used to
-/// yield the prefix `docs/`, which the substring replace then cut out of
-/// arbitrary adopter content mid-string — an invalid glob `docs/a**b` rendered
-/// as `a**b`. A relative root leaks no host layout, and the canonicalized root
-/// is always absolute, so the DEF4 strip still holds. Shared by the JSON
-/// envelope and the compact/tty pipeline-error render so all three forms are
+/// Resolve the as-passed project root to its canonical absolute form (#185
+/// cold-review H1), so every path derived from it — the `.mdatron/` dirs the
+/// config joins, the loaders' free-form `cannot parse '<path>'` messages, the
+/// pipeline's own root — is canonical-rooted and `strip_prefix`-relativizes
+/// deterministically, whatever spelling (`.`, `docs`, `/abs/docs`) the caller
+/// used. A root that does not exist cannot be canonicalized; it is made
+/// absolute lexically instead (cwd-joined, `.` components dropped) so its
+/// derived paths still strip to the same relative rendering, and only if even
+/// that fails (no cwd) is the spelling kept as passed.
+fn canonical_project_root(root: PathBuf) -> PathBuf {
+    root.canonicalize()
+        .or_else(|_| std::path::absolute(&root))
+        .unwrap_or(root)
+}
+
+/// Strip any ROOTED `<root>/` prefix from a free-form error message so no
+/// agent-facing render leaks the host layout (the DEF4 contract, #134/#140). A
+/// trailing-separator match relativizes `<root>/x` to `x`. Callers pass the
+/// canonical root only (#185 H1), which is always rooted, so the guard is
+/// belt-and-braces: a relative spelling must never reach the replace — a
+/// `--project-root docs` once yielded the prefix `docs/`, which the substring
+/// replace cut out of arbitrary adopter content mid-string (an invalid glob
+/// `docs/a**b` rendered as `a**b`, #185 L1). `has_root` rather than
+/// `is_absolute` (#185 H3): a drive-less rooted Windows path (`\dir\proj`)
+/// names a host location and must be stripped, and no rooted path is the kind
+/// of short prefix that mangles adopter text. Shared by the JSON envelope and
+/// the compact/tty pipeline-error render so all three forms are
 /// host-layout-free.
 fn relativize_root_prefix(mut msg: String, roots: &[&Path]) -> String {
     for r in roots {
-        if !r.is_absolute() {
+        if !r.has_root() {
             continue;
         }
         let pref = format!("{}{}", r.to_string_lossy(), std::path::MAIN_SEPARATOR);

@@ -489,7 +489,9 @@ fn three_code_fixture(label: &str) -> TempProject {
 }
 
 /// The code token of a compact block's head line (`E[CODE] …`) or a TTY
-/// header line (`error[CODE]: …`), if the line is one.
+/// header line (`error[CODE]: …`), if the line is one. It cannot false-match
+/// a body line: quoted lines carry a `> ` marker and notes are indented, so
+/// no line but a header starts with a bare severity letter/word and `[`.
 fn code_in_header(line: &str) -> Option<&str> {
     let is_compact =
         line.len() > 1 && line.starts_with(['E', 'W', 'L']) && line[1..].starts_with('[');
@@ -589,28 +591,89 @@ fn pipeline_error_message_escapes_separators() {
 // substring-strip `docs/` out of a free-form error mid-string — the invalid
 // glob `docs/a**b` rendered as `a**b` in BOTH the envelope and the TTY note.
 // Only an absolute root is a host-layout leak; relative roots are skipped.
+/// A tree at `<parent>/docs`, addressable three ways — by absolute path, as
+/// `--project-root .` from inside it, and as `--project-root docs` from its
+/// parent — so a test can pin that the root SPELLING never changes a render.
+/// Removed on drop like every other fixture (#185 H6).
+struct RelRootFixture {
+    parent: PathBuf,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum RootSpelling {
+    Absolute,
+    Dot,
+    Name,
+}
+
+impl RelRootFixture {
+    fn new(label: &str, config: &str) -> Self {
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let parent = std::env::temp_dir().join(format!("mdatron-relroot-{label}-{nanos}"));
+        let _ = fs::remove_dir_all(&parent);
+        fs::create_dir_all(parent.join("docs/.mdatron")).unwrap();
+        fs::write(parent.join("docs/.mdatron/config.yaml"), config).unwrap();
+        Self { parent }
+    }
+
+    fn root(&self) -> PathBuf {
+        self.parent.join("docs")
+    }
+
+    fn write(&self, rel: &str, content: &str) {
+        let p = self.root().join(rel);
+        fs::create_dir_all(p.parent().unwrap()).unwrap();
+        fs::write(p, content).unwrap();
+    }
+
+    /// `verify` with the root spelled `how`; `extra` follows the root flag.
+    fn verify(&self, how: RootSpelling, extra: &[&str]) -> Output {
+        let (cwd, root_arg) = match how {
+            RootSpelling::Absolute => (self.parent.clone(), self.root().into_os_string()),
+            RootSpelling::Dot => (self.root(), ".".into()),
+            RootSpelling::Name => (self.parent.clone(), "docs".into()),
+        };
+        Command::new(mdatron_bin())
+            .current_dir(cwd)
+            .args(["verify", "--project-root"])
+            .arg(root_arg)
+            .args(extra)
+            .output()
+            .expect("mdatron binary executes")
+    }
+
+    /// Every spelling of a host-absolute segment a leak could carry: the raw
+    /// temp parent and its canonical form (macOS: /var -> /private/var).
+    fn host_segments(&self) -> Vec<String> {
+        let raw = self.parent.to_string_lossy().into_owned();
+        let canon = self
+            .parent
+            .canonicalize()
+            .map(|p| p.to_string_lossy().into_owned())
+            .unwrap_or_else(|_| raw.clone());
+        vec![raw, canon]
+    }
+}
+
+impl Drop for RelRootFixture {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.parent);
+    }
+}
+
+// RED GATE (#185 L1 item 2): a RELATIVE --project-root must never be substring-
+// stripped out of adopter text. The catch-all relativizer once turned a
+// `--project-root docs` into the prefix `docs/` and cut it out of an invalid
+// glob `docs/a**b` mid-string, rendering `a**b`.
 #[test]
 fn relative_project_root_never_mangles_adopter_text() {
-    let nanos = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_nanos();
-    let parent = std::env::temp_dir().join(format!("mdatron-relroot-{nanos}"));
-    let root = parent.join("docs");
-    fs::create_dir_all(root.join(".mdatron")).unwrap();
-    fs::write(
-        root.join(".mdatron/config.yaml"),
-        "file_globs:\n  - \"docs/a**b\"\n",
-    )
-    .unwrap();
-    fs::create_dir_all(root.join(".mdatron/schemas")).unwrap();
-    fs::write(root.join(".mdatron/schemas/.keep.json"), "{}").unwrap();
+    let fx = RelRootFixture::new("mangle", "file_globs:\n  - \"docs/a**b\"\n");
+    fx.write(".mdatron/schemas/.keep.json", "{}");
 
-    let json = Command::new(mdatron_bin())
-        .current_dir(&parent)
-        .args(["verify", "--project-root", "docs", "--json"])
-        .output()
-        .expect("mdatron binary executes");
+    let json = fx.verify(RootSpelling::Name, &["--json"]);
     assert_eq!(
         json.status.code(),
         Some(2),
@@ -622,17 +685,126 @@ fn relative_project_root_never_mangles_adopter_text() {
         msg.contains("docs/a**b"),
         "the adopter's glob text is intact in the envelope; got {msg:?}"
     );
-    let tty = Command::new(mdatron_bin())
-        .current_dir(&parent)
-        .args(["verify", "--project-root", "docs"])
-        .output()
-        .expect("mdatron binary executes");
+    let tty = fx.verify(RootSpelling::Name, &[]);
     let stderr = String::from_utf8_lossy(&tty.stderr);
     assert!(
         stderr.contains("docs/a**b"),
         "the adopter's glob text is intact in the TTY note; got {stderr}"
     );
-    let _ = fs::remove_dir_all(&parent);
+}
+
+// RED GATE (#185 cold-review H1/H4): the pipeline-error render — the envelope's
+// `pipeline_error.message` AND the tty detail — is byte-equal whatever the root
+// spelling, and carries no host-absolute segment. Pins two defects of the
+// published 0.6.0: under `--project-root .` a missing schemas dir rendered
+// `./.mdatron/schemas` (the as-passed root leaked into every derived path, and
+// only a substring catch-all hid it), and under `--project-root docs` a config
+// error LEAKED the absolute host path (the `docs/` substring strip ate a segment
+// of the canonical path, so the canonical strip then missed — a DEF4 violation).
+// The fix is at the source: one canonical root before any path derives from it.
+#[test]
+fn pipeline_error_render_is_identical_across_root_spellings() {
+    const CONFIG: &str = "file_globs:\n  - \"**/*.md\"\n";
+    const SCHEMA: &str = r#"{"type":"object"}"#;
+    struct Case {
+        label: &'static str,
+        seed: fn(&RelRootFixture),
+        /// The expected `pipeline_error.kind`.
+        kind: &'static str,
+        /// The root-relative path the message must carry.
+        rel_path: &'static str,
+    }
+    let cases = [
+        Case {
+            label: "missing-dirs",
+            seed: |_| {},
+            kind: "schema_load",
+            rel_path: "'.mdatron/schemas'",
+        },
+        Case {
+            label: "bad-schema",
+            seed: |fx| fx.write(".mdatron/schemas/bad.json", "{not json"),
+            kind: "schema_load",
+            rel_path: "'.mdatron/schemas/bad.json'",
+        },
+        Case {
+            label: "bad-pattern",
+            seed: |fx| {
+                fx.write(".mdatron/schemas/blog.json", SCHEMA);
+                fx.write(".mdatron/patterns/bad.yaml", "rules: [\n");
+            },
+            kind: "pattern_load",
+            rel_path: "'.mdatron/patterns/bad.yaml'",
+        },
+        Case {
+            label: "bad-routes",
+            seed: |fx| {
+                fx.write(".mdatron/schemas/blog.json", SCHEMA);
+                fx.write(".mdatron/routes.yaml", "routes: \"not a list\"\n");
+            },
+            kind: "config",
+            rel_path: "'.mdatron/routes.yaml'",
+        },
+    ];
+    for Case {
+        label,
+        seed,
+        kind,
+        rel_path,
+    } in cases
+    {
+        let fx = RelRootFixture::new(label, CONFIG);
+        seed(&fx);
+
+        let baseline_run = fx.verify(RootSpelling::Absolute, &["--json"]);
+        assert_eq!(
+            baseline_run.status.code(),
+            Some(2),
+            "{label}: the seed is a pipeline failure"
+        );
+        let baseline = parse_output(&baseline_run);
+        assert_eq!(baseline["pipeline_error"]["kind"], kind, "{label}: kind");
+        let baseline_msg = baseline["pipeline_error"]["message"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        assert!(
+            baseline_msg.contains(rel_path),
+            "{label}: the path renders root-relative; got {baseline_msg:?}"
+        );
+        let baseline_tty = fx.verify(RootSpelling::Absolute, &[]).stderr;
+        assert!(
+            String::from_utf8_lossy(&baseline_tty).contains("error[MDATRON-E0080]"),
+            "{label}: the tty form renders the pipeline error"
+        );
+
+        for how in [RootSpelling::Dot, RootSpelling::Name] {
+            let env = parse_output(&fx.verify(how, &["--json"]));
+            let msg = env["pipeline_error"]["message"].as_str().unwrap();
+            assert_eq!(
+                msg, baseline_msg,
+                "{label} under {how:?}: the envelope message equals the absolute-root render"
+            );
+            let tty = fx.verify(how, &[]).stderr;
+            assert_eq!(
+                String::from_utf8_lossy(&tty),
+                String::from_utf8_lossy(&baseline_tty),
+                "{label} under {how:?}: the tty render equals the absolute-root render"
+            );
+        }
+
+        let tty_text = String::from_utf8_lossy(&baseline_tty);
+        for seg in fx.host_segments() {
+            assert!(
+                !baseline_msg.contains(&seg) && !tty_text.contains(&seg),
+                "{label}: no host-absolute segment leaks; got {baseline_msg:?} / {tty_text}"
+            );
+        }
+        assert!(
+            !baseline_msg.contains("./.mdatron") && !baseline_msg.contains("docs/.mdatron"),
+            "{label}: no as-passed root spelling survives; got {baseline_msg:?}"
+        );
+    }
 }
 
 // RED GATE (#185 L1 item 3a): the three output forms agree on the FINDING SET
