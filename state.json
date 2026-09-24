@@ -1,5 +1,5 @@
 {
-  "next_display_id": 199,
+  "next_display_id": 200,
   "next_comment_id": 540,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -7,6 +7,7 @@
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
     "0943c25f-129e-492b-a326-fff0d809c6c0": 121,
     "0a8ad661-dd5e-450a-8a23-0440a6ed9990": 150,
+    "0c4386ac-2062-472d-91ea-c47d4a283531": 199,
     "0ce9e2f6-cb02-409d-aba5-6b1942abc74c": 149,
     "1197e92a-56c6-4b95-9d5a-a6e376ec37e9": 176,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
@@ -388,6 +389,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAX6o6Kw5WZzvsIL2C6k6vWQxm3DQ1ZWaedgFNJd7oByjum7ZZ7hHOZKnFfRfGRun9AzOjxyawYlabUvSz/oUXBg=="
         }
       }
+    },
+    "0c4386ac-2062-472d-91ea-c47d4a283531": {
+      "uuid": "0c4386ac-2062-472d-91ea-c47d4a283531",
+      "display_id": 199,
+      "title": "work-check hook: chain splitter is quote-unaware — a ' | ' inside a quoted argument (e.g. a jq filter) splits the command and refuses the whole chain; also 'cd' is not on the read-only allowlist. Fix locally + file upstream (crosslink init deploys this hook)",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-09-24T00:55:31.898873Z",
+      "updated_at": "2026-09-24T00:55:31.898873Z"
     },
     "0ce9e2f6-cb02-409d-aba5-6b1942abc74c": {
       "uuid": "0ce9e2f6-cb02-409d-aba5-6b1942abc74c",
@@ -8441,8 +8452,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-24T00:54:33.063992Z",
+    "timestamp": "2026-09-24T00:55:31.898873Z",
     "agent_id": "79Ig",
-    "agent_seq": 1093
+    "agent_seq": 1094
   }
 }
