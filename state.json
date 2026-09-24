@@ -1,6 +1,6 @@
 {
   "next_display_id": 205,
-  "next_comment_id": 557,
+  "next_comment_id": 558,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "03beb708-b15d-4522-950e-3fdaa3a3d16b": 196,
@@ -2365,8 +2365,17 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-24T22:16:23.986226Z",
-      "updated_at": "2026-09-24T22:57:37.006801Z",
+      "updated_at": "2026-09-24T23:57:23.020411Z",
       "comments": {
+        "32b24c0a-b1fc-4ed6-b325-2cac42c8d522": {
+          "display_id": 557,
+          "author": "79Ig",
+          "content": "RESULT (lane feature/204-ontology, stacked on feature/64 at 9363e17; worktree in the session scratchpad; 6 commits b3cbcef..7effaae, every gate green incl. cross-target clippy, self-verify --deny-warnings clean over the widened corpus, cargo deny): O-A renames w/ aliases + ledger (one ElementClass heading|h1..h6|list-item-bold-name shared by marker/count/disjoint; id_from->element; pins governing->governed_by w/ pin --update rewrite; anti_patterns register->guidance; mdatron envelope-schema + --file-globs aliases). O-B code meaning (E0081 reference-target-not-captured split from E0080; E0010/E0011 one headline absolute-path-refused/parent-segment-refused; W0045->schema-class-unvalidated; TTY info->lint; migration notes on every shifted code). O-C envelope 3.1.0 (families.rule_dsl tri-state; inert for citation/link/marker/section; one reason register; manifest demoted[] emits L0001 — DESIGN criterion R3 now true; manifest.yaml in lineage). O-D DSL truth (phases:/location: announced as W0052 inert-pattern-key; reference documents them as deprecated-inert). O-E prose (DESIGN Terms + activation table; help scrub w/ red gate; Layer pedagogy retired; explain-page methodology vocab out; dead § citations repointed; SARIF residue out; Cargo description says conformance engine). D1 register (lexicon registered, retired spellings reserved; vocabulary_globs -> DESIGN/README/docs; DESIGN self-claiming route; NEW coinage_globs key scopes E0090 to where bold means coinage — the trial run showed 331 label/emphasis false coinages otherwise; W0043 covers a dead coinage scope; E0091 allow-list widened for reference-shaped clusters; DESIGN's review-lane labels reworded as prose). DECISIONS taken in-lane: manifest demoted[].path keeps its name (it is .mdatron-relative, not the pins root-relative file — a different slot, documented, not aliased); E0080 stays on CLI-level exit-2 failures (documented per subcommand) rather than a new code; W0052 chosen over refusing the inert keys (a MAJOR input break for keys that never did anything). NEXT: CHANGELOG entry, cold review to MVR, PR stacked on #57.",
+          "created_at": "2026-09-24T23:57:23.006788Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA1EsErVv8v4mWiOLXwg684nPXQzSfkXvvFCx4HelnpWjflR5Fm4TfZhzFbnCaS2MzHBCylVdx/3ePo7BQXsL/CQ=="
+        },
         "52c27011-4fc8-41e5-ad9a-3bab949b1f83": {
           "display_id": 555,
           "author": "79Ig",
@@ -8675,8 +8684,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-24T23:00:03.693491Z",
+    "timestamp": "2026-09-24T23:57:23.020411Z",
     "agent_id": "79Ig",
-    "agent_seq": 1121
+    "agent_seq": 1122
   }
 }
