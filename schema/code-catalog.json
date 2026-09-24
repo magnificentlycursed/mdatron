@@ -46,5 +46,6 @@
   "MDATRON-W0048": "reference-target-unverified",
   "MDATRON-W0049": "index-source-unreadable",
   "MDATRON-W0050": "comparison-dead-clause",
-  "MDATRON-W0051": "require-frontmatter-scope-matches-nothing"
+  "MDATRON-W0051": "require-frontmatter-scope-matches-nothing",
+  "MDATRON-W0052": "inert-pattern-key"
 }

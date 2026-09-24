@@ -599,6 +599,12 @@ fn run_inner(
         &rule_locations,
         &mut findings,
     )?;
+    inert_pattern_key_findings(
+        &config.patterns_dir,
+        &patterns,
+        &rule_locations,
+        &mut findings,
+    );
 
     // Keep the pins for after the scope filter: a pin finding locates at
     // pins.yaml but is ABOUT the pinned file, so incremental includes it by the
@@ -1878,6 +1884,70 @@ fn rule_location(rule_locs: &[Location], rule_idx: usize, patterns_dir: &Path) -
 }
 
 // ── Rule field-reference validation (#156) ──────────────────────────────────────
+
+/// `MDATRON-W0052` (#204 R1/R2): a pattern key the engine parses but does not
+/// act on — a pattern's `phases:` (documented through 0.6.0 as
+/// "runtime-selectable subsets"; no selector ever existed) and a rule's
+/// `location:` (in the AST, never consumed). Both stay accepted under DSL v1
+/// so no adopter file breaks, and both are announced rather than silently
+/// tolerated: `docs/dsl-reference.md`'s exact-match claim holds only if every
+/// accepted key is documented WITH its effect, and "no effect" is the honest
+/// effect. Retired at DSL v2. One finding per inert key occurrence, anchored at
+/// the rule (for `location:`) or the pattern file (for `phases:`).
+fn inert_pattern_key_findings(
+    patterns_dir: &Path,
+    patterns: &[PatternFile],
+    rule_locations: &RuleLocations,
+    findings: &mut Vec<Finding>,
+) {
+    let empty: Vec<Location> = Vec::new();
+    for (file_idx, pf) in patterns.iter().enumerate() {
+        let rule_locs = rule_locations.get(file_idx).unwrap_or(&empty);
+        let file_location = || {
+            rule_locs
+                .first()
+                .map(|l| Location {
+                    file: l.file.clone(),
+                    line: 1,
+                    column: 0,
+                })
+                .unwrap_or_else(|| Location::whole_file(patterns_dir))
+        };
+        let inert = |key: &str, at: Location, what: &str| Finding {
+            code: "MDATRON-W0052".into(),
+            severity: Severity::Warning,
+            summary: "inert-pattern-key".into(),
+            message: format!(
+                "the pattern key `{key}` is accepted but has no effect ({what}); \
+                 it is retired at DSL v2"
+            ),
+            help: Some(format!("delete `{key}` from the pattern file")),
+            location: at,
+            explain_ref: Some("MDATRON-W0052".into()),
+            quoted: vec![QuotedRegion {
+                platform_variant: false,
+                label: "pattern".into(),
+                content: pf.pattern.id.clone(),
+            }],
+        };
+        if !pf.pattern.phases.is_empty() {
+            findings.push(inert(
+                "phases",
+                file_location(),
+                "no phase selector exists; every rule runs on every verify",
+            ));
+        }
+        for (rule_idx, rule) in pf.pattern.rules.iter().enumerate() {
+            if rule.location.is_some() {
+                findings.push(inert(
+                    "location",
+                    rule_location(rule_locs, rule_idx, patterns_dir),
+                    "finding locations are the whole artifact; the override is never read",
+                ));
+            }
+        }
+    }
+}
 
 /// Validate every rule's `$self.<field>` references against the frontmatter
 /// schema its context binds (#156, adopting Cedar's validate-before-deploy
@@ -5284,6 +5354,71 @@ pattern:
             crate::output::FamilyActivity::Inert { .. } => "inert",
             crate::output::FamilyActivity::Inactive { .. } => "inactive",
         }
+    }
+
+    // #204 R1/R2: the two parsed-but-inert pattern keys are announced at load
+    // (W0052, one per occurrence, anchored at the file for `phases:` and at the
+    // rule for `location:`) — never silently accepted, never a parse refusal.
+    #[test]
+    fn inert_pattern_keys_warn_at_load() {
+        let proj = TempProject::new("inert-keys");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(".mdatron/config.yaml", "file_globs:\n  - \"**/*.md\"\n");
+        proj.write(
+            ".mdatron/patterns/t.yaml",
+            concat!(
+                "pattern:\n  id: t\n  phases: [strict]\n  rules:\n",
+                "    - id: r1\n      context: phase-primer\n      assert: count($self.relevant_domains) == 1\n",
+                "      code: T-E0001\n      message: m\n      location:\n        field: relevant_domains\n",
+                "    - id: r2\n      context: phase-primer\n      assert: count($self.relevant_domains) == 1\n",
+                "      code: T-E0002\n      message: m\n",
+            ),
+        );
+        proj.write(
+            "doc.md",
+            "---\nschema_class: phase-primer\nphase: phase-1a\nrelevant_domains: [se]\n---\nbody\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let (findings, _fam, _v, _n) = run(&cfg, None, None).unwrap();
+        let inert: Vec<&Finding> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-W0052")
+            .collect();
+        assert_eq!(inert.len(), 2, "{findings:?}");
+        assert!(inert
+            .iter()
+            .any(|f| f.message.contains("`phases`") && f.location.line == 1));
+        let at_rule = inert
+            .iter()
+            .find(|f| f.message.contains("`location`"))
+            .expect("the rule-level key is announced");
+        assert!(
+            at_rule.location.line > 1
+                && at_rule.location.file.to_string_lossy().ends_with("t.yaml"),
+            "anchored at the rule in its own file: {at_rule:?}"
+        );
+        assert!(inert.iter().all(|f| f.quoted[0].content == "t"));
+
+        let clean = TempProject::new("inert-keys-clean");
+        clean.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        clean.write(".mdatron/config.yaml", "file_globs:\n  - \"**/*.md\"\n");
+        clean.write(
+            ".mdatron/patterns/t.yaml",
+            "pattern:\n  id: t\n  rules:\n    - id: r\n      context: phase-primer\n      assert: count($self.relevant_domains) == 1\n      code: T-E0001\n      message: m\n",
+        );
+        clean.write(
+            "doc.md",
+            "---\nschema_class: phase-primer\nphase: phase-1a\nrelevant_domains: [se]\n---\nbody\n",
+        );
+        let cfg = VerifyConfig::from_project(&clean.0).unwrap();
+        let (findings, _fam, _v, _n) = run(&cfg, None, None).unwrap();
+        assert_eq!(codes_of(&findings, "MDATRON-W0052"), 0, "{findings:?}");
     }
 
     // #204 R6 (envelope 3.1.0): the rule-DSL lane reports its own tri-state —

@@ -19,13 +19,16 @@ pub struct PatternFile {
     pub pattern: Pattern,
 }
 
-/// A named group of rules sharing a `keys:` declaration + optional `phases:` selection.
+/// A named group of rules sharing a `keys:` declaration.
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct Pattern {
     pub id: String,
     #[serde(default)]
     pub description: Option<String>,
+    /// Deprecated, inert (#204 R1): parsed for DSL-v1 compatibility, never
+    /// read — no phase selector exists. Announced at load as `MDATRON-W0052`;
+    /// retired at DSL v2.
     #[serde(default)]
     pub phases: Vec<String>,
     #[serde(default)]
@@ -65,6 +68,9 @@ pub struct Rule {
     pub code: String,
     /// Message template with `{{...}}` interpolation slots.
     pub message: String,
+    /// Deprecated, inert (#204 R2): parsed for DSL-v1 compatibility, never
+    /// consumed — finding locations are the whole artifact. Announced at load
+    /// as `MDATRON-W0052`; retired at DSL v2.
     #[serde(default)]
     pub location: Option<LocationSpec>,
 }
