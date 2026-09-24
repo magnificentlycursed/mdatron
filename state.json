@@ -1,6 +1,6 @@
 {
   "next_display_id": 198,
-  "next_comment_id": 539,
+  "next_comment_id": 540,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "03beb708-b15d-4522-950e-3fdaa3a3d16b": 196,
@@ -7894,7 +7894,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-08-10T12:56:45.901952Z",
-      "updated_at": "2026-09-24T00:47:26.881846Z",
+      "updated_at": "2026-09-24T00:49:51.073161Z",
       "closed_at": "2026-09-24T00:47:26.881837Z",
       "labels": [
         "release"
@@ -7953,6 +7953,15 @@
           "kind": "decision",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAim51Y4N2M9dKKstIC/lcyuToW86SCAtPSXmJrVjSO4eHqd+TjDAwOIbges9SN16//6Wj2G4Eags08MiR2ZlGDw=="
+        },
+        "7ca29210-a68d-494f-bae2-ee7c8ab473f8": {
+          "display_id": 539,
+          "author": "79Ig",
+          "content": "Post-publish relay filed: https://github.com/magnificentlycursed/vsdd-cli/issues/35 (crosslink #197).",
+          "created_at": "2026-09-24T00:49:51.059429Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA7UWGTPDE/KThS73eZsGAcMvzGpFDX1Do2QoEY4jzsJ4O2ODo4muLvwhM2NFYRkYpH7dAQnrIe/PLGEfsoh31Ag=="
         },
         "b60bb6b0-9724-416d-9451-c7f3a3f94457": {
           "display_id": 459,
@@ -8414,8 +8423,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-24T00:49:44.826678Z",
+    "timestamp": "2026-09-24T00:49:51.073161Z",
     "agent_id": "79Ig",
-    "agent_seq": 1089
+    "agent_seq": 1090
   }
 }
