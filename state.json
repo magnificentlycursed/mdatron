@@ -7864,11 +7864,12 @@
       "uuid": "f9ae6221-0d48-49da-a2d4-46d81c6e5685",
       "display_id": 171,
       "title": "cut 0.6.0 release (crate 0.6.0 / envelope 3.0.0)",
-      "status": "open",
+      "status": "closed",
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-08-10T12:56:45.901952Z",
-      "updated_at": "2026-09-24T00:47:20.830073Z",
+      "updated_at": "2026-09-24T00:47:26.881846Z",
+      "closed_at": "2026-09-24T00:47:26.881837Z",
       "labels": [
         "release"
       ],
@@ -8387,8 +8388,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-24T00:47:20.830073Z",
+    "timestamp": "2026-09-24T00:47:26.881846Z",
     "agent_id": "79Ig",
-    "agent_seq": 1082
+    "agent_seq": 1083
   }
 }
