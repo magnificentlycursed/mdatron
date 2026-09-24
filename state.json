@@ -1,6 +1,6 @@
 {
   "next_display_id": 205,
-  "next_comment_id": 551,
+  "next_comment_id": 552,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "03beb708-b15d-4522-950e-3fdaa3a3d16b": 196,
@@ -1865,7 +1865,7 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-07-21T03:53:35.156084Z",
-      "updated_at": "2026-09-24T22:07:06.801357Z",
+      "updated_at": "2026-09-24T22:27:10.022372Z",
       "labels": [
         "security"
       ],
@@ -1907,6 +1907,15 @@
           "kind": "handoff",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAjpZFYm02rPxQdBlrROkVWvIiGPUCBVBA7Wdn3Bp9xsjuYS/jqsyovoTqekHTZxdcu768sTGT1YVB28knRlpPCA=="
+        },
+        "ac4ac4e5-972e-425d-bf53-0ecc6d267612": {
+          "display_id": 551,
+          "author": "79Ig",
+          "content": "COLD REVIEW round 1 (8a80de2): NO grant path, NO followed-reparse path — every binding verified against windows-sys 0.61.2 source + std 1.88 Windows internals; six-feature amendment confirmed minimal; handle ownership RAII on every path; error mapping to callers audited (NotFound = closed-world no-match, nothing grants). 13 findings, 0 CRITICAL: W1 MEDIUM — refusal mislabelled for non-symlink reparse classes (OneDrive placeholders, WOF, dedup, ProjFS get 'replace the symlink'); carry the tag, name the class. W2 MEDIUM — pin/init pass the RAW root so a junction-rooted project silently no-ops on Windows (regression; canonicalize at source for every subcommand + make pin's Err→continue loud). W3 OBJ_DONT_REPARSE (std precedent; filter-independent). W4 DESIGN:114 dangling ref. W5 unmeasured watchdog claim + DESIGN:70 'cycles cannot extend a walk' is list_dir-only truth. W6 cross-target clippy in CI Lint. W7/W8 missing gates (file-symlink intermediate; enumeration continuation). W9 refuse ':' (ADS aliasing). W10 attributes from FileBasicInfo, tag only when reparse. W11-13 nits. 17 candidates refuted. Fix round dispatched (all 13). windows-latest runtime verdict pending on draft PR #57.",
+          "created_at": "2026-09-24T22:27:10.006956Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA3O6N3Lj6EVh2T23jqcINA3K6kv0iKxdnLxcx2RPQ8bc/+DkBjYQK8jIp0twUJMDYmtVLepkCfPmpU9iXzj1ZCQ=="
         },
         "c8249302-53bd-4096-8c85-3776f4364c06": {
           "author": "79Ig",
@@ -8615,8 +8624,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-24T22:16:23.986226Z",
+    "timestamp": "2026-09-24T22:27:10.022372Z",
     "agent_id": "79Ig",
-    "agent_seq": 1114
+    "agent_seq": 1115
   }
 }
