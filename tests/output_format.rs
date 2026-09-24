@@ -768,8 +768,13 @@ fn pipeline_error_render_is_identical_across_root_spellings() {
             .as_str()
             .unwrap()
             .to_string();
+        // Structured error paths (schema_load/pattern_load) render
+        // forward-slashed on every platform; the free-form config-kind
+        // message carries the loader's own `Path::display()`, which is
+        // backslashed on Windows — normalize before the contains check so the
+        // assertion tests relativization, not the separator.
         assert!(
-            baseline_msg.contains(rel_path),
+            baseline_msg.replace('\\', "/").contains(rel_path),
             "{label}: the path renders root-relative; got {baseline_msg:?}"
         );
         let baseline_tty = fx.verify(RootSpelling::Absolute, &[]).stderr;
