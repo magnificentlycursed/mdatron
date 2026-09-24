@@ -1673,11 +1673,12 @@
       "uuid": "2f2a6d90-3b29-46ba-9136-cb827d30ea2e",
       "display_id": 197,
       "title": "Post-publish relay: file the 0.6.0 capability-delta issue on vsdd-cli against tag v0.6.0 (their mdatron-capability-surface page is a full envelope-MAJOR stale)",
-      "status": "open",
+      "status": "closed",
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-09-24T00:48:10.709386Z",
-      "updated_at": "2026-09-24T00:49:31.644602Z",
+      "updated_at": "2026-09-24T00:49:38.454236Z",
+      "closed_at": "2026-09-24T00:49:38.454227Z",
       "labels": [
         "docs"
       ],
@@ -8417,8 +8418,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-24T00:49:31.644602Z",
+    "timestamp": "2026-09-24T00:49:38.454236Z",
     "agent_id": "79Ig",
-    "agent_seq": 1087
+    "agent_seq": 1088
   }
 }
