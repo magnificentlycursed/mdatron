@@ -1,6 +1,6 @@
 {
   "next_display_id": 201,
-  "next_comment_id": 545,
+  "next_comment_id": 546,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "03beb708-b15d-4522-950e-3fdaa3a3d16b": 196,
@@ -7934,7 +7934,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-20T00:10:00.982073Z",
-      "updated_at": "2026-09-24T02:55:15.839419Z",
+      "updated_at": "2026-09-24T03:03:40.994519Z",
       "comments": {
         "175b261c-1c44-424e-a7ee-960bf4f24ef7": {
           "display_id": 543,
@@ -7962,6 +7962,15 @@
           "kind": "observation",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAqnO+fCGzDcaLVqzxHHRdM5LvIoTC4WKbpF4HeyXmUFoWAMxFRCHO0654dMVsjAmHMb+t+dCrpuDKah8s6w4lCA=="
+        },
+        "8065d3a3-5348-496e-b595-af1a8b6799f5": {
+          "display_id": 545,
+          "author": "79Ig",
+          "content": "MVR REACHED (closure verification of 062097b): H1-H6 closed at source; reviewer matrix widened to 8 failure kinds x 5 root spellings, all byte-equal, no host segment; --files/--changed/--quiet byte-identical across spellings; nonexistent-root fallback identical to 0.6.0's render; symlinked roots identical; H4 test proven red on BOTH ff129c2 and 0.6.0 (0.6.0 reds at bad-routes with the WORSE absolute-spelling mangle '/private.mdatron/routes.yaml'). CHANGELOG amended to name that variant. L1 branch = 0.6.1 PATCH candidate: closes a published DEF4 leak. Awaiting operator push + PR.",
+          "created_at": "2026-09-24T03:03:40.954790Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAwIfI9G1f3Jc2NskXqQxfzU9OcG13jXQkjfEGRhBg1iNM/imYo9A+UbY2yUGqZF6FKwGZaMaP6OyzwL/YksOwCQ=="
         },
         "97f5e2e8-f8d1-468b-b9da-59da86a57783": {
           "display_id": 542,
@@ -8511,8 +8520,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-24T02:55:15.839419Z",
+    "timestamp": "2026-09-24T03:03:40.994519Z",
     "agent_id": "79Ig",
-    "agent_seq": 1103
+    "agent_seq": 1104
   }
 }
