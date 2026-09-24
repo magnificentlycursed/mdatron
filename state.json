@@ -1,6 +1,6 @@
 {
   "next_display_id": 201,
-  "next_comment_id": 540,
+  "next_comment_id": 541,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "03beb708-b15d-4522-950e-3fdaa3a3d16b": 196,
@@ -2553,10 +2553,21 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-24T00:54:18.914310Z",
-      "updated_at": "2026-09-24T00:54:24.348441Z",
+      "updated_at": "2026-09-24T00:55:45.019649Z",
       "labels": [
         "planning"
-      ]
+      ],
+      "comments": {
+        "41a5fb98-7979-4099-9a3d-308a93accc3d": {
+          "display_id": 540,
+          "author": "79Ig",
+          "content": "TRIAGE PLAN (proposed to operator 2026-09-23): six lanes. L1 contract hygiene = #185 substantive minors (envelope U+2028/2029 escaping on quoted[].content + pipeline_error.message; relativize substring remnant; tripwire strengthening — real-run envelope validation + form-drops-a-finding detection). L2 = #64 Windows fail-closed FFI (prior ruling: first post-cut code item). L3 generated peer artifacts (Ruff idiom) = #189 INVERT limits.md + cost-ledger fold, #190 dependency-record schema + agnosticism bijection + field-rename-ledger fold, the hook-config superset seam, #185 doc-comment sweep + lib surface. L4 harness depth = #193 first-party body-scanner properties. L5 standards pack = #181 D1-D4 (+ #192 term maturity as a design input the vocab recipe exercises). L6 operator-gated process = #194 two rulings, #170 two parked decisions (Test->required; comment_discipline->required), #191 (dogfood trigger), #188 (v1.0.0 parking), the quote-unaware splitter bug. Recommended order: L1 -> L2 -> L5 (start D1 recipe 1 early; parallel with L3, disjoint files) -> L3 -> L4; L6 rulings batched in one operator sitting.",
+          "created_at": "2026-09-24T00:55:45.005676Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA8v1vucBiOkNzQZfJEQ3gE3xxk8BQ9AYQBYxld8bnIq7nIlpKWyWZlmjIp5wU/KMVTf1wBZhWjMV0/AhCHk4RBw=="
+        }
+      }
     },
     "571fe228-1e58-4ec0-8edf-6ebced31ecd8": {
       "uuid": "571fe228-1e58-4ec0-8edf-6ebced31ecd8",
@@ -8463,8 +8474,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-24T00:55:38.857931Z",
+    "timestamp": "2026-09-24T00:55:45.019649Z",
     "agent_id": "79Ig",
-    "agent_seq": 1095
+    "agent_seq": 1096
   }
 }
