@@ -1,6 +1,6 @@
 {
   "next_display_id": 201,
-  "next_comment_id": 541,
+  "next_comment_id": 542,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "03beb708-b15d-4522-950e-3fdaa3a3d16b": 196,
@@ -2553,7 +2553,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-24T00:54:18.914310Z",
-      "updated_at": "2026-09-24T00:55:45.019649Z",
+      "updated_at": "2026-09-24T00:57:28.133515Z",
       "labels": [
         "planning"
       ],
@@ -2566,6 +2566,15 @@
           "kind": "plan",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA8v1vucBiOkNzQZfJEQ3gE3xxk8BQ9AYQBYxld8bnIq7nIlpKWyWZlmjIp5wU/KMVTf1wBZhWjMV0/AhCHk4RBw=="
+        },
+        "59f9bd38-546e-4a17-9773-87e706c96467": {
+          "display_id": 541,
+          "author": "79Ig",
+          "content": "RATIFIED (operator 2026-09-23): lane order L1 -> L2 -> L5 (recipe 1 early, parallel with L3) -> L3 -> L4; L6 rulings batched. Opening L1 (#185 substantive half) now.",
+          "created_at": "2026-09-24T00:57:28.117721Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAXYAnjl4r7BdvaG6jIrQeEzVWk2qcySXUJvD1kkHCONUFDaJgwY92ab5A4FSYBmc37whbRxOyH7yucLJOVkWWDw=="
         }
       }
     },
@@ -8474,8 +8483,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-24T00:55:45.019649Z",
+    "timestamp": "2026-09-24T00:57:28.133515Z",
     "agent_id": "79Ig",
-    "agent_seq": 1096
+    "agent_seq": 1097
   }
 }
