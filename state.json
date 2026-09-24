@@ -1,6 +1,6 @@
 {
   "next_display_id": 197,
-  "next_comment_id": 537,
+  "next_comment_id": 538,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "03beb708-b15d-4522-950e-3fdaa3a3d16b": 196,
@@ -7868,7 +7868,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-08-10T12:56:45.901952Z",
-      "updated_at": "2026-09-24T00:41:14.918066Z",
+      "updated_at": "2026-09-24T00:47:20.830073Z",
       "labels": [
         "release"
       ],
@@ -7881,6 +7881,15 @@
           "kind": "decision",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAc3MU+zuQgOC5c7Gk43WRt7sJF6hm2xWinf68qvNwK179HfDaTaWrfXIO56v31kFJxfYkeMWdx0G9F/Mxvl7MBQ=="
+        },
+        "0a81b7d4-bd0b-4c92-b146-593eb75b32c7": {
+          "display_id": 537,
+          "author": "79Ig",
+          "content": "RELEASED: mdatron 0.6.0 published to crates.io 2026-09-24T00:46Z (tag v0.6.0 at merge commit 97b09c7; envelope 3.0.0). Gauntlet green three times over — PR #53 (8/8), release PR #54 (16/16 across both push+PR runs, B6 concurrency fix verified live), and the tag-triggered run on the tagged tree (8/8, the first-ever on.push.tags run). Package: 107 files, 425.9KiB compressed, LICENSE + docs/limits.md + docs/faq.md shipped, no internal apparatus. Post-publish: vsdd-cli capability-delta issue filed against the live tag (see next comment). Stale parked branch release/0.6.0 (at b358391) is operator housekeeping. Closing.",
+          "created_at": "2026-09-24T00:47:20.817706Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAM47Qr9eZxbQxeKFa2gr7O5ktw5U0x9QQDBza18IhQgg6ZdIdRCuAYjsE4Pq7+Tam+SUxEZlWnsA/pRZLns+qDg=="
         },
         "133704f1-ebba-4301-9d0f-1bb5fb8f09a5": {
           "display_id": 536,
@@ -8378,8 +8387,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-24T00:41:14.918066Z",
+    "timestamp": "2026-09-24T00:47:20.830073Z",
     "agent_id": "79Ig",
-    "agent_seq": 1081
+    "agent_seq": 1082
   }
 }
