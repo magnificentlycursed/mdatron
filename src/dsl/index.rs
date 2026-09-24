@@ -1150,40 +1150,38 @@ mod tests {
         assert_eq!(degraded[0].key_name, "m");
     }
 
-    #[cfg(unix)]
+    #[cfg(any(unix, windows))]
     #[test]
     fn symlink_source_refused_even_when_target_is_inside_root() {
         // No-follow is unconditional: a symlink is refused whatever its
         // target, so escape detection never depends on resolving it.
         let temp = TempDir::new("symlink-inside");
         temp.write("real.yaml", "k: v\n");
-        std::os::unix::fs::symlink(
+        crate::confine::test_symlink::file(
             temp.path().join("real.yaml"),
             temp.path().join("alias.yaml"),
-        )
-        .unwrap();
+        );
         let d = decl("s", "alias.yaml", "$", "$key");
         let err = IndexRegistry::build(temp.path(), &[d]).unwrap_err();
         assert!(matches!(err, IndexError::SymlinkRefused { .. }));
     }
 
-    #[cfg(unix)]
+    #[cfg(any(unix, windows))]
     #[test]
     fn symlink_source_pointing_outside_root_refused() {
         let temp = TempDir::new("symlink-escape");
         let outside = TempDir::new("symlink-escape-target");
         outside.write("target.yaml", "k: v\n");
-        std::os::unix::fs::symlink(
+        crate::confine::test_symlink::file(
             outside.path().join("target.yaml"),
             temp.path().join("link.yaml"),
-        )
-        .unwrap();
+        );
         let d = decl("s", "link.yaml", "$", "$key");
         let err = IndexRegistry::build(temp.path(), &[d]).unwrap_err();
         assert!(matches!(err, IndexError::SymlinkRefused { .. }));
     }
 
-    #[cfg(unix)]
+    #[cfg(any(unix, windows))]
     #[test]
     fn symlinked_intermediate_component_refused() {
         // Component-wise resolution: a symlinked directory in the middle of
@@ -1191,7 +1189,7 @@ mod tests {
         let temp = TempDir::new("symlink-mid");
         let outside = TempDir::new("symlink-mid-target");
         outside.write("data.yaml", "k: v\n");
-        std::os::unix::fs::symlink(outside.path(), temp.path().join("sub")).unwrap();
+        crate::confine::test_symlink::dir(outside.path(), temp.path().join("sub"));
         let d = decl("s", "sub/data.yaml", "$", "$key");
         let err = IndexRegistry::build(temp.path(), &[d]).unwrap_err();
         match err {
@@ -1200,7 +1198,7 @@ mod tests {
         }
     }
 
-    #[cfg(unix)]
+    #[cfg(any(unix, windows))]
     #[test]
     fn glob_matched_symlink_refused() {
         // Glob expansion may match a symlink; the handle-based open still
@@ -1208,11 +1206,10 @@ mod tests {
         let temp = TempDir::new("glob-symlink");
         let outside = TempDir::new("glob-symlink-target");
         outside.write("target.yaml", "k: v\n");
-        std::os::unix::fs::symlink(
+        crate::confine::test_symlink::file(
             outside.path().join("target.yaml"),
             temp.path().join("linked.yaml"),
-        )
-        .unwrap();
+        );
         let d = decl("g", "*.yaml", "$", "$key");
         let err = IndexRegistry::build(temp.path(), &[d]).unwrap_err();
         assert!(matches!(err, IndexError::SymlinkRefused { .. }));
@@ -1331,7 +1328,7 @@ mod tests {
         assert!(idx.lookup("alpha").is_some());
     }
 
-    #[cfg(unix)]
+    #[cfg(any(unix, windows))]
     #[test]
     fn symlinked_intermediate_enumeration_refused_without_disclosure() {
         // Symptom 3 (SEC-F2) + symptom 5 (SEC-F3): glob::glob enumerated
@@ -1343,7 +1340,7 @@ mod tests {
         let temp = TempDir::new("enum-symlink");
         let outside = TempDir::new("enum-symlink-outside");
         outside.write("SECRET-OUTSIDE.yaml", "leaked: 1\n");
-        std::os::unix::fs::symlink(outside.path(), temp.path().join("sub")).unwrap();
+        crate::confine::test_symlink::dir(outside.path(), temp.path().join("sub"));
 
         let d = decl("g", "sub/*.yaml", "$", "$key");
         let err = IndexRegistry::build(temp.path(), &[d]).unwrap_err();
@@ -1361,7 +1358,7 @@ mod tests {
         );
     }
 
-    #[cfg(unix)]
+    #[cfg(any(unix, windows))]
     #[test]
     fn symlink_cycle_under_recursive_pattern_terminates() {
         // Symptom 4 (I10): a symlink cycle under a recursive `**` pattern was
@@ -1373,7 +1370,7 @@ mod tests {
         let temp = TempDir::new("cycle");
         temp.write("real.yaml", "found: 1\n");
         // A self-referential directory symlink: loop -> the root itself.
-        std::os::unix::fs::symlink(temp.path(), temp.path().join("loop")).unwrap();
+        crate::confine::test_symlink::dir(temp.path(), temp.path().join("loop"));
         let root = temp.path().to_path_buf();
         let d = decl("c", "**/*.yaml", "$", "$key");
 

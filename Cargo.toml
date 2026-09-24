@@ -79,6 +79,25 @@ pulldown-cmark = { version = "0.13.4", default-features = false }
 # in confine (DESIGN.md § Verification is fast where it is invoked).
 libc = "0.2"
 
+[target.'cfg(windows)'.dependencies]
+# Windows has no openat either; the only handle-relative no-follow open is
+# NtCreateFile with a RootDirectory handle, which std does not expose. This
+# crate is the raw binding for exactly that call plus the through-the-handle
+# reparse-attribute query and directory enumeration the confine walk needs
+# (#64; DESIGN.md § Verification is fast where it is invoked — the swap-proof
+# guarantee is universal). Feature-scoped to the namespaces the walk touches;
+# `Win32_Security` and `Win32_System_IO` are the crate's own gates on
+# `NtCreateFile` / `OBJECT_ATTRIBUTES` / `IO_STATUS_BLOCK`. See
+# docs/dependencies/windows-sys.md.
+windows-sys = { version = "0.61", features = [
+    "Wdk_Foundation",
+    "Wdk_Storage_FileSystem",
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_Storage_FileSystem",
+    "Win32_System_IO",
+] }
+
 [dev-dependencies]
 # proptest: the property-based parser-robustness harness (GH #52 major 1,
 # crosslink #184) — every input parser (expr, pattern YAML, frontmatter, schema

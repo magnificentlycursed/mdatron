@@ -11,8 +11,10 @@ confinement model requires: `confine::open_confined` walks each path component
 via `openat` with `O_NOFOLLOW | O_CLOEXEC | O_DIRECTORY`, so a symlinked
 intermediate component is refused exactly like a symlinked leaf (DESIGN.md
 § Verification is fast where it is invoked; the swap-proof guarantee). Only the
-Unix implementation links libc; the non-unix fallback (documented weaker
-carve-out, pending a handle-based Windows walk) uses std alone.
+Unix implementation links libc; Windows has its own handle walk over
+`windows-sys` (`NtCreateFile` + `FILE_OPEN_REPARSE_POINT`, see
+`windows-sys.md`, #64), and only a target nothing declares compiles the
+std-only fallback carve-out.
 
 **Alternatives considered:**
 

@@ -5,7 +5,13 @@ landed before the dependency, per the 2026-09-19 ruling).
 
 **Pinned version:** `^0.61` (resolves to 0.61.2), Windows targets only, with
 exactly the namespace features the handle walk needs: `Wdk_Foundation`,
-`Wdk_Storage_FileSystem`, `Win32_Foundation`, `Win32_Storage_FileSystem`.
+`Wdk_Storage_FileSystem`, `Win32_Foundation`, `Win32_Security`,
+`Win32_Storage_FileSystem`, `Win32_System_IO`. (Amended at pin time, #64: the
+crate gates `NtCreateFile` and `OBJECT_ATTRIBUTES` — whose
+`SecurityDescriptor` field is a `SECURITY_DESCRIPTOR` pointer — behind
+`Win32_Security`, and `IO_STATUS_BLOCK` behind `Win32_System_IO`; removing
+either fails to compile. `Win32_Foundation` is implied by the `Wdk` feature
+chain and kept explicit.)
 
 ## Why this dependency
 
@@ -42,15 +48,19 @@ needed to refuse every reparse kind after the open.
 
 - **Version pin:** `windows-sys = { version = "0.61", features = [...] }`
   under `[target.'cfg(windows)'.dependencies]`; `Cargo.lock` committed, every
-  CI job `--locked`. Feature-scoped so only the four namespaces' bindings
+  CI job `--locked`. Feature-scoped so only the six namespaces' bindings
   compile.
 - **Maintainer trust:** Microsoft, `microsoft/windows-rs` (Kenny Kerr); the
   canonical Windows bindings crate, ~1.6 billion downloads; MSRV 1.71, well
   under the pinned 1.88.
-- **`cargo audit` / `cargo deny`:** to be verified clean at pin time; the
-  license is inside the `deny.toml` allowlist; crates.io source.
-- **Transitive deps:** none (`windows-sys` is a leaf: generated bindings, no
-  runtime dependencies) — verify against `Cargo.lock` at pin time.
+- **`cargo audit` / `cargo deny`:** verified clean at pin time (2026-09-24:
+  `cargo deny check bans licenses sources` ok; `cargo audit` no advisories);
+  the license is inside the `deny.toml` allowlist; crates.io source.
+- **Transitive deps:** one — `windows-link` 0.2.1 (same Microsoft repo; the
+  `link!` macro / raw-dylib import glue, no runtime code). Both it and
+  `windows-sys` 0.61.2 were already in `Cargo.lock` through `clap`'s Windows
+  console support (`anstream` → `anstyle-query` / `anstyle-wincon`), so the
+  pin added no new crate to the tree — only a direct, feature-scoped edge.
 
 ## Security notes
 
@@ -68,10 +78,15 @@ needed to refuse every reparse kind after the open.
   `UNICODE_STRING` construction) carry SAFETY comments naming the invariants
   (valid handle, NUL-free UTF-16 name, struct lifetimes outliving the call).
 - **Refusals pinned in CI** (`windows-latest` red-gates): a symlinked
-  intermediate directory, a junction, and a volume mount point each refused
-  without disclosure; a plain file and a plain directory still open; the
-  Unix-only test gates flip to `cfg(any(unix, windows))` where the guarantee
-  becomes universal.
+  intermediate directory, a symlinked leaf (file and directory), and a
+  junction (as intermediate, as leaf, and enumerated) each refused without
+  disclosure; a reparse-point root refused; a file squatting an intermediate
+  refused; a plain file and a plain directory still open; the Unix-only test
+  gates flip to `cfg(any(unix, windows))` where the guarantee becomes
+  universal. A volume mount point cannot be created on a runner (it needs a
+  spare volume); it carries the junction's mount-point tag and the same
+  attribute the walk decides on, so it falls in exactly the refused class the
+  junction gates pin.
 - **Non-Windows, non-Unix targets:** none are declared; the std fallback
   stays compiled under `cfg(not(any(unix, windows)))` with its carve-out
   comment, so the crate never compiles on a target that has no reason to

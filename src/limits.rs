@@ -152,8 +152,9 @@ pub(crate) fn slot_dir(project_root: &Path) -> std::io::Result<(std::path::PathB
     // named; a swap after the open cannot redirect the fstat or the fchmod.
     // Only the by-path slot-file opens below remain a residual, tolerated on a
     // sticky or per-user temp parent (Linux /tmp, the macOS and Windows
-    // per-user temp dirs) exactly as the confine fallback's check-to-open
-    // window is — see the module note.
+    // per-user temp dirs) — see the module note. (Since #64 the confine walk
+    // itself carries no check-to-open window on any declared target; this
+    // slot-file residual is the one that remains.)
     let handle = std::fs::OpenOptions::new()
         .read(true)
         .custom_flags(libc::O_NOFOLLOW | libc::O_DIRECTORY)

@@ -194,13 +194,32 @@ fn no_adopter_data_runs_with_all_families_inactive() {
     let _ = fs::remove_dir_all(&root);
 }
 
+/// Per-platform symlink fixtures (#64): the confinement guarantee is
+/// universal, so these gates run on Unix AND Windows. A creation failure
+/// FAILS the test loudly (Windows: the runner needs
+/// SeCreateSymbolicLinkPrivilege or Developer Mode), never skips it.
+#[cfg(any(unix, windows))]
+mod symlink_fixture {
+    use std::path::Path;
+
+    pub fn dir(target: impl AsRef<Path>, link: impl AsRef<Path>) {
+        #[cfg(unix)]
+        let result = std::os::unix::fs::symlink(target.as_ref(), link.as_ref());
+        #[cfg(windows)]
+        let result = std::os::windows::fs::symlink_dir(target.as_ref(), link.as_ref());
+        result.unwrap_or_else(|e| {
+            panic!("directory symlink fixture must be creatable on this runner: {e}")
+        });
+    }
+}
+
 // ── 4. Symlink-cycle bounded extras scan ────────────────────────────────────
 //
 // The closed-world no-follow enumeration terminates on a symlink cycle: a
 // self-referential symlink is listed as a Symlink entry and NOT descended, so
 // the scan cannot loop. (DESIGN § Five check families: "symlink cycles cannot
 // extend a walk".)
-#[cfg(unix)]
+#[cfg(any(unix, windows))]
 #[test]
 fn symlink_cycle_terminates_the_extras_scan() {
     use mdatron::confine::{list_dir, EntryType};
@@ -215,7 +234,7 @@ fn symlink_cycle_terminates_the_extras_scan() {
     fs::create_dir_all(root.join("a")).unwrap();
     fs::write(root.join("a/real.md"), "x\n").unwrap();
     // A cycle: a/loop -> .. (back to a's parent, which contains a).
-    std::os::unix::fs::symlink("..", root.join("a/loop")).unwrap();
+    symlink_fixture::dir("..", root.join("a/loop"));
 
     // list_dir enumerates a/ without following the cycle — it TERMINATES and
     // classifies the symlink as a Symlink entry rather than descending it.

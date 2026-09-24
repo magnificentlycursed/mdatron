@@ -18,15 +18,14 @@ and whatever its target, inside or outside the governed tree. Refusing
 symlinks unconditionally means escape detection never depends on resolving
 where a link points.
 
-Where the platform provides a handle-relative no-follow open — Unix, via
-`openat` with `O_NOFOLLOW` — a link swapped after the check cannot redirect
-the read: the handle that passed confinement is the handle that is read.
-Platforms without that primitive fall back to a per-component symlink check
-followed by an ordinary open, so a component swapped between the check and the
-open is followed — the swap-proof guarantee is Unix-only. That weaker fallback
-posture is the one place the snapshot model's check-then-read closure is
-reopened, and it holds only until a handle-based walk lands on those
-platforms.
+The open is handle-relative and no-follow on every supported platform — Unix
+via `openat` with `O_NOFOLLOW`, Windows via `NtCreateFile` with a
+`RootDirectory` handle and `FILE_OPEN_REPARSE_POINT` — so a link swapped after
+the check cannot redirect the read: the handle that passed confinement is the
+handle that is read. On Windows the refusal is decided on the handle's reparse
+attribute and is tag-agnostic: every reparse point — symlink, junction, volume
+mount point — is refused alike, never followed. The swap-proof guarantee is
+universal.
 
 ## How to fix
 

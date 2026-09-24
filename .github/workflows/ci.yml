@@ -85,12 +85,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # unix confinement (openat/O_NOFOLLOW handle walks) is the primary
-        # security path — exercised on Linux and macOS. windows-latest builds
-        # and tests the non-unix fallback (symlink_metadata + open / path-based
-        # list_dir), so it no longer bit-rots unbuilt; the unix-only tests are
-        # cfg-gated off there. The fallback's weaker TOCTOU posture is the
-        # documented carve-out (#56) pending the handle-based Windows walk (#64).
+        # Confinement is a handle walk on every declared target: openat/
+        # O_NOFOLLOW on Linux and macOS, NtCreateFile + FILE_OPEN_REPARSE_POINT
+        # on Windows (#64). windows-latest is the ONLY executor of the Windows
+        # walk (no local Windows box): its symlink/junction red-gates and the
+        # cfg(any(unix, windows)) confinement tests run here. Unix-only gates
+        # (fd counting, FIFOs, permissions) stay cfg-gated off on Windows.
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
