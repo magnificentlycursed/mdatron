@@ -367,9 +367,21 @@ pub fn update(project_root: &Path, dry_run: bool) -> Result<Vec<(String, String,
         })?;
         let handle = match open_confined(project_root, &confined) {
             Ok(h) => h,
-            // Absent, or refused as a symlink / non-regular file: leave the
-            // record — the next verify reports it (E0062 / E0012).
-            Err(OpenViolation::Io(e)) if e.kind() == std::io::ErrorKind::NotFound => continue,
+            // Absent, routed through a file, an invalid name, or refused as a
+            // symlink / non-regular file: an adopter-authored pins.yaml defect
+            // that the next verify reports (E0062 / E0012) — leave the record
+            // (#64 review N4: one partition for all "the pin cannot resolve"
+            // shapes, so a typo'd path and a file-as-intermediate behave alike).
+            Err(OpenViolation::Io(e))
+                if matches!(
+                    e.kind(),
+                    std::io::ErrorKind::NotFound
+                        | std::io::ErrorKind::NotADirectory
+                        | std::io::ErrorKind::InvalidFilename
+                ) =>
+            {
+                continue
+            }
             Err(OpenViolation::Symlink { .. }) | Err(OpenViolation::NotRegular) => continue,
             // Any OTHER open failure (permission, an unresolvable root, an I/O
             // fault) is LOUD: a pin that cannot be recomputed is a reported

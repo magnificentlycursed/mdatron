@@ -420,7 +420,19 @@ pub struct ReparseDescription {
 pub fn describe_reparse(tag: Option<u32>) -> ReparseDescription {
     let never = "mdatron never follows reparse points";
     match (classify_reparse(tag), tag) {
-        (ReparseClass::NameSurrogate, None | Some(IO_REPARSE_TAG_SYMLINK)) => ReparseDescription {
+        // No tag: on Unix the refusal is always a symbolic link (the only
+        // no-follow class there); on Windows a missing tag means the kernel
+        // refused traversal before a handle existed (OBJ_DONT_REPARSE) or the
+        // tag query failed — say so rather than mislabel it (#64 review N3).
+        (_, None) => ReparseDescription {
+            what: if cfg!(windows) {
+                "a reparse point the kernel refused to traverse (tag unavailable)".into()
+            } else {
+                "a symbolic link".into()
+            },
+            help: None,
+        },
+        (ReparseClass::NameSurrogate, Some(IO_REPARSE_TAG_SYMLINK)) => ReparseDescription {
             what: "a symbolic link".into(),
             help: None,
         },
@@ -462,15 +474,13 @@ pub fn describe_reparse(tag: Option<u32>) -> ReparseDescription {
                  virtualized tree — {never}"
             )),
         },
+        // N2: the "never follows" sentence lives in `help`, not spliced into
+        // the message's "resolves through {what}" clause.
         (_, Some(t)) => ReparseDescription {
-            what: format!("a reparse point (tag 0x{t:08x}), refused; {never}"),
-            help: Some("replace it with a plain file or directory inside the governed tree".into()),
-        },
-        // Unreachable by construction (only NameSurrogate has a None tag), but
-        // an exhaustive match keeps the classification honest if a class grows.
-        (_, None) => ReparseDescription {
-            what: "a symbolic link".into(),
-            help: None,
+            what: format!("a reparse point (tag 0x{t:08x})"),
+            help: Some(format!(
+                "replace it with a plain file or directory inside the governed tree — {never}"
+            )),
         },
     }
 }
@@ -2019,12 +2029,22 @@ mod tests {
         assert_eq!(classify_reparse(Some(0x9000_001C)), ProjectedFile);
         assert_eq!(classify_reparse(Some(0x8000_0099)), Unknown);
 
+        // N3: a missing tag is the symlink only where symlinks are the only
+        // no-follow class (Unix); on Windows it is a kernel-refused reparse
+        // point whose tag never became readable, and it says so.
         let link = describe_reparse(None);
-        assert_eq!(link.what, "a symbolic link");
+        if cfg!(windows) {
+            assert!(link.what.contains("tag unavailable"), "{}", link.what);
+        } else {
+            assert_eq!(link.what, "a symbolic link");
+        }
         assert!(
             link.help.is_none(),
-            "the symlink class keeps each site's own remedy"
+            "the tagless class keeps each site's own remedy"
         );
+        let symlink = describe_reparse(Some(0xA000_000C));
+        assert_eq!(symlink.what, "a symbolic link");
+        assert!(symlink.help.is_none());
         assert!(describe_reparse(Some(0xA000_0003))
             .what
             .contains("junction"));
@@ -2035,8 +2055,13 @@ mod tests {
             .help
             .as_deref()
             .is_some_and(|h| h.contains("compact /u")));
+        // N2: the message names the thing; the "never follows" sentence is
+        // help, so the "resolves through {what}" clause reads as one sentence.
         let unknown = describe_reparse(Some(0x8000_0099));
-        assert!(unknown.what.contains("0x80000099") && unknown.what.contains("never follows"));
-        assert!(unknown.help.is_some());
+        assert!(unknown.what.contains("0x80000099") && !unknown.what.contains("never follows"));
+        assert!(unknown
+            .help
+            .as_deref()
+            .is_some_and(|h| h.contains("plain file") && h.contains("never follows")));
     }
 }

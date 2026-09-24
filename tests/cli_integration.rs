@@ -718,6 +718,16 @@ fn pin_update_through_junction_root_updates_the_pin() {
         "mklink /J must succeed on this runner: {}",
         String::from_utf8_lossy(&out.stderr)
     );
+    // #64 review N5: remove the junction entry on every exit path, so an
+    // assertion failure below never leaks it in %TEMP% (RemoveDirectoryW on a
+    // reparse point removes the entry, never the target tree).
+    struct JunctionGuard(PathBuf);
+    impl Drop for JunctionGuard {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir(&self.0);
+        }
+    }
+    let _junction_guard = JunctionGuard(junction.clone());
 
     let run_pin = |args: &[&str]| {
         Command::new(mdatron_bin())
@@ -744,7 +754,6 @@ fn pin_update_through_junction_root_updates_the_pin() {
         Some(0),
         "check through the junction is clean"
     );
-    let _ = std::fs::remove_dir(&junction);
 }
 
 // GH #48 finding 4 (lane C): the pin subcommand renders adopter-authored
