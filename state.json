@@ -1,6 +1,6 @@
 {
   "next_display_id": 205,
-  "next_comment_id": 554,
+  "next_comment_id": 555,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "03beb708-b15d-4522-950e-3fdaa3a3d16b": 196,
@@ -2352,8 +2352,17 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-24T22:16:23.986226Z",
-      "updated_at": "2026-09-24T22:33:52.538193Z",
+      "updated_at": "2026-09-24T22:54:39.798987Z",
       "comments": {
+        "6baa7e8e-b05f-4e92-b686-8d93f22a2e4a": {
+          "display_id": 554,
+          "author": "79Ig",
+          "content": "Operator ruling 2026-09-24: 'Do all the ontology stuff for 0.7.0' — the full proposed disposition (D1 lexicon registration + vocabulary_globs widening; D2-1/2 element unification + governed_by on pins; D2-3/4/5 code-meaning hygiene with migration notes; D2-6..9 TTY info->lint, help scrub, reason strings + inert per family, families.rule_dsl -> envelope 3.1.0; R1/R2/R3 DSL-reference truth; D3 aliases; D4 define-dont-rename) is ratified for the 0.7.0 train. Lane opens as a stacked branch on feature/64 (D2-4 confinement summaries touch the L2 surface); PR base main after L2 merges.",
+          "created_at": "2026-09-24T22:54:39.783403Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAdLdUFGDv+7xy2/kug3wZzLXZheFH8HRmPfDgohOPD4vtaAWlIb6vqpDhXjhXahu2hnqi+i2vmlh3l9CZsuX2AA=="
+        },
         "a824c11e-3aaa-4a8f-be80-7e10f582b50e": {
           "display_id": 552,
           "author": "79Ig",
@@ -8644,8 +8653,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-24T22:41:02.133467Z",
+    "timestamp": "2026-09-24T22:54:39.798987Z",
     "agent_id": "79Ig",
-    "agent_seq": 1117
+    "agent_seq": 1118
   }
 }
