@@ -1,4 +1,4 @@
-//! Layer 1: JSON Schema dispatch for frontmatter validation.
+//! The schema family: JSON Schema dispatch for frontmatter validation.
 //!
 //! Adopters ship JSON Schema files (draft 2020-12) at `.mdatron/schemas/<class>.json`.
 //! mdatron parses YAML frontmatter from markdown files via [`crate::frontmatter::parse`],

@@ -2,7 +2,7 @@
 //!
 //! `mdatron verify` runs the full pipeline from `mdatron::verify`: loads schemas
 //! from `<root>/.mdatron/schemas/`, patterns from `<root>/.mdatron/patterns/`, walks
-//! the project per `--files` globs, and applies Layer 1 (JSON Schema) + Layer 2 (DSL)
+//! the project per `--files` globs, and applies the schema family (JSON Schema) + the rule DSL
 //! against every matched markdown file.
 
 use std::path::{Path, PathBuf};

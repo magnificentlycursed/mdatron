@@ -500,10 +500,12 @@ proptest! {
             "pins.yaml",
             "vocabulary.yaml",
             "code-catalogs.yaml",
+            "manifest.yaml",
         ] {
             std::fs::write(root.join(".mdatron").join(name), &bytes).unwrap();
         }
         let _ = mdatron::config::load(root);
+        let _ = mdatron::init::load_tombstones(root);
         let _ = mdatron::route::load(root);
         let _ = mdatron::pin::load(root);
         let _ = mdatron::vocab::load(root);

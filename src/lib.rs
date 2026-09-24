@@ -10,8 +10,8 @@
 //! supported consumption surface. Shell out to the binary instead.
 //!
 //! Two-layer architecture per DESIGN.md § Summary: JSON Schema for structural validation
-//! (Layer 1); a Schematron-derived DSL for cross-field, cross-file, and cross-document
-//! semantic rules (Layer 2).
+//! (the schema family); a Schematron-derived DSL for cross-field, cross-file, and cross-document
+//! semantic rules (the rule DSL).
 //!
 //! mdatron is descended from Schematron (ISO/IEC 19757-3); the `-tron` suffix
 //! evokes Schematron, the same way `jsontron` did for JSON.
@@ -19,7 +19,7 @@
 //! # Implementation state
 //!
 //! The verify pipeline is implemented end to end: frontmatter parsing, JSON Schema
-//! dispatch (Layer 1), DSL evaluation with the cross-file `key()` index (Layer 2),
+//! dispatch (the schema family), DSL evaluation with the cross-file `key()` index (the rule DSL),
 //! and rustc-shaped + JSON output. See CHANGELOG.md for the surface shipped per
 //! release (this crate is versioned in `Cargo.toml`, not pinned in this header).
 

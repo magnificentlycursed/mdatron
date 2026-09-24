@@ -178,13 +178,13 @@ fn absent_family_data_reports_inactive_and_version_bumped() {
     let env = parse_output(&run_verify_json(&proj));
     let fam = env.get("families").and_then(|v| v.as_object()).unwrap();
     assert_eq!(fam["schema"]["state"], "active");
-    for k in ["route", "pin", "vocabulary", "citation", "link"] {
+    for k in ["route", "pin", "vocabulary", "citation", "link", "rule_dsl"] {
         assert_eq!(fam[k]["state"], "inactive", "{k} has no data supplied");
     }
     assert_eq!(
         env.get("mdatron_output_version").and_then(|v| v.as_str()),
-        Some("3.0.0"),
-        "envelope 3.0.0 for 0.6.0: MAJOR — the sixth family (link, required, closed member) plus the forward-extensibility reshape of `families` (#145)"
+        Some("3.1.0"),
+        "envelope 3.1.0 for 0.7.0: MINOR — the additive `families.rule_dsl` member and the `manifest.yaml` lineage key (#204), on top of 3.0.0's forward-extensible `families` (#145)"
     );
 }
 
@@ -371,7 +371,7 @@ fn ad_hoc_files_run_emits_only_loaded_inputs() {
     assert!(
         env.get("envelope_schema")
             .and_then(|v| v.as_str())
-            .is_some_and(|s| s.ends_with("/3.0.0")),
+            .is_some_and(|s| s.ends_with("/3.1.0")),
         "the envelope pins its schema $id; got {env}"
     );
 }

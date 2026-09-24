@@ -132,9 +132,98 @@ struct ManagedEntry {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct DemotionTombstone {
+    /// The demoted file, relative to `.mdatron/` (the manifest's own base —
+    /// unlike a pins.yaml tombstone's root-relative `file`).
     path: String,
+    #[serde(default)]
     reason: String,
+    #[serde(default)]
     owner: String,
+}
+
+/// The init manifest as `verify` reads it: its standing demotion tombstones
+/// rendered as findings, plus the digest of the bytes read (input lineage).
+pub struct LoadedManifest {
+    pub findings: Vec<Finding>,
+    pub digest: String,
+}
+
+/// Render the manifest's demotion tombstones as the standing governance-
+/// weakening findings — the second carrier of `MDATRON-L0001` beside
+/// `pins.yaml`'s `unpinned[]` (DESIGN § Governance data is governed: "a
+/// tombstoned demotion stays loud through its standing annotation"; #204 R3 —
+/// through 0.6.0 only the pins carrier emitted the lint, so the DESIGN
+/// criterion was unmet). A tombstone without its justification is
+/// `MDATRON-W0042`, exactly as for an unpinned entry. An absent manifest is
+/// `None` (a tree that never ran `init`); a manifest that does not parse is a
+/// config error — the file is engine-managed, so a parse failure is a defect,
+/// never something to skip silently.
+pub fn load_tombstones(project_root: &Path) -> Result<Option<LoadedManifest>, crate::Error> {
+    let path = project_root.join(".mdatron").join(MANIFEST_NAME);
+    let content = match std::fs::read_to_string(&path) {
+        Ok(c) => c,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(e) => {
+            return Err(crate::Error::Config(format!(
+                "cannot read '{}': {e}",
+                path.display()
+            )))
+        }
+    };
+    let manifest: Manifest = serde_yaml_ng::from_str(&content)
+        .map_err(|e| crate::Error::Config(format!("cannot parse '{}': {e}", path.display())))?;
+    let mut findings = Vec::new();
+    for t in &manifest.demoted {
+        let file = QuotedRegion {
+            platform_variant: false,
+            label: "file".into(),
+            content: format!(".mdatron/{}", t.path),
+        };
+        if t.reason.trim().is_empty() || t.owner.trim().is_empty() {
+            findings.push(Finding {
+                code: "MDATRON-W0042".into(),
+                severity: Severity::Warning,
+                summary: "governance-weakening-unjustified".into(),
+                message: "a demotion tombstone carries no justification (reason and \
+                          owner are required); a weakening that cannot say why it \
+                          stands is not a tombstone, it is an erasure"
+                    .into(),
+                help: Some("add reason and owner to the demoted entry".into()),
+                location: Location::whole_file(&path),
+                explain_ref: Some("MDATRON-W0042".into()),
+                quoted: vec![file],
+            });
+        } else {
+            findings.push(Finding {
+                code: "MDATRON-L0001".into(),
+                severity: Severity::Lint,
+                summary: "governance-weakening-standing".into(),
+                message: "a file was demoted from the managed partition; the \
+                          tombstone below is the standing record of that weakening"
+                    .into(),
+                help: None,
+                location: Location::whole_file(&path),
+                explain_ref: Some("MDATRON-L0001".into()),
+                quoted: vec![
+                    file,
+                    QuotedRegion {
+                        platform_variant: false,
+                        label: "reason".into(),
+                        content: t.reason.clone(),
+                    },
+                    QuotedRegion {
+                        platform_variant: false,
+                        label: "owner".into(),
+                        content: t.owner.clone(),
+                    },
+                ],
+            });
+        }
+    }
+    Ok(Some(LoadedManifest {
+        findings,
+        digest: sha256_hex(content.as_bytes()),
+    }))
 }
 
 /// Lowercase hex sha256 of `bytes`.

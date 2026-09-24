@@ -47,10 +47,17 @@ use crate::diagnostic::{Finding, Severity};
 /// - `timings` (OPTIONAL, #175): flag-gated run-phase wall-clock; omitted by
 ///   default so the default envelope stays deterministic.
 ///
+/// 3.1.0 (#204, 0.7.0): MINOR — `families` gains the additive member `rule_dsl`
+/// (the pattern-rule lane's activity, so the envelope can say "no rule ran"),
+/// permitted by 3.0.0's forward-extensible `families`; `inputs` gains the
+/// `manifest.yaml` key when the init manifest is read; the new code
+/// `MDATRON-E0081` splits the never-captured-target FINDING out of `E0080`
+/// (an additive code in a reserved range).
+///
 /// Must move in lockstep with the published schema
 /// (`schema/mdatron-output.schema.json`); the `envelope_version_matches_published_schema`
 /// tripwire enforces it.
-pub const OUTPUT_VERSION: &str = "3.0.0";
+pub const OUTPUT_VERSION: &str = "3.1.0";
 
 /// The published envelope schema's `$id` (#176) — emitted verbatim as the
 /// envelope's `envelope_schema` field so a consumer can pin the exact contract
@@ -58,7 +65,7 @@ pub const OUTPUT_VERSION: &str = "3.0.0";
 /// An identifier, not a fetch target (DEF6); kept in lockstep with
 /// [`OUTPUT_VERSION`] and the schema's own `$id` by the version tripwire.
 pub const ENVELOPE_SCHEMA_ID: &str =
-    "https://github.com/magnificentlycursed/mdatron/schema/mdatron-output/3.0.0";
+    "https://github.com/magnificentlycursed/mdatron/schema/mdatron-output/3.1.0";
 
 /// The published output-envelope JSON Schema, embedded so `mdatron schema` can
 /// print it to stdout for a binary-only (`cargo install`) consumer that has no
@@ -110,8 +117,9 @@ impl FamilyActivity {
     }
 }
 
-/// Per-verify activity of the five check families (`DESIGN.md` § Five check
-/// families), emitted under the envelope's `families` field.
+/// Per-verify activity of the nine check families (`DESIGN.md` § Nine check
+/// families) plus the rule-DSL lane, emitted under the envelope's `families`
+/// field.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Families {
     pub schema: FamilyActivity,
@@ -138,6 +146,12 @@ pub struct Families {
     /// assertions over markdown body sections. Additive member of the
     /// forward-extensible `families` (folded into the unpublished 3.0.0).
     pub section: FamilyActivity,
+    /// The rule-DSL lane (#204 R6, envelope 3.1.0): not a check family (DESIGN
+    /// keeps the DSL a kept component serving one lane), but reported here so
+    /// a consumer can tell "patterns supplied and rules ran" from "no pattern
+    /// file" from "patterns supplied but no rule's context matched a walked
+    /// file" — the envelope could not express "checked nothing" for the DSL.
+    pub rule_dsl: FamilyActivity,
 }
 
 impl Families {
@@ -155,6 +169,7 @@ impl Families {
             marker: reason(),
             code_catalog: reason(),
             section: reason(),
+            rule_dsl: reason(),
         }
     }
 }
@@ -637,6 +652,7 @@ mod tests {
                 marker: FamilyActivity::inactive("no marker_rules route"),
                 code_catalog: FamilyActivity::inactive("no code-catalogs.yaml"),
                 section: FamilyActivity::inactive("no route supplies section_rules"),
+                rule_dsl: FamilyActivity::inactive("no pattern files"),
             },
             "0.3.0",
         )

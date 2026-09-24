@@ -122,7 +122,7 @@ a contract limit) for agent-context consumers; add `--quiet` to silence the
 stderr rendering (and, under `--json`, to keep stdout the only stream).
 
 The `--json` envelope is a published, versioned contract (`mdatron_output_version`,
-currently `3.0.0`). The load-bearing fields for a machine consumer:
+currently `3.1.0`). The load-bearing fields for a machine consumer:
 
 - `pipeline_status` — `"ok"` or `"failed"`; on failure, `pipeline_error`
   `{code, kind, message}` carries the reason **in-band** (it survives `--quiet`),
@@ -130,7 +130,8 @@ currently `3.0.0`). The load-bearing fields for a machine consumer:
 - `summary.files_checked` — the true count of files **validated** (a clean run
   over N reports N, not 0).
 - `families` — each of the nine check families (schema, route, pin,
-  vocabulary, citation, link, marker, code_catalog, section) as
+  vocabulary, citation, link, marker, code_catalog, section) and the rule-DSL
+  lane (`rule_dsl`) as
   `{state, reason}` (`active` / `inert` / `inactive`), so "checked N, all
   clean" is distinguishable from "checked nothing"; the object is
   forward-extensible, so a consumer must tolerate unknown family keys.
