@@ -44,6 +44,13 @@ pub struct ProjectConfig {
     /// prior behavior for configs that predate this field.
     #[serde(default)]
     pub vocabulary_globs: Vec<String>,
+    /// Globs whose matching files the code-catalog family scans for adopter
+    /// code tokens (#203 F3, GH #56 finding 3). Kept separate from `file_globs`
+    /// exactly like `vocabulary_globs`, so a `comprehensive` catalog can coexist
+    /// with a walked archive that cites retired codes. Empty (the default)
+    /// scans every walked file — prior behavior.
+    #[serde(default)]
+    pub code_catalog_globs: Vec<String>,
 }
 
 /// Load `<project_root>/.mdatron/config.yaml`.

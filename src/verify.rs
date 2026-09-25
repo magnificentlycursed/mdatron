@@ -51,6 +51,9 @@ pub struct VerifyConfig {
     /// Globs whose matching files the vocabulary family scans (#97). Empty
     /// falls back to every walked file (prior behavior).
     pub vocabulary_globs: Vec<String>,
+    /// Globs whose matching files the code-catalog family scans (#203 F3).
+    /// Empty scans every walked file (prior behavior).
+    pub code_catalog_globs: Vec<String>,
     /// sha256 (lowercase hex) of the `.mdatron/config.yaml` bytes
     /// `from_project` read (#176, the envelope's input lineage). `None` for an
     /// ad-hoc `--files`/`new` config, which reads no config file.
@@ -68,6 +71,7 @@ impl VerifyConfig {
             file_globs: vec!["**/*.md".to_string()],
             require_frontmatter: Vec::new(),
             vocabulary_globs: Vec::new(),
+            code_catalog_globs: Vec::new(),
             config_digest: None,
         }
     }
@@ -116,6 +120,7 @@ impl VerifyConfig {
         cfg.file_globs = pc.file_globs;
         cfg.require_frontmatter = pc.require_frontmatter;
         cfg.vocabulary_globs = pc.vocabulary_globs;
+        cfg.code_catalog_globs = pc.code_catalog_globs;
         cfg.config_digest = Some(pc.digest);
         Ok(cfg)
     }
@@ -502,6 +507,8 @@ fn run_inner(
     // Kept separate from file_globs so a historical archive stays walked +
     // routed without its retired handle scheme tripping the register.
     let vocab_globs = confine_and_compile_globs(&config.vocabulary_globs, "vocabulary_globs")?;
+    let codecat_globs =
+        confine_and_compile_globs(&config.code_catalog_globs, "code_catalog_globs")?;
 
     // Route family (#83): load + compile the allowlist; absent file = family
     // inactive. Per-entry defects arrive as findings (confinement escapes drop
@@ -571,6 +578,8 @@ fn run_inner(
     use crate::output::{Families, FamilyActivity};
     let schemas_supplied = !schemas.is_empty();
     let route_supplied = routes.is_some();
+    let routes_declared = routes.as_ref().map_or(0, |r| r.declared);
+    let routes_active = routes.as_ref().map_or(0, |r| r.routes.len());
     let pin_supplied = pin_data.is_some();
     let vocab_supplied = vocab.is_some();
     let code_catalog_supplied = catalogs.is_some();
@@ -1019,6 +1028,9 @@ fn run_inner(
     // only — W0043 is `.mdatron/`-located (never in an incremental scope) and
     // the incremental walk sees only part of the tree.
     let vocab_scoped = vocab.is_some() && !vocab_globs.is_empty();
+    // #203 F3: the code-catalog scan's own scope (GH #56 finding 3 — the scan
+    // ran over every walked file with no control of its own).
+    let codecat_scoped = catalogs.is_some() && !codecat_globs.is_empty();
     // #204 R5 (round-2 M1): per route-attached family, how many WALKED files a
     // route's opt-in reaches — an opt-in that claims no walked file is `inert`,
     // not `active`. The claim is about the whole walk, so it is measured over
@@ -1031,8 +1043,17 @@ fn run_inner(
     let mut section_cov = 0usize;
     let mut vocab_scoped_hits = 0usize;
     let mut coinage_hits = 0usize;
+    let mut codecat_hits = 0usize;
+    // #203 F2: per route, how many walked files its `files` glob claims — a
+    // route claiming nothing governs nothing (W0054, whole-tree runs only).
+    let mut route_cov: Vec<usize> = vec![0; routes.as_ref().map_or(0, Vec::len)];
     for (_, rel) in &governed {
         if let Some(routes) = &routes {
+            for (i, r) in routes.iter().enumerate() {
+                if r.files.matches_path(rel) {
+                    route_cov[i] += 1;
+                }
+            }
             cite_cov += usize::from(crate::route::citations_enabled(routes, rel));
             link_cov += usize::from(crate::route::links_enabled(routes, rel));
             marker_cov += usize::from(!crate::route::marker_rules_for(routes, rel).is_empty());
@@ -1044,6 +1065,9 @@ fn run_inner(
         }
         if vocab_enabled && !coinage_globs.is_empty() && coinage_globs.matches_any(rel) {
             coinage_hits += 1;
+        }
+        if codecat_scoped && codecat_globs.matches_any(rel) {
+            codecat_hits += 1;
         }
     }
     // Content-dependent signals (a rule context matched; a schema served a
@@ -1087,6 +1111,8 @@ fn run_inner(
         // applies inside `coinage_globs` (empty = wherever the register applies).
         let vocab_enabled = vocab_globs.is_empty() || vocab_globs.matches_any(rel);
         let vocab_coinage = coinage_globs.is_empty() || coinage_globs.matches_any(rel);
+        // Code-catalog scope (#203 F3): empty globs = every walked file.
+        let codecat_enabled = codecat_globs.is_empty() || codecat_globs.matches_any(rel);
         // Read from the immutable snapshot, never the filesystem (#103). A
         // symlinked file was refused at capture (its E0012 is recorded); a
         // captured-but-unreadable body (non-UTF8, or a read failure past the
@@ -1131,7 +1157,11 @@ fn run_inner(
             link_enabled,
             link_root,
             &marker_rules,
-            catalogs.as_deref().unwrap_or(&[]),
+            if codecat_enabled {
+                catalogs.as_deref().unwrap_or(&[])
+            } else {
+                &[]
+            },
             &section_rules,
             vocab.as_ref().filter(|_| vocab_enabled),
             vocab_coinage,
@@ -1329,6 +1359,82 @@ fn run_inner(
         });
     }
 
+    // #203 F2 (GH #56): a route whose `files` glob claims no walked file
+    // governs nothing — its governed_by, naming grammar, and every family it
+    // opts in with are inert for the files it meant to claim (W0046's posture
+    // for a dead `file_globs` entry). Whole-tree runs only: an incremental pass
+    // sees part of the tree — and only when the jurisdiction came from the
+    // config (round-2 M2): an ad-hoc `--files` run replaces it from the command
+    // line without reading config.yaml, so every route outside the ad-hoc glob
+    // would look dead.
+    if scope.is_none() && config.config_digest.is_some() {
+        if let Some(rs) = &routes {
+            let routes_path = project_root.join(".mdatron").join("routes.yaml");
+            for (i, r) in rs.iter().enumerate() {
+                if route_cov[i] == 0 {
+                    findings.push(Finding {
+                        code: "MDATRON-W0054".into(),
+                        severity: Severity::Warning,
+                        summary: "route-glob-matches-nothing".into(),
+                        message: "a route's files glob claims no walked file, so its \
+                                  governed_by, naming grammar, and every family it opts \
+                                  in with govern nothing — a typo or a stale path leaves \
+                                  the files it meant to claim unrouted or ungoverned"
+                            .into(),
+                        help: Some(
+                            "correct the glob so it claims the files it should govern \
+                             (check it against the paths under file_globs), or remove \
+                             the route if those files are gone"
+                                .into(),
+                        ),
+                        location: Location {
+                            file: routes_path.clone(),
+                            line: 1,
+                            column: 0,
+                        },
+                        explain_ref: Some("MDATRON-W0054".into()),
+                        quoted: vec![QuotedRegion {
+                            platform_variant: false,
+                            label: "glob".into(),
+                            content: r.files.as_str().to_string(),
+                        }],
+                    });
+                }
+            }
+        }
+    }
+
+    // #203 F3: a `code_catalog_globs` list that reaches no walked file leaves
+    // the catalog scan inert — the same fail-open class as a dead
+    // `vocabulary_globs` (W0043), announced at the config, whole-tree only.
+    if scope.is_none() && codecat_scoped && codecat_hits == 0 {
+        findings.push(Finding {
+            code: "MDATRON-W0055".into(),
+            severity: Severity::Warning,
+            summary: "code-catalog-scope-matches-nothing".into(),
+            message: "a `code-catalogs.yaml` is present but the `code_catalog_globs` in \
+                      .mdatron/config.yaml match no walked file, so the code-catalog \
+                      family is inert — a mistyped glob would pass silently as if no \
+                      code token were cited anywhere"
+                .into(),
+            help: Some(
+                "correct the `code_catalog_globs` to cover the files whose code tokens \
+                 the catalogs should resolve, or remove the list to scan every walked \
+                 file"
+                    .into(),
+            ),
+            location: Location {
+                file: project_root
+                    .join(".mdatron")
+                    .join(crate::config::CONFIG_NAME),
+                line: 1,
+                column: 0,
+            },
+            explain_ref: Some("MDATRON-W0055".into()),
+            quoted: Vec::new(),
+        });
+    }
+
     // Incremental soundness (#102): keep only findings located within the
     // scope. verify_file findings are already scope-local (it ran on scope
     // files only); this filters the location-based whole-run findings (route
@@ -1385,7 +1491,25 @@ fn run_inner(
             FamilyActivity::active(".mdatron/schemas/ supplied; the schema family ran")
         },
         route: if route_supplied {
-            FamilyActivity::active(".mdatron/routes.yaml supplied")
+            // The counts make `routes: []` — and a table whose declared routes
+            // were all dropped fail-closed — legible as what they are (#203 F2,
+            // round-2 M1): the number a consumer reads is the ACTIVE one.
+            let n = |k: usize| {
+                if k == 1 {
+                    "1 route".to_string()
+                } else {
+                    format!("{k} routes")
+                }
+            };
+            FamilyActivity::active(if routes_declared == routes_active {
+                format!(".mdatron/routes.yaml supplied ({})", n(routes_active))
+            } else {
+                format!(
+                    ".mdatron/routes.yaml supplied ({} declared, {} active)",
+                    n(routes_declared),
+                    n(routes_active)
+                )
+            })
         } else {
             FamilyActivity::inactive("no .mdatron/routes.yaml")
         },
@@ -1426,10 +1550,14 @@ fn run_inner(
         } else {
             FamilyActivity::active("a route supplies marker_rules")
         },
-        code_catalog: if code_catalog_supplied {
-            FamilyActivity::active(".mdatron/code-catalogs.yaml supplied")
-        } else {
+        code_catalog: if !code_catalog_supplied {
             FamilyActivity::inactive("no .mdatron/code-catalogs.yaml")
+        } else if codecat_scoped && codecat_hits == 0 {
+            FamilyActivity::inert(
+                ".mdatron/code-catalogs.yaml supplied but code_catalog_globs matched no walked file",
+            )
+        } else {
+            FamilyActivity::active(".mdatron/code-catalogs.yaml supplied")
         },
         section: if !section_supplied {
             FamilyActivity::inactive("no route supplies section_rules")
@@ -5734,6 +5862,177 @@ pattern:
         ] {
             assert_eq!(state_of(a), "active", "{name}: {a:?}");
         }
+    }
+
+    // #203 F3 (GH #56 finding 3): `code_catalog_globs` scopes the catalog scan
+    // the way `vocabulary_globs` scopes the register — a comprehensive catalog
+    // can coexist with a walked archive that cites retired codes. Absent =
+    // every walked file (prior behaviour); a scope reaching nothing is W0055-
+    // loud at config.yaml and the family reports inert.
+    #[test]
+    fn code_catalog_globs_scope_the_scan() {
+        let seed = |label: &str, scope: &str| {
+            let proj = TempProject::new(label);
+            proj.write(
+                ".mdatron/schemas/phase-primer.json",
+                minimal_phase_primer_schema(),
+            );
+            proj.write(
+                ".mdatron/config.yaml",
+                &format!("file_globs:\n  - \"**/*.md\"\n{scope}"),
+            );
+            proj.write(
+                ".mdatron/code-catalogs.yaml",
+                "mdatron_format_version: 1\ncatalogs:\n- namespace: \"T-\"\n  comprehensive: true\n  codes: [\"E0001\"]\n",
+            );
+            proj.write("docs/live.md", "Live doc cites T-E0999.\n");
+            proj.write("archive/old.md", "Frozen archive cites T-E0999.\n");
+            proj
+        };
+        let scoped = seed("codecat-scoped", "code_catalog_globs:\n  - \"docs/**\"\n");
+        let cfg = VerifyConfig::from_project(&scoped.0).unwrap();
+        let (findings, fam, _v, _n) = run(&cfg, None, None).unwrap();
+        let orphans: Vec<std::path::PathBuf> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0113")
+            .map(|f| f.location.file.clone())
+            .collect();
+        assert_eq!(
+            orphans,
+            vec![std::path::PathBuf::from("docs/live.md")],
+            "{findings:?}"
+        );
+        assert_eq!(state_of(&fam.code_catalog), "active");
+        assert_eq!(codes_of(&findings, "MDATRON-W0055"), 0);
+
+        let dead = seed("codecat-dead", "code_catalog_globs:\n  - \"nowhere/**\"\n");
+        let cfg = VerifyConfig::from_project(&dead.0).unwrap();
+        let (findings, fam, _v, _n) = run(&cfg, None, None).unwrap();
+        assert_eq!(codes_of(&findings, "MDATRON-E0113"), 0, "{findings:?}");
+        let w = findings
+            .iter()
+            .find(|f| f.code == "MDATRON-W0055")
+            .expect("a dead catalog scope is loud");
+        assert!(w.location.file.to_string_lossy().ends_with("config.yaml"));
+        assert_eq!(
+            state_of(&fam.code_catalog),
+            "inert",
+            "{:?}",
+            fam.code_catalog
+        );
+        let (findings, _fam, visited, _n) =
+            run(&cfg, Some(Path::new("docs/live.md")), None).unwrap();
+        assert!(visited.is_some());
+        assert_eq!(
+            codes_of(&findings, "MDATRON-W0055"),
+            0,
+            "whole-tree only: {findings:?}"
+        );
+
+        let unscoped = seed("codecat-unscoped", "");
+        let cfg = VerifyConfig::from_project(&unscoped.0).unwrap();
+        let (findings, fam, _v, _n) = run(&cfg, None, None).unwrap();
+        assert_eq!(codes_of(&findings, "MDATRON-E0113"), 2, "{findings:?}");
+        assert_eq!(state_of(&fam.code_catalog), "active");
+    }
+
+    // #203 F2 (GH #56 finding 2): `routes: []` is a supplied table — the closed
+    // world is active and every walked file is E0030 — and the cause is named
+    // once at the table (W0053) with the family reason saying "(0 routes)".
+    #[test]
+    fn empty_route_table_is_loud_and_closed_world() {
+        let proj = TempProject::new("routes-empty");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(".mdatron/config.yaml", "file_globs:\n  - \"**/*.md\"\n");
+        proj.write(".mdatron/routes.yaml", "routes: []\n");
+        proj.write("a.md", "plain\n");
+        proj.write("b.md", "plain\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let (findings, fam, _v, _n) = run(&cfg, None, None).unwrap();
+        assert_eq!(codes_of(&findings, "MDATRON-W0053"), 1, "{findings:?}");
+        assert_eq!(codes_of(&findings, "MDATRON-E0030"), 2, "{findings:?}");
+        let crate::output::FamilyActivity::Active { reason } = &fam.route else {
+            panic!("an empty table is still a supplied table: {:?}", fam.route)
+        };
+        assert!(reason.contains("(0 routes)"), "{reason}");
+
+        // Round-2 M1: a table whose only route was dropped fail-closed is just
+        // as empty — W0053 fires, and the reason says declared vs active.
+        let dropped = TempProject::new("routes-dropped");
+        dropped.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        dropped.write(".mdatron/config.yaml", "file_globs:\n  - \"**/*.md\"\n");
+        dropped.write("GOVERNING.md", "# gov\n");
+        dropped.write(
+            ".mdatron/routes.yaml",
+            "routes:\n- files: \"../outside/**/*.md\"\n  governed_by: GOVERNING.md\n",
+        );
+        dropped.write("a.md", "plain\n");
+        let cfg = VerifyConfig::from_project(&dropped.0).unwrap();
+        let (findings, fam, _v, _n) = run(&cfg, None, None).unwrap();
+        assert_eq!(codes_of(&findings, "MDATRON-E0011"), 1, "{findings:?}");
+        assert_eq!(codes_of(&findings, "MDATRON-W0053"), 1, "{findings:?}");
+        let crate::output::FamilyActivity::Active { reason } = &fam.route else {
+            panic!("{:?}", fam.route)
+        };
+        assert!(
+            reason.contains("(1 route declared, 0 routes active)"),
+            "{reason}"
+        );
+    }
+
+    // #203 F2 (GH #56 finding 1's tail): a route whose glob claims no walked
+    // file is announced (W0054, one per dead route, quoting the glob) on a
+    // whole-tree run — never under `--changed`, which sees part of the tree.
+    #[test]
+    fn dead_route_glob_is_loud_on_whole_tree_runs_only() {
+        let proj = TempProject::new("routes-dead-glob");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(".mdatron/config.yaml", "file_globs:\n  - \"**/*.md\"\n");
+        proj.write("GOVERNING.md", "# gov\n");
+        proj.write(
+            ".mdatron/routes.yaml",
+            concat!(
+                "routes:\n- files: \"**/*.md\"\n  governed_by: GOVERNING.md\n",
+                "- files: \"nowhere/**/*.md\"\n  governed_by: GOVERNING.md\n  citations: true\n",
+            ),
+        );
+        proj.write("docs/a.md", "plain\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let (findings, fam, _v, _n) = run(&cfg, None, None).unwrap();
+        let dead: Vec<&Finding> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-W0054")
+            .collect();
+        assert_eq!(dead.len(), 1, "{findings:?}");
+        assert_eq!(dead[0].quoted[0].content, "nowhere/**/*.md");
+        assert!(dead[0]
+            .location
+            .file
+            .to_string_lossy()
+            .ends_with("routes.yaml"));
+        assert_eq!(codes_of(&findings, "MDATRON-E0030"), 0, "{findings:?}");
+        assert_eq!(state_of(&fam.citation), "inert");
+        let (findings, _fam, visited, _n) = run(&cfg, Some(Path::new("docs/a.md")), None).unwrap();
+        assert!(visited.is_some());
+        assert_eq!(codes_of(&findings, "MDATRON-W0054"), 0, "{findings:?}");
+
+        // Round-2 M2: an ad-hoc `--files` run replaces the jurisdiction from
+        // the command line without the config, so a route outside the ad-hoc
+        // glob is not dead — no W0054, and --deny-warnings stays clean.
+        let mut adhoc = VerifyConfig::new(&proj.0);
+        adhoc.file_globs = vec!["docs/**/*.md".to_string()];
+        assert!(adhoc.config_digest.is_none());
+        let (findings, _fam, _v, _n) = run(&adhoc, None, None).unwrap();
+        assert_eq!(codes_of(&findings, "MDATRON-W0054"), 0, "{findings:?}");
     }
 
     // Round-2 M1: coverage is a whole-walk claim. Under `--changed`, a route

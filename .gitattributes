@@ -3,3 +3,6 @@
 # (`code_catalog_is_generated_from_pages`) is stable regardless of a checkout's
 # core.autocrlf setting.
 schema/code-catalog.json text eol=lf
+# The explain pages are `include_str!`-embedded into the binary; keep them
+# LF-canonical so a Windows build embeds the same bytes as every other.
+src/explain/*.md text eol=lf

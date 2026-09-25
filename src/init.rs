@@ -42,6 +42,171 @@ file_globs:
 /// absent, never overwritten, never hashed — adopter-owned once deployed.
 const SEED_FILES: &[(&str, &str)] = &[("config.yaml", DEFAULT_CONFIG)];
 
+/// Inert templates the engine deploys at init as MANAGED files (#203 F4, GH #56
+/// finding 4): one per family input file, fully commented, each header stating
+/// the activation rule, scope, keys, and codes. The `.example` extension is
+/// what keeps a family from activating by accident — the loaders read the real
+/// names only. Managed (hashed, drift-refused) because they are engine prose to
+/// copy from, not to edit; the copy is the adopter's.
+pub const TEMPLATE_FILES: &[(&str, &str)] = &[
+    ("routes.yaml.example", ROUTES_TEMPLATE),
+    ("pins.yaml.example", PINS_TEMPLATE),
+    ("vocabulary.yaml.example", VOCABULARY_TEMPLATE),
+    ("code-catalogs.yaml.example", CODE_CATALOGS_TEMPLATE),
+];
+
+/// The line that separates a template's header from its (commented) example
+/// body; a test strips the comment marker from the lines after it and runs the
+/// body through the real loader, so the documented shape is executable. Spelled
+/// without a `---` run (round-2 N1): an adopter who blanket-uncomments the
+/// block must not manufacture a YAML document separator.
+pub const TEMPLATE_BODY_MARKER: &str = "# (example: uncomment the lines below)";
+
+const ROUTES_TEMPLATE: &str = r####"# routes.yaml.example — the route family. Copy to routes.yaml to activate.
+#
+# ACTIVATION  the family is supplied the moment .mdatron/routes.yaml EXISTS,
+#             even with `routes: []`; from then on every walked file must be
+#             claimed by exactly one route (E0030 unclaimed, E0032 claimed
+#             twice, W0053 empty table, W0054 a route claiming nothing).
+#             Delete the file to deactivate.
+# SCOPE       every walked file (config.yaml file_globs); a route's `files`
+#             glob is root-relative and `*` crosses `/`.
+# GATEWAY     citations, links, marker_rules, and section_rules exist only
+#             on a route.
+# KEYS        per route — required: files, governed_by
+#                         optional: naming, citations, links, link_root,
+#                                   marker_rules, section_rules
+#             file-level  — optional: mdatron_format_version (absent = 1)
+# CODES       E0030 E0031 E0032 W0041 W0053 W0054; per opt-in E0100 E0101
+#             W0048 E0081 (citations), E0110 E0111 W0048 E0081 (links),
+#             E0112 E0114 W0048 E0081 (markers), E0120 E0121 E0122 (section
+#             rules); E0010 E0011 E0012 on paths.
+# The body below is the minimal activating shape: one route claiming every
+# walked file, answering to a document that must exist (point governed_by at
+# yours). The optional additions each opt a family in — and section_rules
+# assert structure on EVERY file the route claims, so add them to a route
+# whose files all carry that structure.
+# (example: uncomment the lines below)
+# mdatron_format_version: 1
+# routes:
+# - files: "**/*.md"
+#   governed_by: README.md
+# (optional additions: uncomment what you need)
+#   naming: "^[a-z0-9-]+\\.md$"
+#   citations: true
+#   links: true
+#   link_root: false
+#   marker_rules:
+#   - pattern: "^Provenance: (.+)$"
+#     element: list-item-bold-name
+#     target_doc: DESIGN.md
+#     target_section: "## Decisions"
+#   section_rules:
+#   - section: "## Requirements"
+#     element: h3
+#     match: "^### "
+#     count: ">= 1"
+#   - disjoint:
+#     - section: "## Requirements"
+#       element: h3
+#       id_pattern: 'Slice (\d+)'
+#     - section: "## Decisions"
+#       element: list-item-bold-name
+#       id_pattern: 'Slice (\d+)'
+"####;
+
+const PINS_TEMPLATE: &str = r####"# pins.yaml.example — the pin family. Copy to pins.yaml to activate.
+#
+# ACTIVATION  the file exists. Each pin attests a governed file's sha256 (or
+#             one heading's span) on behalf of a governing document; a stale
+#             hash blocks (E0061) until `mdatron pin --update` re-pins after
+#             the governing document is re-read. `unpinned:` tombstones are
+#             the standing record of a removed pin (L0001 every whole-tree
+#             run; W0042 when reason or owner is missing).
+# SCOPE       the pinned files themselves — any file inside the project
+#             root, walked or not.
+# KEYS        per pin      — required: governed_by, file, sha256
+#                            optional: section
+#             per unpinned — required: file, governed_by, reason, owner
+#             file-level   — optional: mdatron_format_version (absent = 1;
+#                            `pin --update` stamps it)
+# CODES       E0061 E0062 E0063 E0081 L0001 W0042; E0010 E0011 E0012 on paths.
+# (example: uncomment the lines below)
+# mdatron_format_version: 1
+# pins:
+# - governed_by: DESIGN.md
+#   file: src/lib.rs
+#   sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+# - governed_by: DESIGN.md
+#   file: docs/plan.md
+#   section: "## Decomposition"
+#   sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+# unpinned:
+# - file: docs/old-plan.md
+#   governed_by: DESIGN.md
+#   reason: "superseded by docs/plan.md"
+#   owner: operator
+"####;
+
+const VOCABULARY_TEMPLATE: &str = r####"# vocabulary.yaml.example — the vocabulary family (the naming register).
+# Copy to vocabulary.yaml to activate.
+#
+# ACTIVATION  the file exists.
+# SCOPE       every walked file, or config.yaml vocabulary_globs when set
+#             (W0043 if that scope matches nothing); the bold-means-coinage
+#             check (E0090) is further narrowed by coinage_globs when set.
+# KEYS        all optional — terms[] {term, status, sense} with status one of
+#             registered | draft | reserved; coinage_globs[]; label_schemes
+#             {allow[]}; anti_patterns[] {pattern, guidance}; numeric_claims[]
+#             {field}; mdatron_format_version (absent = 1).
+# CODES       E0090 E0091 E0092 E0093 E0094 W0043 W0044.
+# The body below activates cleanly on any tree; the optional addition scopes
+# the coinage check to files that must exist in YOUR tree (a scope matching
+# nothing is W0043).
+# (example: uncomment the lines below)
+# mdatron_format_version: 1
+# terms:
+# - term: "jurisdiction"
+#   status: registered
+#   sense: "the file set the declared file_globs walk"
+# - term: "spend shape"
+#   status: draft
+#   sense: "how a review round's agent budget is declared"
+# label_schemes:
+#   allow:
+#   - "^ADR-[0-9]+$"
+# anti_patterns:
+# - pattern: "very unique"
+#   guidance: "say 'unique' — uniqueness does not grade"
+# numeric_claims:
+# - field: items
+# (optional additions: uncomment what you need)
+# coinage_globs:
+# - "docs/spec/**/*.md"
+"####;
+
+const CODE_CATALOGS_TEMPLATE: &str = r####"# code-catalogs.yaml.example — the code-catalog family. Copy to
+# code-catalogs.yaml to activate.
+#
+# ACTIVATION  the file exists.
+# SCOPE       every walked file, or config.yaml code_catalog_globs when set
+#             (W0055 if that scope matches nothing). Inline code spans ARE
+#             scanned (a backticked code is a citation); fenced blocks are
+#             examples and are not.
+# KEYS        per catalog — required: namespace, codes[]
+#                           optional: comprehensive (default false; only a
+#                                     comprehensive catalog can orphan a
+#                                     token)
+#             file-level  — required: mdatron_format_version
+# CODES       E0113 W0055.
+# (example: uncomment the lines below)
+# mdatron_format_version: 1
+# catalogs:
+# - namespace: "ADOPTER-"
+#   comprehensive: true
+#   codes: ["E0001", "W0100"]
+"####;
+
 /// Engine-known content for manifest-listed managed paths, used to repair a
 /// missing managed file in trees whose manifest still lists it (v1 trees
 /// predating the config.yaml demotion). The manifest is the authority on WHAT
@@ -49,7 +214,10 @@ const SEED_FILES: &[(&str, &str)] = &[("config.yaml", DEFAULT_CONFIG)];
 fn engine_content(path: &str) -> Option<&'static str> {
     match path {
         "config.yaml" => Some(DEFAULT_CONFIG),
-        _ => None,
+        other => TEMPLATE_FILES
+            .iter()
+            .find(|(name, _)| *name == other)
+            .map(|(_, content)| *content),
     }
 }
 
@@ -84,9 +252,22 @@ pub struct Drift {
 /// hand-modified); the others are IO/parse failures.
 #[derive(Debug)]
 pub enum InitError {
-    Io { path: String, error: String },
-    ManifestParse { path: String, error: String },
+    Io {
+        path: String,
+        error: String,
+    },
+    ManifestParse {
+        path: String,
+        error: String,
+    },
     Drift(Vec<Drift>),
+    /// A template path already exists with content the engine did not write
+    /// (#203 F4, round-2 m11): refused rather than hashed as the engine's own
+    /// (which would refuse the NEXT init as drift the adopter never caused) or
+    /// overwritten.
+    TemplateCollision {
+        path: String,
+    },
 }
 
 impl std::fmt::Display for InitError {
@@ -103,6 +284,11 @@ impl std::fmt::Display for InitError {
                     drifts.len()
                 )
             }
+            InitError::TemplateCollision { path } => write!(
+                f,
+                "'{path}' already exists with content the engine did not write; move it \
+                 aside (the engine deploys its own template there), then re-run init"
+            ),
         }
     }
 }
@@ -353,6 +539,13 @@ pub fn init(project_root: &Path) -> Result<InitOutcome, InitError> {
             }
         }
 
+        // Templates (#203 F4, round-2 M5): a manifest that predates them gains
+        // them here — the same idempotent repair as a missing managed file, so
+        // a tree initialized by 0.6.0 receives them on its next init.
+        if deploy_templates(&dir, &mut manifest.managed, &mut created)? {
+            write_manifest(&dir, &manifest)?;
+        }
+
         return if created.is_empty() {
             Ok(InitOutcome::AlreadyInitialized)
         } else {
@@ -365,7 +558,59 @@ pub fn init(project_root: &Path) -> Result<InitOutcome, InitError> {
     Ok(InitOutcome::Deployed { created })
 }
 
+/// Deploy every template not yet in the manifest: write it when absent and
+/// list it with its hash. A template that already exists with the engine's
+/// own content is simply adopted; one that exists with FOREIGN content is a
+/// collision, refused by name. Returns whether the manifest changed.
+fn deploy_templates(
+    dir: &Path,
+    managed: &mut Vec<ManagedEntry>,
+    created: &mut Vec<String>,
+) -> Result<bool, InitError> {
+    let mut changed = false;
+    for (name, content) in TEMPLATE_FILES {
+        let p = dir.join(name);
+        let listed = managed.iter().any(|e| e.path == *name);
+        match std::fs::read(&p) {
+            Ok(bytes) if !listed && bytes != content.as_bytes() => {
+                return Err(InitError::TemplateCollision {
+                    path: format!(".mdatron/{name}"),
+                });
+            }
+            Ok(_) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                crate::atomic::write(&p, content.as_bytes()).map_err(|e| io_err(&p, &e))?;
+                created.push(format!(".mdatron/{name}"));
+            }
+            Err(e) => return Err(io_err(&p, &e)),
+        }
+        if !listed {
+            managed.push(ManagedEntry {
+                path: (*name).to_string(),
+                sha256: sha256_hex(content.as_bytes()),
+            });
+            changed = true;
+        }
+    }
+    Ok(changed)
+}
+
 fn deploy(dir: &Path) -> Result<Vec<String>, InitError> {
+    // A template collision is refused BEFORE anything is written (round-2 N2):
+    // a refusal must not leave a half-scaffolded tree with no manifest.
+    for (name, content) in TEMPLATE_FILES {
+        let p = dir.join(name);
+        match std::fs::read(&p) {
+            Ok(bytes) if bytes != content.as_bytes() => {
+                return Err(InitError::TemplateCollision {
+                    path: format!(".mdatron/{name}"),
+                });
+            }
+            Ok(_) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(e) => return Err(io_err(&p, &e)),
+        }
+    }
     let mut created = Vec::new();
 
     if !dir.exists() {
@@ -390,13 +635,14 @@ fn deploy(dir: &Path) -> Result<Vec<String>, InitError> {
         }
     }
 
-    // Fresh manifests start with an empty managed partition: config.yaml is a
-    // seed, not a managed file (#77), and no other engine-managed file exists
-    // yet. The manifest still DEFINES the partition — future engine-managed
-    // files (and v1 trees' existing entries) are honored as data.
+    // Templates (#203 F4): deployed as managed files and listed with their
+    // hashes — config.yaml stays a seed (#77), and the manifest still DEFINES
+    // the partition (v1 trees' existing entries are honored as data).
+    let mut managed = Vec::new();
+    deploy_templates(dir, &mut managed, &mut created)?;
     let manifest = Manifest {
         version: MANIFEST_VERSION,
-        managed: Vec::new(),
+        managed,
         demoted: Vec::new(),
     };
     let existed = dir.join(MANIFEST_NAME).exists();

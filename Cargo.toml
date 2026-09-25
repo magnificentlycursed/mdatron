@@ -34,6 +34,8 @@ include = [
     # Prior-art comparisons + influences (#187): crates.io-reader material,
     # linked from the README's docs list.
     "docs/faq.md",
+    # docs/inputs.md is embedded by `mdatron docs inputs` (#203 F4).
+    "docs/inputs.md",
 ]
 
 # Single-crate, binary-first (#81, operator ruling 2026-07-22 executing the

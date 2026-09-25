@@ -423,6 +423,342 @@ fn schema_subcommand_prints_the_published_envelope_schema() {
     );
 }
 
+// #203 F4 (GH #56 finding 4): the four inert templates `init` deploys are
+// executable documentation — uncommenting the body of each yields a file the
+// real loader accepts (exit 0 or 1, never a load refusal) — and the keys the
+// inputs reference lists for each file are exactly the keys the template
+// exercises, so `docs/inputs.md`, the templates, and the parsers cannot drift
+// apart silently.
+#[test]
+fn init_templates_load_and_match_the_inputs_reference() {
+    let proj = TempProject::new("templates");
+    let out = Command::new(mdatron_bin())
+        .args(["init", "--project-root"])
+        .arg(proj.path())
+        .output()
+        .expect("mdatron binary executes");
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    // A Windows checkout may carry CRLF (git autocrlf); the section and
+    // `Keys:` anchors below are LF-shaped, so normalise first.
+    let inputs = fs::read_to_string(mdatron_repo_root().join("docs/inputs.md"))
+        .unwrap()
+        .replace("\r\n", "\n");
+    let keys_listed = |section: &str| -> std::collections::BTreeSet<String> {
+        let start = inputs
+            .find(&format!("\n## {section}\n"))
+            .unwrap_or_else(|| panic!("docs/inputs.md has a section for {section}"));
+        let body = &inputs[start..];
+        let line = body
+            .lines()
+            .find(|l| l.starts_with("Keys: "))
+            .unwrap_or_else(|| panic!("{section}: a `Keys:` line"));
+        line.split('`')
+            .skip(1)
+            .step_by(2)
+            .map(str::to_string)
+            .collect()
+    };
+    for (name, activation) in [
+        ("routes.yaml", "routes.yaml"),
+        ("pins.yaml", "pins.yaml"),
+        ("vocabulary.yaml", "vocabulary.yaml"),
+        ("code-catalogs.yaml", "code-catalogs.yaml"),
+    ] {
+        let template = fs::read_to_string(proj.path().join(format!(".mdatron/{name}.example")))
+            .unwrap_or_else(|e| panic!("{name}.example deployed: {e}"));
+        let marker = "# (example: uncomment the lines below)";
+        let optional = "# (optional additions: uncomment what you need)";
+        let body_start = template
+            .find(marker)
+            .unwrap_or_else(|| panic!("{name}: body marker"));
+        let example = &template[body_start + marker.len()..];
+        // The executable body stops at the optional-additions block (round-2
+        // M6: the body is the minimal activating shape); the key inventory
+        // below spans both.
+        let body_end = example.find(optional).unwrap_or(example.len());
+        let uncomment = |text: &str| -> String {
+            text.lines()
+                .filter(|l| !l.trim().is_empty() && !l.starts_with("# ("))
+                .map(|l| {
+                    l.strip_prefix("# ")
+                        .or_else(|| l.strip_prefix('#'))
+                        .unwrap_or_else(|| panic!("{name}: uncommented body line {l:?}"))
+                })
+                .collect::<Vec<_>>()
+                .join("\n")
+                + "\n"
+        };
+        let body = uncomment(&example[..body_end]);
+        let all_keys = uncomment(example);
+        // Executable: the uncommented body loads through the real parser.
+        let live = TempProject::new(&format!("template-{name}"));
+        live.seed_blog_schema();
+        live.seed_clean_md("doc.md");
+        live.write("README.md", "# readme\n");
+        live.write(&format!(".mdatron/{activation}"), &body);
+        let out = Command::new(mdatron_bin())
+            .args(["verify", "--project-root"])
+            .arg(live.path())
+            .output()
+            .expect("mdatron binary executes");
+        assert_ne!(
+            out.status.code(),
+            Some(2),
+            "{name}: the template body must load (findings are fine, a refusal is not): {}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        // Round-2 M6: the routes body is the minimal activating shape — copied
+        // verbatim onto a plausible tree it must not red the first run.
+        if name == "routes.yaml" {
+            assert_eq!(
+                out.status.code(),
+                Some(0),
+                "the routes template body must be clean on a plausible tree: {}",
+                String::from_utf8_lossy(&out.stderr)
+            );
+        }
+        // Cross-checked: the keys the reference lists are the keys the
+        // template (body + optional additions) uses.
+        let used: std::collections::BTreeSet<String> = all_keys
+            .lines()
+            .filter_map(|l| {
+                let t = l.trim_start().trim_start_matches("- ").trim_start();
+                let (key, _) = t.split_once(':')?;
+                let key = key.trim();
+                (!key.is_empty()
+                    && key
+                        .chars()
+                        .all(|c| c.is_ascii_lowercase() || c == '_' || c.is_ascii_digit()))
+                .then(|| key.to_string())
+            })
+            .collect();
+        let listed = keys_listed(name);
+        assert_eq!(
+            listed, used,
+            "{name}: docs/inputs.md `Keys:` must equal the keys the template exercises"
+        );
+    }
+    // The four templates are managed (hashed) — a hand edit is drift.
+    let manifest = fs::read_to_string(proj.path().join(".mdatron/manifest.yaml")).unwrap();
+    for name in ["routes", "pins", "vocabulary", "code-catalogs"] {
+        assert!(
+            manifest.contains(&format!("{name}.yaml.example")),
+            "{manifest}"
+        );
+    }
+    // Round-2 M5: a tree whose manifest predates the templates gains them on
+    // its next init; m11: a template path holding foreign content is refused
+    // by name, never adopted or overwritten.
+    let old = TempProject::new("templates-old-tree");
+    old.write(".mdatron/manifest.yaml", "version: 2\nmanaged: []\n");
+    let out = Command::new(mdatron_bin())
+        .args(["init", "--project-root"])
+        .arg(old.path())
+        .output()
+        .expect("mdatron binary executes");
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert!(old.path().join(".mdatron/routes.yaml.example").is_file());
+    let manifest = fs::read_to_string(old.path().join(".mdatron/manifest.yaml")).unwrap();
+    assert!(manifest.contains("routes.yaml.example"), "{manifest}");
+    let again = Command::new(mdatron_bin())
+        .args(["init", "--project-root"])
+        .arg(old.path())
+        .output()
+        .expect("mdatron binary executes");
+    assert!(String::from_utf8_lossy(&again.stderr).contains("already initialized"));
+    let foreign = TempProject::new("templates-collision");
+    foreign.write(".mdatron/routes.yaml.example", "# my own notes\n");
+    let out = Command::new(mdatron_bin())
+        .args(["init", "--project-root"])
+        .arg(foreign.path())
+        .output()
+        .expect("mdatron binary executes");
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(out.status.code(), Some(2), "{stderr}");
+    assert!(
+        stderr.contains("routes.yaml.example") && stderr.contains("did not write"),
+        "{stderr}"
+    );
+    assert_eq!(
+        fs::read_to_string(foreign.path().join(".mdatron/routes.yaml.example")).unwrap(),
+        "# my own notes\n",
+        "a foreign template is never overwritten"
+    );
+    // Round-2 N2: the refusal is atomic — nothing else was scaffolded.
+    assert!(
+        !foreign.path().join(".mdatron/manifest.yaml").exists()
+            && !foreign.path().join(".mdatron/schemas").exists(),
+        "a refused init must leave no half-scaffolded tree"
+    );
+    // ...and inert: with only templates present, no family activates.
+    let out = Command::new(mdatron_bin())
+        .args(["verify", "--project-root"])
+        .arg(proj.path())
+        .args(["--json", "--quiet"])
+        .output()
+        .expect("mdatron binary executes");
+    let env: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+    for fam in ["route", "pin", "vocabulary", "code_catalog"] {
+        assert_eq!(
+            env["families"][fam]["state"], "inactive",
+            "{fam}: a template must not activate"
+        );
+    }
+}
+
+// #203 F4, round-2 M3: docs/inputs.md's `Keys:` lines are held to the ENGINE,
+// not just to the templates. Every strict parser refuses an unknown key by
+// naming the keys it accepts ("unknown field `x`, expected one of `a`, `b`");
+// asking each parser at every nesting level and taking the union is a
+// key inventory derived from the serde structs themselves — a key added to a
+// struct but to neither document fails here. `config.yaml` is lenient and
+// cannot be asked; its list is held by review, and the page says so.
+#[test]
+fn inputs_reference_keys_match_the_parsers() {
+    let inputs = fs::read_to_string(mdatron_repo_root().join("docs/inputs.md"))
+        .unwrap()
+        .replace("\r\n", "\n");
+    let keys_listed = |section: &str| -> std::collections::BTreeSet<String> {
+        let start = inputs
+            .find(&format!("\n## {section}\n"))
+            .unwrap_or_else(|| panic!("docs/inputs.md has a section for {section}"));
+        inputs[start..]
+            .lines()
+            .find(|l| l.starts_with("Keys: "))
+            .unwrap_or_else(|| panic!("{section}: a `Keys:` line"))
+            .split('`')
+            .skip(1)
+            .step_by(2)
+            .map(str::to_string)
+            .collect()
+    };
+    // Aliases are accepted names but not the canonical keys the page lists;
+    // serde may or may not name them in a refusal, so they are dropped.
+    let aliases = [
+        "id_from",
+        "governing",
+        "register",
+        "h3-heading",
+        "bullet-lead",
+    ];
+    let probe = |file: &str, variants: &[&str]| -> std::collections::BTreeSet<String> {
+        let mut accepted = std::collections::BTreeSet::new();
+        for (i, variant) in variants.iter().enumerate() {
+            let proj = TempProject::new(&format!("probe-{}-{i}", file.replace(['/', '.'], "-")));
+            proj.seed_blog_schema();
+            proj.seed_clean_md("doc.md");
+            proj.write(file, variant);
+            let out = run_verify(&proj, &[]);
+            let stderr = String::from_utf8_lossy(&out.stderr);
+            assert_eq!(
+                out.status.code(),
+                Some(2),
+                "{file} variant {i}: an unknown key must be refused; got {stderr}"
+            );
+            let tail = stderr.split("expected ").nth(1).unwrap_or_else(|| {
+                panic!("{file} variant {i}: the refusal names the accepted keys: {stderr}")
+            });
+            let names: Vec<String> = tail
+                .split('`')
+                .skip(1)
+                .step_by(2)
+                .take_while(|k| {
+                    k.chars().all(|c| {
+                        c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_' || c == '-'
+                    })
+                })
+                .map(str::to_string)
+                .collect();
+            assert!(
+                !names.is_empty(),
+                "{file} variant {i}: no accepted keys parsed from {stderr}"
+            );
+            accepted.extend(names);
+        }
+        accepted.retain(|k| !aliases.contains(&k.as_str()));
+        accepted
+    };
+    let cases: [(&str, &str, Vec<&str>); 6] = [
+        (
+            "routes.yaml",
+            ".mdatron/routes.yaml",
+            vec![
+                "bogus_zz: 1\n",
+                "routes:\n- bogus_zz: 1\n",
+                "routes:\n- files: \"**/*.md\"\n  governed_by: doc.md\n  marker_rules:\n  - bogus_zz: 1\n",
+                "routes:\n- files: \"**/*.md\"\n  governed_by: doc.md\n  section_rules:\n  - bogus_zz: 1\n",
+                "routes:\n- files: \"**/*.md\"\n  governed_by: doc.md\n  section_rules:\n  - disjoint:\n    - bogus_zz: 1\n",
+            ],
+        ),
+        (
+            "pins.yaml",
+            ".mdatron/pins.yaml",
+            vec![
+                "bogus_zz: 1\n",
+                "pins:\n- bogus_zz: 1\n",
+                "unpinned:\n- bogus_zz: 1\n",
+            ],
+        ),
+        (
+            "vocabulary.yaml",
+            ".mdatron/vocabulary.yaml",
+            vec![
+                "bogus_zz: 1\n",
+                "terms:\n- bogus_zz: 1\n",
+                "label_schemes:\n  bogus_zz: 1\n",
+                "anti_patterns:\n- bogus_zz: 1\n",
+                "numeric_claims:\n- bogus_zz: 1\n",
+            ],
+        ),
+        (
+            "code-catalogs.yaml",
+            ".mdatron/code-catalogs.yaml",
+            vec![
+                "mdatron_format_version: 1\nbogus_zz: 1\n",
+                "mdatron_format_version: 1\ncatalogs:\n- bogus_zz: 1\n",
+            ],
+        ),
+        (
+            "manifest.yaml",
+            ".mdatron/manifest.yaml",
+            vec![
+                "version: 2\nmanaged: []\nbogus_zz: 1\n",
+                "version: 2\nmanaged:\n- bogus_zz: 1\n",
+                "version: 2\nmanaged: []\ndemoted:\n- bogus_zz: 1\n",
+            ],
+        ),
+        (
+            "patterns/",
+            ".mdatron/patterns/p.yaml",
+            vec![
+                "bogus_zz: 1\n",
+                "pattern:\n  bogus_zz: 1\n",
+                "pattern:\n  id: p\n  rules:\n  - bogus_zz: 1\n",
+                "pattern:\n  id: p\n  keys:\n  - bogus_zz: 1\n  rules: []\n",
+                "pattern:\n  id: p\n  rules:\n  - id: r\n    context: blog\n    assert: \"1 == 1\"\n    code: T-E0001\n    message: m\n    location:\n      bogus_zz: 1\n",
+            ],
+        ),
+    ];
+    for (section, file, variants) in cases {
+        let accepted = probe(file, &variants);
+        let listed = keys_listed(section);
+        assert_eq!(
+            listed, accepted,
+            "{section}: docs/inputs.md `Keys:` must equal the keys the parsers accept"
+        );
+    }
+}
+
 // #204 L1: clap renders `///` doc comments verbatim, so tracker numbers and
 // review jargon ("(#125/#126)", "crosslink #13 SEC/F1", "vsdd W4") reached
 // every adopter's `--help`. The help surface is adopter-facing prose: no
@@ -1391,6 +1727,64 @@ fn readme_pattern_example_round_trips_against_mdatron_verify() {
         "clean run stderr must include the documented `mdatron verify: clean` \
          summary line; got: {stderr}"
     );
+}
+
+// #203 F6 (GH #56 finding 6): every family example in the README is
+// round-trip-marked and loads through the real parser — findings are fine
+// (the examples claim files that do not exist in the fixture and carry
+// placeholder scopes), a load refusal is not. The First-run trio stays with
+// its own clean-run assertion above.
+#[test]
+fn readme_family_examples_load_through_the_real_parsers() {
+    let readme = readme_text();
+    for (label, file, extra) in [
+        ("routes", ".mdatron/routes.yaml", vec![("DESIGN.md", "# design\n")]),
+        (
+            "markers",
+            ".mdatron/routes.yaml",
+            vec![("contract.md", "# contract\n## Decomposition\n- **Slice 1.** x\n")],
+        ),
+        (
+            "section-rules",
+            ".mdatron/routes.yaml",
+            vec![("ROADMAP.md", "# roadmap\n## Requirements\n### Phase 1: a (parallel)\n## Completed phases\n- **Slice 2.** done\n")],
+        ),
+        ("vocabulary", ".mdatron/vocabulary.yaml", vec![]),
+        ("code-catalogs", ".mdatron/code-catalogs.yaml", vec![]),
+        (
+            "pins",
+            ".mdatron/pins.yaml",
+            vec![
+                ("DESIGN.md", "# design\n"),
+                ("src/codes.rs", "// codes\n"),
+                ("contract.md", "# contract\n## Decomposition\n- x\n"),
+                ("plan/build-plan.md", "# plan\n## Decomposition\n- y\n"),
+            ],
+        ),
+        (
+            "first-routes",
+            ".mdatron/routes.yaml",
+            vec![("README.md", "# readme\n")],
+        ),
+    ] {
+        let fence = extract_marked_fence(&readme, label).unwrap_or_else(|| {
+            panic!("README must contain <!-- mdatron-roundtrip:{label}-start/end --> markers")
+        });
+        let proj = TempProject::new(&format!("readme-{label}"));
+        proj.seed_blog_schema();
+        proj.seed_clean_md("post.md");
+        for (name, content) in extra {
+            proj.write(name, content);
+        }
+        proj.write(file, &fence);
+        let out = run_verify(&proj, &[]);
+        assert_ne!(
+            out.status.code(),
+            Some(2),
+            "README {label} example must load through the real parser (findings are fine): {}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+    }
 }
 
 // ── 4. Drive-by `--quiet` and `--quiet --json` coverage ────────────────────────

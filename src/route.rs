@@ -113,6 +113,9 @@ pub use crate::markup::ElementClass;
 pub struct LoadedRoutes {
     pub routes: Vec<Route>,
     pub findings: Vec<Finding>,
+    /// How many routes the file DECLARED (before confinement drops) — the
+    /// family reason reports it, so `routes: []` reads as what it is (#203 F2).
+    pub declared: usize,
     /// sha256 (lowercase hex) of the exact `routes.yaml` bytes `load` read
     /// (#176, the envelope's input lineage).
     pub digest: String,
@@ -168,6 +171,7 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
 
     let mut routes = Vec::new();
     let mut findings = Vec::new();
+    let declared = raw.routes.len();
     for entry in raw.routes {
         // Confinement of the files GLOB, decided on the pattern text alone
         // (parent segments are rejected in glob patterns too — BOUNDARY-
@@ -376,9 +380,37 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
             section_rules,
         });
     }
+    // #203 F2 (GH #56 finding 2): "supplied" means the file exists — even with
+    // `routes: []` the closed world is active and every walked file is E0030.
+    // An adopter staging routes incrementally hit dozens of E0030s with no
+    // finding naming the cause; this names it, once, at the table. The test
+    // is the ACTIVE count (round-2 M1): a table whose every declared route was
+    // dropped fail-closed is just as empty as `routes: []`.
+    if routes.is_empty() {
+        findings.push(Finding {
+            code: "MDATRON-W0053".into(),
+            severity: Severity::Warning,
+            summary: "route-table-empty".into(),
+            message: "routes.yaml is present but no route is active — it declares \
+                      none, or every route it declares was dropped fail-closed by a \
+                      confinement finding; the route table is supplied the moment the \
+                      file exists, so the closed world is active and every walked file \
+                      is unrouted (E0030) until an active route claims it"
+                .into(),
+            help: Some(
+                "add the first route (a files glob and its governed_by) or fix the \
+                 dropped one, or delete routes.yaml to deactivate the route family"
+                    .into(),
+            ),
+            location: Location::whole_file(&path),
+            explain_ref: Some("MDATRON-W0053".into()),
+            quoted: Vec::new(),
+        });
+    }
     Ok(Some(LoadedRoutes {
         routes,
         findings,
+        declared,
         digest: crate::init::sha256_hex(content.as_bytes()),
     }))
 }

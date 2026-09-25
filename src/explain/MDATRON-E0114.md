@@ -13,7 +13,9 @@ resolved. The engine emits the finding **once per run** per rule *key* — the
 `(target document, target section, element class)` triple, shared by every rule
 and route that names the same triple — located at the first governed file the
 (sorted) walk encounters for it, and skips those rules' marker lines in every
-file they govern. The heading is matched exactly
+file they govern — the references that rule would have checked are not
+evaluated until the target heading is restored; the file already blocks, so
+nothing is lost. The heading is matched exactly
 the way member resolution matches it: by **level and name-equality** (a
 trailing `.` on the heading tolerated), and a `#` inside a fenced code block is
 not a heading. When several headings match, members from **all** matching

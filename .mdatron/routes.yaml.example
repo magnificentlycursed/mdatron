@@ -1,0 +1,51 @@
+# routes.yaml.example — the route family. Copy to routes.yaml to activate.
+#
+# ACTIVATION  the family is supplied the moment .mdatron/routes.yaml EXISTS,
+#             even with `routes: []`; from then on every walked file must be
+#             claimed by exactly one route (E0030 unclaimed, E0032 claimed
+#             twice, W0053 empty table, W0054 a route claiming nothing).
+#             Delete the file to deactivate.
+# SCOPE       every walked file (config.yaml file_globs); a route's `files`
+#             glob is root-relative and `*` crosses `/`.
+# GATEWAY     citations, links, marker_rules, and section_rules exist only
+#             on a route.
+# KEYS        per route — required: files, governed_by
+#                         optional: naming, citations, links, link_root,
+#                                   marker_rules, section_rules
+#             file-level  — optional: mdatron_format_version (absent = 1)
+# CODES       E0030 E0031 E0032 W0041 W0053 W0054; per opt-in E0100 E0101
+#             W0048 E0081 (citations), E0110 E0111 W0048 E0081 (links),
+#             E0112 E0114 W0048 E0081 (markers), E0120 E0121 E0122 (section
+#             rules); E0010 E0011 E0012 on paths.
+# The body below is the minimal activating shape: one route claiming every
+# walked file, answering to a document that must exist (point governed_by at
+# yours). The optional additions each opt a family in — and section_rules
+# assert structure on EVERY file the route claims, so add them to a route
+# whose files all carry that structure.
+# (example: uncomment the lines below)
+# mdatron_format_version: 1
+# routes:
+# - files: "**/*.md"
+#   governed_by: README.md
+# (optional additions: uncomment what you need)
+#   naming: "^[a-z0-9-]+\\.md$"
+#   citations: true
+#   links: true
+#   link_root: false
+#   marker_rules:
+#   - pattern: "^Provenance: (.+)$"
+#     element: list-item-bold-name
+#     target_doc: DESIGN.md
+#     target_section: "## Decisions"
+#   section_rules:
+#   - section: "## Requirements"
+#     element: h3
+#     match: "^### "
+#     count: ">= 1"
+#   - disjoint:
+#     - section: "## Requirements"
+#       element: h3
+#       id_pattern: 'Slice (\d+)'
+#     - section: "## Decisions"
+#       element: list-item-bold-name
+#       id_pattern: 'Slice (\d+)'

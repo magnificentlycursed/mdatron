@@ -12,6 +12,14 @@ closed-world allowlist over the governed tree: with routes active, every walked
 file must have a declared owner — an unclaimed file blocks rather than drifting
 along ungoverned.
 
+**"Supplied" means the file exists** — even with `routes: []`. Absence
+deactivates the route family; emptiness does not (an empty table is announced
+once as `MDATRON-W0053`, and the envelope's `families.route.reason` reads
+`supplied (0 routes)`). Routes are also the gateway to four other families:
+`citations`, `links`, `marker_rules`, and `section_rules` exist only on a route,
+so the first route you write to use any of them puts every walked file under
+this rule.
+
 ## How to fix
 
 - **The file should be governed.** Add a route whose `files` glob claims it,

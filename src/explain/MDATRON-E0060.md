@@ -23,6 +23,10 @@ manifest and is never guarded or touched by `init`.
 Read the `= note:` line for the drifted file and its recorded-vs-found hashes,
 then apply the matching pattern:
 
+- **You edited a `*.example` template.** The templates `init` deploys are
+  engine prose to copy from, not to edit: copy one to its real name
+  (`routes.yaml.example` → `routes.yaml`) and edit the copy; restore the
+  template.
 - **You edited a managed file by mistake.** Restore it — `git checkout
   .mdatron/<file>` if it is committed, or re-run `mdatron init` in a clean
   checkout to redeploy the engine defaults.

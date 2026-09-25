@@ -63,8 +63,12 @@ mdatron --version
 
 Scaffold with `mdatron init`, which deploys the `.mdatron/` skeleton — the
 `schemas/` and `patterns/` directories, a seeded `config.yaml` (adopter-owned
-from then on), and the init manifest (the record of the engine-managed
-partition):
+from then on), the init manifest (the record of the engine-managed partition),
+and one inert `*.example` template per family file (`routes`, `pins`,
+`vocabulary`, `code-catalogs`) whose header states its activation rule, keys,
+scope, and codes — copy one to its real name to activate that family, or read
+`mdatron docs inputs` (a tree initialized before 0.7.0 gains the templates on
+its next `mdatron init`):
 
 ```
 mkdir my-typed-docs && cd my-typed-docs
@@ -277,35 +281,62 @@ generic families activate on adopter data under `.mdatron/` — each
 inactive until its data exists, each strict-parsed, every path confined to the
 governed tree:
 
-**Routes** (`routes.yaml`) — the closed-world allowlist:
+**Routes** (`routes.yaml`) — the closed-world allowlist, and the gateway to
+four more families: **the moment `routes.yaml` exists, every walked file must be
+claimed by exactly one route** (`E0030` unclaimed, `E0032` claimed twice; no
+catch-all, no precedence), each route names the `governed_by` document it
+answers to (`E0031` if it cannot be opened), and `citations`, `links`,
+`marker_rules`, and `section_rules` exist only on a route. "Supplied" means the
+file exists — `routes: []` activates the closed world and is announced as
+`W0053`; delete the file to deactivate the family. A route whose glob claims no
+walked file is announced as `W0054`. Required and optional keys:
 
+<!-- mdatron-roundtrip:routes-start -->
 ```yaml
 routes:
-- files: "docs/adr/**/*.md"
-  governed_by: DESIGN.md
-  naming: "^[0-9]{4}-[a-z0-9-]+\\.md$"                   # optional
-  citations: true                                        # optional, see below
-  links: true                                            # optional, see below
+- files: "docs/adr/**/*.md"                              # required: root-relative glob (`*` crosses `/`)
+  governed_by: DESIGN.md                                 # required: must open inside the governed tree
+  naming: "^[0-9]{4}-[a-z0-9-]+\\.md$"                   # optional: filename grammar (W0041)
+  citations: true                                        # optional: citation family, see below
+  links: true                                            # optional: link family, see below
   link_root: true                                        # optional: resolve /root-relative links (needs links)
+  # marker_rules: [...]                                  # optional: marker family, see below
+  # section_rules: [...]                                 # optional: section family, see below
 ```
+<!-- mdatron-roundtrip:routes-end -->
+
+A first `routes.yaml` for a tree with one governing document — everything
+claimed, nothing opted in yet:
+
+<!-- mdatron-roundtrip:first-routes-start -->
+```yaml
+routes:
+- files: "**/*.md"
+  governed_by: README.md
+```
+<!-- mdatron-roundtrip:first-routes-end -->
 
 With routes supplied: an unclaimed walked file blocks (`E0030`), a route
 citing an absent governing document blocks (`E0031`), two routes claiming one
-file is an error (`E0032`), and a filename underivable from the `naming`
-grammar warns (`W0041`).
+file is an error (`E0032`), a filename underivable from the `naming` grammar
+warns (`W0041`), an empty table warns (`W0053`), and a route claiming no walked
+file warns (`W0054`).
 
 **Pins** (`pins.yaml`) — governing documents pin sha256 over governed files:
 
+<!-- mdatron-roundtrip:pins-start -->
 ```yaml
 pins:
-- governing: DESIGN.md
-  file: src/codes.rs
-  sha256: "…"
-- governing: contract.md            # optional: pin ONE section, not the whole file
+- governed_by: DESIGN.md            # required: the governing document
+  file: src/codes.rs                # required: the governed file, root-relative
+  sha256: "…"                       # required: `mdatron pin --update` writes it
+- governed_by: contract.md          # a second shape: pin ONE section, not the whole file
   file: plan/build-plan.md
-  section: "## Decomposition"       # the heading whose span is hashed
+  section: "## Decomposition"       # optional: the heading whose span is hashed
   sha256: "…"
+# unpinned:                         # optional tombstones: file, governed_by, reason, owner (all required)
 ```
+<!-- mdatron-roundtrip:pins-end -->
 
 A governed-file change with a stale pin fails (`E0061`) until you re-read the
 governing document and re-pin: `mdatron pin --update` (preview with
@@ -331,9 +362,10 @@ authors of *Observability Engineering* coined "observability" precisely and
 watched vendors redefine it out from under them; this family is that
 codification for your project's own terms. The registry:
 
+<!-- mdatron-roundtrip:vocabulary-start -->
 ```yaml
-mdatron_format_version: 1
-terms:
+mdatron_format_version: 1     # optional (absent = 1)
+terms:                        # optional; per term: term, status, sense all required
   - term: "jurisdiction"
     status: registered        # a coined term, formally registered
     sense: "the file set the declared file_globs walk"
@@ -343,15 +375,18 @@ terms:
   - term: "contract"
     status: reserved          # reserved: use outside the sense flags E0092
     sense: "a versioned behavioral commitment, never a soft promise"
-coinage_globs:                # where **bold** introduces a term (E0090);
+coinage_globs:                # optional: where **bold** introduces a term (E0090);
   - "docs/spec/**/*.md"       # absent = wherever the register scans
-label_schemes:
+label_schemes:                # optional; the cluster scan is active only when allow is non-empty
   allow:
     - "^C\\d+$"               # local scheme: C1, C2, ...
-anti_patterns:
+anti_patterns:                # optional; per entry: pattern, guidance both required
   - pattern: "very unique"
     guidance: "say 'unique' — uniqueness does not grade"
+numeric_claims:               # optional; per entry: field required
+  - field: items
 ```
+<!-- mdatron-roundtrip:vocabulary-end -->
 
 What it flags: unregistered
 bold-introduced coinages (`E0090`, draft-status exempt — inside `coinage_globs`
@@ -372,13 +407,17 @@ check. A term
 declared both `registered` and `draft` resolves to draft with a warning
 (`W0044`), so a conflicting declaration is surfaced, not silently resolved.
 
-**Citations** — data-less; opt a route in with `citations: true` and its
+**Citations** — route-attached: the opt-in exists only on a route in `routes.yaml`,
+so writing that route puts every walked file under the closed world (see
+**Routes**). Data-less; opt a route in with `citations: true` and its
 files' `path:line` / `path:start-end` references are verified against the
 working-tree snapshot (uncommitted content counts; no git subprocess): a dead citation
 blocks (`E0100`), one past the target's end blocks (`E0101`). Historical
 corpora simply don't opt in.
 
-**Links** — data-less; opt a route in with `links: true` and its files' inline
+**Links** — route-attached: the opt-in exists only on a route in `routes.yaml`, so
+writing that route puts every walked file under the closed world (see
+**Routes**). Data-less; opt a route in with `links: true` and its files' inline
 markdown links are resolved against the working-tree snapshot via a CommonMark parse
 (`pulldown-cmark`), so **inline** `[text](target)`, **reference-style**
 `[text][ref]`, and **image** `![alt](src)` links are all checked, while a link
@@ -396,21 +435,25 @@ opts a route into resolving a leading-slash `/docs/x.md` from the project root
 (still confined) for static-site corpora that author links that way. External
 links (any URL scheme) are left alone.
 
-**Markers** — data-less; give a route one or more `marker_rules` and each body
+**Markers** — route-attached: `marker_rules` exist only on a route in
+`routes.yaml`, so writing that route puts every walked file under the closed
+world (see **Routes**). Data-less; give a route one or more `marker_rules` and each body
 line matching a rule's `pattern` names a reference whose captured `<name>` must
 resolve to an existing element in a rule-named target doc — the name-anchor
 sibling of citations. A rule is `{ pattern, element, target_doc, target_section? }`:
 
+<!-- mdatron-roundtrip:markers-start -->
 ```yaml
 routes:
 - files: "plan/**/*.md"
   governed_by: contract.md
   marker_rules:
-    - pattern: "^Provenance: (.+)$"       # first capture = the referenced name
-      element: list-item-bold-name        # or: heading
-      target_doc: contract.md
+    - pattern: "^Provenance: (.+)$"       # required: first capture = the referenced name
+      element: list-item-bold-name        # required: heading | h1..h6 | list-item-bold-name
+      target_doc: contract.md             # required: root-relative, confined
       target_section: "## Decomposition"  # optional: scope to this heading's span
 ```
+<!-- mdatron-roundtrip:markers-end -->
 
 `element: list-item-bold-name` resolves the name against the leading `**bold**`
 of a `- ` list item (`- **Slice 1 — …the guardrail.**` ← `Provenance: Slice 1 —
@@ -421,22 +464,33 @@ whose capture group captured nothing (an optional group that didn't
 participate); the `target_doc` is project-root-relative and confined
 (`E0010`/`E0011`/`E0012`). A `target_section` whose heading is absent from the
 target doc blocks once per governed file (`E0114`, marker-target-section-not-
-found) and the rule's lines are skipped there — a renamed target heading never
+found) and that rule's references in the file are not evaluated until the
+target heading is restored (the file already blocks, so nothing is lost) — a
+renamed target heading never
 mass-flags healthy references. Two misconfigs are refused at load: a `pattern`
 with no capture group (nothing to resolve), and a `target_section` that is not
 a full ATX heading line with non-empty text.
 
 **Code catalogs** (`code-catalogs.yaml`) — the adopter-side twin of mdatron's
 own every-code-resolves-in-explain: declare your code namespace and every code
-token cited in the corpus must resolve to it.
+token cited in the corpus must resolve to it. Required and optional keys:
 
+<!-- mdatron-roundtrip:code-catalogs-start -->
 ```yaml
 mdatron_format_version: 1     # required on this file (born in 0.6.0)
 catalogs:
-  - namespace: "ADOPTER-"     # the ownership prefix
-    comprehensive: true       # this catalog is the sole authority for the prefix
-    codes: ["E0010", "W0180"] # the declared legal set (class letter + digits)
+  - namespace: "ADOPTER-"     # required: the ownership prefix
+    comprehensive: true       # optional (default false): sole authority for the prefix — only then can a token orphan (E0113)
+    codes: ["E0010", "W0180"] # required: the declared legal set (class letter + digits)
 ```
+<!-- mdatron-roundtrip:code-catalogs-end -->
+
+The scan covers **every walked file** by default, and inline code spans are
+scanned (a backticked code is a real citation; only fenced blocks are
+examples). To keep a comprehensive catalog beside a walked archive that cites
+retired codes, scope the scan with `code_catalog_globs` in `config.yaml` (a
+scope list beside `vocabulary_globs`); a scope that matches no walked file is
+loud (`W0055`) and the family reports `inert`.
 
 Every adopter input file carries `mdatron_format_version` — the **input**
 contract's own version axis (independent of the DSL's `mdatron_dsl_version`
@@ -455,22 +509,25 @@ the closed legal set. Set `comprehensive: false` if codes for the prefix may
 legitimately live outside the catalog.
 
 **Section rules** (a `section_rules:` block on a route in `routes.yaml`, the
-sibling of `marker_rules`) — declarative **count** and **disjointness**
+sibling of `marker_rules` — route-attached, so writing that route puts every
+walked file under the closed world; see **Routes**) — declarative **count** and **disjointness**
 assertions over markdown body sections (the body-content counterpart of the
 DSL's frontmatter arity rules), **scoped by the route's `files` glob** so a
 file-specific structural invariant lives on the route that claims those files
 and can't misfire corpus-wide:
 
+<!-- mdatron-roundtrip:section-rules-start -->
 ```yaml
 routes:
   - files: "plan/**/*.md"
     governed_by: ROADMAP.md
     section_rules:
-      # at least one open-phase H3 in ## Requirements
+      # a count rule: section, element, match, count — all four required
+      # (at least one open-phase H3 in ## Requirements)
       - section: "## Requirements"
         element: h3
         match: '^### Phase \d+: .*\((parallel|sequential)\)$'
-        count: ">= 1"
+        count: ">= 1"                # one of >= <= == != > < and an integer
       # a slice is open XOR complete — ids extracted per element, never a full-span scan
       - disjoint:
           - section: "## Requirements"
@@ -480,10 +537,12 @@ routes:
             element: list-item-bold-name # ids from the `- **bold**` lead
             id_pattern: 'Slice (\d+)'
 ```
+<!-- mdatron-roundtrip:section-rules-end -->
 
 A count rule counts the elements of the `element` class in the `section`'s span
 (until the next heading of the same or higher level) whose line matches `match`,
-and asserts the `count` predicate (`>= 1`, `== 1`, …); a violation is `E0120`.
+and asserts the `count` predicate — one of `>=`, `<=`, `==`, `!=`, `>`, `<` and
+an integer (`>= 1`, `== 1`, `< 3`); a violation is `E0120`.
 `element` is the one vocabulary marker rules use too: `heading` (a heading of
 any level), `h1`…`h6` (one level), or `list-item-bold-name` (the `**bold**` lead
 of a `- ` list item). A `disjoint` rule extracts an id (the `id_pattern`'s first
@@ -503,7 +562,8 @@ Every family code has an explain page: `mdatron explain MDATRON-E0061`.
 
 ## Onboarding: the init-and-hook path
 
-The adoption sequence, each step optional after the first:
+The adoption sequence — each step optional after the first, except that step
+3 is the prerequisite of the four route-attached families:
 
 1. `mdatron init` — scaffold; scope `file_globs` in `config.yaml` to your
    typed corpus (your jurisdiction).
@@ -511,7 +571,11 @@ The adoption sequence, each step optional after the first:
    in with `require_frontmatter` globs in `config.yaml` (`W0040` flags a
    governed file that silently lacks frontmatter).
 3. Route your corpus (`routes.yaml`) to its governing documents; add a
-   `naming` grammar if filenames are a contract.
+   `naming` grammar if filenames are a contract. This is the gateway:
+   citations, links, marker rules, and section rules exist only on a route,
+   and the moment `routes.yaml` exists every walked file must be claimed by
+   exactly one route (`E0030` otherwise) — so the first route you write for
+   any of them is a route table over the whole jurisdiction.
 4. Pin what governs you (`pins.yaml` + `mdatron pin --update`) so governed
    drift blocks instead of rotting.
 5. Wire the fail-closed pre-commit hook (next section) and a CI job that
@@ -524,20 +588,22 @@ The adoption sequence, each step optional after the first:
 - [`DESIGN.md`](./DESIGN.md) — the standing design: behavioral contracts,
   the nine check families, output marking discipline, path confinement,
   governance-data governance
-- [`docs/dsl-reference.md`](./docs/dsl-reference.md) — the complete rule-DSL
-  construct inventory with evaluation semantics; held to the implementation
+- [`docs/dsl-reference.md`](./docs/dsl-reference.md) (`mdatron docs dsl`) — the
+  complete rule-DSL construct inventory with evaluation semantics; held to the implementation
   continuously by CI tripwires (the construct-inventory check and the
   operator-semantics pins), so an engine construct absent from the reference —
   or reference semantics the engine does not implement — fails the build
-- [`docs/faq.md`](./docs/faq.md) — prior-art comparisons, influences, and
-  frequently asked questions
-- [`docs/limits.md`](./docs/limits.md) — every declared input and enumeration
+- [`docs/inputs.md`](./docs/inputs.md) (`mdatron docs inputs`) — every
+  `.mdatron/` input file in one place: shape, required and optional keys,
+  activation, scope, codes
+- [`docs/faq.md`](./docs/faq.md) (`mdatron docs faq`) — prior-art comparisons,
+  influences, and frequently asked questions
+- [`docs/limits.md`](./docs/limits.md) (`mdatron docs limits`) — every declared input and enumeration
   bound (file sizes, nesting depths, walk budgets, the concurrent-invocation
   count), shipped as data and held to the implementation by a test
-- `mdatron explain <code>` — per-code prose for every emitted diagnostic
-  (frontmatter, confinement, schema, init, jurisdiction, route, pin,
-  vocabulary, and citation codes); the catalog grows by one entry per
-  newly-emitted code
+- `mdatron explain <code>` — per-code prose for every emitted diagnostic;
+  `mdatron explain --list` enumerates the catalog (`--compact` adds the fix
+  hint per line)
 
 ## License
 

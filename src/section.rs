@@ -227,7 +227,8 @@ pub(crate) fn compile_rule(r: RawRule) -> Result<Rule, Error> {
                 };
             let pred = parse_count_pred(&count).ok_or_else(|| {
                 Error::Config(format!(
-                    "section-rule count predicate '{count}' is not `<op> <n>` (e.g. \">= 1\")"
+                    "section-rule count predicate '{count}' is not `<op> <n>`: op is one of \
+                     >= <= == != > < and n an integer (e.g. \">= 1\")"
                 ))
             })?;
             heading_spec(&section)?;

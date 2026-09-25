@@ -24,6 +24,19 @@ read as grammar, not as part of the code — the token resolves (or orphans)
 as the singular. Any other trailing run stays part of the token, so a
 mistyped class or suffix is still caught by the resolver.
 
+**Scope.** The scan runs over every walked file by default, so a
+`comprehensive` catalog cannot coexist with a walked archive that cites retired
+codes — the same need `vocabulary_globs` answers for the register. Set
+`code_catalog_globs` in `.mdatron/config.yaml` to the files whose tokens the
+catalogs should resolve (root-relative globs, confined like every scope glob); a
+list that matches no walked file is announced as `MDATRON-W0055`, and the
+`families.code_catalog` activity reports `inert`. Two workarounds predate the
+key and still work, at a cost: drop `comprehensive: true` (no orphan is ever
+reported), or narrow `file_globs` so the archive is not walked at all (it then
+loses route and frontmatter governance too). Inline code spans **are** scanned
+— a backticked code is a real citation, not an example; only fenced blocks are
+examples.
+
 ## How to fix
 
 - **The code was retired or renamed.** Update the citation, or add the code to
