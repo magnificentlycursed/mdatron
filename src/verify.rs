@@ -233,10 +233,14 @@ impl VerifyError {
     /// construction site against the canonicalized root. A path not under `root`
     /// (a pre-canonicalization error, or one already relative) is left as-is.
     pub fn relativize_paths(self, root: &Path) -> Self {
+        // Forward-slashed on every platform, like `findings[].location.file`
+        // (the DEF4 cross-platform rendering convention): a Windows consumer
+        // and a Unix consumer see the same `.mdatron/schemas` text for the
+        // same failure (#185 L1 — windows-latest caught the `\\` render).
         fn rel(p: String, root: &Path) -> String {
             match Path::new(&p).strip_prefix(root) {
                 Ok(r) if r.as_os_str().is_empty() => ".".into(),
-                Ok(r) => r.to_string_lossy().into_owned(),
+                Ok(r) => crate::diagnostic::to_forward_slash(r),
                 Err(_) => p,
             }
         }
