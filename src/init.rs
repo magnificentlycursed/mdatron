@@ -57,8 +57,10 @@ pub const TEMPLATE_FILES: &[(&str, &str)] = &[
 
 /// The line that separates a template's header from its (commented) example
 /// body; a test strips the comment marker from the lines after it and runs the
-/// body through the real loader, so the documented shape is executable.
-pub const TEMPLATE_BODY_MARKER: &str = "# --- example (uncomment below) ---";
+/// body through the real loader, so the documented shape is executable. Spelled
+/// without a `---` run (round-2 N1): an adopter who blanket-uncomments the
+/// block must not manufacture a YAML document separator.
+pub const TEMPLATE_BODY_MARKER: &str = "# (example: uncomment the lines below)";
 
 const ROUTES_TEMPLATE: &str = r####"# routes.yaml.example — the route family. Copy to routes.yaml to activate.
 #
@@ -84,12 +86,12 @@ const ROUTES_TEMPLATE: &str = r####"# routes.yaml.example — the route family. 
 # yours). The optional additions each opt a family in — and section_rules
 # assert structure on EVERY file the route claims, so add them to a route
 # whose files all carry that structure.
-# --- example (uncomment below) ---
+# (example: uncomment the lines below)
 # mdatron_format_version: 1
 # routes:
 # - files: "**/*.md"
 #   governed_by: README.md
-# --- optional additions (uncomment what you need) ---
+# (optional additions: uncomment what you need)
 #   naming: "^[a-z0-9-]+\\.md$"
 #   citations: true
 #   links: true
@@ -129,7 +131,7 @@ const PINS_TEMPLATE: &str = r####"# pins.yaml.example — the pin family. Copy t
 #             file-level   — optional: mdatron_format_version (absent = 1;
 #                            `pin --update` stamps it)
 # CODES       E0061 E0062 E0063 E0081 L0001 W0042; E0010 E0011 E0012 on paths.
-# --- example (uncomment below) ---
+# (example: uncomment the lines below)
 # mdatron_format_version: 1
 # pins:
 # - governed_by: DESIGN.md
@@ -161,7 +163,7 @@ const VOCABULARY_TEMPLATE: &str = r####"# vocabulary.yaml.example — the vocabu
 # The body below activates cleanly on any tree; the optional addition scopes
 # the coinage check to files that must exist in YOUR tree (a scope matching
 # nothing is W0043).
-# --- example (uncomment below) ---
+# (example: uncomment the lines below)
 # mdatron_format_version: 1
 # terms:
 # - term: "jurisdiction"
@@ -178,7 +180,7 @@ const VOCABULARY_TEMPLATE: &str = r####"# vocabulary.yaml.example — the vocabu
 #   guidance: "say 'unique' — uniqueness does not grade"
 # numeric_claims:
 # - field: items
-# --- optional additions (uncomment what you need) ---
+# (optional additions: uncomment what you need)
 # coinage_globs:
 # - "docs/spec/**/*.md"
 "####;
@@ -197,7 +199,7 @@ const CODE_CATALOGS_TEMPLATE: &str = r####"# code-catalogs.yaml.example — the 
 #                                     token)
 #             file-level  — required: mdatron_format_version
 # CODES       E0113 W0055.
-# --- example (uncomment below) ---
+# (example: uncomment the lines below)
 # mdatron_format_version: 1
 # catalogs:
 # - namespace: "ADOPTER-"
@@ -594,6 +596,21 @@ fn deploy_templates(
 }
 
 fn deploy(dir: &Path) -> Result<Vec<String>, InitError> {
+    // A template collision is refused BEFORE anything is written (round-2 N2):
+    // a refusal must not leave a half-scaffolded tree with no manifest.
+    for (name, content) in TEMPLATE_FILES {
+        let p = dir.join(name);
+        match std::fs::read(&p) {
+            Ok(bytes) if bytes != content.as_bytes() => {
+                return Err(InitError::TemplateCollision {
+                    path: format!(".mdatron/{name}"),
+                });
+            }
+            Ok(_) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(e) => return Err(io_err(&p, &e)),
+        }
+    }
     let mut created = Vec::new();
 
     if !dir.exists() {

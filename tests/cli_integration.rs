@@ -471,8 +471,8 @@ fn init_templates_load_and_match_the_inputs_reference() {
     ] {
         let template = fs::read_to_string(proj.path().join(format!(".mdatron/{name}.example")))
             .unwrap_or_else(|e| panic!("{name}.example deployed: {e}"));
-        let marker = "# --- example (uncomment below) ---";
-        let optional = "# --- optional additions (uncomment what you need) ---";
+        let marker = "# (example: uncomment the lines below)";
+        let optional = "# (optional additions: uncomment what you need)";
         let body_start = template
             .find(marker)
             .unwrap_or_else(|| panic!("{name}: body marker"));
@@ -483,7 +483,7 @@ fn init_templates_load_and_match_the_inputs_reference() {
         let body_end = example.find(optional).unwrap_or(example.len());
         let uncomment = |text: &str| -> String {
             text.lines()
-                .filter(|l| !l.trim().is_empty() && !l.starts_with("# ---"))
+                .filter(|l| !l.trim().is_empty() && !l.starts_with("# ("))
                 .map(|l| {
                     l.strip_prefix("# ")
                         .or_else(|| l.strip_prefix('#'))
@@ -593,6 +593,12 @@ fn init_templates_load_and_match_the_inputs_reference() {
         fs::read_to_string(foreign.path().join(".mdatron/routes.yaml.example")).unwrap(),
         "# my own notes\n",
         "a foreign template is never overwritten"
+    );
+    // Round-2 N2: the refusal is atomic — nothing else was scaffolded.
+    assert!(
+        !foreign.path().join(".mdatron/manifest.yaml").exists()
+            && !foreign.path().join(".mdatron/schemas").exists(),
+        "a refused init must leave no half-scaffolded tree"
     );
     // ...and inert: with only templates present, no family activates.
     let out = Command::new(mdatron_bin())
