@@ -1,6 +1,6 @@
 {
   "next_display_id": 205,
-  "next_comment_id": 560,
+  "next_comment_id": 561,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "03beb708-b15d-4522-950e-3fdaa3a3d16b": 196,
@@ -1260,7 +1260,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-09-24T22:05:25.081803Z",
-      "updated_at": "2026-09-25T00:00:57.693613Z",
+      "updated_at": "2026-09-25T00:01:46.352939Z",
       "comments": {
         "001b2717-0609-4d13-a23d-4d775df7e6ac": {
           "display_id": 549,
@@ -1270,6 +1270,15 @@
           "kind": "decision",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAomOVJCu+Y/qwNI/YhLNnW4Bf4WbrV2HSqPG2JbZNwzRa0eKDnkH/qaCHJqOOn+LpXUH5gZe2LbmKJwBLzJX0Dg=="
+        },
+        "1ff160b3-bd36-4fbc-b3e2-971de15010bd": {
+          "display_id": 560,
+          "author": "79Ig",
+          "content": "L2b DESIGN (ready to implement after the #204 cold review clears; branch feature/203-adoption-feedback stacked on feature/204-ontology): F2 route loud-absence — (a) W0053 route-table-empty at routes.yaml when the file is present with zero routes (the closed world is active; every walked file would be E0030), family reason 'routes.yaml supplied (0 routes)'; (b) W0054 route-glob-matches-nothing per route whose files glob claims no walked file (W0046 posture; whole-tree runs only; quoted glob); (c) 'supplied' defined once on E0030's page and README § Routes ('the file exists, even with routes: []; to deactivate, delete it'). F3 code-catalog scope — config.yaml code_catalog_globs (lenient file, new optional key; empty = every walked file, preserving prior behaviour), per-file gating in the walk mirroring vocabulary_globs, catalog family reports inert when scoped and no walked file matched, W0055 code-catalog-scope-matches-nothing at config.yaml when the scope reaches nothing (whole-tree only); README § Code catalogs + E0113 state the scope and that inline code spans ARE scanned (a backticked code is a real reference). F4 — init seeds inert templates routes.yaml.example / pins.yaml.example / vocabulary.yaml.example / code-catalogs.yaml.example (managed-partition entries; header states activation rule, required/optional keys, scope, codes) and mdatron docs inputs prints a new bundled docs/inputs.md (one section per adopter input incl. manifest.yaml, schemas/, patterns/), held current by a key-inventory tripwire against the serde structs. F5 — explain --compact hint v3: first FIX ITEM in full (bold lead + its action sentence), preambles skipped ('Three corrective paths…:', 'Read the … then apply…:'), tripwire rejects a hint that is only a bold lead, ends in ':', or is byte-identical across two codes. F1/F6 docs — required/optional annotations on every example; the gateway sentence opens § Routes and is the first line of § Citations/§ Links/§ Markers/§ Section rules; 'first routes.yaml' recipe; Where-to-go-next enumeration dropped + binary form paired; count operators enumerated in README/E0120/the load message; E0114 gloss; roundtrip markers per family example. F8 — relay template gains the route-attached gateway line and the inputs page pointer. Envelope: additive codes only (3.1.0 already open in #204).",
+          "created_at": "2026-09-25T00:01:46.327009Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAAzqTA9u7p28zRFgE6JECueBRGRhPHgGJQnGabjLwjX6rreiOV1J3+lqZwiYUF2kyMFmTpy0AoEQZI1rR2gLuCQ=="
         },
         "4e2235d7-5744-4165-b4d9-b884fa0f01ba": {
           "display_id": 559,
@@ -8702,8 +8711,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-25T00:00:57.693613Z",
+    "timestamp": "2026-09-25T00:01:46.352939Z",
     "agent_id": "79Ig",
-    "agent_seq": 1124
+    "agent_seq": 1125
   }
 }
