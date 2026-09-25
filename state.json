@@ -1883,11 +1883,12 @@
       "uuid": "3584e906-268f-45e3-96ef-9d107e4ade52",
       "display_id": 64,
       "title": "confine: handle-based non-unix (Windows) no-follow walk — delete the check-to-open fallback weakness",
-      "status": "open",
+      "status": "closed",
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-07-21T03:53:35.156084Z",
-      "updated_at": "2026-09-25T00:22:28.246100Z",
+      "updated_at": "2026-09-25T00:41:03.319423Z",
+      "closed_at": "2026-09-25T00:41:03.319415Z",
       "labels": [
         "security"
       ],
@@ -8747,8 +8748,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-25T00:40:08.135059Z",
+    "timestamp": "2026-09-25T00:41:03.319423Z",
     "agent_id": "79Ig",
-    "agent_seq": 1129
+    "agent_seq": 1130
   }
 }
