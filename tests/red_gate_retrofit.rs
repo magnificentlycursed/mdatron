@@ -2,7 +2,7 @@
 //!
 //! This file is placed into the PRE-FIX worktree (0b21986^ = b30251b) at
 //! tests/red_gate_retrofit.rs and run there. Each test asserts
-//! the ratified-contract expectation (DESIGN.md § Five check families:
+//! the ratified-contract expectation (DESIGN.md § Nine check families:
 //! parent-directory, absolute-path, and symlink escapes rejected, including
 //! non-existent targets) that the corresponding post-fix test asserts.
 //! A test that FAILS here is the red gate demonstrated: the pre-fix code did

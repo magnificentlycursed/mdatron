@@ -290,7 +290,7 @@ fn print_page(body: &str) -> ExitCode {
         Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => ExitCode::SUCCESS,
         Err(e) => {
             eprintln!(
-                "error[MDATRON-E0080]: writing to stdout failed\n   = note: {}",
+                "error[MDATRON-E0080]: pipeline-orchestration-failure\n   = note: writing to stdout failed: {}",
                 stderr_safe(&e, &[])
             );
             ExitCode::from(2)
@@ -375,7 +375,7 @@ fn cmd_pin(project_root: Option<PathBuf>, update: bool, dry_run: bool, quiet: bo
                     // escape at the print boundary and strip the resolved root
                     // (DEF4) from the rendered note.
                     eprintln!(
-                        "error[MDATRON-E0080]: pin update failed\n   = note: {}",
+                        "error[MDATRON-E0080]: pipeline-orchestration-failure\n   = note: pin update failed: {}",
                         stderr_safe(&e, &[root.as_path()])
                     );
                 }
@@ -417,7 +417,7 @@ fn cmd_pin(project_root: Option<PathBuf>, update: bool, dry_run: bool, quiet: bo
                                 );
                                 if !quiet {
                                     eprintln!(
-                                        "error[MDATRON-E0080]: pin check failed\n   = note: {}",
+                                        "error[MDATRON-E0080]: pipeline-orchestration-failure\n   = note: pin check failed: {}",
                                         stderr_safe(&e, &[root.as_path()])
                                     );
                                 }
@@ -427,7 +427,7 @@ fn cmd_pin(project_root: Option<PathBuf>, update: bool, dry_run: bool, quiet: bo
                             Err(e) => {
                                 if !quiet {
                                     eprintln!(
-                                        "error[MDATRON-E0080]: pin check failed\n   = note: {}",
+                                        "error[MDATRON-E0080]: pipeline-orchestration-failure\n   = note: pin check failed: {}",
                                         stderr_safe(&e, &[root.as_path()])
                                     );
                                 }
@@ -462,7 +462,7 @@ fn cmd_pin(project_root: Option<PathBuf>, update: bool, dry_run: bool, quiet: bo
                     // #167: pin::load errors interpolate the pins.yaml path —
                     // root-relativize (DEF4) + escape at the print boundary.
                     eprintln!(
-                        "error[MDATRON-E0080]: pin check failed\n   = note: {}",
+                        "error[MDATRON-E0080]: pipeline-orchestration-failure\n   = note: pin check failed: {}",
                         stderr_safe(&e, &[root.as_path()])
                     );
                 }
@@ -529,7 +529,7 @@ fn cmd_init(project_root: Option<PathBuf>, quiet: bool) -> ExitCode {
                 // #167: InitError::Io/ManifestParse interpolate manifest-derived
                 // paths — root-relativize (DEF4) + escape at the print boundary.
                 eprintln!(
-                    "error[MDATRON-E0080]: init failed\n   = note: {}",
+                    "error[MDATRON-E0080]: pipeline-orchestration-failure\n   = note: init failed: {}",
                     stderr_safe(&e, &[root.as_path()])
                 );
             }
@@ -749,7 +749,7 @@ fn cmd_verify(
                     // escape + root-strip at the print boundary like every
                     // other non-Finding stderr note.
                     eprintln!(
-                        "error[MDATRON-E0080]: output serialization failed\n   = note: {}",
+                        "error[MDATRON-E0080]: pipeline-orchestration-failure\n   = note: output serialization failed: {}",
                         stderr_safe(&e, &[root.as_path(), canonical_root.as_path()])
                     );
                 }
@@ -915,7 +915,7 @@ fn cmd_explain(code: Option<&str>, list: bool, json: bool, compact: bool) -> Exi
                         Ok(line) => return print_page(&format!("{line}\n")),
                         Err(e) => {
                             eprintln!(
-                                "error[MDATRON-E0080]: output serialization failed\n   = note: {}",
+                                "error[MDATRON-E0080]: pipeline-orchestration-failure\n   = note: output serialization failed: {}",
                                 stderr_safe(&e, &[])
                             );
                             return ExitCode::from(2);
@@ -945,7 +945,7 @@ fn cmd_explain(code: Option<&str>, list: bool, json: bool, compact: bool) -> Exi
                 // #167: routed through the print-boundary escape for
                 // uniformity (no resolved root in this command).
                 eprintln!(
-                    "error[MDATRON-E0080]: explain --list failed\n   = note: {}",
+                    "error[MDATRON-E0080]: pipeline-orchestration-failure\n   = note: explain --list failed: {}",
                     stderr_safe(&e, &[])
                 );
                 return ExitCode::from(2);
@@ -966,7 +966,7 @@ fn cmd_explain(code: Option<&str>, list: bool, json: bool, compact: bool) -> Exi
                 }
                 Err(e) => {
                     eprintln!(
-                        "error[MDATRON-E0080]: output serialization failed\n   = note: {}",
+                        "error[MDATRON-E0080]: pipeline-orchestration-failure\n   = note: output serialization failed: {}",
                         stderr_safe(&e, &[])
                     );
                     return ExitCode::from(2);
@@ -990,9 +990,9 @@ fn cmd_explain(code: Option<&str>, list: bool, json: bool, compact: bool) -> Exi
     let code = stderr_safe(code, &[]);
     if explain::is_mdatron_namespace(&code) {
         eprintln!(
-            "error[MDATRON-E0080]: no explain page found for {code}\n   \
-             = note: the explain catalog grows by one entry per emitted code; \
-             {code} is not in the v0.1.0 baseline catalog\n   \
+            "error[MDATRON-E0080]: pipeline-orchestration-failure\n   \
+             = note: no explain page found for {code}: the explain catalog grows \
+             by one entry per emitted code, and {code} is not in it\n   \
              = help: see DESIGN.md \u{00A7} Diagnostics are a versioned contract for \
              the structural meaning of unimplemented codes"
         );
@@ -1002,8 +1002,9 @@ fn cmd_explain(code: Option<&str>, list: bool, json: bool, compact: bool) -> Exi
     // its own namespace only per phase-0-output-format/DESIGN.md
     // namespace-separation contract.
     eprintln!(
-        "error[MDATRON-E0080]: {code} is outside the mdatron namespace\n   \
-         = note: mdatron explain covers MDATRON-Exxxx codes only; \
+        "error[MDATRON-E0080]: pipeline-orchestration-failure\n   \
+         = note: {code} is outside the mdatron namespace: mdatron explain covers \
+         MDATRON-Exxxx codes only; \
          see `vsdd explain {code}` for the VSDD namespace"
     );
     ExitCode::from(2)

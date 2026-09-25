@@ -38,7 +38,7 @@ only schema-decidable enum membership is checked.
 
 ## See also
 
-- the mdatron design reference, § the DSL and its narrowed surface (in the
+- the mdatron design reference, § Cross-file semantics stay narrowed (in the
   project repository)
 
 ## Related codes

@@ -182,9 +182,17 @@ pub fn load_tombstones(project_root: &Path) -> Result<Option<LoadedManifest>, cr
         // m13): a demoted path escaping .mdatron/ is a manifest-integrity
         // failure, refused — never rendered as if it named a governed file.
         if let Err(v) = confine_lexically(Path::new(&t.path)) {
+            let why = match v {
+                crate::confine::LexicalViolation::Absolute => "is an absolute path",
+                crate::confine::LexicalViolation::ParentSegment => {
+                    "climbs above .mdatron/ with `..`"
+                }
+            };
             return Err(crate::Error::Config(format!(
-                "cannot use '{}': demoted path escapes .mdatron/ ({v:?})",
-                path.display()
+                "cannot use '{}': the demoted path '{}' {why}; a tombstone names a \
+                 file inside .mdatron/",
+                path.display(),
+                t.path
             )));
         }
         let file = QuotedRegion {

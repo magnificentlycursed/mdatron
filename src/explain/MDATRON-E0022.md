@@ -48,7 +48,7 @@ as compatible (an integer is a valid number).
 
 ## See also
 
-- the mdatron design reference, § the DSL and its narrowed surface (in the
+- the mdatron design reference, § Cross-file semantics stay narrowed (in the
   project repository)
 
 ## Related codes

@@ -37,7 +37,7 @@ Two neighbouring conditions are NOT this warning — they are hard errors:
 
 ## See also
 
-- the mdatron design reference, § the DSL and its cross-file `key()` index (in
+- the mdatron design reference, § Cross-file semantics stay narrowed, the cross-file `key()` index (in
   the project repository)
 
 ## Related codes

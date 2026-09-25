@@ -56,15 +56,20 @@ fn frontmatter_parse_failure_emits_e0001() {
     let codes: Vec<&str> = findings.iter().map(|f| f.code.as_str()).collect();
     assert!(
         codes.contains(&"MDATRON-E0001"),
-        "frontmatter-parse-failed must emit MDATRON-E0001 per DESIGN.md § Five check families (schema conformance); \
+        "frontmatter-parse-failed must emit MDATRON-E0001 per DESIGN.md § Nine check families (schema conformance); \
          got codes: {codes:?}"
     );
 }
 
-// #204 round-2 m8: an emitted `(code, summary)` pair is a contract (the
-// summary is the catalog headline and a fingerprint input). Through 0.6.0 the
-// E0010/E0011 catalog headlines were carried by NO emission site and nothing
-// noticed; this pins every literal pair in src/ to schema/code-catalog.json.
+// #204 round-2 m8 (round-3 shape): an emitted `(code, summary)` pair is a
+// contract — the summary is the catalog headline and a fingerprint input.
+// Through 0.6.0 the E0010/E0011 catalog headlines were carried by NO emission
+// site and nothing noticed. Every literal pair in `src/` — production AND
+// test modules, since a fixture pair must be a real pair too — is held to
+// schema/code-catalog.json, and the codes the two shapes reach are pinned
+// explicitly, so a shrinking scan fails loudly instead of passing vacuously
+// (round-2's version truncated `verify.rs` at its first `#[cfg(test)]`
+// attribute and silently guarded 30 of 49 codes).
 #[test]
 fn every_emitted_summary_matches_the_catalog() {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -80,15 +85,13 @@ fn every_emitted_summary_matches_the_catalog() {
     let shape_b =
         regex_lite::Regex::new(r#""(MDATRON-[EWL][0-9]{4})",\s*"([a-z0-9][a-z0-9-]*)""#).unwrap();
     let mut violations = Vec::new();
-    let mut pairs = 0usize;
+    let mut covered: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
     for entry in walk_files(&root.join("src"), &["rs"]) {
         let content = fs::read_to_string(&entry).unwrap_or_default();
-        // Production code only: test modules construct fixture findings.
-        let production = content.split("#[cfg(test)]").next().unwrap_or("");
         for re in [&shape_a, &shape_b] {
-            for cap in re.captures_iter(production) {
+            for cap in re.captures_iter(&content) {
                 let (code, summary) = (&cap[1], &cap[2]);
-                pairs += 1;
+                covered.insert(code.to_string());
                 match catalog.get(code) {
                     Some(expected) if expected == summary => {}
                     Some(expected) => violations.push(format!(
@@ -104,26 +107,55 @@ fn every_emitted_summary_matches_the_catalog() {
         }
     }
     assert!(
-        pairs >= 30,
-        "the extractor found only {pairs} (code, summary) pairs — its shapes have drifted from the code"
-    );
-    assert!(
         violations.is_empty(),
         "every emitted summary must be the catalog headline for its code:\n{}",
         violations.join("\n")
     );
+    // Codes the two literal shapes do NOT reach: their summaries flow through
+    // a variable or a helper that takes the code alone. Adding a code here is
+    // a conscious decision (route its summary through a literal pair instead
+    // where you can); a code leaving this list is the scan growing, which is
+    // fine — a code the scan LOSES fails below.
+    let reached_by_other_shapes: std::collections::BTreeSet<&str> =
+        ["MDATRON-E0002", "MDATRON-E0040", "MDATRON-E0070"]
+            .into_iter()
+            .collect();
+    let expected: std::collections::BTreeSet<String> = catalog
+        .keys()
+        .filter(|c| !reached_by_other_shapes.contains(c.as_str()))
+        .cloned()
+        .collect();
+    let lost: Vec<&String> = expected.difference(&covered).collect();
+    assert!(
+        lost.is_empty(),
+        "the (code, summary) scan no longer reaches {lost:?} — its shapes have drifted from the code"
+    );
+    let unexpected: Vec<&String> = covered
+        .iter()
+        .filter(|c| reached_by_other_shapes.contains(c.as_str()))
+        .collect();
+    assert!(
+        unexpected.is_empty(),
+        "{unexpected:?} are now reached by a literal pair — drop them from `reached_by_other_shapes`"
+    );
 }
 
-// #204 round-2 M6: DESIGN.md is "referenced by exact heading name", so every
-// `DESIGN § <Name>` citation in the engine, its shipped pages, and the docs
-// must open with a heading that exists. R10 found a dozen dead citations by
-// hand; this keeps the next rename from leaving any behind.
+// #204 round-2 M6 (round-3 scope): DESIGN.md is "referenced by exact heading
+// name", so every citation of it must open with a heading that exists. Two
+// spellings are in use — the document name followed by the section sign and
+// the heading in code and docs, and the adopter-facing "the mdatron design
+// reference" form in the explain pages — over `src/**` (pages included),
+// `tests/**`, `docs/**`, `README.md`,
+// `Cargo.toml`, and `.mdatron/*.yaml`. `CHANGELOG.md` is excluded on purpose:
+// released sections are frozen history and cite the headings of their day.
+// R10 found a dozen dead citations by hand; this keeps the next rename from
+// leaving any behind.
 #[test]
 fn every_design_section_citation_resolves_to_a_heading() {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let design = fs::read_to_string(root.join("DESIGN.md")).unwrap();
     let cut = |t: &str| -> String {
-        t.split(|c| ",;.():`—\n".contains(c))
+        t.split(|c| ",;.():`\"—\n".contains(c))
             .next()
             .unwrap_or("")
             .trim()
@@ -135,10 +167,15 @@ fn every_design_section_citation_resolves_to_a_heading() {
         .map(|l| cut(l.trim_start_matches('#')))
         .filter(|h| !h.is_empty())
         .collect();
-    let cite = regex_lite::Regex::new(r"DESIGN(?:\.md)?`?\s*§\s*([^,;.():`—\n]+)").unwrap();
+    let cite = regex_lite::Regex::new(
+        r#"(?:DESIGN(?:\.md)?`?|design reference,?)\s*§\s*([^,;.():`"—\n]+)"#,
+    )
+    .unwrap();
     let mut files: Vec<PathBuf> = walk_files(&root.join("src"), &["rs", "md"]);
+    files.extend(walk_files(&root.join("tests"), &["rs"]));
     files.extend(walk_files(&root.join("docs"), &["md"]));
     files.push(root.join("README.md"));
+    files.push(root.join("Cargo.toml"));
     files.extend(walk_files(&root.join(".mdatron"), &["yaml"]));
     let mut dead = Vec::new();
     let mut seen = 0usize;
@@ -173,12 +210,12 @@ fn every_design_section_citation_resolves_to_a_heading() {
         }
     }
     assert!(
-        seen >= 40,
-        "only {seen} DESIGN § citations found — the grammar has drifted"
+        seen >= 100,
+        "only {seen} design-section citations found — the grammar has drifted"
     );
     assert!(
         dead.is_empty(),
-        "every DESIGN § citation must open with an existing heading ({} known):\n{}",
+        "every design-section citation must open with an existing heading ({} known):\n{}",
         headings.len(),
         dead.join("\n")
     );

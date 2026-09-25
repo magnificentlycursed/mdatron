@@ -654,7 +654,7 @@ mod tests {
         let finding = Finding {
             code: "MDATRON-E0050".into(),
             severity: Severity::Error,
-            summary: "s".into(),
+            summary: "frontmatter-schema-violation".into(),
             message: "m".repeat(470),
             help: None,
             location: Location {
@@ -692,7 +692,7 @@ mod tests {
         let finding = Finding {
             code: "MDATRON-E0050".into(),
             severity: Severity::Error,
-            summary: "schema-violation".into(),
+            summary: "frontmatter-schema-violation".into(),
             message: words.join(" "),
             help: None,
             location: Location {
@@ -729,7 +729,7 @@ mod tests {
         let finding = Finding {
             code: "MDATRON-E0050".into(),
             severity: Severity::Error,
-            summary: "schema-violation".into(),
+            summary: "frontmatter-schema-violation".into(),
             message: "x".repeat(800), // one whitespace-free token > 512
             help: None,
             location: Location {
@@ -759,7 +759,7 @@ mod tests {
         let finding = Finding {
             code: "MDATRON-E0050".into(),
             severity: Severity::Error,
-            summary: "s".into(),
+            summary: "frontmatter-schema-violation".into(),
             message: "   ".into(), // whitespace-only, but != summary
             help: None,
             location: Location::whole_file("doc.md"),
@@ -1041,7 +1041,7 @@ mod tests {
         let mut finding = Finding {
             code: "MDATRON-E0050".into(),
             severity: Severity::Error,
-            summary: "s".into(),
+            summary: "frontmatter-schema-violation".into(),
             message: "m".into(),
             help: None,
             location: Location::whole_file("doc.md"),
@@ -1159,7 +1159,7 @@ mod tests {
         let finding = Finding {
             code: "MDATRON-W0050".into(),
             severity: Severity::Warning,
-            summary: "header-count-mismatch".into(),
+            summary: "comparison-dead-clause".into(),
             message: "header declares (3) but table has 4 rows".into(),
             help: None,
             location: Location {
@@ -1186,7 +1186,7 @@ mod tests {
         let finding = Finding {
             code: "MDATRON-W0050".into(),
             severity: Severity::Warning,
-            summary: "header-count-mismatch".into(),
+            summary: "comparison-dead-clause".into(),
             message: "header declares (3) but table has 4 rows".into(),
             help: Some("change the header count or remove an extra row".into()),
             location: Location {
