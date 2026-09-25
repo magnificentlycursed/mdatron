@@ -42,6 +42,158 @@ file_globs:
 /// absent, never overwritten, never hashed — adopter-owned once deployed.
 const SEED_FILES: &[(&str, &str)] = &[("config.yaml", DEFAULT_CONFIG)];
 
+/// Inert templates the engine deploys at init as MANAGED files (#203 F4, GH #56
+/// finding 4): one per family input file, fully commented, each header stating
+/// the activation rule, scope, keys, and codes. The `.example` extension is
+/// what keeps a family from activating by accident — the loaders read the real
+/// names only. Managed (hashed, drift-refused) because they are engine prose to
+/// copy from, not to edit; the copy is the adopter's.
+pub const TEMPLATE_FILES: &[(&str, &str)] = &[
+    ("routes.yaml.example", ROUTES_TEMPLATE),
+    ("pins.yaml.example", PINS_TEMPLATE),
+    ("vocabulary.yaml.example", VOCABULARY_TEMPLATE),
+    ("code-catalogs.yaml.example", CODE_CATALOGS_TEMPLATE),
+];
+
+/// The line that separates a template's header from its (commented) example
+/// body; a test strips the comment marker from the lines after it and runs the
+/// body through the real loader, so the documented shape is executable.
+pub const TEMPLATE_BODY_MARKER: &str = "# --- example (uncomment below) ---";
+
+const ROUTES_TEMPLATE: &str = r####"# routes.yaml.example — the route family. Copy to routes.yaml to activate.
+#
+# ACTIVATION  the family is supplied the moment .mdatron/routes.yaml EXISTS,
+#             even with `routes: []`; from then on every walked file must be
+#             claimed by exactly one route (E0030 unclaimed, E0032 claimed
+#             twice, W0053 empty table, W0054 a route claiming nothing).
+#             Delete the file to deactivate.
+# SCOPE       every walked file (config.yaml file_globs); a route's `files`
+#             glob is root-relative and `*` crosses `/`.
+# GATEWAY     citations, links, marker_rules, and section_rules exist only
+#             on a route.
+# KEYS        per route — required: files, governed_by
+#                         optional: naming, citations, links, link_root,
+#                                   marker_rules, section_rules
+#             file-level  — optional: mdatron_format_version (absent = 1)
+# CODES       E0030 E0031 E0032 W0041 W0053 W0054; per opt-in E0100 E0101
+#             (citations), E0110 E0111 (links), E0112 E0114 (markers),
+#             E0120 E0121 E0122 (section rules); E0010 E0011 E0012 on paths.
+# --- example (uncomment below) ---
+# mdatron_format_version: 1
+# routes:
+# - files: "docs/**/*.md"
+#   governed_by: DESIGN.md
+#   naming: "^[a-z0-9-]+\\.md$"
+#   citations: true
+#   links: true
+#   link_root: false
+#   marker_rules:
+#   - pattern: "^Provenance: (.+)$"
+#     element: list-item-bold-name
+#     target_doc: DESIGN.md
+#     target_section: "## Decisions"
+#   section_rules:
+#   - section: "## Requirements"
+#     element: h3
+#     match: "^### "
+#     count: ">= 1"
+#   - disjoint:
+#     - section: "## Requirements"
+#       element: h3
+#       id_pattern: 'Slice (\d+)'
+#     - section: "## Decisions"
+#       element: list-item-bold-name
+#       id_pattern: 'Slice (\d+)'
+"####;
+
+const PINS_TEMPLATE: &str = r####"# pins.yaml.example — the pin family. Copy to pins.yaml to activate.
+#
+# ACTIVATION  the file exists. Each pin attests a governed file's sha256 (or
+#             one heading's span) on behalf of a governing document; a stale
+#             hash blocks (E0061) until `mdatron pin --update` re-pins after
+#             the governing document is re-read. `unpinned:` tombstones are
+#             the standing record of a removed pin (L0001 every whole-tree
+#             run; W0042 when reason or owner is missing).
+# SCOPE       the pinned files themselves — any file inside the project
+#             root, walked or not.
+# KEYS        per pin      — required: governed_by, file, sha256
+#                            optional: section
+#             per unpinned — required: file, governed_by, reason, owner
+#             file-level   — optional: mdatron_format_version (absent = 1;
+#                            `pin --update` stamps it)
+# CODES       E0061 E0062 E0063 L0001 W0042; E0010 E0011 E0012 on paths.
+# --- example (uncomment below) ---
+# mdatron_format_version: 1
+# pins:
+# - governed_by: DESIGN.md
+#   file: src/lib.rs
+#   sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+# - governed_by: DESIGN.md
+#   file: docs/plan.md
+#   section: "## Decomposition"
+#   sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+# unpinned:
+# - file: docs/old-plan.md
+#   governed_by: DESIGN.md
+#   reason: "superseded by docs/plan.md"
+#   owner: operator
+"####;
+
+const VOCABULARY_TEMPLATE: &str = r####"# vocabulary.yaml.example — the vocabulary family (the naming register).
+# Copy to vocabulary.yaml to activate.
+#
+# ACTIVATION  the file exists.
+# SCOPE       every walked file, or config.yaml vocabulary_globs when set
+#             (W0043 if that scope matches nothing); the bold-means-coinage
+#             check (E0090) is further narrowed by coinage_globs when set.
+# KEYS        all optional — terms[] {term, status, sense} with status one of
+#             registered | draft | reserved; coinage_globs[]; label_schemes
+#             {allow[]}; anti_patterns[] {pattern, guidance}; numeric_claims[]
+#             {field}; mdatron_format_version (absent = 1).
+# CODES       E0090 E0091 E0092 E0093 E0094 W0043 W0044.
+# --- example (uncomment below) ---
+# mdatron_format_version: 1
+# terms:
+# - term: "jurisdiction"
+#   status: registered
+#   sense: "the file set the declared file_globs walk"
+# - term: "spend shape"
+#   status: draft
+#   sense: "how a review round's agent budget is declared"
+# coinage_globs:
+# - "docs/spec/**/*.md"
+# label_schemes:
+#   allow:
+#   - "^ADR-[0-9]+$"
+# anti_patterns:
+# - pattern: "very unique"
+#   guidance: "say 'unique' — uniqueness does not grade"
+# numeric_claims:
+# - field: items
+"####;
+
+const CODE_CATALOGS_TEMPLATE: &str = r####"# code-catalogs.yaml.example — the code-catalog family. Copy to
+# code-catalogs.yaml to activate.
+#
+# ACTIVATION  the file exists.
+# SCOPE       every walked file, or config.yaml code_catalog_globs when set
+#             (W0055 if that scope matches nothing). Inline code spans ARE
+#             scanned (a backticked code is a citation); fenced blocks are
+#             examples and are not.
+# KEYS        per catalog — required: namespace, codes[]
+#                           optional: comprehensive (default false; only a
+#                                     comprehensive catalog can orphan a
+#                                     token)
+#             file-level  — required: mdatron_format_version
+# CODES       E0113 W0055.
+# --- example (uncomment below) ---
+# mdatron_format_version: 1
+# catalogs:
+# - namespace: "ADOPTER-"
+#   comprehensive: true
+#   codes: ["E0001", "W0100"]
+"####;
+
 /// Engine-known content for manifest-listed managed paths, used to repair a
 /// missing managed file in trees whose manifest still lists it (v1 trees
 /// predating the config.yaml demotion). The manifest is the authority on WHAT
@@ -49,7 +201,10 @@ const SEED_FILES: &[(&str, &str)] = &[("config.yaml", DEFAULT_CONFIG)];
 fn engine_content(path: &str) -> Option<&'static str> {
     match path {
         "config.yaml" => Some(DEFAULT_CONFIG),
-        _ => None,
+        other => TEMPLATE_FILES
+            .iter()
+            .find(|(name, _)| *name == other)
+            .map(|(_, content)| *content),
     }
 }
 
@@ -390,13 +545,25 @@ fn deploy(dir: &Path) -> Result<Vec<String>, InitError> {
         }
     }
 
-    // Fresh manifests start with an empty managed partition: config.yaml is a
-    // seed, not a managed file (#77), and no other engine-managed file exists
-    // yet. The manifest still DEFINES the partition — future engine-managed
-    // files (and v1 trees' existing entries) are honored as data.
+    // Templates (#203 F4): deployed as managed files and listed with their
+    // hashes — config.yaml stays a seed (#77), and the manifest still DEFINES
+    // the partition (v1 trees' existing entries are honored as data; a tree
+    // whose manifest predates the templates does not gain them on repair).
+    let mut managed = Vec::new();
+    for (name, content) in TEMPLATE_FILES {
+        let p = dir.join(name);
+        if !p.exists() {
+            crate::atomic::write(&p, content.as_bytes()).map_err(|e| io_err(&p, &e))?;
+            created.push(format!(".mdatron/{name}"));
+        }
+        managed.push(ManagedEntry {
+            path: (*name).to_string(),
+            sha256: sha256_hex(content.as_bytes()),
+        });
+    }
     let manifest = Manifest {
         version: MANIFEST_VERSION,
-        managed: Vec::new(),
+        managed,
         demoted: Vec::new(),
     };
     let existed = dir.join(MANIFEST_NAME).exists();

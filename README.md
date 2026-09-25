@@ -63,8 +63,11 @@ mdatron --version
 
 Scaffold with `mdatron init`, which deploys the `.mdatron/` skeleton — the
 `schemas/` and `patterns/` directories, a seeded `config.yaml` (adopter-owned
-from then on), and the init manifest (the record of the engine-managed
-partition):
+from then on), the init manifest (the record of the engine-managed partition),
+and one inert `*.example` template per family file (`routes`, `pins`,
+`vocabulary`, `code-catalogs`) whose header states its activation rule, keys,
+scope, and codes — copy one to its real name to activate that family, or read
+`mdatron docs inputs`:
 
 ```
 mkdir my-typed-docs && cd my-typed-docs
@@ -551,20 +554,22 @@ The adoption sequence, each step optional after the first:
 - [`DESIGN.md`](./DESIGN.md) — the standing design: behavioral contracts,
   the nine check families, output marking discipline, path confinement,
   governance-data governance
-- [`docs/dsl-reference.md`](./docs/dsl-reference.md) — the complete rule-DSL
-  construct inventory with evaluation semantics; held to the implementation
+- [`docs/dsl-reference.md`](./docs/dsl-reference.md) (`mdatron docs dsl`) — the
+  complete rule-DSL construct inventory with evaluation semantics; held to the implementation
   continuously by CI tripwires (the construct-inventory check and the
   operator-semantics pins), so an engine construct absent from the reference —
   or reference semantics the engine does not implement — fails the build
-- [`docs/faq.md`](./docs/faq.md) — prior-art comparisons, influences, and
-  frequently asked questions
-- [`docs/limits.md`](./docs/limits.md) — every declared input and enumeration
+- [`docs/inputs.md`](./docs/inputs.md) (`mdatron docs inputs`) — every
+  `.mdatron/` input file in one place: shape, required and optional keys,
+  activation, scope, codes
+- [`docs/faq.md`](./docs/faq.md) (`mdatron docs faq`) — prior-art comparisons,
+  influences, and frequently asked questions
+- [`docs/limits.md`](./docs/limits.md) (`mdatron docs limits`) — every declared input and enumeration
   bound (file sizes, nesting depths, walk budgets, the concurrent-invocation
   count), shipped as data and held to the implementation by a test
-- `mdatron explain <code>` — per-code prose for every emitted diagnostic
-  (frontmatter, confinement, schema, init, jurisdiction, route, pin,
-  vocabulary, and citation codes); the catalog grows by one entry per
-  newly-emitted code
+- `mdatron explain <code>` — per-code prose for every emitted diagnostic;
+  `mdatron explain --list` enumerates the catalog (`--compact` adds the fix
+  hint per line)
 
 ## License
 

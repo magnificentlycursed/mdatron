@@ -21,7 +21,7 @@ mod explain;
   mdatron verify                   check the tree; rustc-shaped diagnostics
   mdatron explain <code>           the fix for any diagnostic (--list for all)
   mdatron verify --json            the versioned machine envelope (agents/CI)
-  mdatron docs                     the bundled DSL reference (also: limits, faq)
+  mdatron docs                     the bundled DSL reference (also: limits, faq, inputs)
   mdatron envelope-schema          the published envelope JSON Schema
 
 Exit contract: 0 clean, 1 findings, 2 pipeline failure — anything else is an
@@ -147,8 +147,12 @@ enum Command {
         quiet: bool,
     },
 
-    /// Scaffold the `.mdatron/` skeleton and its init manifest. Idempotent;
-    /// refuses a hand-modified managed file with MDATRON-E0060.
+    /// Scaffold `.mdatron/`: the schemas/ and patterns/ directories, a seeded
+    /// config.yaml (adopter-owned from then on), the init manifest, and four
+    /// inert *.example templates (routes, pins, vocabulary, code-catalogs) that
+    /// activate nothing until copied to their real names. Creates no family
+    /// file itself. Idempotent; refuses a hand-modified managed file with
+    /// MDATRON-E0060. `mdatron docs inputs` documents every input file.
     Init {
         /// Project root. Defaults to the current directory.
         #[arg(long = "project-root", value_name = "DIR")]
@@ -168,12 +172,13 @@ enum Command {
     EnvelopeSchema,
 
     /// Print bundled documentation on stdout: the
-    /// complete DSL reference (default), the declared-limits table, or the
-    /// FAQ — the same files the crate ships, so a binary-only `cargo install`
+    /// complete DSL reference (default), the declared-limits table, the FAQ,
+    /// or the adopter-input reference (one section per .mdatron/ input:
+    /// shape, keys, activation, scope, codes) — the same files the crate ships, so a binary-only `cargo install`
     /// consumer reads them without a repo checkout (`mdatron docs | less`).
     Docs {
         /// Which document to print.
-        #[arg(value_parser = ["dsl", "limits", "faq"], default_value = "dsl")]
+        #[arg(value_parser = ["dsl", "limits", "faq", "inputs"], default_value = "dsl")]
         topic: String,
     },
 }
@@ -306,6 +311,7 @@ fn cmd_docs(topic: &str) -> ExitCode {
     let body = match topic {
         "limits" => include_str!("../docs/limits.md"),
         "faq" => include_str!("../docs/faq.md"),
+        "inputs" => include_str!("../docs/inputs.md"),
         _ => include_str!("../docs/dsl-reference.md"),
     };
     print_page(body)

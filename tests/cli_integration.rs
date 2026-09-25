@@ -423,6 +423,129 @@ fn schema_subcommand_prints_the_published_envelope_schema() {
     );
 }
 
+// #203 F4 (GH #56 finding 4): the four inert templates `init` deploys are
+// executable documentation — uncommenting the body of each yields a file the
+// real loader accepts (exit 0 or 1, never a load refusal) — and the keys the
+// inputs reference lists for each file are exactly the keys the template
+// exercises, so `docs/inputs.md`, the templates, and the parsers cannot drift
+// apart silently.
+#[test]
+fn init_templates_load_and_match_the_inputs_reference() {
+    let proj = TempProject::new("templates");
+    let out = Command::new(mdatron_bin())
+        .args(["init", "--project-root"])
+        .arg(proj.path())
+        .output()
+        .expect("mdatron binary executes");
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let inputs = fs::read_to_string(mdatron_repo_root().join("docs/inputs.md")).unwrap();
+    let keys_listed = |section: &str| -> std::collections::BTreeSet<String> {
+        let start = inputs
+            .find(&format!("\n## {section}\n"))
+            .unwrap_or_else(|| panic!("docs/inputs.md has a section for {section}"));
+        let body = &inputs[start..];
+        let line = body
+            .lines()
+            .find(|l| l.starts_with("Keys: "))
+            .unwrap_or_else(|| panic!("{section}: a `Keys:` line"));
+        line.split('`')
+            .skip(1)
+            .step_by(2)
+            .map(str::to_string)
+            .collect()
+    };
+    for (name, activation) in [
+        ("routes.yaml", "routes.yaml"),
+        ("pins.yaml", "pins.yaml"),
+        ("vocabulary.yaml", "vocabulary.yaml"),
+        ("code-catalogs.yaml", "code-catalogs.yaml"),
+    ] {
+        let template = fs::read_to_string(proj.path().join(format!(".mdatron/{name}.example")))
+            .unwrap_or_else(|e| panic!("{name}.example deployed: {e}"));
+        let marker = "# --- example (uncomment below) ---";
+        let body_start = template
+            .find(marker)
+            .unwrap_or_else(|| panic!("{name}: body marker"));
+        let body: String = template[body_start + marker.len()..]
+            .lines()
+            .filter(|l| !l.trim().is_empty())
+            .map(|l| {
+                l.strip_prefix("# ")
+                    .or_else(|| l.strip_prefix('#'))
+                    .unwrap_or_else(|| panic!("{name}: uncommented body line {l:?}"))
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+            + "\n";
+        // Executable: the uncommented body loads through the real parser.
+        let live = TempProject::new(&format!("template-{name}"));
+        live.seed_blog_schema();
+        live.seed_clean_md("doc.md");
+        live.write(
+            "DESIGN.md",
+            "# design\n## Decisions\n- **Slice 1.** x\n## Requirements\n### One\n",
+        );
+        live.write(&format!(".mdatron/{activation}"), &body);
+        let out = Command::new(mdatron_bin())
+            .args(["verify", "--project-root"])
+            .arg(live.path())
+            .output()
+            .expect("mdatron binary executes");
+        assert_ne!(
+            out.status.code(),
+            Some(2),
+            "{name}: the template body must load (findings are fine, a refusal is not): {}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        // Cross-checked: the keys the reference lists are the keys the body uses.
+        let used: std::collections::BTreeSet<String> = body
+            .lines()
+            .filter_map(|l| {
+                let t = l.trim_start().trim_start_matches("- ").trim_start();
+                let (key, _) = t.split_once(':')?;
+                let key = key.trim();
+                (!key.is_empty()
+                    && key
+                        .chars()
+                        .all(|c| c.is_ascii_lowercase() || c == '_' || c.is_ascii_digit()))
+                .then(|| key.to_string())
+            })
+            .collect();
+        let listed = keys_listed(name);
+        assert_eq!(
+            listed, used,
+            "{name}: docs/inputs.md `Keys:` must equal the keys the template exercises"
+        );
+    }
+    // The four templates are managed (hashed) — a hand edit is drift.
+    let manifest = fs::read_to_string(proj.path().join(".mdatron/manifest.yaml")).unwrap();
+    for name in ["routes", "pins", "vocabulary", "code-catalogs"] {
+        assert!(
+            manifest.contains(&format!("{name}.yaml.example")),
+            "{manifest}"
+        );
+    }
+    // ...and inert: with only templates present, no family activates.
+    let out = Command::new(mdatron_bin())
+        .args(["verify", "--project-root"])
+        .arg(proj.path())
+        .args(["--json", "--quiet"])
+        .output()
+        .expect("mdatron binary executes");
+    let env: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+    for fam in ["route", "pin", "vocabulary", "code_catalog"] {
+        assert_eq!(
+            env["families"][fam]["state"], "inactive",
+            "{fam}: a template must not activate"
+        );
+    }
+}
+
 // #204 L1: clap renders `///` doc comments verbatim, so tracker numbers and
 // review jargon ("(#125/#126)", "crosslink #13 SEC/F1", "vsdd W4") reached
 // every adopter's `--help`. The help surface is adopter-facing prose: no
