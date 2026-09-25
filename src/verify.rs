@@ -579,6 +579,7 @@ fn run_inner(
     let schemas_supplied = !schemas.is_empty();
     let route_supplied = routes.is_some();
     let routes_declared = routes.as_ref().map_or(0, |r| r.declared);
+    let routes_active = routes.as_ref().map_or(0, |r| r.routes.len());
     let pin_supplied = pin_data.is_some();
     let vocab_supplied = vocab.is_some();
     let code_catalog_supplied = catalogs.is_some();
@@ -1362,8 +1363,11 @@ fn run_inner(
     // governs nothing — its governed_by, naming grammar, and every family it
     // opts in with are inert for the files it meant to claim (W0046's posture
     // for a dead `file_globs` entry). Whole-tree runs only: an incremental pass
-    // sees part of the tree.
-    if scope.is_none() {
+    // sees part of the tree — and only when the jurisdiction came from the
+    // config (round-2 M2): an ad-hoc `--files` run replaces it from the command
+    // line without reading config.yaml, so every route outside the ad-hoc glob
+    // would look dead.
+    if scope.is_none() && config.config_digest.is_some() {
         if let Some(rs) = &routes {
             let routes_path = project_root.join(".mdatron").join("routes.yaml");
             for (i, r) in rs.iter().enumerate() {
@@ -1487,10 +1491,25 @@ fn run_inner(
             FamilyActivity::active(".mdatron/schemas/ supplied; the schema family ran")
         },
         route: if route_supplied {
-            // The count makes `routes: []` legible as what it is (#203 F2).
-            FamilyActivity::active(format!(
-                ".mdatron/routes.yaml supplied ({routes_declared} routes)"
-            ))
+            // The counts make `routes: []` — and a table whose declared routes
+            // were all dropped fail-closed — legible as what they are (#203 F2,
+            // round-2 M1): the number a consumer reads is the ACTIVE one.
+            let n = |k: usize| {
+                if k == 1 {
+                    "1 route".to_string()
+                } else {
+                    format!("{k} routes")
+                }
+            };
+            FamilyActivity::active(if routes_declared == routes_active {
+                format!(".mdatron/routes.yaml supplied ({})", n(routes_active))
+            } else {
+                format!(
+                    ".mdatron/routes.yaml supplied ({} declared, {} active)",
+                    n(routes_declared),
+                    n(routes_active)
+                )
+            })
         } else {
             FamilyActivity::inactive("no .mdatron/routes.yaml")
         },
@@ -5939,6 +5958,32 @@ pattern:
             panic!("an empty table is still a supplied table: {:?}", fam.route)
         };
         assert!(reason.contains("(0 routes)"), "{reason}");
+
+        // Round-2 M1: a table whose only route was dropped fail-closed is just
+        // as empty — W0053 fires, and the reason says declared vs active.
+        let dropped = TempProject::new("routes-dropped");
+        dropped.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        dropped.write(".mdatron/config.yaml", "file_globs:\n  - \"**/*.md\"\n");
+        dropped.write("GOVERNING.md", "# gov\n");
+        dropped.write(
+            ".mdatron/routes.yaml",
+            "routes:\n- files: \"../outside/**/*.md\"\n  governed_by: GOVERNING.md\n",
+        );
+        dropped.write("a.md", "plain\n");
+        let cfg = VerifyConfig::from_project(&dropped.0).unwrap();
+        let (findings, fam, _v, _n) = run(&cfg, None, None).unwrap();
+        assert_eq!(codes_of(&findings, "MDATRON-E0011"), 1, "{findings:?}");
+        assert_eq!(codes_of(&findings, "MDATRON-W0053"), 1, "{findings:?}");
+        let crate::output::FamilyActivity::Active { reason } = &fam.route else {
+            panic!("{:?}", fam.route)
+        };
+        assert!(
+            reason.contains("(1 route declared, 0 routes active)"),
+            "{reason}"
+        );
     }
 
     // #203 F2 (GH #56 finding 1's tail): a route whose glob claims no walked
@@ -5978,6 +6023,15 @@ pattern:
         assert_eq!(state_of(&fam.citation), "inert");
         let (findings, _fam, visited, _n) = run(&cfg, Some(Path::new("docs/a.md")), None).unwrap();
         assert!(visited.is_some());
+        assert_eq!(codes_of(&findings, "MDATRON-W0054"), 0, "{findings:?}");
+
+        // Round-2 M2: an ad-hoc `--files` run replaces the jurisdiction from
+        // the command line without the config, so a route outside the ad-hoc
+        // glob is not dead — no W0054, and --deny-warnings stays clean.
+        let mut adhoc = VerifyConfig::new(&proj.0);
+        adhoc.file_globs = vec!["docs/**/*.md".to_string()];
+        assert!(adhoc.config_digest.is_none());
+        let (findings, _fam, _v, _n) = run(&adhoc, None, None).unwrap();
         assert_eq!(codes_of(&findings, "MDATRON-W0054"), 0, "{findings:?}");
     }
 

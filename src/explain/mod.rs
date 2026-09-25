@@ -193,13 +193,27 @@ pub fn lookup_compact(code: &str) -> Option<String> {
 /// should be governed" — shared verbatim by three codes) — the wrong half of
 /// the item for an agent reading `explain --list --compact` into context.
 ///
-/// Shape: paragraphs are split on blank lines; a leading paragraph that is a
-/// single sentence ending in `:` is a preamble and skipped; the chosen
-/// paragraph has its list marker stripped; a `**bold lead**` (with or without
-/// its own terminal `.`/`:`) becomes `lead: action-sentence`; otherwise the
-/// paragraph's first sentence is the hint. Sentence ends are a `.` followed by
-/// whitespace or end-of-text, except inside dotted abbreviations (`e.g.`).
+/// Shape: paragraphs are split on blank lines; the first paragraph that opens
+/// (after its list marker) with a `**bold lead**` is the item — a page with
+/// bold-led items never renders a preamble, however it is punctuated (round-2
+/// m9); otherwise the first paragraph that is not a one-sentence preamble
+/// ending in `:`; otherwise the first paragraph. A lead becomes
+/// `lead: action-sentence` when it closes with `.`/`:`, `lead action-sentence`
+/// when it is a phrase the action continues. `has_action` says whether an
+/// action sentence was actually found — the tripwire asserts on that fact,
+/// not on a word count (round-2 M8).
 fn first_fix_sentence(fix: &str) -> String {
+    first_fix_hint(fix).text
+}
+
+struct FixHint {
+    text: String,
+    /// Read by the compact-hint tripwire (a test); production renders `text`.
+    #[cfg_attr(not(test), allow(dead_code))]
+    has_action: bool,
+}
+
+fn first_fix_hint(fix: &str) -> FixHint {
     let paragraphs: Vec<String> = fix
         .split("\n\n")
         .map(|para| {
@@ -211,6 +225,25 @@ fn first_fix_sentence(fix: &str) -> String {
         })
         .filter(|para| !para.is_empty())
         .collect();
+    // Bold-led paragraphs are the fix items. The first one that carries an
+    // action wins; a bold sub-heading with no action of its own ("**Common
+    // (operator-fixable):**" above a list) is passed over, and only if no
+    // bold-led paragraph has an action does the first one stand — reported as
+    // having none, which is what the tripwire refuses.
+    let mut first_bold: Option<FixHint> = None;
+    for para in &paragraphs {
+        if !strip_list_marker(para).starts_with("**") {
+            continue;
+        }
+        let hint = hint_of_item(strip_list_marker(para));
+        if hint.has_action {
+            return hint;
+        }
+        first_bold.get_or_insert(hint);
+    }
+    if let Some(hint) = first_bold {
+        return hint;
+    }
     let chosen = paragraphs
         .iter()
         .find(|para| {
@@ -222,23 +255,12 @@ fn first_fix_sentence(fix: &str) -> String {
         .or(paragraphs.first())
         .cloned()
         .unwrap_or_default();
-    // Strip list markers only — `- `, `* `, `1. ` — never a `**` bold marker,
-    // which the lead detection below needs intact.
-    let mut item = chosen.trim_start();
-    loop {
-        let before = item;
-        if let Some(rest) = item.strip_prefix("- ").or_else(|| item.strip_prefix("* ")) {
-            item = rest.trim_start();
-        }
-        if let Some(rest) = item.strip_prefix(|c: char| c.is_ascii_digit()) {
-            if let Some(rest) = rest.strip_prefix(". ") {
-                item = rest.trim_start();
-            }
-        }
-        if item == before {
-            break;
-        }
-    }
+    hint_of_item(strip_list_marker(&chosen))
+}
+
+/// The hint of one (marker-stripped) fix item: `lead: action` / `lead action`
+/// for a bold-led item, the first sentence otherwise.
+fn hint_of_item(item: &str) -> FixHint {
     if let Some(rest) = item.strip_prefix("**") {
         if let Some((raw_lead, action)) = rest.split_once("**") {
             // A lead that closes with `.`/`:` is a label for the action that
@@ -247,21 +269,65 @@ fn first_fix_sentence(fix: &str) -> String {
             // `--project-root`" + " with an absolute path" → one sentence).
             let labelled = raw_lead.trim_end().ends_with(['.', ':']);
             let lead = raw_lead.trim().trim_end_matches(['.', ':']).trim_end();
-            let action = action.trim_start_matches([':', ' ']).trim();
-            let action = first_sentence(action);
-            if !lead.is_empty() && !action.is_empty() {
-                return if labelled {
+            let action = action
+                .trim_start_matches([':', ' '])
+                .trim()
+                .replace("**", "");
+            let action = first_sentence(&action);
+            // An action that is itself a list marker means the lead had no
+            // sentence of its own — two bullets in one paragraph.
+            let has_action = !action.is_empty() && !starts_with_list_marker(action);
+            if !lead.is_empty() && has_action {
+                let text = if labelled {
                     format!("{lead}: {action}")
                 } else {
                     format!("{lead} {action}")
                 };
+                return FixHint {
+                    text,
+                    has_action: true,
+                };
             }
             if !lead.is_empty() {
-                return lead.to_string();
+                return FixHint {
+                    text: lead.to_string(),
+                    has_action: false,
+                };
             }
         }
     }
-    first_sentence(&item.replace("**", "")).to_string()
+    let text = first_sentence(&item.replace("**", "")).to_string();
+    let has_action = !text.is_empty() && !text.trim_end().ends_with(':');
+    FixHint { text, has_action }
+}
+
+/// Strip a leading list marker — `- `, `* `, or an ordinal `12. ` of any
+/// width — never a `**` bold marker, which the lead detection needs intact.
+fn strip_list_marker(para: &str) -> &str {
+    let mut item = para.trim_start();
+    loop {
+        let before = item;
+        if let Some(rest) = item.strip_prefix("- ").or_else(|| item.strip_prefix("* ")) {
+            item = rest.trim_start();
+        }
+        let digits = item.chars().take_while(char::is_ascii_digit).count();
+        if digits > 0 {
+            if let Some(rest) = item[digits..].strip_prefix(". ") {
+                item = rest.trim_start();
+            }
+        }
+        if item == before {
+            return item;
+        }
+    }
+}
+
+fn starts_with_list_marker(s: &str) -> bool {
+    let t = s.trim_start();
+    t.starts_with("- ") || t.starts_with("* ") || {
+        let digits = t.chars().take_while(char::is_ascii_digit).count();
+        digits > 0 && t[digits..].starts_with(". ")
+    }
 }
 
 /// The first sentence of `s`: up to a `.` followed by whitespace or the end,
@@ -485,9 +551,16 @@ mod tests {
                 !hint.trim_end().ends_with(':'),
                 "{code}: the hint is a preamble, not a fix: {hint:?}"
             );
+            // Asserted on the extractor's own finding, not a word count
+            // (round-2 M8); an interior list marker is the two-bullets shape.
+            let page = lookup_structured(&code).expect("page parses");
             assert!(
-                hint.contains(": ") || hint.split_whitespace().count() >= 6,
+                first_fix_hint(&page.how_to_fix).has_action,
                 "{code}: the hint is a bare case label with no action: {hint:?}"
+            );
+            assert!(
+                !hint.contains(" - ") && !hint.contains(" * "),
+                "{code}: an interior list marker survived into the hint: {hint:?}"
             );
             if let Some(other) = seen.insert(hint.to_string(), code.clone()) {
                 panic!("{code} and {other} share the compact hint {hint:?}");
@@ -506,8 +579,8 @@ mod tests {
             "The literal is wrong: Use a literal of the field's declared type"
         );
         // A first paragraph that carries an action sentence before its colon is
-        // not a preamble.
-        let fix = "Open the file at the reported line. Common shapes:\n\n- **A.** B.";
+        // not a preamble (and no bold-led item follows to prefer).
+        let fix = "Open the file at the reported line. Common shapes:\n\nplain follow-up.";
         assert_eq!(
             first_fix_sentence(fix),
             "Open the file at the reported line"
@@ -517,6 +590,25 @@ mod tests {
         assert_eq!(
             first_fix_sentence(fix),
             "Rewrite it relative to the root (e.g. `x/y`)"
+        );
+        // Round-2 M8: a bare lead with no action, and two bullets in one
+        // paragraph, are reported as having no action (the tripwire's teeth).
+        let bare = "- **The term was declared twice with conflicting status**\n";
+        assert!(!first_fix_hint(bare).has_action);
+        let joined = "- **The term was declared twice.**\n- Pick one and delete the other.\n";
+        assert!(!first_fix_hint(joined).has_action);
+        // A bold sub-heading with no action is passed over for the first item
+        // that has one (E0080's "**Common (operator-fixable):**").
+        let fix = "**Common (operator-fixable):**\n\n- **Missing dir.** Run `mdatron init`.\n";
+        assert_eq!(first_fix_sentence(fix), "Missing dir: Run `mdatron init`");
+        // Round-2 m9: a bold-led item beats a preamble however it is punctuated.
+        let fix = "Read the note, then apply the matching pattern below\n\n- **Missing dir.** Run `mdatron init`.";
+        assert_eq!(first_fix_sentence(fix), "Missing dir: Run `mdatron init`");
+        // Multi-digit ordinals and a bold span inside the action.
+        let fix = "12. **The field is wrong.** Reference the **other** field.";
+        assert_eq!(
+            first_fix_sentence(fix),
+            "The field is wrong: Reference the other field"
         );
     }
 

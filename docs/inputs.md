@@ -4,18 +4,25 @@ Every file mdatron reads from `.mdatron/`, in one place: its shape, the keys it
 accepts, what activates it, what it scans, and the codes it can emit. This is
 the page `mdatron docs inputs` prints. `mdatron init` deploys the skeleton and
 an inert `*.example` template for each family file below (copy a template to
-its real name to activate that family); a test loads every template through the
-real parser and cross-checks the keys listed here against it, so this page and
-the engine cannot drift apart silently.
+its real name to activate that family; a tree initialized before the templates
+existed gains them on its next `init`). Two tests hold this page current: one
+loads every template through the real parser and cross-checks the keys listed
+here against the keys the template exercises; the other asks each strict
+parser directly — by feeding it an unknown key at every nesting level and
+reading the accepted-key list its refusal names — and asserts that list equals
+the keys listed here. `config.yaml` is the one file that cannot be asked (it
+tolerates unknown keys), so its list is held by review.
 
 Conventions. Paths are project-root-relative and confined: an absolute path or
 a `..` segment is refused (`E0010`, `E0011`), a symlinked component is refused
 (`E0012`). Every family file is parsed strictly — an unknown key is a load
 refusal (exit 2), never ignored — except `config.yaml`, which tolerates unknown
 keys. "Supplied" means the file exists; delete a file to deactivate its family.
-Each file may carry `mdatron_format_version` (the input contract's own version
-axis; absent reads as `1`) — required on `code-catalogs.yaml`, optional
-elsewhere.
+The four family files (`routes.yaml`, `pins.yaml`, `vocabulary.yaml`,
+`code-catalogs.yaml`) carry `mdatron_format_version`, the input contract's own
+version axis (absent reads as `1`; required on `code-catalogs.yaml`, optional
+on the other three). `manifest.yaml` carries its own `version`, and a pattern
+file carries `mdatron_dsl_version`; neither accepts `mdatron_format_version`.
 
 ## config.yaml
 
@@ -60,8 +67,9 @@ Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `cit
 Activation: the file exists — even `routes: []` (announced as `W0053`); from
 then on every walked file must be claimed by exactly one route. Scope: every
 walked file. Codes: `E0030`, `E0031`, `E0032`, `W0041`, `W0053`, `W0054`; per
-opt-in `E0100`/`E0101` (citations), `E0110`/`E0111` (links),
-`E0112`/`E0114` (markers), `E0120`/`E0121`/`E0122` (section rules).
+opt-in `E0100`/`E0101`/`W0048`/`E0081` (citations), `E0110`/`E0111`/`W0048`/
+`E0081` (links), `E0112`/`E0114`/`W0048`/`E0081` (markers),
+`E0120`/`E0121`/`E0122` (section rules).
 
 ## pins.yaml
 
@@ -78,7 +86,7 @@ Keys: `mdatron_format_version`, `pins`, `governed_by`, `file`, `section`, `sha25
 
 Activation: the file exists. Scope: the pinned files themselves — any file
 inside the project root, walked or not. Codes: `E0061`, `E0062`, `E0063`,
-`L0001`, `W0042`.
+`E0081`, `L0001`, `W0042`.
 
 ## vocabulary.yaml
 
@@ -149,13 +157,13 @@ with a `schema_class`. Codes: `E0002`, `E0040`, `E0050`, `W0045`, `W0047`.
 The rule DSL: pattern files at `.mdatron/patterns/<name>.yaml` — see
 `mdatron docs dsl` for the complete construct inventory.
 
-Keys: `mdatron_dsl_version`, `pattern`, `id`, `description`, `keys`, `name`, `source`, `select`, `indexed_by`, `rules`, `context`, `let`, `assert`, `code`, `message`, `phases`, `location`.
+Keys: `mdatron_dsl_version`, `pattern`, `id`, `description`, `keys`, `name`, `source`, `select`, `indexed_by`, `rules`, `context`, `let`, `assert`, `code`, `message`, `phases`, `location`, `field`, `expression`.
 
 - `pattern` (required) — `id` (required), `description` (optional), `keys`
   (optional cross-file indices of `name`, `source`, `select`, `indexed_by`),
   `rules` (required; each with `id`, `context`, `assert`, `code`, `message`, and
-  an optional `let` map). `phases` and a rule's `location` are accepted and
-  inert (`W0052`).
+  an optional `let` map). `phases` and a rule's `location` (`field`,
+  `expression`) are accepted and inert (`W0052`).
 
 Activation: the directory holds at least one pattern file. Scope: every walked
 file whose `schema_class` a rule's `context` selects. Codes: `E0021`, `E0022`,

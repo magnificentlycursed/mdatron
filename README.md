@@ -67,7 +67,8 @@ from then on), the init manifest (the record of the engine-managed partition),
 and one inert `*.example` template per family file (`routes`, `pins`,
 `vocabulary`, `code-catalogs`) whose header states its activation rule, keys,
 scope, and codes — copy one to its real name to activate that family, or read
-`mdatron docs inputs`:
+`mdatron docs inputs` (a tree initialized before 0.7.0 gains the templates on
+its next `mdatron init`):
 
 ```
 mkdir my-typed-docs && cd my-typed-docs
@@ -307,11 +308,13 @@ routes:
 A first `routes.yaml` for a tree with one governing document — everything
 claimed, nothing opted in yet:
 
+<!-- mdatron-roundtrip:first-routes-start -->
 ```yaml
 routes:
 - files: "**/*.md"
   governed_by: README.md
 ```
+<!-- mdatron-roundtrip:first-routes-end -->
 
 With routes supplied: an unclaimed walked file blocks (`E0030`), a route
 citing an absent governing document blocks (`E0031`), two routes claiming one
@@ -321,6 +324,7 @@ file warns (`W0054`).
 
 **Pins** (`pins.yaml`) — governing documents pin sha256 over governed files:
 
+<!-- mdatron-roundtrip:pins-start -->
 ```yaml
 pins:
 - governed_by: DESIGN.md            # required: the governing document
@@ -332,6 +336,7 @@ pins:
   sha256: "…"
 # unpinned:                         # optional tombstones: file, governed_by, reason, owner (all required)
 ```
+<!-- mdatron-roundtrip:pins-end -->
 
 A governed-file change with a stale pin fails (`E0061`) until you re-read the
 governing document and re-pin: `mdatron pin --update` (preview with
@@ -557,7 +562,8 @@ Every family code has an explain page: `mdatron explain MDATRON-E0061`.
 
 ## Onboarding: the init-and-hook path
 
-The adoption sequence, each step optional after the first:
+The adoption sequence — each step optional after the first, except that step
+3 is the prerequisite of the four route-attached families:
 
 1. `mdatron init` — scaffold; scope `file_globs` in `config.yaml` to your
    typed corpus (your jurisdiction).
@@ -565,7 +571,11 @@ The adoption sequence, each step optional after the first:
    in with `require_frontmatter` globs in `config.yaml` (`W0040` flags a
    governed file that silently lacks frontmatter).
 3. Route your corpus (`routes.yaml`) to its governing documents; add a
-   `naming` grammar if filenames are a contract.
+   `naming` grammar if filenames are a contract. This is the gateway:
+   citations, links, marker rules, and section rules exist only on a route,
+   and the moment `routes.yaml` exists every walked file must be claimed by
+   exactly one route (`E0030` otherwise) — so the first route you write for
+   any of them is a route table over the whole jurisdiction.
 4. Pin what governs you (`pins.yaml` + `mdatron pin --update`) so governed
    drift blocks instead of rotting.
 5. Wire the fail-closed pre-commit hook (next section) and a CI job that

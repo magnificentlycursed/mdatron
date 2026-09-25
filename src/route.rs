@@ -383,20 +383,23 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
     // #203 F2 (GH #56 finding 2): "supplied" means the file exists — even with
     // `routes: []` the closed world is active and every walked file is E0030.
     // An adopter staging routes incrementally hit dozens of E0030s with no
-    // finding naming the cause; this names it, once, at the table.
-    if declared == 0 {
+    // finding naming the cause; this names it, once, at the table. The test
+    // is the ACTIVE count (round-2 M1): a table whose every declared route was
+    // dropped fail-closed is just as empty as `routes: []`.
+    if routes.is_empty() {
         findings.push(Finding {
             code: "MDATRON-W0053".into(),
             severity: Severity::Warning,
             summary: "route-table-empty".into(),
-            message: "routes.yaml is present but declares no routes; the route table \
-                      is supplied the moment the file exists, so the closed world is \
-                      active and every walked file is unrouted (E0030) until a route \
-                      claims it"
+            message: "routes.yaml is present but no route is active — it declares \
+                      none, or every route it declares was dropped fail-closed by a \
+                      confinement finding; the route table is supplied the moment the \
+                      file exists, so the closed world is active and every walked file \
+                      is unrouted (E0030) until an active route claims it"
                 .into(),
             help: Some(
-                "add the first route (a files glob and its governed_by), or delete \
-                 routes.yaml to deactivate the route family"
+                "add the first route (a files glob and its governed_by) or fix the \
+                 dropped one, or delete routes.yaml to deactivate the route family"
                     .into(),
             ),
             location: Location::whole_file(&path),

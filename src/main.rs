@@ -147,12 +147,15 @@ enum Command {
         quiet: bool,
     },
 
-    /// Scaffold `.mdatron/`: the schemas/ and patterns/ directories, a seeded
-    /// config.yaml (adopter-owned from then on), the init manifest, and four
-    /// inert *.example templates (routes, pins, vocabulary, code-catalogs) that
-    /// activate nothing until copied to their real names. Creates no family
-    /// file itself. Idempotent; refuses a hand-modified managed file with
-    /// MDATRON-E0060. `mdatron docs inputs` documents every input file.
+    /// Scaffold `.mdatron/`; idempotent, refuses a hand-modified managed file
+    /// with MDATRON-E0060.
+    ///
+    /// Writes the schemas/ and patterns/ directories, a seeded config.yaml
+    /// (adopter-owned from then on), the init manifest, and four inert
+    /// *.example templates (routes, pins, vocabulary, code-catalogs) that
+    /// activate nothing until copied to their real names — a tree initialized
+    /// before the templates existed gains them on its next run. Creates no
+    /// family file itself. `mdatron docs inputs` documents every input file.
     Init {
         /// Project root. Defaults to the current directory.
         #[arg(long = "project-root", value_name = "DIR")]
@@ -520,7 +523,13 @@ fn cmd_init(project_root: Option<PathBuf>, quiet: bool) -> ExitCode {
         }
         Err(InitError::Drift(drifts)) => {
             if !quiet {
-                for f in drift_findings(&root, &drifts) {
+                for mut f in drift_findings(&root, &drifts) {
+                    // DEF4 (#203 round-2 m10): the drift location is root-joined
+                    // by the init module; render it root-relative with forward
+                    // slashes like every verify finding, never the host layout.
+                    if let Ok(rel) = f.location.file.strip_prefix(&root) {
+                        f.location.file = PathBuf::from(rel.to_string_lossy().replace('\\', "/"));
+                    }
                     print_finding(&f);
                 }
                 eprintln!(

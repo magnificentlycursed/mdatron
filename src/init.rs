@@ -76,13 +76,20 @@ const ROUTES_TEMPLATE: &str = r####"# routes.yaml.example — the route family. 
 #                                   marker_rules, section_rules
 #             file-level  — optional: mdatron_format_version (absent = 1)
 # CODES       E0030 E0031 E0032 W0041 W0053 W0054; per opt-in E0100 E0101
-#             (citations), E0110 E0111 (links), E0112 E0114 (markers),
-#             E0120 E0121 E0122 (section rules); E0010 E0011 E0012 on paths.
+#             W0048 E0081 (citations), E0110 E0111 W0048 E0081 (links),
+#             E0112 E0114 W0048 E0081 (markers), E0120 E0121 E0122 (section
+#             rules); E0010 E0011 E0012 on paths.
+# The body below is the minimal activating shape: one route claiming every
+# walked file, answering to a document that must exist (point governed_by at
+# yours). The optional additions each opt a family in — and section_rules
+# assert structure on EVERY file the route claims, so add them to a route
+# whose files all carry that structure.
 # --- example (uncomment below) ---
 # mdatron_format_version: 1
 # routes:
-# - files: "docs/**/*.md"
-#   governed_by: DESIGN.md
+# - files: "**/*.md"
+#   governed_by: README.md
+# --- optional additions (uncomment what you need) ---
 #   naming: "^[a-z0-9-]+\\.md$"
 #   citations: true
 #   links: true
@@ -121,7 +128,7 @@ const PINS_TEMPLATE: &str = r####"# pins.yaml.example — the pin family. Copy t
 #             per unpinned — required: file, governed_by, reason, owner
 #             file-level   — optional: mdatron_format_version (absent = 1;
 #                            `pin --update` stamps it)
-# CODES       E0061 E0062 E0063 L0001 W0042; E0010 E0011 E0012 on paths.
+# CODES       E0061 E0062 E0063 E0081 L0001 W0042; E0010 E0011 E0012 on paths.
 # --- example (uncomment below) ---
 # mdatron_format_version: 1
 # pins:
@@ -151,6 +158,9 @@ const VOCABULARY_TEMPLATE: &str = r####"# vocabulary.yaml.example — the vocabu
 #             {allow[]}; anti_patterns[] {pattern, guidance}; numeric_claims[]
 #             {field}; mdatron_format_version (absent = 1).
 # CODES       E0090 E0091 E0092 E0093 E0094 W0043 W0044.
+# The body below activates cleanly on any tree; the optional addition scopes
+# the coinage check to files that must exist in YOUR tree (a scope matching
+# nothing is W0043).
 # --- example (uncomment below) ---
 # mdatron_format_version: 1
 # terms:
@@ -160,8 +170,6 @@ const VOCABULARY_TEMPLATE: &str = r####"# vocabulary.yaml.example — the vocabu
 # - term: "spend shape"
 #   status: draft
 #   sense: "how a review round's agent budget is declared"
-# coinage_globs:
-# - "docs/spec/**/*.md"
 # label_schemes:
 #   allow:
 #   - "^ADR-[0-9]+$"
@@ -170,6 +178,9 @@ const VOCABULARY_TEMPLATE: &str = r####"# vocabulary.yaml.example — the vocabu
 #   guidance: "say 'unique' — uniqueness does not grade"
 # numeric_claims:
 # - field: items
+# --- optional additions (uncomment what you need) ---
+# coinage_globs:
+# - "docs/spec/**/*.md"
 "####;
 
 const CODE_CATALOGS_TEMPLATE: &str = r####"# code-catalogs.yaml.example — the code-catalog family. Copy to
@@ -239,9 +250,22 @@ pub struct Drift {
 /// hand-modified); the others are IO/parse failures.
 #[derive(Debug)]
 pub enum InitError {
-    Io { path: String, error: String },
-    ManifestParse { path: String, error: String },
+    Io {
+        path: String,
+        error: String,
+    },
+    ManifestParse {
+        path: String,
+        error: String,
+    },
     Drift(Vec<Drift>),
+    /// A template path already exists with content the engine did not write
+    /// (#203 F4, round-2 m11): refused rather than hashed as the engine's own
+    /// (which would refuse the NEXT init as drift the adopter never caused) or
+    /// overwritten.
+    TemplateCollision {
+        path: String,
+    },
 }
 
 impl std::fmt::Display for InitError {
@@ -258,6 +282,11 @@ impl std::fmt::Display for InitError {
                     drifts.len()
                 )
             }
+            InitError::TemplateCollision { path } => write!(
+                f,
+                "'{path}' already exists with content the engine did not write; move it \
+                 aside (the engine deploys its own template there), then re-run init"
+            ),
         }
     }
 }
@@ -508,6 +537,13 @@ pub fn init(project_root: &Path) -> Result<InitOutcome, InitError> {
             }
         }
 
+        // Templates (#203 F4, round-2 M5): a manifest that predates them gains
+        // them here — the same idempotent repair as a missing managed file, so
+        // a tree initialized by 0.6.0 receives them on its next init.
+        if deploy_templates(&dir, &mut manifest.managed, &mut created)? {
+            write_manifest(&dir, &manifest)?;
+        }
+
         return if created.is_empty() {
             Ok(InitOutcome::AlreadyInitialized)
         } else {
@@ -518,6 +554,43 @@ pub fn init(project_root: &Path) -> Result<InitOutcome, InitError> {
     // First run: deploy the skeleton, seeds, and a fresh (v2) manifest.
     let created = deploy(&dir)?;
     Ok(InitOutcome::Deployed { created })
+}
+
+/// Deploy every template not yet in the manifest: write it when absent and
+/// list it with its hash. A template that already exists with the engine's
+/// own content is simply adopted; one that exists with FOREIGN content is a
+/// collision, refused by name. Returns whether the manifest changed.
+fn deploy_templates(
+    dir: &Path,
+    managed: &mut Vec<ManagedEntry>,
+    created: &mut Vec<String>,
+) -> Result<bool, InitError> {
+    let mut changed = false;
+    for (name, content) in TEMPLATE_FILES {
+        let p = dir.join(name);
+        let listed = managed.iter().any(|e| e.path == *name);
+        match std::fs::read(&p) {
+            Ok(bytes) if !listed && bytes != content.as_bytes() => {
+                return Err(InitError::TemplateCollision {
+                    path: format!(".mdatron/{name}"),
+                });
+            }
+            Ok(_) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                crate::atomic::write(&p, content.as_bytes()).map_err(|e| io_err(&p, &e))?;
+                created.push(format!(".mdatron/{name}"));
+            }
+            Err(e) => return Err(io_err(&p, &e)),
+        }
+        if !listed {
+            managed.push(ManagedEntry {
+                path: (*name).to_string(),
+                sha256: sha256_hex(content.as_bytes()),
+            });
+            changed = true;
+        }
+    }
+    Ok(changed)
 }
 
 fn deploy(dir: &Path) -> Result<Vec<String>, InitError> {
@@ -547,20 +620,9 @@ fn deploy(dir: &Path) -> Result<Vec<String>, InitError> {
 
     // Templates (#203 F4): deployed as managed files and listed with their
     // hashes — config.yaml stays a seed (#77), and the manifest still DEFINES
-    // the partition (v1 trees' existing entries are honored as data; a tree
-    // whose manifest predates the templates does not gain them on repair).
+    // the partition (v1 trees' existing entries are honored as data).
     let mut managed = Vec::new();
-    for (name, content) in TEMPLATE_FILES {
-        let p = dir.join(name);
-        if !p.exists() {
-            crate::atomic::write(&p, content.as_bytes()).map_err(|e| io_err(&p, &e))?;
-            created.push(format!(".mdatron/{name}"));
-        }
-        managed.push(ManagedEntry {
-            path: (*name).to_string(),
-            sha256: sha256_hex(content.as_bytes()),
-        });
-    }
+    deploy_templates(dir, &mut managed, &mut created)?;
     let manifest = Manifest {
         version: MANIFEST_VERSION,
         managed,

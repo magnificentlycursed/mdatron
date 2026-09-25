@@ -15,8 +15,10 @@ unrouted (`MDATRON-E0030`, if no other route claims them) or governed by some
 other route than the one you wrote. This is the route-table counterpart of
 `MDATRON-W0046` (a dead `file_globs` entry) and `W0043` (a dead scope glob): a
 glob that governs nothing is announced, never silently tolerated. It is
-reported once per dead route, quoting the glob, and only on a whole-tree run —
-an incremental (`--changed`) run sees just part of the tree.
+reported once per dead route, quoting the glob, and only on a whole-tree run
+whose jurisdiction came from `config.yaml` — an incremental (`--changed`) run
+sees just part of the tree, and an ad-hoc `--files` run replaces the
+jurisdiction from the command line, so a route outside that glob is not dead.
 
 ## How to fix
 
