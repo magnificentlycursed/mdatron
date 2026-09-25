@@ -1,6 +1,6 @@
 {
   "next_display_id": 205,
-  "next_comment_id": 559,
+  "next_comment_id": 560,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "03beb708-b15d-4522-950e-3fdaa3a3d16b": 196,
@@ -1260,7 +1260,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-09-24T22:05:25.081803Z",
-      "updated_at": "2026-09-24T22:06:01.759473Z",
+      "updated_at": "2026-09-25T00:00:57.693613Z",
       "comments": {
         "001b2717-0609-4d13-a23d-4d775df7e6ac": {
           "display_id": 549,
@@ -1270,6 +1270,15 @@
           "kind": "decision",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAomOVJCu+Y/qwNI/YhLNnW4Bf4WbrV2HSqPG2JbZNwzRa0eKDnkH/qaCHJqOOn+LpXUH5gZe2LbmKJwBLzJX0Dg=="
+        },
+        "4e2235d7-5744-4165-b4d9-b884fa0f01ba": {
+          "display_id": 559,
+          "author": "79Ig",
+          "content": "Scope update from #204 (2026-09-24): two GH#56 item-6 sub-findings shipped in the ontology lane — 'verify --help carries tracker numbers / lane rationale' (help scrubbed on every subcommand, red gate) and 'marker vs section name the same element two ways' (one ElementClass; id_from/h3-heading/bullet-lead aliased). Item 6's 'element alias for a minor' is therefore done. Remaining for L2b: F2 (routes: [] loud-absence W-code + route glob matching nothing + define 'supplied' + reason 'routes.yaml supplied (0 routes)'), F3 (code_catalog_globs + W0043-style guard + scope stated on README/E0113 + inline-code-spans-are-scanned note), F4 (init inert .example templates + docs inputs topic), F5 (compact-hint extractor v3 + tighter tripwire), F1 (required/optional annotations; gateway consequence at § Routes and repeated at each route-attached family; 'first routes.yaml' recipe), F6 rest (Where-to-go-next enumeration, count operators enumerated in README/E0120/load message, E0114 gloss, roundtrip markers per family example), F7 done at 0.6.0 (Release object) + runbook step in #202, F8 relay template additions.",
+          "created_at": "2026-09-25T00:00:57.667623Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAnjIo2/re1s7Y2X0JNTwibAKZTC5/CV/hHY6UNHsF8GZ4nn0qqK+vdhdPSalOWCmSJkj1J44F9d/JPITm3So/AQ=="
         },
         "953e611c-05b6-4a41-83dc-53eb0aeee976": {
           "display_id": 548,
@@ -8693,8 +8702,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-24T23:59:45.632105Z",
+    "timestamp": "2026-09-25T00:00:57.693613Z",
     "agent_id": "79Ig",
-    "agent_seq": 1123
+    "agent_seq": 1124
   }
 }
