@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1141,
-        "tip_oid": "44c81ac2b3c9392b70098580cada08c91878f720",
-        "prefix_sha256": "117b8004647ccd69edaa01b39f7e605f718d22b1b766ed40e2c10b389ea9de6d"
+        "sequence": 1142,
+        "tip_oid": "9915c4464344620712c94a29650c89e96d3bd5a6",
+        "prefix_sha256": "0c1bd0c8432b4d66962c86c5b31aaa8fa9174b599440545a79daf2c20929d552"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 205,
-  "next_comment_id": 573,
+  "next_comment_id": 574,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "03beb708-b15d-4522-950e-3fdaa3a3d16b": 196,
@@ -1282,7 +1282,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-09-24T22:05:25.081803Z",
-      "updated_at": "2026-09-25T02:38:29.903688Z",
+      "updated_at": "2026-09-25T02:51:09.988536Z",
       "comments": {
         "001b2717-0609-4d13-a23d-4d775df7e6ac": {
           "display_id": 549,
@@ -1337,6 +1337,15 @@
           "kind": "plan",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAYr8fy5AZJ3LNUUJr02JNSj/UPLL3vFxVbfH8n6xOlgZXXOSk6rKD/gKIXtpirR6UiPflyjNFxNsB9d0pdn1sAQ=="
+        },
+        "d196c774-4789-413a-843a-383cd3bfcd2b": {
+          "display_id": 573,
+          "author": "79Ig",
+          "content": "ROUND 2 CLOSURE VERIFICATION (6c196ad): all 8 majors + 5 minors CLOSED and re-verified (M3 and M8 by mutation in a clone: the owner_note struct mutation now fails the key-inventory gate; all three hint bypasses fail the hint tripwire); n14/n16/n17/n18/n19/n20 closed; #15 (YAML findings at line 1) is the standing posture; NEW nits N1 (--- dividers) and N2 (non-atomic collision refusal) + #9 (E0080 hint diagnosis-first). VERDICT: MVR-CANDIDATE. ROUND 3 (see git log) closes #9/N1/N2 with gates. PhaseExited{phase: phase-3, exit_status: implementation-mvr-reached, rounds: 2 + nit closure}. NEXT: operator pushes; PR #59 un-drafted on green; operator merges; #203 closes (--no-changelog).",
+          "created_at": "2026-09-25T02:51:09.918406Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA8ycQaticmpM9ulkXP0LmZmhHMDecGSHubACXtQfNnzNPqC4raF4sdPNvBc+3XITGPXULrdtsZ1RajDjGV32jDg=="
         },
         "e13734f0-3cf2-47c4-90a5-56949dc9603c": {
           "display_id": 571,
