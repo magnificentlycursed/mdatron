@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1146,
-        "tip_oid": "8572c723976221ed67bb1ef19ae3eec9f7528735",
-        "prefix_sha256": "449e1bcbf77fe7eacd9a5809d9f3b857154b7977c8871ac9a8ee7ef0403bb9ff"
+        "sequence": 1147,
+        "tip_oid": "4fa1fd4247991efe70ebc4febcfef3f1a62a3c82",
+        "prefix_sha256": "6078820bcaec9c858b685039f49c01dc6ee5b4738a4babb1670b65aef801a591"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 205,
-  "next_comment_id": 575,
+  "next_comment_id": 576,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "03beb708-b15d-4522-950e-3fdaa3a3d16b": 196,
@@ -3548,7 +3548,18 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-20T01:09:38.927412Z",
-      "updated_at": "2026-09-20T01:09:38.927412Z"
+      "updated_at": "2026-09-25T11:01:52.533895Z",
+      "comments": {
+        "fa48c9c2-4bff-48e1-b08d-91df3e48ad1a": {
+          "display_id": 575,
+          "author": "79Ig",
+          "content": "PLAN (L3 lane, branch feature/189-l3-inversions off origin/main @ 3a00315; one PR for #189/#190/#200/#185-remainder). #189 inversion, code-catalog model mirror direction: (1) Limits gains compact_finding_bytes=512 (diagnostic::COMPACT_FINDING_LIMIT becomes a re-export of SHIPPED) so the compact output cap is a declared limit shipped as data like the rest; (2) limits::render_table(&Limits) renders the operator table (name/value/surface/on-exceedance carried as data next to the values) and limits::render_page(template) splices it between <!-- mdatron-generated --> markers; (3) mdatron docs limits prints render_page(include_str!) so the binary's page can never disagree with its own catalog; (4) the tripwire inverts: docs/limits.md must EQUAL its own rendering (MDATRON_UPDATE_DOCS=1 rewrites it, expect-test style) — the hand-synced value pins go; (5) docs/cost-ledger.md folds into docs/limits.md § Compact per-finding sizes (measured) with a fresh 2026-09-25 measurement row; file deleted; DESIGN's cost-ledger clause repoints (citation #189, #187 addendum ratified 2026-09-20).",
+          "created_at": "2026-09-25T11:01:52.490860Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABANlQYrXPr1qBEwA+Nm/nKVEKeNKZtQTCLEzYCKedByOeyG6QREL27ngHq701maqCAQNi/f/0vby5A8n/GhOHyBA=="
+        }
+      }
     },
     "72e27489-2e30-4b01-9833-62299f42c542": {
       "uuid": "72e27489-2e30-4b01-9833-62299f42c542",
