@@ -47,5 +47,7 @@
   "MDATRON-W0049": "index-source-unreadable",
   "MDATRON-W0050": "comparison-dead-clause",
   "MDATRON-W0051": "require-frontmatter-scope-matches-nothing",
-  "MDATRON-W0052": "inert-pattern-key"
+  "MDATRON-W0052": "inert-pattern-key",
+  "MDATRON-W0053": "route-table-empty",
+  "MDATRON-W0054": "route-glob-matches-nothing"
 }

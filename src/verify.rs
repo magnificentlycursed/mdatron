@@ -571,6 +571,7 @@ fn run_inner(
     use crate::output::{Families, FamilyActivity};
     let schemas_supplied = !schemas.is_empty();
     let route_supplied = routes.is_some();
+    let routes_declared = routes.as_ref().map_or(0, |r| r.declared);
     let pin_supplied = pin_data.is_some();
     let vocab_supplied = vocab.is_some();
     let code_catalog_supplied = catalogs.is_some();
@@ -1031,8 +1032,16 @@ fn run_inner(
     let mut section_cov = 0usize;
     let mut vocab_scoped_hits = 0usize;
     let mut coinage_hits = 0usize;
+    // #203 F2: per route, how many walked files its `files` glob claims — a
+    // route claiming nothing governs nothing (W0054, whole-tree runs only).
+    let mut route_cov: Vec<usize> = vec![0; routes.as_ref().map_or(0, Vec::len)];
     for (_, rel) in &governed {
         if let Some(routes) = &routes {
+            for (i, r) in routes.iter().enumerate() {
+                if r.files.matches_path(rel) {
+                    route_cov[i] += 1;
+                }
+            }
             cite_cov += usize::from(crate::route::citations_enabled(routes, rel));
             link_cov += usize::from(crate::route::links_enabled(routes, rel));
             marker_cov += usize::from(!crate::route::marker_rules_for(routes, rel).is_empty());
@@ -1329,6 +1338,48 @@ fn run_inner(
         });
     }
 
+    // #203 F2 (GH #56): a route whose `files` glob claims no walked file
+    // governs nothing — its governed_by, naming grammar, and every family it
+    // opts in with are inert for the files it meant to claim (W0046's posture
+    // for a dead `file_globs` entry). Whole-tree runs only: an incremental pass
+    // sees part of the tree.
+    if scope.is_none() {
+        if let Some(rs) = &routes {
+            let routes_path = project_root.join(".mdatron").join("routes.yaml");
+            for (i, r) in rs.iter().enumerate() {
+                if route_cov[i] == 0 {
+                    findings.push(Finding {
+                        code: "MDATRON-W0054".into(),
+                        severity: Severity::Warning,
+                        summary: "route-glob-matches-nothing".into(),
+                        message: "a route's files glob claims no walked file, so its \
+                                  governed_by, naming grammar, and every family it opts \
+                                  in with govern nothing — a typo or a stale path leaves \
+                                  the files it meant to claim unrouted or ungoverned"
+                            .into(),
+                        help: Some(
+                            "correct the glob so it claims the files it should govern \
+                             (check it against the paths under file_globs), or remove \
+                             the route if those files are gone"
+                                .into(),
+                        ),
+                        location: Location {
+                            file: routes_path.clone(),
+                            line: 1,
+                            column: 0,
+                        },
+                        explain_ref: Some("MDATRON-W0054".into()),
+                        quoted: vec![QuotedRegion {
+                            platform_variant: false,
+                            label: "glob".into(),
+                            content: r.files.as_str().to_string(),
+                        }],
+                    });
+                }
+            }
+        }
+    }
+
     // Incremental soundness (#102): keep only findings located within the
     // scope. verify_file findings are already scope-local (it ran on scope
     // files only); this filters the location-based whole-run findings (route
@@ -1385,7 +1436,10 @@ fn run_inner(
             FamilyActivity::active(".mdatron/schemas/ supplied; the schema family ran")
         },
         route: if route_supplied {
-            FamilyActivity::active(".mdatron/routes.yaml supplied")
+            // The count makes `routes: []` legible as what it is (#203 F2).
+            FamilyActivity::active(format!(
+                ".mdatron/routes.yaml supplied ({routes_declared} routes)"
+            ))
         } else {
             FamilyActivity::inactive("no .mdatron/routes.yaml")
         },
@@ -5734,6 +5788,70 @@ pattern:
         ] {
             assert_eq!(state_of(a), "active", "{name}: {a:?}");
         }
+    }
+
+    // #203 F2 (GH #56 finding 2): `routes: []` is a supplied table — the closed
+    // world is active and every walked file is E0030 — and the cause is named
+    // once at the table (W0053) with the family reason saying "(0 routes)".
+    #[test]
+    fn empty_route_table_is_loud_and_closed_world() {
+        let proj = TempProject::new("routes-empty");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(".mdatron/config.yaml", "file_globs:\n  - \"**/*.md\"\n");
+        proj.write(".mdatron/routes.yaml", "routes: []\n");
+        proj.write("a.md", "plain\n");
+        proj.write("b.md", "plain\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let (findings, fam, _v, _n) = run(&cfg, None, None).unwrap();
+        assert_eq!(codes_of(&findings, "MDATRON-W0053"), 1, "{findings:?}");
+        assert_eq!(codes_of(&findings, "MDATRON-E0030"), 2, "{findings:?}");
+        let crate::output::FamilyActivity::Active { reason } = &fam.route else {
+            panic!("an empty table is still a supplied table: {:?}", fam.route)
+        };
+        assert!(reason.contains("(0 routes)"), "{reason}");
+    }
+
+    // #203 F2 (GH #56 finding 1's tail): a route whose glob claims no walked
+    // file is announced (W0054, one per dead route, quoting the glob) on a
+    // whole-tree run — never under `--changed`, which sees part of the tree.
+    #[test]
+    fn dead_route_glob_is_loud_on_whole_tree_runs_only() {
+        let proj = TempProject::new("routes-dead-glob");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(".mdatron/config.yaml", "file_globs:\n  - \"**/*.md\"\n");
+        proj.write("GOVERNING.md", "# gov\n");
+        proj.write(
+            ".mdatron/routes.yaml",
+            concat!(
+                "routes:\n- files: \"**/*.md\"\n  governed_by: GOVERNING.md\n",
+                "- files: \"nowhere/**/*.md\"\n  governed_by: GOVERNING.md\n  citations: true\n",
+            ),
+        );
+        proj.write("docs/a.md", "plain\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let (findings, fam, _v, _n) = run(&cfg, None, None).unwrap();
+        let dead: Vec<&Finding> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-W0054")
+            .collect();
+        assert_eq!(dead.len(), 1, "{findings:?}");
+        assert_eq!(dead[0].quoted[0].content, "nowhere/**/*.md");
+        assert!(dead[0]
+            .location
+            .file
+            .to_string_lossy()
+            .ends_with("routes.yaml"));
+        assert_eq!(codes_of(&findings, "MDATRON-E0030"), 0, "{findings:?}");
+        assert_eq!(state_of(&fam.citation), "inert");
+        let (findings, _fam, visited, _n) = run(&cfg, Some(Path::new("docs/a.md")), None).unwrap();
+        assert!(visited.is_some());
+        assert_eq!(codes_of(&findings, "MDATRON-W0054"), 0, "{findings:?}");
     }
 
     // Round-2 M1: coverage is a whole-walk claim. Under `--changed`, a route

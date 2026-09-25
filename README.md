@@ -277,22 +277,42 @@ generic families activate on adopter data under `.mdatron/` — each
 inactive until its data exists, each strict-parsed, every path confined to the
 governed tree:
 
-**Routes** (`routes.yaml`) — the closed-world allowlist:
+**Routes** (`routes.yaml`) — the closed-world allowlist, and the gateway to
+four more families: **the moment `routes.yaml` exists, every walked file must be
+claimed by exactly one route** (`E0030` unclaimed, `E0032` claimed twice; no
+catch-all, no precedence), each route names the `governed_by` document it
+answers to (`E0031` if it cannot be opened), and `citations`, `links`,
+`marker_rules`, and `section_rules` exist only on a route. "Supplied" means the
+file exists — `routes: []` activates the closed world and is announced as
+`W0053`; delete the file to deactivate the family. A route whose glob claims no
+walked file is announced as `W0054`. Required and optional keys:
 
 ```yaml
 routes:
-- files: "docs/adr/**/*.md"
-  governed_by: DESIGN.md
-  naming: "^[0-9]{4}-[a-z0-9-]+\\.md$"                   # optional
-  citations: true                                        # optional, see below
-  links: true                                            # optional, see below
+- files: "docs/adr/**/*.md"                              # required: root-relative glob (`*` crosses `/`)
+  governed_by: DESIGN.md                                 # required: must open inside the governed tree
+  naming: "^[0-9]{4}-[a-z0-9-]+\\.md$"                   # optional: filename grammar (W0041)
+  citations: true                                        # optional: citation family, see below
+  links: true                                            # optional: link family, see below
   link_root: true                                        # optional: resolve /root-relative links (needs links)
+  # marker_rules: [...]                                  # optional: marker family, see below
+  # section_rules: [...]                                 # optional: section family, see below
+```
+
+A first `routes.yaml` for a tree with one governing document — everything
+claimed, nothing opted in yet:
+
+```yaml
+routes:
+- files: "**/*.md"
+  governed_by: README.md
 ```
 
 With routes supplied: an unclaimed walked file blocks (`E0030`), a route
 citing an absent governing document blocks (`E0031`), two routes claiming one
-file is an error (`E0032`), and a filename underivable from the `naming`
-grammar warns (`W0041`).
+file is an error (`E0032`), a filename underivable from the `naming` grammar
+warns (`W0041`), an empty table warns (`W0053`), and a route claiming no walked
+file warns (`W0054`).
 
 **Pins** (`pins.yaml`) — governing documents pin sha256 over governed files:
 
