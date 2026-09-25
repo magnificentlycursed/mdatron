@@ -177,8 +177,25 @@ fn every_design_section_citation_resolves_to_a_heading() {
     files.push(root.join("README.md"));
     files.push(root.join("Cargo.toml"));
     files.extend(walk_files(&root.join(".mdatron"), &["yaml"]));
+    files.extend(walk_files(&root.join(".github"), &["yml", "yaml"]));
     let mut dead = Vec::new();
     let mut seen = 0usize;
+    // DESIGN.md cites its own sections with a bare `§ <Name>` (no document
+    // name), so it gets the bare grammar (round-3 n22).
+    let bare = regex_lite::Regex::new(r#"§\s*([^,;.():`"—\n]+)"#).unwrap();
+    for cap in bare.captures_iter(&design) {
+        seen += 1;
+        let text = cap[1].trim();
+        let resolves = headings.iter().any(|h| {
+            text == h
+                || text
+                    .strip_prefix(h.as_str())
+                    .is_some_and(|rest| rest.starts_with(' '))
+        });
+        if !resolves {
+            dead.push(format!("    DESIGN.md: § {text}"));
+        }
+    }
     for entry in files {
         let content = fs::read_to_string(&entry).unwrap_or_default();
         // Join wrapped comment/prose lines so a citation split across a line
