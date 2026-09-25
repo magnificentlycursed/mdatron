@@ -185,40 +185,89 @@ pub fn lookup_compact(code: &str) -> Option<String> {
     ))
 }
 
-/// The first real sentence of a fix section, tolerant of markdown list
-/// openers and dotted abbreviations (consolidated-review F3).
+/// The compact hint: the first FIX ITEM of a "How to fix" section, rendered as
+/// its bold lead plus the action sentence that follows it (#203 F5, GH #56
+/// finding 5). Through 0.6.0 the hint was the first sentence of the first
+/// paragraph, which on most pages is either a preamble ("Three corrective
+/// paths, listed in order of likelihood:") or a bare diagnosis lead ("The file
+/// should be governed" — shared verbatim by three codes) — the wrong half of
+/// the item for an agent reading `explain --list --compact` into context.
+///
+/// Shape: paragraphs are split on blank lines; a leading paragraph that is a
+/// single sentence ending in `:` is a preamble and skipped; the chosen
+/// paragraph has its list marker stripped; a `**bold lead**` (with or without
+/// its own terminal `.`/`:`) becomes `lead: action-sentence`; otherwise the
+/// paragraph's first sentence is the hint. Sentence ends are a `.` followed by
+/// whitespace or end-of-text, except inside dotted abbreviations (`e.g.`).
 fn first_fix_sentence(fix: &str) -> String {
-    // First PARAGRAPH (lines up to the first blank), joined — a sentence that
-    // spans the page's hard wrap must not truncate mid-phrase (review F8) —
-    // with leading list markers stripped: "1. ", "- ", "* ", and bold markers
-    // stripped throughout (a bold lead-in's closing ** would otherwise ride
-    // along and defeat the sentence-end scan).
-    let paragraph = fix
-        .lines()
-        .map(str::trim)
-        .skip_while(|l| l.is_empty())
-        .take_while(|l| !l.is_empty())
-        .collect::<Vec<_>>()
-        .join(" ")
-        .replace("**", "");
-    let mut s = paragraph.as_str();
+    let paragraphs: Vec<String> = fix
+        .split("\n\n")
+        .map(|para| {
+            para.lines()
+                .map(str::trim)
+                .filter(|l| !l.is_empty())
+                .collect::<Vec<_>>()
+                .join(" ")
+        })
+        .filter(|para| !para.is_empty())
+        .collect();
+    let chosen = paragraphs
+        .iter()
+        .find(|para| {
+            let trimmed = para.trim_end();
+            // A preamble: one sentence, announcing a list. A paragraph that
+            // ends in `:` but carries an earlier full sentence is not.
+            !(trimmed.ends_with(':') && first_sentence(trimmed).len() == trimmed.len())
+        })
+        .or(paragraphs.first())
+        .cloned()
+        .unwrap_or_default();
+    // Strip list markers only — `- `, `* `, `1. ` — never a `**` bold marker,
+    // which the lead detection below needs intact.
+    let mut item = chosen.trim_start();
     loop {
-        let before = s;
-        s = s.trim_start_matches(['-', '*', ' ']).trim_start();
-        if let Some(rest) = s.strip_prefix(|c: char| c.is_ascii_digit()) {
+        let before = item;
+        if let Some(rest) = item.strip_prefix("- ").or_else(|| item.strip_prefix("* ")) {
+            item = rest.trim_start();
+        }
+        if let Some(rest) = item.strip_prefix(|c: char| c.is_ascii_digit()) {
             if let Some(rest) = rest.strip_prefix(". ") {
-                s = rest;
-                continue;
+                item = rest.trim_start();
             }
         }
-        if s == before {
+        if item == before {
             break;
         }
     }
-    let s = s.trim_start();
-    // Sentence end: a '.' followed by whitespace or end-of-line — unless it
-    // is the closing dot of a dotted abbreviation ("e.g.", "i.e."), which the
-    // letter-dot-letter-dot shape identifies (the char two back is a '.').
+    if let Some(rest) = item.strip_prefix("**") {
+        if let Some((raw_lead, action)) = rest.split_once("**") {
+            // A lead that closes with `.`/`:` is a label for the action that
+            // follows ("The literal is wrong." → "The literal is wrong: Use …");
+            // a lead without one is a phrase the action continues ("Pass
+            // `--project-root`" + " with an absolute path" → one sentence).
+            let labelled = raw_lead.trim_end().ends_with(['.', ':']);
+            let lead = raw_lead.trim().trim_end_matches(['.', ':']).trim_end();
+            let action = action.trim_start_matches([':', ' ']).trim();
+            let action = first_sentence(action);
+            if !lead.is_empty() && !action.is_empty() {
+                return if labelled {
+                    format!("{lead}: {action}")
+                } else {
+                    format!("{lead} {action}")
+                };
+            }
+            if !lead.is_empty() {
+                return lead.to_string();
+            }
+        }
+    }
+    first_sentence(&item.replace("**", "")).to_string()
+}
+
+/// The first sentence of `s`: up to a `.` followed by whitespace or the end,
+/// skipping the closing dot of a dotted abbreviation (`e.g.`, `i.e.`) — the
+/// letter-dot-letter-dot shape, identified by the char two back being a `.`.
+fn first_sentence(s: &str) -> &str {
     let bytes = s.as_bytes();
     for (i, &b) in bytes.iter().enumerate() {
         if b != b'.' {
@@ -227,10 +276,10 @@ fn first_fix_sentence(fix: &str) -> String {
         let ends_here = bytes.get(i + 1).is_none_or(|&n| n == b' ' || n == b'\n');
         let abbreviation_tail = i >= 2 && bytes[i - 2] == b'.';
         if ends_here && !abbreviation_tail {
-            return s[..i].trim().to_string();
+            return s[..i].trim();
         }
     }
-    s.trim().to_string()
+    s.trim()
 }
 
 /// Look up + parse the explain page into the structured [`ExplainPage`] form.
@@ -413,6 +462,7 @@ mod tests {
     // and cut mid-abbreviation ("(e.g.") on others.
     #[test]
     fn every_compact_line_carries_a_real_fix_hint() {
+        let mut seen: std::collections::BTreeMap<String, String> = Default::default();
         for (code, _) in catalog().expect("catalog parses") {
             let line =
                 lookup_compact(&code).unwrap_or_else(|| panic!("{code}: compact form renders"));
@@ -428,7 +478,46 @@ mod tests {
                 !hint.starts_with(['-', '*']) && !hint.contains("**"),
                 "{code}: unstripped list/bold marker in hint {hint:?}"
             );
+            // #203 F5 (GH #56 finding 5): a hint is a FIX, not a case label —
+            // never a preamble ending in `:`, never a bare diagnosis lead with no
+            // action after it, never byte-identical to another code's hint.
+            assert!(
+                !hint.trim_end().ends_with(':'),
+                "{code}: the hint is a preamble, not a fix: {hint:?}"
+            );
+            assert!(
+                hint.contains(": ") || hint.split_whitespace().count() >= 6,
+                "{code}: the hint is a bare case label with no action: {hint:?}"
+            );
+            if let Some(other) = seen.insert(hint.to_string(), code.clone()) {
+                panic!("{code} and {other} share the compact hint {hint:?}");
+            }
         }
+    }
+
+    // #203 F5: the item shape — preamble skipped, lead + action rendered.
+    #[test]
+    fn compact_hint_renders_the_first_fix_item_not_its_preamble() {
+        let fix = "Three corrective paths, listed in order of likelihood:\n\n\
+                   1. **The literal is wrong.** Use a literal of the field's declared type. More.\n\
+                   2. **The field is wrong.** Reference another field.\n";
+        assert_eq!(
+            first_fix_sentence(fix),
+            "The literal is wrong: Use a literal of the field's declared type"
+        );
+        // A first paragraph that carries an action sentence before its colon is
+        // not a preamble.
+        let fix = "Open the file at the reported line. Common shapes:\n\n- **A.** B.";
+        assert_eq!(
+            first_fix_sentence(fix),
+            "Open the file at the reported line"
+        );
+        // No lead: the first sentence, abbreviation-safe.
+        let fix = "Rewrite it relative to the root (e.g. `x/y`). Then re-run.";
+        assert_eq!(
+            first_fix_sentence(fix),
+            "Rewrite it relative to the root (e.g. `x/y`)"
+        );
     }
 
     use super::*;

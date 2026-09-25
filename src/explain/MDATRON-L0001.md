@@ -25,10 +25,10 @@ instead.
 
 ## How to fix
 
-Nothing is broken. If the weakening should end, restore the governance — re-pin
-the file (`mdatron pin --update` after listing it under `pins:`), or move the
-file back into the managed partition — and delete the tombstone in the same
-reviewed commit. If the tombstone is wrong, correct it; commit review is the
+Nothing needs fixing: if the weakening should end, restore the governance —
+re-pin the file (`mdatron pin --update` after listing it under `pins:`), or
+move the file back into the managed partition — and delete the tombstone in
+the same reviewed commit. If the tombstone is wrong, correct it; commit review is the
 anchor.
 
 ## Related codes
