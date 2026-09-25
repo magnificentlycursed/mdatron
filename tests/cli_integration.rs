@@ -443,7 +443,11 @@ fn init_templates_load_and_match_the_inputs_reference() {
         "{}",
         String::from_utf8_lossy(&out.stderr)
     );
-    let inputs = fs::read_to_string(mdatron_repo_root().join("docs/inputs.md")).unwrap();
+    // A Windows checkout may carry CRLF (git autocrlf); the section and
+    // `Keys:` anchors below are LF-shaped, so normalise first.
+    let inputs = fs::read_to_string(mdatron_repo_root().join("docs/inputs.md"))
+        .unwrap()
+        .replace("\r\n", "\n");
     let keys_listed = |section: &str| -> std::collections::BTreeSet<String> {
         let start = inputs
             .find(&format!("\n## {section}\n"))
