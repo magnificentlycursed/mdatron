@@ -1,6 +1,6 @@
 {
   "next_display_id": 205,
-  "next_comment_id": 561,
+  "next_comment_id": 562,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "03beb708-b15d-4522-950e-3fdaa3a3d16b": 196,
@@ -1887,7 +1887,7 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-07-21T03:53:35.156084Z",
-      "updated_at": "2026-09-24T22:58:26.245060Z",
+      "updated_at": "2026-09-25T00:19:07.684123Z",
       "labels": [
         "security"
       ],
@@ -1895,6 +1895,15 @@
         "bc81359e-bf75-45ec-896a-418745373491"
       ],
       "comments": {
+        "1b9fdfe0-aa9d-4ede-9851-129fc2a5cb33": {
+          "display_id": 561,
+          "author": "79Ig",
+          "content": "Merge of origin/main (L1) into feature/64 committed as 4b29b7f (one semantic conflict: both lanes added an identical canonical_project_root helper; kept once) and pushed by the operator; PR #57 conflict cleared, CI (incl. windows-latest, the runtime proof) now running. Un-draft when green + MVR.",
+          "created_at": "2026-09-25T00:19:07.666034Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAptKHL9sgjjxgwhvcAeO8CqHUoMO9jPeLgUqoqcBWPSh1iAONzed0Wo2N1AvEPbXnQ/bq8H/J0ALb+21eA4eaDQ=="
+        },
         "24916ad9-06d0-486a-b874-d508312326fb": {
           "display_id": 455,
           "author": "79Ig",
@@ -8711,8 +8720,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-25T00:01:46.352939Z",
+    "timestamp": "2026-09-25T00:19:07.684123Z",
     "agent_id": "79Ig",
-    "agent_seq": 1125
+    "agent_seq": 1126
   }
 }
