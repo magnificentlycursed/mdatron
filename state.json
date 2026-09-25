@@ -1,6 +1,6 @@
 {
   "next_display_id": 205,
-  "next_comment_id": 563,
+  "next_comment_id": 564,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "03beb708-b15d-4522-950e-3fdaa3a3d16b": 196,
@@ -2401,7 +2401,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-24T22:16:23.986226Z",
-      "updated_at": "2026-09-24T23:59:45.632105Z",
+      "updated_at": "2026-09-25T00:26:52.390436Z",
       "comments": {
         "32b24c0a-b1fc-4ed6-b325-2cac42c8d522": {
           "display_id": 557,
@@ -2438,6 +2438,15 @@
           "kind": "plan",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA4KGGiXiySRV5LAYjjRyWhLkBgFdJ+sjZ1QmI6XCDWIO4qRUZjpO7FGKZAMPBZAWkPLTB9nqlXzLTFbIt9TYxCg=="
+        },
+        "93866c21-d3b3-40c8-87ea-890c709caaa6": {
+          "display_id": 563,
+          "author": "79Ig",
+          "content": "COLD REVIEW ROUND 1 (feature/204-ontology @ 1f9f2a8): NOT MVR — 7 major / 8 minor / 6 nit, all verified by the reviewer against the built binary with /tmp fixtures; no hallucinated findings. Dispositions (all RESOLVED-PENDING in round 2): M1 inert is false under --changed (hits counted inside the scope-filtered walk) -> route-attached + vocabulary coverage computed over the FULL governed walk before the scope filter (scope-independent, the claim actually made); content-dependent signals (rule_dsl, schema) gated on scope.is_none() with an honest incremental reason. M2 manifest.yaml parses leniently (demotedd: erases every tombstone, still attested in inputs) -> deny_unknown_fields on Manifest/ManagedEntry/DemotionTombstone + ledger strict list + red test. M3 section rules no longer see the span's own heading: undocumented for disjoint, untested, one direction fail-open -> both halves documented (CHANGELOG, E0121, README) + red test on extract_ids offset 0. M4 E0012 migration note false (no E0012 carries the field label) -> note deleted, CHANGELOG narrowed to E0010/E0011. M5 E0092 exact-case whole-word: DESIGN:17 'pin manifests' undetected -> fixed + plural/capital variants reserved + matcher exactness stated. M6 § citation sweep incomplete (wrapped citations; § Output / § Init phantoms; init.rs:1 spelling) -> multiline sweep + a contract test resolving every DESIGN § citation in src/docs/README against DESIGN headings. M7 DESIGN Terms claims inert for every family; schema/code_catalog lack it -> schema inert implemented (no walked file declares a served schema_class); DESIGN sentence narrowed (code_catalog gains it with its scope glob in L2b). m8 summary<->catalog tripwire; m9 W0052 on key presence (phases: [] / location: ~); m10 W0052 phases anchored at the pattern file even with rules: []; m11 --file-globs ledger/CHANGELOG wording; m12 schema prose version dropped; m13 demoted[].path confined; m14 E0080.md MAX_EXPR_DEPTH; m15 E0002/W0041 copy; n16-n21 as listed. Round 2 then closure verification by the same reviewer.",
+          "created_at": "2026-09-25T00:26:52.377869Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAt9OYRIXzvDOf1udt0Ry8VP8Mt1biIFtHZ6CrYGbs3J4y2W+Hexn91kB14C/4cPMqV0qOiIEWDiuPFsUPAe1UBQ=="
         },
         "a824c11e-3aaa-4a8f-be80-7e10f582b50e": {
           "display_id": 552,
@@ -8729,8 +8738,8 @@
   },
   "next_milestone_id": 3,
   "watermark": {
-    "timestamp": "2026-09-25T00:22:28.246100Z",
+    "timestamp": "2026-09-25T00:26:52.390436Z",
     "agent_id": "79Ig",
-    "agent_seq": 1127
+    "agent_seq": 1128
   }
 }
