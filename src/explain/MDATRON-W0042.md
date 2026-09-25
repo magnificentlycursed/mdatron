@@ -8,7 +8,7 @@
 
 An `unpinned:` entry in `.mdatron/pins.yaml` carries no justification. Changes
 that weaken governance carry an annotated justification that one search
-enumerates (`DESIGN.md` § Validation is data-driven (governance data is governed)) — a weakening that
+enumerates (`DESIGN.md` § Validation is data-driven, governance data is governed) — a weakening that
 cannot say why it stands, or who stands behind it, is not a tombstone; it is
 an erasure. The `owner` field is unauthenticated by construction; the
 operative control is commit review cross-checking the annotation against

@@ -30,8 +30,8 @@ after the original was archived.
 
 - **License:** MIT OR Apache-2.0; compatible.
 - **Threat model:** parses untrusted adopter YAML (a trust boundary). Alias and
-  nesting-depth bounds are a declared hook-time limit (DESIGN § Verification is
-  fast); malformed input yields a diagnostic, never a panic.
+  nesting-depth bounds are a declared hook-time limit (DESIGN § Verification is fast
+  where it is invoked); malformed input yields a diagnostic, never a panic.
 
 ## Approval
 

@@ -490,7 +490,8 @@ of a `- ` list item). A `disjoint` rule extracts an id (the `id_pattern`'s first
 capture) from each section's declared element and asserts the two sets share
 none; an overlap is `E0121`. Ids come **only** from the declared element (an `h3`
 heading's text, or a `list-item-bold-name` bullet's bold name), never
-surrounding prose — so a body mention of an id doesn't cause a false overlap. A `section` spec that matches no heading in the
+surrounding prose and never the section's own heading line — so a body mention
+of an id doesn't cause a false overlap. A `section` spec that matches no heading in the
 document blocks (`E0122`, section-not-found; matching is exact on level and
 text) instead of silently passing, and the assertion is not evaluated; when a
 heading occurs more than once, the rule evaluates over **all** matching spans

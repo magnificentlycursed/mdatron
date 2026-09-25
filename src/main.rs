@@ -869,11 +869,15 @@ fn pipeline_error_finding(e: &VerifyError, roots: &[&Path]) -> Finding {
         VerifyError::Frontmatter { .. } => "a file's frontmatter failed to parse",
         VerifyError::BoundExceeded { .. } => "a declared resource bound was exceeded",
     };
+    // The TTY/compact render of a pipeline failure carries the catalog headline
+    // as its summary like every other finding (#204 round-2 m8: the new
+    // summary<->catalog tripwire caught this one prose summary); the failure
+    // sense rides in the message.
     Finding {
         code: "MDATRON-E0080".into(),
         severity: Severity::Error,
-        summary: "verify pipeline failed".into(),
-        message: kind.into(),
+        summary: "pipeline-orchestration-failure".into(),
+        message: format!("verify pipeline failed: {kind}"),
         help: None,
         location: Location {
             file: std::path::PathBuf::new(),

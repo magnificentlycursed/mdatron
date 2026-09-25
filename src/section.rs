@@ -572,6 +572,33 @@ mod tests {
         );
     }
 
+    // Round-2 M3: an operand's own section heading is the container, never an
+    // id source — `element: heading` on a `## Slice 9 group` operand must not
+    // collect `9`.
+    #[test]
+    fn extract_ids_never_reads_the_operands_own_heading() {
+        let body = "## Slice 9 group\n### Slice 1\n- **Slice 2.** x\n";
+        let span = section_span(body, "## Slice 9 group").unwrap();
+        let mk = |element| Operand {
+            section: "## Slice 9 group".into(),
+            element,
+            id_pattern: rx(r"Slice (\d+)"),
+        };
+        assert_eq!(
+            extract_ids(span, &mk(ElementClass::Heading)),
+            HashSet::from(["1".to_string()])
+        );
+        assert_eq!(
+            extract_ids(span, &mk(ElementClass::H2)),
+            HashSet::new(),
+            "the span's own h2 is not an element inside it"
+        );
+        assert_eq!(
+            extract_ids(span, &mk(ElementClass::ListItemBoldName)),
+            HashSet::from(["2".to_string()])
+        );
+    }
+
     #[test]
     fn counts_matching_headings_in_span() {
         let body = "## Requirements\n\n### Phase 2: Slice 2 (sequential)\ntext\n### Phase 3: Slice 4 (sequential)\n\n## Other\n### Phase 9: nope (sequential)\n";

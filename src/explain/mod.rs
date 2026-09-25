@@ -324,7 +324,8 @@ pub const MIGRATION_NOTES: &[(&str, &str)] = &[
          file_globs walk said `governed-path-absolute`, and the family \
          surfaces said `absolute-path-refused`. The meaning is unchanged. \
          Fingerprints of the walk-site shape turned over once, and on the \
-         pins.yaml surface the quoted label `governing` became `governed_by`.",
+         pins.yaml surface (where the quoted label is the pin field's name) \
+         `governing` became `governed_by`.",
     ),
     (
         "MDATRON-E0011",
@@ -336,14 +337,6 @@ pub const MIGRATION_NOTES: &[(&str, &str)] = &[
          unchanged. Fingerprints of the walk-site shape turned over once, and \
          on the pins.yaml surface the quoted label `governing` became \
          `governed_by`.",
-    ),
-    (
-        "MDATRON-E0012",
-        "0.7.0 renamed the pins.yaml surface's quoted-region label `governing` \
-         to `governed_by`, so E0012 fingerprints raised from a pin record \
-         turned over once; the headline `symlinked-component-refused` and the \
-         meaning are unchanged. (`key-source-symlink-refused`, named in older \
-         engine comments, was never an emitted headline.)",
     ),
     (
         "MDATRON-W0045",

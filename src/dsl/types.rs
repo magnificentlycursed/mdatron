@@ -30,7 +30,7 @@ pub struct Pattern {
     /// read — no phase selector exists. Announced at load as `MDATRON-W0052`;
     /// retired at DSL v2.
     #[serde(default)]
-    pub phases: Vec<String>,
+    pub phases: Option<Vec<String>>,
     #[serde(default)]
     pub keys: Vec<KeyDecl>,
     pub rules: Vec<Rule>,
@@ -71,8 +71,18 @@ pub struct Rule {
     /// Deprecated, inert (#204 R2): parsed for DSL-v1 compatibility, never
     /// consumed — finding locations are the whole artifact. Announced at load
     /// as `MDATRON-W0052`; retired at DSL v2.
-    #[serde(default)]
-    pub location: Option<LocationSpec>,
+    #[serde(default, deserialize_with = "deserialize_present")]
+    pub location: Option<Option<LocationSpec>>,
+}
+
+/// `Some(inner)` when the key is PRESENT (even as `~`/null), `None` (the
+/// default) when absent — so an inert key can be announced on presence.
+fn deserialize_present<'de, D, T>(deserializer: D) -> Result<Option<Option<T>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    Option::<T>::deserialize(deserializer).map(Some)
 }
 
 /// Deserialize a YAML mapping of let-bindings preserving document order

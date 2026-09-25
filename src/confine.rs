@@ -1,7 +1,7 @@
 //! Path confinement: component-wise resolution and validated no-follow opens
 //! under a governed root.
 //!
-//! Implements the family-wide confinement discipline of `DESIGN.md` § Five
+//! Implements the family-wide confinement discipline of `DESIGN.md` § Nine
 //! check families: adopter-supplied paths resolve inside the governed tree,
 //! with parent-directory, absolute-path, and symlink escapes rejected —
 //! including paths whose targets do not exist. Two layers:

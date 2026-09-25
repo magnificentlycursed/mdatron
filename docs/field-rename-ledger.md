@@ -4,7 +4,7 @@ Renaming a field on one of mdatron's input contracts breaks adopters who use the
 old name — but the *shape* of the breakage differs by parse mode:
 
 - **Strict** (`deny_unknown_fields`): `routes.yaml`, `vocabulary.yaml`,
-  `pins.yaml`, `code-catalogs.yaml`. An adopter file that still uses the old field
+  `pins.yaml`, `code-catalogs.yaml`, and the engine-written `manifest.yaml`. An adopter file that still uses the old field
   name fails to parse with a **loud** unknown-field error.
 - **Lenient** (`.mdatron/config.yaml` / `ProjectConfig`): unknown fields are
   tolerated (#80, decision 1). A rename here is *worse* — the old key is **silently
@@ -45,4 +45,4 @@ Format: `old-name → new-name` | input file | aliased since | alias removable i
 | `governing` → `governed_by` (`pins[]` and `unpinned[]`; `pin --update` rewrites) | `pins.yaml` | 0.7.0 | format v2 |
 | `register` → `guidance` (`anti_patterns[]`) | `vocabulary.yaml` | 0.7.0 | format v2 |
 | `mdatron schema` → `mdatron envelope-schema` (subcommand; `schema` stays a visible alias) | CLI | 0.7.0 | — (CLI aliases are free) |
-| `--files` → `--file-globs` (`--files` stays a visible alias) | CLI | 0.7.0 | — (CLI aliases are free) |
+| `--file-globs` added as a visible alias of `--files` (`--files` stays primary) | CLI | 0.7.0 | — (CLI aliases are free) |

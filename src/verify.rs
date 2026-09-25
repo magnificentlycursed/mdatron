@@ -166,14 +166,14 @@ pub enum VerifyError {
     Frontmatter { path: String, error: String },
 
     // A declared hook-time resource bound was exceeded (#124, roast SHO1). Loud
-    // by design (DESIGN § Verification is fast where invoked: "exceeding a bound
+    // by design (DESIGN § Verification is fast where it is invoked: "exceeding a bound
     // is itself a diagnostic — no silent degradation").
     #[error("resource bound exceeded ({bound}): {detail}")]
     BoundExceeded { bound: String, detail: String },
 }
 
 /// Declared hook-time resource limits (#124). Shipped as constants (the "declared
-/// limits" of DESIGN § Verification is fast where invoked). Generous for real
+/// limits" of DESIGN § Verification is fast where it is invoked). Generous for real
 /// governed markdown; a hostile oversized or deeply-nested input trips a loud
 /// `BoundExceeded` (pipeline_error kind `bound_exceeded`) instead of exhausting
 /// CPU/memory silently.
@@ -410,7 +410,8 @@ fn run_inner(
     // deliberate opt-out, not drift, so only true absence is flagged.
     let schemas_dir_missing = !config.schemas_dir.is_dir();
     let (schemas, schemas_digest) = load_schemas(&config.schemas_dir)?;
-    let (patterns, rule_locations, patterns_digest) = load_patterns(&config.patterns_dir)?;
+    let (patterns, rule_locations, pattern_paths, patterns_digest) =
+        load_patterns(&config.patterns_dir)?;
     // #176 input lineage: one aggregate digest per input directory (sorted
     // names + per-file content digests), keyed only when the dir held files.
     if let Some(d) = schemas_digest {
@@ -430,7 +431,7 @@ fn run_inner(
             error: e.to_string(),
         })?;
 
-    // Concurrent VERIFY-invocation bound (#92 D / DESIGN § hook-time cost;
+    // Concurrent VERIFY-invocation bound (#92 D / DESIGN § Verification is fast where it is invoked, hook-time cost;
     // the standalone `pin` command is outside the count — docs/limits.md
     // scopes this honestly): hold one of the declared per-user, per-root
     // slots for the run's duration, or report the bound — never pile
@@ -609,6 +610,7 @@ fn run_inner(
         &config.patterns_dir,
         &patterns,
         &rule_locations,
+        &pattern_paths,
         &mut findings,
     );
 
@@ -1013,16 +1015,38 @@ fn run_inner(
     // only — W0043 is `.mdatron/`-located (never in an incremental scope) and
     // the incremental walk sees only part of the tree.
     let vocab_scoped = vocab.is_some() && !vocab_globs.is_empty();
+    // #204 R5 (round-2 M1): per route-attached family, how many WALKED files a
+    // route's opt-in reaches — an opt-in that claims no walked file is `inert`,
+    // not `active`. The claim is about the whole walk, so it is measured over
+    // `governed` BEFORE the scope filter: an incremental pass sees part of the
+    // tree, and "matched nothing" there is expected, exactly as W0046/W0043
+    // already reason. The same holds for the register's scope hits.
+    let mut cite_cov = 0usize;
+    let mut link_cov = 0usize;
+    let mut marker_cov = 0usize;
+    let mut section_cov = 0usize;
     let mut vocab_scoped_hits = 0usize;
     let mut coinage_hits = 0usize;
-    // #204 R5: per route-attached family, how many walked files a route's
-    // opt-in actually reached — an opt-in that claims no walked file is
-    // `inert`, not `active` (the tri-state's audit claim was one family deep).
-    let mut cite_hits = 0usize;
-    let mut link_hits = 0usize;
-    let mut marker_hits = 0usize;
-    let mut section_hits = 0usize;
+    for (_, rel) in &governed {
+        if let Some(routes) = &routes {
+            cite_cov += usize::from(crate::route::citations_enabled(routes, rel));
+            link_cov += usize::from(crate::route::links_enabled(routes, rel));
+            marker_cov += usize::from(!crate::route::marker_rules_for(routes, rel).is_empty());
+            section_cov += usize::from(!crate::route::section_rules_for(routes, rel).is_empty());
+        }
+        let vocab_enabled = vocab_globs.is_empty() || vocab_globs.matches_any(rel);
+        if vocab_scoped && vocab_enabled {
+            vocab_scoped_hits += 1;
+        }
+        if vocab_enabled && !coinage_globs.is_empty() && coinage_globs.matches_any(rel) {
+            coinage_hits += 1;
+        }
+    }
+    // Content-dependent signals (a rule context matched; a schema served a
+    // declared class) can only be known for files this pass READ, so under an
+    // incremental scope they do not decide `inert` (see the families block).
     let mut rule_context_hits = 0usize;
+    let mut schema_bound_hits = 0usize;
     let mut files_checked: u32 = 0;
     // #110: does any walked file declare a schema_class that routed to neither a
     // schema nor a rule context? With the schemas dir missing entirely, that is
@@ -1055,21 +1079,10 @@ fn run_inner(
             marker_rules = crate::route::marker_rules_for(routes, rel);
             section_rules = crate::route::section_rules_for(routes, rel);
         }
-        cite_hits += usize::from(cite_enabled);
-        link_hits += usize::from(link_enabled);
-        marker_hits += usize::from(!marker_rules.is_empty());
-        section_hits += usize::from(!section_rules.is_empty());
-        // Vocabulary scope (#97): empty globs = every walked file.
+        // Vocabulary scope (#97): empty globs = every walked file. Coinage
+        // applies inside `coinage_globs` (empty = wherever the register applies).
         let vocab_enabled = vocab_globs.is_empty() || vocab_globs.matches_any(rel);
-        if vocab_scoped && vocab_enabled {
-            vocab_scoped_hits += 1;
-        }
-        // Coinage applies inside `coinage_globs` (empty = wherever the register
-        // applies); counted so a coinage scope that reaches nothing is loud.
         let vocab_coinage = coinage_globs.is_empty() || coinage_globs.matches_any(rel);
-        if vocab_enabled && !coinage_globs.is_empty() && vocab_coinage {
-            coinage_hits += 1;
-        }
         // Read from the immutable snapshot, never the filesystem (#103). A
         // symlinked file was refused at capture (its E0012 is recorded); a
         // captured-but-unreadable body (non-UTF8, or a read failure past the
@@ -1127,6 +1140,7 @@ fn run_inner(
         )?;
         any_unvalidated_schema_class |= verdict.unvalidated_schema_class;
         rule_context_hits += usize::from(verdict.rule_context_matched);
+        schema_bound_hits += usize::from(verdict.schema_bound);
         // A validated file (#105): the audit signal counts files the per-file
         // checks actually ran on, not files that produced findings.
         files_checked += 1;
@@ -1353,10 +1367,18 @@ fn run_inner(
     // walked file this pass (#204 R5 — every route-attached family now
     // distinguishes it, not only vocabulary).
     let families = Families {
-        schema: if schemas_supplied {
-            FamilyActivity::active(".mdatron/schemas/ supplied; the schema family ran")
-        } else {
+        schema: if !schemas_supplied {
             FamilyActivity::inactive("no schema files in .mdatron/schemas/")
+        } else if scope.is_some() {
+            FamilyActivity::active(
+                ".mdatron/schemas/ supplied; the schema family ran over the incremental scope",
+            )
+        } else if schema_bound_hits == 0 {
+            FamilyActivity::inert(
+                ".mdatron/schemas/ supplied but no walked file declares a schema_class it serves",
+            )
+        } else {
+            FamilyActivity::active(".mdatron/schemas/ supplied; the schema family ran")
         },
         route: if route_supplied {
             FamilyActivity::active(".mdatron/routes.yaml supplied")
@@ -1381,21 +1403,21 @@ fn run_inner(
         },
         citation: if !citation_supplied {
             FamilyActivity::inactive("no route opts in with citations: true")
-        } else if cite_hits == 0 {
+        } else if cite_cov == 0 {
             FamilyActivity::inert("a route opts in with citations: true but claims no walked file")
         } else {
             FamilyActivity::active("a route opts in with citations: true")
         },
         link: if !link_supplied {
             FamilyActivity::inactive("no route opts in with links: true")
-        } else if link_hits == 0 {
+        } else if link_cov == 0 {
             FamilyActivity::inert("a route opts in with links: true but claims no walked file")
         } else {
             FamilyActivity::active("a route opts in with links: true")
         },
         marker: if !marker_supplied {
             FamilyActivity::inactive("no route supplies marker_rules")
-        } else if marker_hits == 0 {
+        } else if marker_cov == 0 {
             FamilyActivity::inert("a route supplies marker_rules but claims no walked file")
         } else {
             FamilyActivity::active("a route supplies marker_rules")
@@ -1407,13 +1429,17 @@ fn run_inner(
         },
         section: if !section_supplied {
             FamilyActivity::inactive("no route supplies section_rules")
-        } else if section_hits == 0 {
+        } else if section_cov == 0 {
             FamilyActivity::inert("a route supplies section_rules but claims no walked file")
         } else {
             FamilyActivity::active("a route supplies section_rules")
         },
         rule_dsl: if !patterns_supplied {
             FamilyActivity::inactive("no pattern files in .mdatron/patterns/")
+        } else if scope.is_some() {
+            FamilyActivity::active(
+                ".mdatron/patterns/ supplied; rules ran over the incremental scope",
+            )
         } else if rule_context_hits == 0 {
             FamilyActivity::inert(
                 ".mdatron/patterns/ supplied but no rule's context matched a walked file",
@@ -1736,14 +1762,24 @@ fn aggregate_digest(mut entries: Vec<(String, String)>) -> Option<String> {
 /// pinpoint it.
 type RuleLocations = Vec<Vec<Location>>;
 
-fn load_patterns(
-    dir: &Path,
-) -> Result<(Vec<PatternFile>, RuleLocations, Option<String>), VerifyError> {
+type LoadedPatterns = (
+    Vec<PatternFile>,
+    RuleLocations,
+    Vec<PathBuf>,
+    Option<String>,
+);
+
+/// Returns the pattern files, their per-rule locations, each file's own path
+/// (parallel to `patterns`, so a pattern-level finding can anchor at its file
+/// even when the file declares no rules — #204 round-2 m10), and the
+/// directory's aggregate digest.
+fn load_patterns(dir: &Path) -> Result<LoadedPatterns, VerifyError> {
     let mut out = Vec::new();
     let mut locations: RuleLocations = Vec::new();
+    let mut paths: Vec<PathBuf> = Vec::new();
     let mut digests: Vec<(String, String)> = Vec::new();
     if !dir.is_dir() {
-        return Ok((out, locations, None));
+        return Ok((out, locations, paths, None));
     }
     for entry in std::fs::read_dir(dir).map_err(|e| VerifyError::Io {
         path: dir.to_string_lossy().into_owned(),
@@ -1783,6 +1819,7 @@ fn load_patterns(
             error: e.to_string(),
         })?;
         locations.push(resolve_file_rule_locations(&content, &path, &pf));
+        paths.push(path.clone());
         let name = path
             .file_name()
             .map(|n| n.to_string_lossy().into_owned())
@@ -1790,7 +1827,7 @@ fn load_patterns(
         digests.push((name, crate::init::sha256_hex(content.as_bytes())));
         out.push(pf);
     }
-    Ok((out, locations, aggregate_digest(digests)))
+    Ok((out, locations, paths, aggregate_digest(digests)))
 }
 
 /// Resolve one [`Location`] per rule in `pf`, positionally aligned to
@@ -1941,20 +1978,21 @@ fn inert_pattern_key_findings(
     patterns_dir: &Path,
     patterns: &[PatternFile],
     rule_locations: &RuleLocations,
+    pattern_paths: &[PathBuf],
     findings: &mut Vec<Finding>,
 ) {
     let empty: Vec<Location> = Vec::new();
     for (file_idx, pf) in patterns.iter().enumerate() {
         let rule_locs = rule_locations.get(file_idx).unwrap_or(&empty);
-        let file_location = || {
-            rule_locs
-                .first()
-                .map(|l| Location {
-                    file: l.file.clone(),
-                    line: 1,
-                    column: 0,
-                })
-                .unwrap_or_else(|| Location::whole_file(patterns_dir))
+        // The pattern file itself, line 1 (m10: never the directory — a file
+        // with `rules: []` has no rule location to borrow from).
+        let file_location = || Location {
+            file: pattern_paths
+                .get(file_idx)
+                .cloned()
+                .unwrap_or_else(|| patterns_dir.to_path_buf()),
+            line: 1,
+            column: 0,
         };
         let inert = |key: &str, at: Location, what: &str| Finding {
             code: "MDATRON-W0052".into(),
@@ -1973,7 +2011,9 @@ fn inert_pattern_key_findings(
                 content: pf.pattern.id.clone(),
             }],
         };
-        if !pf.pattern.phases.is_empty() {
+        // Key PRESENCE, not value presence (m9): `phases: []` and
+        // `location: ~` are the same silent tolerance the warning ends.
+        if pf.pattern.phases.is_some() {
             findings.push(inert(
                 "phases",
                 file_location(),
@@ -2826,6 +2866,7 @@ fn verify_file(
     Ok(FileVerdict {
         unvalidated_schema_class,
         rule_context_matched: any_context_matched,
+        schema_bound: schema_matched,
     })
 }
 
@@ -2837,6 +2878,9 @@ struct FileVerdict {
     /// At least one pattern rule's `context` matched this file (feeds the
     /// `rule_dsl` activity: active vs inert).
     rule_context_matched: bool,
+    /// The file's declared `schema_class` was served by a schema (feeds the
+    /// schema family's activity: active vs inert).
+    schema_bound: bool,
 }
 
 impl FileVerdict {
@@ -2844,6 +2888,7 @@ impl FileVerdict {
     const NONE: Self = Self {
         unvalidated_schema_class: false,
         rule_context_matched: false,
+        schema_bound: false,
     };
 }
 
@@ -4059,7 +4104,7 @@ mod tests {
         }
     }
 
-    // RED GATE (#84, DESIGN §Validation is data-driven): a standing tombstoned
+    // RED GATE (#84, DESIGN § Validation is data-driven): a standing tombstoned
     // weakening (unpinned entry with justification) emits its informational
     // lint on every whole-tree run (L0001); an UNJUSTIFIED weakening is
     // flagged louder (W0042).
@@ -5529,6 +5574,49 @@ pattern:
         let cfg = VerifyConfig::from_project(&clean.0).unwrap();
         let (findings, _fam, _v, _n) = run(&cfg, None, None).unwrap();
         assert_eq!(codes_of(&findings, "MDATRON-W0052"), 0, "{findings:?}");
+
+        // Round-2 m9/m10: an EMPTY `phases: []` and a null `location: ~` are
+        // still the keys being present; and a pattern with `rules: []`
+        // anchors its warning at its own file, never at the directory.
+        let empty = TempProject::new("inert-keys-empty");
+        empty.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        empty.write(".mdatron/config.yaml", "file_globs:\n  - \"**/*.md\"\n");
+        empty.write(
+            ".mdatron/patterns/norules.yaml",
+            "pattern:\n  id: norules\n  phases: []\n  rules: []\n",
+        );
+        empty.write(
+            ".mdatron/patterns/nullloc.yaml",
+            "pattern:\n  id: nullloc\n  rules:\n    - id: r\n      context: phase-primer\n      assert: count($self.relevant_domains) == 1\n      code: T-E0001\n      message: m\n      location: ~\n",
+        );
+        empty.write(
+            "doc.md",
+            "---\nschema_class: phase-primer\nphase: phase-1a\nrelevant_domains: [se]\n---\nbody\n",
+        );
+        let cfg = VerifyConfig::from_project(&empty.0).unwrap();
+        let (findings, _fam, _v, _n) = run(&cfg, None, None).unwrap();
+        let inert: Vec<&Finding> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-W0052")
+            .collect();
+        assert_eq!(inert.len(), 2, "{findings:?}");
+        let phases = inert
+            .iter()
+            .find(|f| f.message.contains("`phases`"))
+            .expect("an empty phases list is still the key");
+        assert!(
+            phases
+                .location
+                .file
+                .to_string_lossy()
+                .ends_with("norules.yaml")
+                && phases.location.line == 1,
+            "anchored at the pattern file, not the directory: {phases:?}"
+        );
+        assert!(inert.iter().any(|f| f.message.contains("`location`")));
     }
 
     // #204 R6 (envelope 3.1.0): the rule-DSL lane reports its own tri-state —
@@ -5641,7 +5729,80 @@ pattern:
         }
     }
 
-    // #204 R3 (DESIGN § Validation is data-driven (governance data is governed), acceptance criterion): a
+    // Round-2 M1: coverage is a whole-walk claim. Under `--changed`, a route
+    // whose claimed file is simply out of scope must NOT flip the family to
+    // `inert`; the content-dependent lanes (schema, rule DSL) say they ran
+    // over the incremental scope instead of guessing.
+    #[test]
+    fn incremental_runs_never_report_a_false_inert() {
+        let proj = TempProject::new("inert-incremental");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(".mdatron/config.yaml", "file_globs:\n  - \"**/*.md\"\n");
+        proj.write("GOVERNING.md", "# gov\n## A\n### One\n");
+        proj.write(
+            ".mdatron/routes.yaml",
+            concat!(
+                "routes:\n- files: \"docs/**/*.md\"\n  governed_by: GOVERNING.md\n  citations: true\n  links: true\n",
+                "  marker_rules:\n    - pattern: '^P: (.+)$'\n      element: heading\n      target_doc: GOVERNING.md\n",
+                "  section_rules:\n    - section: '## A'\n      element: h3\n      match: '.'\n      count: '>= 1'\n",
+                "- files: \"notes/**/*.md\"\n  governed_by: GOVERNING.md\n",
+                "- files: \"GOVERNING.md\"\n  governed_by: GOVERNING.md\n",
+            ),
+        );
+        proj.write(
+            ".mdatron/patterns/t.yaml",
+            "pattern:\n  id: t\n  rules:\n    - id: r\n      context: phase-primer\n      assert: count($self.relevant_domains) == 1\n      code: T-E0001\n      message: m\n",
+        );
+        proj.write(
+            "docs/a.md",
+            "---\nschema_class: phase-primer\nphase: phase-1a\nrelevant_domains: [se]\n---\n## A\n### One\n",
+        );
+        proj.write("notes/b.md", "plain note\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let (_f, fam, visited, _n) = run(&cfg, Some(Path::new("notes/b.md")), None).unwrap();
+        assert!(visited.is_some(), "an incremental run");
+        for (name, a) in [
+            ("citation", &fam.citation),
+            ("link", &fam.link),
+            ("marker", &fam.marker),
+            ("section", &fam.section),
+            ("schema", &fam.schema),
+            ("rule_dsl", &fam.rule_dsl),
+        ] {
+            assert_eq!(state_of(a), "active", "{name}: {a:?}");
+        }
+        let (_f, fam, _v, _n) = run(&cfg, None, None).unwrap();
+        assert_eq!(state_of(&fam.schema), "active");
+        assert_eq!(state_of(&fam.citation), "active");
+    }
+
+    // Round-2 M7: the schema family is `inert` when schemas are supplied but no
+    // walked file declares a class they serve — the false-clean the tri-state
+    // exists to expose (W0045/W0047 are silent: nothing declares an unserved
+    // class either).
+    #[test]
+    fn schema_family_is_inert_when_no_walked_file_declares_a_served_class() {
+        let proj = TempProject::new("schema-inert");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(".mdatron/config.yaml", "file_globs:\n  - \"**/*.md\"\n");
+        proj.write("plain.md", "no frontmatter here\n");
+        let fam = link_families(&proj);
+        assert_eq!(state_of(&fam.schema), "inert", "{:?}", fam.schema);
+        proj.write(
+            "typed.md",
+            "---\nschema_class: phase-primer\nphase: phase-1a\nrelevant_domains: [se]\n---\nbody\n",
+        );
+        let fam = link_families(&proj);
+        assert_eq!(state_of(&fam.schema), "active", "{:?}", fam.schema);
+    }
+
+    // #204 R3 (DESIGN § Validation is data-driven, governance data is governed, acceptance criterion): a
     // tombstoned demotion in the init manifest emits the standing L0001 on a
     // whole-tree run — the second carrier beside pins.yaml's unpinned[] — and
     // one without its justification is W0042. The manifest's bytes join the
@@ -5696,6 +5857,36 @@ pattern:
         let (findings, _fam, _v, _n) = run(&cfg, None, None).unwrap();
         assert_eq!(codes_of(&findings, "MDATRON-W0042"), 1, "{findings:?}");
         assert_eq!(codes_of(&findings, "MDATRON-L0001"), 0, "{findings:?}");
+
+        // Round-2 M2: the manifest is engine-managed and parsed STRICTLY — a
+        // typo'd key cannot erase every tombstone while the file stays
+        // attested in the lineage. Round-2 m13: a demoted path escaping
+        // .mdatron/ is refused like a managed[] path.
+        for (label, manifest) in [
+            (
+                "manifest-typo",
+                "version: 2\nmanaged: []\ndemotedd:\n- path: config.yaml\n  reason: r\n  owner: o\n",
+            ),
+            (
+                "manifest-escape",
+                "version: 2\nmanaged: []\ndemoted:\n- path: ../../etc/passwd\n  reason: r\n  owner: o\n",
+            ),
+        ] {
+            let proj = TempProject::new(label);
+            proj.write(
+                ".mdatron/schemas/phase-primer.json",
+                minimal_phase_primer_schema(),
+            );
+            proj.write(".mdatron/config.yaml", "file_globs:\n  - \"**/*.md\"\n");
+            proj.write(".mdatron/manifest.yaml", manifest);
+            proj.write(
+                "doc.md",
+                "---\nschema_class: phase-primer\nphase: phase-1a\nrelevant_domains: [se]\n---\nbody\n",
+            );
+            let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+            let err = run(&cfg, None, None).err().unwrap_or_else(|| panic!("{label}: must refuse"));
+            assert!(matches!(err, VerifyError::Config(_)), "{label}: {err:?}");
+        }
     }
 
     // GH #37: with `link_root: true` on the route, a leading-slash link
@@ -7618,7 +7809,7 @@ pattern:
     // ── #103 unification red gate ────────────────────────────────────────────
     //
     // Every input class is served from the ONE immutable snapshot sealed at the
-    // capture-complete seam (DESIGN.md § Verification is fast: "reads its inputs
+    // capture-complete seam (DESIGN.md § Verification is fast where it is invoked: "reads its inputs
     // once ... all checks run against snapshot bytes"). Each fixture mutates or
     // deletes an input AT THE SEAM and asserts the run reports capture-time
     // state; a follow-up fresh run proves the mutation landed (no vacuous pass).
@@ -8889,7 +9080,7 @@ pattern:
         assert_eq!(findings[0].code, "MDATRON-E0050");
         // Engine-authored message names the constraint (schema-side), and the
         // failing document value is carried out-of-line in a quoted region — not
-        // inline in the message (DESIGN § Agents are the first consumer marking discipline).
+        // inline in the message (DESIGN § Agents are the first consumer, marking discipline).
         assert!(
             findings[0].message.contains("allowed options"),
             "message should describe the constraint: {}",

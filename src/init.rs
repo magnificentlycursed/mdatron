@@ -1,7 +1,8 @@
-//! `mdatron init`: deploy the `.mdatron/` skeleton and its managed-partition
-//! manifest, idempotently, refusing drifted managed files.
+//! `mdatron init`: deploy the `.mdatron/` skeleton and its init manifest (the
+//! record of the engine-managed partition), idempotently, refusing drifted
+//! managed files.
 //!
-//! Per `DESIGN.md` § Init: the skeleton is the schema and pattern directories,
+//! Per `DESIGN.md` § Requirements (Init): the skeleton is the schema and pattern directories,
 //! a seeded engine-default config, and the init manifest defining the managed
 //! partition. Managed files — listed in the manifest with sha256 content
 //! hashes — are drift-refused; the manifest is the authority on WHAT is
@@ -10,7 +11,7 @@
 //! overwritten; their demotion from the managed partition persists as
 //! tombstones in trees that had them managed. Adopter-authored data (schemas
 //! and patterns) lives outside the manifest and is never touched. The manifest
-//! cannot hash itself (a fixed point, `DESIGN.md` § Governance data is
+//! cannot hash itself (a fixed point, `DESIGN.md` § Validation is data-driven, governance data is
 //! governed); its own integrity is anchored by commit review.
 
 use std::path::Path;
@@ -26,8 +27,8 @@ use crate::diagnostic::{Finding, Location, QuotedRegion, Severity};
 /// pipeline honors (#77) — which is exactly why it cannot be drift-guarded:
 /// the original guard (placed "until config consumption lands") would make
 /// customization impossible. Its demotion from the managed partition is
-/// recorded as a tombstone in trees that had it managed (DESIGN § Governance
-/// data is governed).
+/// recorded as a tombstone in trees that had it managed (DESIGN § Validation is data-driven,
+/// governance data is governed).
 const DEFAULT_CONFIG: &str = "\
 # mdatron configuration — seeded by `mdatron init`; adopter-owned.
 # file_globs declare what is in mdatron's jurisdiction; files outside them
@@ -109,11 +110,12 @@ impl std::fmt::Display for InitError {
 impl std::error::Error for InitError {}
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct Manifest {
     version: u32,
     /// Engine-deployed files (path relative to `.mdatron/`) with their sha256.
     /// The manifest never lists itself (fixed point). The manifest DEFINES the
-    /// managed partition (DESIGN § Validation is data-driven (governance data is governed)): drift checks
+    /// managed partition (DESIGN § Validation is data-driven, governance data is governed): drift checks
     /// run over these entries as data, not over an engine-side list.
     managed: Vec<ManagedEntry>,
     /// Demotion tombstones: standing records of entries removed from the
@@ -125,12 +127,14 @@ struct Manifest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct ManagedEntry {
     path: String,
     sha256: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct DemotionTombstone {
     /// The demoted file, relative to `.mdatron/` (the manifest's own base —
     /// unlike a pins.yaml tombstone's root-relative `file`).
@@ -150,7 +154,7 @@ pub struct LoadedManifest {
 
 /// Render the manifest's demotion tombstones as the standing governance-
 /// weakening findings — the second carrier of `MDATRON-L0001` beside
-/// `pins.yaml`'s `unpinned[]` (DESIGN § Validation is data-driven (governance data is governed): "a
+/// `pins.yaml`'s `unpinned[]` (DESIGN § Validation is data-driven, governance data is governed: "a
 /// tombstoned demotion stays loud through its standing annotation"; #204 R3 —
 /// through 0.6.0 only the pins carrier emitted the lint, so the DESIGN
 /// criterion was unmet). A tombstone without its justification is
@@ -174,6 +178,15 @@ pub fn load_tombstones(project_root: &Path) -> Result<Option<LoadedManifest>, cr
         .map_err(|e| crate::Error::Config(format!("cannot parse '{}': {e}", path.display())))?;
     let mut findings = Vec::new();
     for t in &manifest.demoted {
+        // The same confinement the managed[] half of this file gets (round-2
+        // m13): a demoted path escaping .mdatron/ is a manifest-integrity
+        // failure, refused — never rendered as if it named a governed file.
+        if let Err(v) = confine_lexically(Path::new(&t.path)) {
+            return Err(crate::Error::Config(format!(
+                "cannot use '{}': demoted path escapes .mdatron/ ({v:?})",
+                path.display()
+            )));
+        }
         let file = QuotedRegion {
             platform_variant: false,
             label: "file".into(),

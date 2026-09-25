@@ -126,6 +126,8 @@ terms:
     status: registered
     sense: "the point after which the run reads only its immutable snapshot"
   # Retired spellings: reserved, so a reappearance in governed prose fires E0092.
+  # The matcher is EXACT — whole word, case-sensitive — so each spelling's
+  # plural and sentence-initial forms are reserved beside it (#204 round-2 M5).
   - term: "Layer 1"
     status: reserved
     sense: "retired pedagogy; say 'the schema family'"
@@ -159,6 +161,48 @@ terms:
   - term: "pattern data"
     status: reserved
     sense: "retired; say 'family data'"
+  - term: "layer 1"
+    status: reserved
+    sense: "retired pedagogy (lowercase form); say 'the schema family'"
+  - term: "layer 2"
+    status: reserved
+    sense: "retired pedagogy (lowercase form); say 'the rule DSL'"
+  - term: "Bullet lead"
+    status: reserved
+    sense: "retired alias of list-item-bold-name (sentence-initial)"
+  - term: "bullet leads"
+    status: reserved
+    sense: "retired alias of list-item-bold-name (plural)"
+  - term: "Bold lead"
+    status: reserved
+    sense: "retired alias of list-item-bold-name (sentence-initial)"
+  - term: "bold leads"
+    status: reserved
+    sense: "retired alias of list-item-bold-name (plural)"
+  - term: "Pin manifest"
+    status: reserved
+    sense: "retired alias of pin record (sentence-initial)"
+  - term: "pin manifests"
+    status: reserved
+    sense: "retired alias of pin record (plural)"
+  - term: "Managed manifest"
+    status: reserved
+    sense: "retired alias of init manifest (sentence-initial)"
+  - term: "managed manifests"
+    status: reserved
+    sense: "retired alias of init manifest (plural)"
+  - term: "Managed-partition manifest"
+    status: reserved
+    sense: "retired alias of init manifest (sentence-initial)"
+  - term: "Golden code catalog"
+    status: reserved
+    sense: "retired alias of explain catalog (sentence-initial)"
+  - term: "golden code catalogs"
+    status: reserved
+    sense: "retired alias of explain catalog (plural)"
+  - term: "Pattern data"
+    status: reserved
+    sense: "retired; say 'family data' (sentence-initial)"
   # Methodology register (§5): the terms the methodology docs coin.
   - term: "issue lanes"
     status: registered

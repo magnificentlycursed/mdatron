@@ -189,7 +189,7 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedVocab>, Error> {
         .map(|a| Ok((compile(&a.pattern, "anti_pattern")?, a.guidance.clone())))
         .collect::<Result<Vec<_>, Error>>()?;
 
-    // #95 (DESIGN § agnosticism conflict outcome): group terms by name; a term
+    // #95 (DESIGN § Validation is data-driven, the agnosticism conflict outcome): group terms by name; a term
     // declared both `registered` and `draft` resolves to draft (the permissive
     // status) and names a W0044 warning. Non-draft duplicates keep first-wins.
     let mut order: Vec<String> = Vec::new();
@@ -287,28 +287,30 @@ pub fn check_file(
 
     // ── coinage + reserved words (terms section supplied) ─────────────────
     if !vocab.terms.is_empty() {
-        for (start, term) in bold_spans(body).into_iter().filter(|_| coinage) {
-            let status = vocab
-                .terms
-                .iter()
-                .find(|(t, _)| t == &term)
-                .map(|(_, s)| *s);
-            if status.is_none() {
-                findings.push(prose_finding(
-                    path,
-                    content,
-                    body_offset + start,
-                    "MDATRON-E0090",
-                    "unregistered-coinage",
-                    "a bold-introduced term is not in the vocabulary registry \
+        if coinage {
+            for (start, term) in bold_spans(body) {
+                let status = vocab
+                    .terms
+                    .iter()
+                    .find(|(t, _)| t == &term)
+                    .map(|(_, s)| *s);
+                if status.is_none() {
+                    findings.push(prose_finding(
+                        path,
+                        content,
+                        body_offset + start,
+                        "MDATRON-E0090",
+                        "unregistered-coinage",
+                        "a bold-introduced term is not in the vocabulary registry \
                      (draft-status terms are exempt; register the coinage or \
                      unbold the emphasis)",
-                    vec![QuotedRegion {
-                        platform_variant: false,
-                        label: "term".into(),
-                        content: term.clone(),
-                    }],
-                ));
+                        vec![QuotedRegion {
+                            platform_variant: false,
+                            label: "term".into(),
+                            content: term.clone(),
+                        }],
+                    ));
+                }
             }
         }
         for (term, status) in &vocab.terms {

@@ -9,7 +9,7 @@
 //! link the engine; it carries **no API-stability promise** and is not a
 //! supported consumption surface. Shell out to the binary instead.
 //!
-//! Two-layer architecture per DESIGN.md § Summary: JSON Schema for structural validation
+//! Two axes per DESIGN.md § Summary: JSON Schema for structural validation
 //! (the schema family); a Schematron-derived DSL for cross-field, cross-file, and cross-document
 //! semantic rules (the rule DSL).
 //!

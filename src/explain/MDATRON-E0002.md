@@ -7,7 +7,7 @@
 ## What this means
 
 The file's frontmatter declares a `schema_class:` field whose value does not
-match any schema registered in `.mdatron/schemas/`. the schema family cannot
+match any schema registered in `.mdatron/schemas/`. The schema family cannot
 validate the file because the schema it would validate against does not exist.
 
 ## How to fix

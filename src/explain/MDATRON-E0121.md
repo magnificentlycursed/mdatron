@@ -18,7 +18,8 @@ as a completed bullet in another, never both.
 
 The extraction is **element-scoped, never a full-span text scan**: ids come only
 from the declared element (an `h3` heading's text, or a `list-item-bold-name`
-bullet's bold lead), so a
+bullet's bold lead) — never from the operand's own section heading, which is
+the container, not an element in it — so a
 mention of an id in surrounding prose (e.g. a `Provenance:` line naming another
 slice) does not enter the set and cannot cause a false overlap.
 

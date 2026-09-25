@@ -8,8 +8,7 @@
 
 This file's name is not derivable from its route's `naming` grammar (a
 linear-time regular expression over the filename). Naming grammars exist
-because ad-hoc filename schemes proliferate faster than review can police them
-— so a route may pin
+because ad-hoc filename schemes proliferate faster than review can police them, so a route may pin
 what its artifacts are allowed to be called.
 
 ## How to fix

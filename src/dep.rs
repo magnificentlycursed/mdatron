@@ -302,7 +302,7 @@ mod tests {
             pattern: Pattern {
                 id: "p".into(),
                 description: None,
-                phases: vec![],
+                phases: None,
                 keys: vec![],
                 rules: vec![Rule {
                     id: "r".into(),
@@ -349,7 +349,7 @@ mod tests {
             pattern: Pattern {
                 id: "p".into(),
                 description: None,
-                phases: vec![],
+                phases: None,
                 keys: vec![],
                 rules,
             },

@@ -441,14 +441,22 @@ fn help_text_carries_no_tracker_or_review_jargon() {
     for args in subs {
         let out = run(args);
         let help = String::from_utf8_lossy(&out.stdout);
-        let tracker_ref = help
-            .split('#')
-            .skip(1)
-            .any(|rest| rest.chars().next().is_some_and(|c| c.is_ascii_digit()));
-        assert!(
-            !tracker_ref,
-            "{args:?}: a `#<n>` tracker reference leaked into help:\n{help}"
-        );
+        let digit_after = |marker: &str| {
+            help.split(marker)
+                .skip(1)
+                .any(|rest| rest.chars().next().is_some_and(|c| c.is_ascii_digit()))
+        };
+        // `#<n>`, `tracker <n>`, `GH<n>` / `GH #<n>`, `DEF<n>`: every tracker
+        // and design-decision shape this project has ever written.
+        for marker in ["#", "tracker ", "GH", "GH #", "DEF"] {
+            assert!(
+                !digit_after(marker),
+                "{args:?}: a `{marker}<n>` tracker/decision reference leaked into help:\n{help}"
+            );
+        }
+        // Review-round vocabulary and internal citations. `DESIGN §` is banned
+        // deliberately: help is for the operator at the terminal, who has no
+        // section of a design document in front of them.
         for jargon in [
             "crosslink",
             "vsdd-cli",

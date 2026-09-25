@@ -1272,7 +1272,7 @@ mod tests {
 
     // ── Pin tests: engine-owned no-follow bounded glob walk (issue #55) ──────
     //
-    // These pin the closed-world enumeration contract (DESIGN.md § Five check
+    // These pin the closed-world enumeration contract (DESIGN.md § Nine check
     // families: symlinks are not followed during enumeration; symlink cycles
     // cannot extend a walk) against the five symptoms of the absorbed
     // glob::glob delegation defect. Each was authored red-first (misbehaving

@@ -7,7 +7,8 @@
 //! (`MDATRON-E0062`); recomputation is a single command (`mdatron pin
 //! --update`). Absent pin data leaves the family inactive.
 //!
-//! Removals persist (`DESIGN.md` § Validation is data-driven (governance data is governed)): un-pinning a
+//! Removals persist (`DESIGN.md` § Validation is data-driven, governance data
+//! is governed): un-pinning a
 //! file is a governance weakening, recorded as a standing `unpinned:` entry
 //! with its justification (reason + owner). Each justified entry emits the
 //! informational lint `MDATRON-L0001` on every whole-tree run — the weakening
@@ -451,7 +452,7 @@ pub fn update(project_root: &Path, dry_run: bool) -> Result<Vec<(String, String,
     let body = format!(
         "# mdatron pin record — governing documents pin sha256 over governed files (#84).\n\
          # Recompute with `mdatron pin --update`. This file cannot pin itself; its\n\
-         # integrity anchor is commit review (DESIGN § Validation is data-driven (governance data is governed)).\n{yaml}"
+         # integrity anchor is commit review (DESIGN § Validation is data-driven, governance data is governed).\n{yaml}"
     );
     // Atomic write (#126 DEF8): pins.yaml is rewritten in place on every
     // `pin --update`; a torn write would corrupt the pin set.

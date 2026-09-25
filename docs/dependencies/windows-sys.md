@@ -21,8 +21,9 @@ cycle). On Windows the confinement walk still uses the documented weaker
 fallback: `symlink_metadata` on each component, then a *following* open. That
 is a check-then-open window — a component swapped for a reparse point between
 the check and the open is followed — so the swap-proof guarantee in DESIGN
-§ Verification is fast where it is invoked is qualified Unix-only, and the
-`MDATRON-E0012` explain page carries the same hedge. Windows has no `openat`;
+§ Verification is fast where it is invoked was qualified Unix-only through
+0.6.0, and the `MDATRON-E0012` explain page carried the same hedge (both are
+universal since #64 landed the walk below). Windows has no `openat`;
 the only handle-relative open is `NtCreateFile` with a `RootDirectory` handle
 in `OBJECT_ATTRIBUTES`, which the standard library does not expose. This crate
 provides the raw binding for exactly that call plus the reparse-attribute query

@@ -146,7 +146,14 @@ pattern:
 "#;
         let pf = parse_pattern_file(yaml).expect("complex pattern parses");
         assert_eq!(pf.pattern.id, "phase-domain-composition");
-        assert_eq!(pf.pattern.phases, vec!["strict", "pre-commit", "lsp"]);
+        assert_eq!(
+            pf.pattern.phases,
+            Some(vec![
+                "strict".to_string(),
+                "pre-commit".into(),
+                "lsp".into()
+            ])
+        );
         assert_eq!(pf.pattern.keys.len(), 1);
         assert_eq!(pf.pattern.keys[0].name, "composition-matrix");
         assert_eq!(pf.pattern.rules.len(), 1);
@@ -159,11 +166,9 @@ pattern:
                 .map(|(_, v)| v.as_str()),
             Some(r#"key("composition-matrix", $self.phase)"#)
         );
-        assert!(rule.location.is_some());
-        assert_eq!(
-            rule.location.as_ref().unwrap().field.as_deref(),
-            Some("relevant_domains")
-        );
+        let location = rule.location.as_ref().and_then(|l| l.as_ref());
+        assert!(location.is_some());
+        assert_eq!(location.unwrap().field.as_deref(), Some("relevant_domains"));
     }
 
     // RED GATE (#89, #47 cold-run finding): let bindings preserve DECLARATION

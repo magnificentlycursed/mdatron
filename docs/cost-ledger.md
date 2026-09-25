@@ -1,6 +1,6 @@
 # Cost ledger
 
-Usage record for the diagnostic-output cost contract (`DESIGN.md` § Output:
+Usage record for the diagnostic-output cost contract (`DESIGN.md` § Agents are the first consumer:
 "sizes are measured and recorded in the cost ledger"). The compact per-finding
 limit is **512 bytes** (contract limit, ratified 2026-07-25, tracker #80, decision 4).
 
