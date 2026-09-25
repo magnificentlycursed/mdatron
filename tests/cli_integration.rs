@@ -1516,6 +1516,49 @@ fn readme_pattern_example_round_trips_against_mdatron_verify() {
     );
 }
 
+// #203 F6 (GH #56 finding 6): every family example in the README is
+// round-trip-marked and loads through the real parser — findings are fine
+// (the examples claim files that do not exist in the fixture and carry
+// placeholder scopes), a load refusal is not. The First-run trio stays with
+// its own clean-run assertion above.
+#[test]
+fn readme_family_examples_load_through_the_real_parsers() {
+    let readme = readme_text();
+    for (label, file, extra) in [
+        ("routes", ".mdatron/routes.yaml", vec![("DESIGN.md", "# design\n")]),
+        (
+            "markers",
+            ".mdatron/routes.yaml",
+            vec![("contract.md", "# contract\n## Decomposition\n- **Slice 1.** x\n")],
+        ),
+        (
+            "section-rules",
+            ".mdatron/routes.yaml",
+            vec![("ROADMAP.md", "# roadmap\n## Requirements\n### Phase 1: a (parallel)\n## Completed phases\n- **Slice 2.** done\n")],
+        ),
+        ("vocabulary", ".mdatron/vocabulary.yaml", vec![]),
+        ("code-catalogs", ".mdatron/code-catalogs.yaml", vec![]),
+    ] {
+        let fence = extract_marked_fence(&readme, label).unwrap_or_else(|| {
+            panic!("README must contain <!-- mdatron-roundtrip:{label}-start/end --> markers")
+        });
+        let proj = TempProject::new(&format!("readme-{label}"));
+        proj.seed_blog_schema();
+        proj.seed_clean_md("post.md");
+        for (name, content) in extra {
+            proj.write(name, content);
+        }
+        proj.write(file, &fence);
+        let out = run_verify(&proj, &[]);
+        assert_ne!(
+            out.status.code(),
+            Some(2),
+            "README {label} example must load through the real parser (findings are fine): {}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+    }
+}
+
 // ── 4. Drive-by `--quiet` and `--quiet --json` coverage ────────────────────────
 
 #[test]
