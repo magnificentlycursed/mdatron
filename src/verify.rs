@@ -5475,21 +5475,24 @@ pattern:
         let scoped = seed("coinage-scoped", "coinage_globs:\n- \"notes/**\"\n");
         let cfg = VerifyConfig::from_project(&scoped.0).unwrap();
         let (findings, _f, _v, _n) = run(&cfg, None, None).unwrap();
+        // Compare as paths, not strings: the location renders with the
+        // platform separator (`notes\\b.md` on Windows) and `PathBuf` equality
+        // is component-wise.
         let at = |code: &str| {
             findings
                 .iter()
                 .filter(|f| f.code == code)
-                .map(|f| f.location.file.to_string_lossy().into_owned())
+                .map(|f| f.location.file.clone())
                 .collect::<Vec<_>>()
         };
         assert_eq!(
             at("MDATRON-E0090"),
-            vec!["notes/b.md".to_string()],
+            vec![std::path::PathBuf::from("notes/b.md")],
             "{findings:?}"
         );
         assert_eq!(
             at("MDATRON-E0092"),
-            vec!["docs/a.md".to_string()],
+            vec![std::path::PathBuf::from("docs/a.md")],
             "{findings:?}"
         );
         assert_eq!(codes_of(&findings, "MDATRON-W0043"), 0);
