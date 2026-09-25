@@ -214,6 +214,10 @@ struct FixHint {
 }
 
 fn first_fix_hint(fix: &str) -> FixHint {
+    // The pages are `include_str!`-embedded from the checkout; a Windows
+    // checkout with autocrlf hands them over with CRLF, and the paragraph
+    // split below is LF-shaped — normalise first (windows-latest, #203).
+    let fix = fix.replace("\r\n", "\n");
     let paragraphs: Vec<String> = fix
         .split("\n\n")
         .map(|para| {
