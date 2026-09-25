@@ -49,5 +49,6 @@
   "MDATRON-W0051": "require-frontmatter-scope-matches-nothing",
   "MDATRON-W0052": "inert-pattern-key",
   "MDATRON-W0053": "route-table-empty",
-  "MDATRON-W0054": "route-glob-matches-nothing"
+  "MDATRON-W0054": "route-glob-matches-nothing",
+  "MDATRON-W0055": "code-catalog-scope-matches-nothing"
 }

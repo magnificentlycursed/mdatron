@@ -448,15 +448,22 @@ a full ATX heading line with non-empty text.
 
 **Code catalogs** (`code-catalogs.yaml`) — the adopter-side twin of mdatron's
 own every-code-resolves-in-explain: declare your code namespace and every code
-token cited in the corpus must resolve to it.
+token cited in the corpus must resolve to it. Required and optional keys:
 
 ```yaml
 mdatron_format_version: 1     # required on this file (born in 0.6.0)
 catalogs:
-  - namespace: "ADOPTER-"     # the ownership prefix
-    comprehensive: true       # this catalog is the sole authority for the prefix
-    codes: ["E0010", "W0180"] # the declared legal set (class letter + digits)
+  - namespace: "ADOPTER-"     # required: the ownership prefix
+    comprehensive: true       # optional (default false): sole authority for the prefix — only then can a token orphan (E0113)
+    codes: ["E0010", "W0180"] # required: the declared legal set (class letter + digits)
 ```
+
+The scan covers **every walked file** by default, and inline code spans are
+scanned (a backticked code is a real citation; only fenced blocks are
+examples). To keep a comprehensive catalog beside a walked archive that cites
+retired codes, scope the scan with `code_catalog_globs` in `config.yaml` (a
+scope list beside `vocabulary_globs`); a scope that matches no walked file is
+loud (`W0055`) and the family reports `inert`.
 
 Every adopter input file carries `mdatron_format_version` — the **input**
 contract's own version axis (independent of the DSL's `mdatron_dsl_version`
