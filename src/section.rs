@@ -13,25 +13,28 @@
 //! corpus-wide. Two rule shapes (semantics pinned on vsdd-cli#29 against the live
 //! `.design/build-plan.md`):
 //!
-//! - **Count** `{ section, element, match, count }` — count the headings of
-//!   `element` level inside `section` (its span until the next heading of the
-//!   same or higher level) whose line matches `match`, and assert the `count`
-//!   predicate (`>= 1`, `== 1`, `< 3`, …). A failure is `MDATRON-E0120`. Live
-//!   case: "at least one open-phase H3 in `## Requirements`" — an empty section
-//!   is the retire trigger, so the invariant is `>= 1`, not `== 1`.
-//! - **Disjoint** `{ disjoint: [op, op] }`, `op = { section, id_from, id_pattern }`
-//!   — extract an id set from each section (`id_from: h3-heading` from the H3
-//!   heading text, `bullet-lead` from `- **bold**` bullet leads; `id_pattern`
+//! - **Count** `{ section, element, match, count }` — count the elements of the
+//!   `element` class (`h3`, any `heading`, a `list-item-bold-name` bullet — the
+//!   one [`ElementClass`] vocabulary shared with marker rules) inside `section`
+//!   (its span until the next heading of the same or higher level) whose line
+//!   matches `match`, and assert the `count` predicate (`>= 1`, `== 1`, `< 3`,
+//!   …). A failure is `MDATRON-E0120`. Live case: "at least one open-phase H3
+//!   in `## Requirements`" — an empty section is the retire trigger, so the
+//!   invariant is `>= 1`, not `== 1`.
+//! - **Disjoint** `{ disjoint: [op, op] }`, `op = { section, element, id_pattern }`
+//!   — extract an id set from each section (`element: h3` from the H3 heading
+//!   text, `list-item-bold-name` from `- **bold**` bullet leads; `id_pattern`
 //!   captures the id in group 1), and assert the two sets share no element. An
-//!   overlap is `MDATRON-E0121`.
+//!   overlap is `MDATRON-E0121`. (`id_from`, `h3-heading`, and `bullet-lead` are
+//!   the retired 0.6.0 spellings, accepted as aliases.)
 //!
-//! The **id extraction is deliberately heading-scoped / bullet-lead-scoped, not a
-//! full-span text scan** (vsdd-cli#29's load-bearing trap): a body line under an
+//! The **id extraction is deliberately element-scoped, not a full-span text
+//! scan** (vsdd-cli#29's load-bearing trap): a body line under an
 //! open phase (`Provenance: Slice 3 …`) would else collide with a completed
 //! `Slice 3` bullet and report a false overlap. Ids come only from the declared
 //! element, never the surrounding prose.
 //!
-//! Adopter patterns compile on the linear-time engine (`regex_lite`, DESIGN L17).
+//! Adopter patterns compile on the linear-time engine (`regex_lite`, DESIGN § Project declarations (linear-time pattern engines)).
 
 use std::collections::HashSet;
 use std::path::Path;
@@ -39,7 +42,7 @@ use std::path::Path;
 use serde::Deserialize;
 
 use crate::diagnostic::{Finding, Location, QuotedRegion, Severity};
-use crate::markup::{atx_heading, list_item_bold_name, non_fenced_lines, section_spans};
+use crate::markup::{atx_heading, non_fenced_lines, section_spans, ElementClass};
 use crate::Error;
 
 /// One section-structural rule as declared under a route's `section_rules:`
@@ -51,7 +54,7 @@ pub(crate) struct RawRule {
     #[serde(default)]
     section: Option<String>,
     #[serde(default)]
-    element: Option<HeadingLevel>,
+    element: Option<ElementClass>,
     #[serde(default, rename = "match")]
     match_pattern: Option<String>,
     #[serde(default)]
@@ -64,41 +67,21 @@ pub(crate) struct RawRule {
 #[serde(deny_unknown_fields)]
 pub(crate) struct RawOperand {
     section: String,
-    id_from: IdSource,
+    /// The element class ids come from (`h3`, `heading`, `list-item-bold-name`,
+    /// …) — the same vocabulary as marker and count `element`. `id_from` is the
+    /// retired 0.6.0 spelling of this key, and `h3-heading` / `bullet-lead` its
+    /// retired values; all three are accepted as aliases
+    /// (`docs/field-rename-ledger.md`).
+    #[serde(alias = "id_from")]
+    element: ElementClass,
     id_pattern: String,
-}
-
-#[derive(Debug, Clone, Copy, Deserialize)]
-#[serde(rename_all = "lowercase")]
-enum HeadingLevel {
-    H1,
-    H2,
-    H3,
-    H4,
-    H5,
-    H6,
-}
-
-impl HeadingLevel {
-    fn level(self) -> usize {
-        self as usize + 1
-    }
-}
-
-#[derive(Debug, Clone, Copy, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-enum IdSource {
-    /// Ids come from the text of H3 headings in the section (vsdd's open phases).
-    H3Heading,
-    /// Ids come from the `**bold**` lead of `- ` list items (completed items).
-    BulletLead,
 }
 
 /// A compiled section-structural rule.
 pub enum Rule {
     Count {
         section: String,
-        level: usize,
+        element: ElementClass,
         matcher: regex_lite::Regex,
         pred: CountPred,
     },
@@ -110,7 +93,7 @@ pub enum Rule {
 
 pub struct Operand {
     section: String,
-    id_source: IdSource,
+    element: ElementClass,
     id_pattern: regex_lite::Regex,
 }
 
@@ -221,12 +204,12 @@ pub(crate) fn compile_rule(r: RawRule) -> Result<Rule, Error> {
                 a: Operand {
                     id_pattern: compile(&a.id_pattern)?,
                     section: a.section,
-                    id_source: a.id_from,
+                    element: a.element,
                 },
                 b: Operand {
                     id_pattern: compile(&b.id_pattern)?,
                     section: b.section,
-                    id_source: b.id_from,
+                    element: b.element,
                 },
             })
         }
@@ -251,7 +234,7 @@ pub(crate) fn compile_rule(r: RawRule) -> Result<Rule, Error> {
             Ok(Rule::Count {
                 matcher: compile(&pattern)?,
                 section,
-                level: element.level(),
+                element,
                 pred,
             })
         }
@@ -277,7 +260,7 @@ pub fn check_file(
         match rule {
             Rule::Count {
                 section,
-                level,
+                element,
                 matcher,
                 pred,
             } => {
@@ -311,7 +294,7 @@ pub fn check_file(
                 } else {
                     let count: usize = spans
                         .iter()
-                        .map(|s| count_matching_headings(s, *level, matcher))
+                        .map(|s| count_matching_elements(s, *element, matcher))
                         .sum();
                     if !pred.holds(count) {
                         findings.push(section_finding(
@@ -326,9 +309,10 @@ pub fn check_file(
                             // the named section (a duplicated heading has several),
                             // so the message must not imply a single region.
                             &format!(
-                                "the named section has {count} matching h{level} \
-                                 heading(s) across its matching span(s); the rule \
+                                "the named section has {count} matching {} \
+                                 element(s) across its matching span(s); the rule \
                                  requires the count {}",
+                                element.as_str(),
                                 pred.describe()
                             ),
                             vec![QuotedRegion {
@@ -427,29 +411,36 @@ pub fn check_file(
     }
 }
 
-/// Count the `level`-level headings in a section span whose line matches `matcher`.
-fn count_matching_headings(section: &str, level: usize, matcher: &regex_lite::Regex) -> usize {
+/// Count the lines of a section span that are elements of `element` (an `h3`
+/// heading, any `heading`, a `list-item-bold-name` bullet, …) AND match
+/// `matcher` — the regex is matched against the whole element line.
+fn count_matching_elements(
+    section: &str,
+    element: ElementClass,
+    matcher: &regex_lite::Regex,
+) -> usize {
     non_fenced_lines(section)
         .into_iter()
-        .filter(|(_, line)| {
-            atx_heading(line).map(|(l, _)| l == level).unwrap_or(false) && matcher.is_match(line)
-        })
+        // A span opens with the section's own heading line (offset 0); it is
+        // the container, never one of the counted elements — the marker
+        // family's `extract_members` skips it the same way.
+        .filter(|(offset, _)| *offset != 0)
+        .filter(|(_, line)| element.name_in(line).is_some() && matcher.is_match(line))
         .count()
 }
 
 /// Extract the id set for one disjoint operand from its RESOLVED section span —
-/// HEADING-SCOPED or BULLET-LEAD-SCOPED per `id_source`, never a full-span scan,
+/// ELEMENT-SCOPED per the operand's `element` class, never a full-span scan,
 /// so a body mention of an id is not collected (vsdd-cli#29's false-overlap
 /// trap). The caller resolves the span first (GH #48): an absent section is a
 /// loud `E0122`, never an empty set that trivially satisfies disjointness.
 fn extract_ids(section: &str, op: &Operand) -> HashSet<String> {
     let mut ids = HashSet::new();
-    for (_, line) in non_fenced_lines(section) {
-        let source_text = match op.id_source {
-            IdSource::H3Heading => atx_heading(line).filter(|(l, _)| *l == 3).map(|(_, t)| t),
-            IdSource::BulletLead => list_item_bold_name(line),
-        };
-        if let Some(text) = source_text {
+    for (offset, line) in non_fenced_lines(section) {
+        if offset == 0 {
+            continue; // the span's own heading line is the container, not an id source
+        }
+        if let Some(text) = op.element.name_in(line) {
             if let Some(caps) = op.id_pattern.captures(text) {
                 if let Some(id) = caps.get(1) {
                     ids.insert(id.as_str().to_string());
@@ -522,13 +513,99 @@ mod tests {
         assert!(parse_count_pred("bogus").is_none());
     }
 
+    // #204 D2-1: one element vocabulary for count and disjoint rules, and the
+    // retired 0.6.0 spellings (`id_from`, `h3-heading`, `bullet-lead`) parse to
+    // the same variants as aliases (docs/field-rename-ledger.md).
+    #[test]
+    fn element_aliases_parse_to_the_unified_class() {
+        let parse = |y: &str| serde_yaml_ng::from_str::<RawOperand>(y).unwrap().element;
+        assert_eq!(
+            parse("section: '## A'\nid_from: h3-heading\nid_pattern: x"),
+            ElementClass::H3
+        );
+        assert_eq!(
+            parse("section: '## A'\nid_from: bullet-lead\nid_pattern: x"),
+            ElementClass::ListItemBoldName
+        );
+        assert_eq!(
+            parse("section: '## A'\nelement: list-item-bold-name\nid_pattern: x"),
+            ElementClass::ListItemBoldName
+        );
+        assert_eq!(
+            parse("section: '## A'\nelement: h2\nid_pattern: x"),
+            ElementClass::H2
+        );
+        let rule: RawRule =
+            serde_yaml_ng::from_str("section: '## A'\nelement: heading\nmatch: .\ncount: '>= 1'")
+                .unwrap();
+        assert_eq!(rule.element, Some(ElementClass::Heading));
+        assert!(
+            serde_yaml_ng::from_str::<RawOperand>("section: '## A'\nelement: h7\nid_pattern: x")
+                .is_err(),
+            "an unknown element class is refused at load"
+        );
+    }
+
+    // #204 D2-1: a count rule counts elements of ANY class — a level-specific
+    // heading, any heading, or a bold-lead bullet — never the span's own heading.
+    #[test]
+    fn count_rules_count_any_element_class() {
+        let body = "## A\n\n### One\n#### Deeper\n- **Item x.** a\n- **Item y.** b\n- plain\n\n## B\n### Not in A\n";
+        let span = section_span(body, "## A").unwrap();
+        let any = rx(".");
+        assert_eq!(
+            count_matching_elements(span, ElementClass::Heading, &any),
+            2,
+            "`heading` counts every level inside the span, not the section's own heading"
+        );
+        assert_eq!(count_matching_elements(span, ElementClass::H2, &any), 0);
+        assert_eq!(count_matching_elements(span, ElementClass::H4, &any), 1);
+        assert_eq!(
+            count_matching_elements(span, ElementClass::ListItemBoldName, &any),
+            2,
+            "bold-lead bullets only, never the plain bullet"
+        );
+        assert_eq!(
+            count_matching_elements(span, ElementClass::ListItemBoldName, &rx("Item x")),
+            1,
+            "the regex runs over the element's line"
+        );
+    }
+
+    // Round-2 M3: an operand's own section heading is the container, never an
+    // id source — `element: heading` on a `## Slice 9 group` operand must not
+    // collect `9`.
+    #[test]
+    fn extract_ids_never_reads_the_operands_own_heading() {
+        let body = "## Slice 9 group\n### Slice 1\n- **Slice 2.** x\n";
+        let span = section_span(body, "## Slice 9 group").unwrap();
+        let mk = |element| Operand {
+            section: "## Slice 9 group".into(),
+            element,
+            id_pattern: rx(r"Slice (\d+)"),
+        };
+        assert_eq!(
+            extract_ids(span, &mk(ElementClass::Heading)),
+            HashSet::from(["1".to_string()])
+        );
+        assert_eq!(
+            extract_ids(span, &mk(ElementClass::H2)),
+            HashSet::new(),
+            "the span's own h2 is not an element inside it"
+        );
+        assert_eq!(
+            extract_ids(span, &mk(ElementClass::ListItemBoldName)),
+            HashSet::from(["2".to_string()])
+        );
+    }
+
     #[test]
     fn counts_matching_headings_in_span() {
         let body = "## Requirements\n\n### Phase 2: Slice 2 (sequential)\ntext\n### Phase 3: Slice 4 (sequential)\n\n## Other\n### Phase 9: nope (sequential)\n";
         let span = section_span(body, "## Requirements").unwrap();
         let m = rx(r"^### Phase \d+: .*\((parallel|sequential)\)$");
         assert_eq!(
-            count_matching_headings(span, 3, &m),
+            count_matching_elements(span, ElementClass::H3, &m),
             2,
             "only the two in-section H3s"
         );
@@ -540,12 +617,12 @@ mod tests {
         let body = "## Requirements\n\n### Phase 2: Slice 2 (sequential)\nProvenance: Slice 3 — Install\n\n## Completed phases\n\n- **Slice 3's static half (complete):** done\n- **The engine bullet:** no id\n";
         let open = Operand {
             section: "## Requirements".into(),
-            id_source: IdSource::H3Heading,
+            element: ElementClass::H3,
             id_pattern: rx(r"Slice (\d+)"),
         };
         let done = Operand {
             section: "## Completed phases".into(),
-            id_source: IdSource::BulletLead,
+            element: ElementClass::ListItemBoldName,
             id_pattern: rx(r"Slice (\d+)"),
         };
         let open_ids = extract_ids(section_span(body, &open.section).unwrap(), &open);
@@ -571,7 +648,7 @@ mod tests {
     fn duplicate_heading_content_counts_toward_the_predicate() {
         let rule = Rule::Count {
             section: "## Open questions".into(),
-            level: 3,
+            element: ElementClass::H3,
             matcher: rx(r"^### Q\d+"),
             pred: parse_count_pred("== 0").unwrap(),
         };
@@ -597,14 +674,14 @@ mod tests {
     // participates in the overlap check.
     #[test]
     fn disjoint_ids_union_across_duplicate_heading_spans() {
-        let mk = |section: &str, src: IdSource| Operand {
+        let mk = |section: &str, src: ElementClass| Operand {
             section: section.into(),
-            id_source: src,
+            element: src,
             id_pattern: rx(r"Slice (\d+)"),
         };
         let rule = Rule::Disjoint {
-            a: mk("## Requirements", IdSource::H3Heading),
-            b: mk("## Completed phases", IdSource::BulletLead),
+            a: mk("## Requirements", ElementClass::H3),
+            b: mk("## Completed phases", ElementClass::ListItemBoldName),
         };
         // The overlap (Slice 2) lives under the SECOND `## Requirements` span.
         let body = "## Requirements\n\n### Phase 1: Slice 1 (sequential)\n\n\
@@ -625,7 +702,7 @@ mod tests {
     fn compile_rule_rejects_heading_marker_with_empty_text() {
         let raw = RawRule {
             section: Some("##".into()),
-            element: Some(HeadingLevel::H3),
+            element: Some(ElementClass::H3),
             match_pattern: Some(r"^### .*$".into()),
             count: Some(">= 1".into()),
             disjoint: None,
@@ -647,7 +724,7 @@ mod tests {
     fn compile_rule_rejects_count_section_spec_without_heading_marker() {
         let raw = RawRule {
             section: Some("Requirements".into()),
-            element: Some(HeadingLevel::H3),
+            element: Some(ElementClass::H3),
             match_pattern: Some(r"^### .*$".into()),
             count: Some(">= 1".into()),
             disjoint: None,
@@ -675,12 +752,12 @@ mod tests {
             disjoint: Some(vec![
                 RawOperand {
                     section: "## Requirements".into(),
-                    id_from: IdSource::H3Heading,
+                    element: ElementClass::H3,
                     id_pattern: r"Slice (\d+)".into(),
                 },
                 RawOperand {
                     section: "Completed phases".into(),
-                    id_from: IdSource::BulletLead,
+                    element: ElementClass::ListItemBoldName,
                     id_pattern: r"Slice (\d+)".into(),
                 },
             ]),
@@ -704,7 +781,7 @@ mod tests {
     fn absent_section_with_zero_satisfiable_predicate_is_e0122_not_silent() {
         let rule = Rule::Count {
             section: "## Requirements".into(),
-            level: 3,
+            element: ElementClass::H3,
             matcher: rx(r"^### .*$"),
             pred: parse_count_pred("== 0").unwrap(),
         };
@@ -734,7 +811,7 @@ mod tests {
     fn absent_section_is_e0122_not_e0120_with_count_zero() {
         let rule = Rule::Count {
             section: "## Requirements".into(),
-            level: 3,
+            element: ElementClass::H3,
             matcher: rx(r"^### .*$"),
             pred: parse_count_pred(">= 1").unwrap(),
         };
@@ -758,7 +835,7 @@ mod tests {
     fn disjoint_with_renamed_operand_section_is_e0122_for_that_operand() {
         let mk = |section: &str| Operand {
             section: section.into(),
-            id_source: IdSource::H3Heading,
+            element: ElementClass::H3,
             id_pattern: rx(r"Slice (\d+)"),
         };
         let rule = Rule::Disjoint {
@@ -796,7 +873,7 @@ mod tests {
         let body = "## Alpha\n\n### zqxshared\n\n## Beta\n\n### zqxshared\n";
         let mk = |section: &str| Operand {
             section: section.into(),
-            id_source: IdSource::H3Heading,
+            element: ElementClass::H3,
             id_pattern: rx(r"(zqx\w+)"),
         };
         let rule = Rule::Disjoint {

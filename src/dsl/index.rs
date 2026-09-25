@@ -18,7 +18,7 @@
 //! live in an [`IndexRegistry`] keyed by `name`. Rules reference indices via the
 //! `key()` standard-library function (`key("authors", "jane-doe")`).
 //!
-//! Path-confinement (DESIGN.md § Five check families; carried from
+//! Path-confinement (DESIGN.md § Nine check families; carried from
 //! BOUNDARY-PREAMBLE § 7): sources are confined lexically before any
 //! filesystem access — absolute paths and parent segments are rejected
 //! whether or not the target exists — and every read goes through a
@@ -269,18 +269,18 @@ pub enum IndexError {
     #[error("file parse at '{path}': {error}")]
     Parse { path: String, error: String },
 
-    /// Maps to MDATRON-E0010: key-source-absolute-path per DESIGN.md § Five
-    /// check families (carried from BOUNDARY-PREAMBLE § 7).
+    /// Maps to MDATRON-E0010 (absolute-path-refused) — DESIGN.md's path
+    /// confinement, decided lexically on the `keys:` source text.
     #[error("path confinement: absolute source path '{path}' is rejected; sources resolve relative to the project root (MDATRON-E0010)")]
     AbsoluteSource { path: String },
 
-    /// Maps to MDATRON-E0011: key-source-parent-traversal per DESIGN.md § Five
-    /// check families (carried from BOUNDARY-PREAMBLE § 7). Decided lexically,
-    /// so non-existent targets are rejected on the same basis as existing ones.
+    /// Maps to MDATRON-E0011 (parent-segment-refused) — DESIGN.md's path
+    /// confinement. Decided lexically, so non-existent targets are rejected on
+    /// the same basis as existing ones.
     #[error("path traversal: '{path}' escapes project root (MDATRON-E0011)")]
     PathTraversal { path: String },
 
-    /// Maps to MDATRON-E0012: key-source-symlink-refused. No-follow resolution
+    /// Maps to MDATRON-E0012 (symlinked-component-refused). No-follow resolution
     /// refuses a symlink — on Windows, any reparse point — at any component,
     /// whatever its target. `reparse` names a non-symlink class (" — a
     /// cloud-file placeholder (…)"), empty for a plain link (#64 W1).
@@ -512,7 +512,7 @@ fn walk_segments(
             match entry.file_type {
                 // A directory is never a source file; skip it. Files and
                 // symlinks are included — a symlink is refused at open time
-                // (closed-world no-follow, DESIGN.md § Five check families).
+                // (closed-world no-follow, DESIGN.md § Nine check families).
                 confine::EntryType::Dir | confine::EntryType::Other => {}
                 confine::EntryType::File | confine::EntryType::Symlink => {
                     out.push(prefix.join(&entry.name));
@@ -1219,7 +1219,7 @@ mod tests {
     #[test]
     fn glob_matched_symlink_refused() {
         // Glob expansion may match a symlink; the handle-based open still
-        // refuses it (closed-world no-follow, DESIGN.md § Five check families).
+        // refuses it (closed-world no-follow, DESIGN.md § Nine check families).
         let temp = TempDir::new("glob-symlink");
         let outside = TempDir::new("glob-symlink-target");
         outside.write("target.yaml", "k: v\n");
@@ -1272,7 +1272,7 @@ mod tests {
 
     // ── Pin tests: engine-owned no-follow bounded glob walk (issue #55) ──────
     //
-    // These pin the closed-world enumeration contract (DESIGN.md § Five check
+    // These pin the closed-world enumeration contract (DESIGN.md § Nine check
     // families: symlinks are not followed during enumeration; symlink cycles
     // cannot extend a walk) against the five symptoms of the absorbed
     // glob::glob delegation defect. Each was authored red-first (misbehaving

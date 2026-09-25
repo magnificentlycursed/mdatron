@@ -40,7 +40,7 @@ expands the pattern into a list of matching file paths under the project root.
 - Glob patterns operate on filesystem paths; path-confinement discipline
   (BOUNDARY-PREAMBLE § 7) is enforced by the index module: every resolved path is
   validated under the project root before being read. PR-injected glob patterns
-  that escape the project root return `MDATRON-E0011: key-source-parent-traversal`.
+  that escape the project root return `MDATRON-E0011: parent-segment-refused`.
 
 ## Attribution
 

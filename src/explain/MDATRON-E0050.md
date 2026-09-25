@@ -35,5 +35,5 @@ violations) and the first fix may unlock the rest.
 
 ## Related codes
 
-- MDATRON-E0001 — frontmatter could not be parsed (fires before Layer 1)
+- MDATRON-E0001 — frontmatter could not be parsed (fires before the schema family)
 - MDATRON-E0002 — `schema_class` references a class not in `.mdatron/schemas/`

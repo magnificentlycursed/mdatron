@@ -17,6 +17,12 @@ routes:
 - files: "README.md"
   governed_by: DESIGN.md
   links: true
+# The root governing document claims itself (#204): the closed-world walk needs
+# a claimant for every walked file and nothing stands above DESIGN.md; walking
+# it puts the canonical lexicon it declares under the register it declares.
+- files: "DESIGN.md"
+  governed_by: DESIGN.md
+  links: true
 # The methodology docs that govern mdatron's own development (#96/#97). Claimed
 # so the closed-world walk has no unrouted file; governed by DESIGN.md, the root
 # governing document.

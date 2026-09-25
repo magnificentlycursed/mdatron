@@ -1,7 +1,8 @@
-//! `mdatron init`: deploy the `.mdatron/` skeleton and its managed-partition
-//! manifest, idempotently, refusing drifted managed files.
+//! `mdatron init`: deploy the `.mdatron/` skeleton and its init manifest (the
+//! record of the engine-managed partition), idempotently, refusing drifted
+//! managed files.
 //!
-//! Per `DESIGN.md` § Init: the skeleton is the schema and pattern directories,
+//! Per `DESIGN.md` § Requirements (Init): the skeleton is the schema and pattern directories,
 //! a seeded engine-default config, and the init manifest defining the managed
 //! partition. Managed files — listed in the manifest with sha256 content
 //! hashes — are drift-refused; the manifest is the authority on WHAT is
@@ -10,7 +11,7 @@
 //! overwritten; their demotion from the managed partition persists as
 //! tombstones in trees that had them managed. Adopter-authored data (schemas
 //! and patterns) lives outside the manifest and is never touched. The manifest
-//! cannot hash itself (a fixed point, `DESIGN.md` § Governance data is
+//! cannot hash itself (a fixed point, `DESIGN.md` § Validation is data-driven, governance data is
 //! governed); its own integrity is anchored by commit review.
 
 use std::path::Path;
@@ -26,8 +27,8 @@ use crate::diagnostic::{Finding, Location, QuotedRegion, Severity};
 /// pipeline honors (#77) — which is exactly why it cannot be drift-guarded:
 /// the original guard (placed "until config consumption lands") would make
 /// customization impossible. Its demotion from the managed partition is
-/// recorded as a tombstone in trees that had it managed (DESIGN § Governance
-/// data is governed).
+/// recorded as a tombstone in trees that had it managed (DESIGN § Validation is data-driven,
+/// governance data is governed).
 const DEFAULT_CONFIG: &str = "\
 # mdatron configuration — seeded by `mdatron init`; adopter-owned.
 # file_globs declare what is in mdatron's jurisdiction; files outside them
@@ -109,11 +110,12 @@ impl std::fmt::Display for InitError {
 impl std::error::Error for InitError {}
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct Manifest {
     version: u32,
     /// Engine-deployed files (path relative to `.mdatron/`) with their sha256.
     /// The manifest never lists itself (fixed point). The manifest DEFINES the
-    /// managed partition (DESIGN § Governance data is governed): drift checks
+    /// managed partition (DESIGN § Validation is data-driven, governance data is governed): drift checks
     /// run over these entries as data, not over an engine-side list.
     managed: Vec<ManagedEntry>,
     /// Demotion tombstones: standing records of entries removed from the
@@ -125,16 +127,124 @@ struct Manifest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct ManagedEntry {
     path: String,
     sha256: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct DemotionTombstone {
+    /// The demoted file, relative to `.mdatron/` (the manifest's own base —
+    /// unlike a pins.yaml tombstone's root-relative `file`).
     path: String,
+    #[serde(default)]
     reason: String,
+    #[serde(default)]
     owner: String,
+}
+
+/// The init manifest as `verify` reads it: its standing demotion tombstones
+/// rendered as findings, plus the digest of the bytes read (input lineage).
+pub struct LoadedManifest {
+    pub findings: Vec<Finding>,
+    pub digest: String,
+}
+
+/// Render the manifest's demotion tombstones as the standing governance-
+/// weakening findings — the second carrier of `MDATRON-L0001` beside
+/// `pins.yaml`'s `unpinned[]` (DESIGN § Validation is data-driven, governance data is governed: "a
+/// tombstoned demotion stays loud through its standing annotation"; #204 R3 —
+/// through 0.6.0 only the pins carrier emitted the lint, so the DESIGN
+/// criterion was unmet). A tombstone without its justification is
+/// `MDATRON-W0042`, exactly as for an unpinned entry. An absent manifest is
+/// `None` (a tree that never ran `init`); a manifest that does not parse is a
+/// config error — the file is engine-managed, so a parse failure is a defect,
+/// never something to skip silently.
+pub fn load_tombstones(project_root: &Path) -> Result<Option<LoadedManifest>, crate::Error> {
+    let path = project_root.join(".mdatron").join(MANIFEST_NAME);
+    let content = match std::fs::read_to_string(&path) {
+        Ok(c) => c,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(e) => {
+            return Err(crate::Error::Config(format!(
+                "cannot read '{}': {e}",
+                path.display()
+            )))
+        }
+    };
+    let manifest: Manifest = serde_yaml_ng::from_str(&content)
+        .map_err(|e| crate::Error::Config(format!("cannot parse '{}': {e}", path.display())))?;
+    let mut findings = Vec::new();
+    for t in &manifest.demoted {
+        // The same confinement the managed[] half of this file gets (round-2
+        // m13): a demoted path escaping .mdatron/ is a manifest-integrity
+        // failure, refused — never rendered as if it named a governed file.
+        if let Err(v) = confine_lexically(Path::new(&t.path)) {
+            let why = match v {
+                crate::confine::LexicalViolation::Absolute => "is an absolute path",
+                crate::confine::LexicalViolation::ParentSegment => {
+                    "climbs above .mdatron/ with `..`"
+                }
+            };
+            return Err(crate::Error::Config(format!(
+                "cannot use '{}': the demoted path '{}' {why}; a tombstone names a \
+                 file inside .mdatron/",
+                path.display(),
+                t.path
+            )));
+        }
+        let file = QuotedRegion {
+            platform_variant: false,
+            label: "file".into(),
+            content: format!(".mdatron/{}", t.path),
+        };
+        if t.reason.trim().is_empty() || t.owner.trim().is_empty() {
+            findings.push(Finding {
+                code: "MDATRON-W0042".into(),
+                severity: Severity::Warning,
+                summary: "governance-weakening-unjustified".into(),
+                message: "a demotion tombstone carries no justification (reason and \
+                          owner are required); a weakening that cannot say why it \
+                          stands is not a tombstone, it is an erasure"
+                    .into(),
+                help: Some("add reason and owner to the demoted entry".into()),
+                location: Location::whole_file(&path),
+                explain_ref: Some("MDATRON-W0042".into()),
+                quoted: vec![file],
+            });
+        } else {
+            findings.push(Finding {
+                code: "MDATRON-L0001".into(),
+                severity: Severity::Lint,
+                summary: "governance-weakening-standing".into(),
+                message: "a file was demoted from the managed partition; the \
+                          tombstone below is the standing record of that weakening"
+                    .into(),
+                help: None,
+                location: Location::whole_file(&path),
+                explain_ref: Some("MDATRON-L0001".into()),
+                quoted: vec![
+                    file,
+                    QuotedRegion {
+                        platform_variant: false,
+                        label: "reason".into(),
+                        content: t.reason.clone(),
+                    },
+                    QuotedRegion {
+                        platform_variant: false,
+                        label: "owner".into(),
+                        content: t.owner.clone(),
+                    },
+                ],
+            });
+        }
+    }
+    Ok(Some(LoadedManifest {
+        findings,
+        digest: sha256_hex(content.as_bytes()),
+    }))
 }
 
 /// Lowercase hex sha256 of `bytes`.
@@ -172,7 +282,7 @@ pub fn init(project_root: &Path) -> Result<InitOutcome, InitError> {
             // The manifest is read from the tree, and it cannot hash itself
             // (fixed point) — so a hand-edit to it is not drift-caught. Hold its
             // managed paths to the same confinement contract as any governed
-            // path (DESIGN.md § Five check families): a path escaping .mdatron/
+            // path (DESIGN.md § Nine check families): a path escaping .mdatron/
             // is a manifest-integrity failure — refuse, read nothing outside the
             // partition.
             let confined = confine_lexically(Path::new(&entry.path)).map_err(|v| {
@@ -306,7 +416,9 @@ fn write_manifest(dir: &Path, manifest: &Manifest) -> Result<(), InitError> {
         path: manifest_path.to_string_lossy().into_owned(),
         error: e.to_string(),
     })?;
-    let body = format!("# mdatron managed-partition manifest — do not edit by hand.\n{yaml}");
+    let body = format!(
+        "# mdatron init manifest (the engine-managed partition) — do not edit by hand.\n{yaml}"
+    );
     // Atomic write (#126 DEF8): the manifest is rewritten in place on repair
     // (tombstones, re-hashed redeploys); a torn write would corrupt the
     // managed-partition record.

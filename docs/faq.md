@@ -35,7 +35,7 @@ conventions, not contracts, inside SARIF.
 
 The registry discipline: a diagnostic-code registry as the *generator* of
 derived artifacts, so drift is impossible by construction rather than caught by
-review. mdatron's golden code catalog — generated from the explain pages — is
+review. mdatron's explain catalog — generated from the explain pages — is
 the full application of that idiom; the tripwire that forces `docs/limits.md`
 to match shipped data is the weaker cousin (drift caught at test time rather
 than made impossible), and its promotion to a generated table is tracked.
@@ -72,7 +72,7 @@ including the rejections, is recorded in the project's review history.
 
 Compose it as a subprocess, never as a library: spawn `mdatron verify --json`
 and parse the single JSON object on stdout against the published envelope
-schema (`mdatron schema` prints it; pin the `envelope_schema` field's `$id`).
+schema (`mdatron envelope-schema` prints it; pin the `envelope_schema` field's `$id`).
 The envelope carries everything a wrapper needs — pipeline status with an
 in-band failure reason, per-family activity so "checked nothing" is never
 mistaken for "clean", trust-marked quoted regions, and line-churn-stable

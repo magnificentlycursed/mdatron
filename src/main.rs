@@ -2,7 +2,7 @@
 //!
 //! `mdatron verify` runs the full pipeline from `mdatron::verify`: loads schemas
 //! from `<root>/.mdatron/schemas/`, patterns from `<root>/.mdatron/patterns/`, walks
-//! the project per `--files` globs, and applies Layer 1 (JSON Schema) + Layer 2 (DSL)
+//! the project per `--files` globs, and applies the schema family (JSON Schema) + the rule DSL
 //! against every matched markdown file.
 
 use std::path::{Path, PathBuf};
@@ -16,13 +16,13 @@ mod explain;
 
 #[derive(Parser, Debug)]
 #[command(name = "mdatron", about, version, long_about = None)]
-#[command(after_help = "The working loop (#180 discoverability):
+#[command(after_help = "The working loop:
   mdatron init                     scaffold .mdatron/ in a new project
   mdatron verify                   check the tree; rustc-shaped diagnostics
   mdatron explain <code>           the fix for any diagnostic (--list for all)
   mdatron verify --json            the versioned machine envelope (agents/CI)
   mdatron docs                     the bundled DSL reference (also: limits, faq)
-  mdatron schema                   the published envelope JSON Schema
+  mdatron envelope-schema          the published envelope JSON Schema
 
 Exit contract: 0 clean, 1 findings, 2 pipeline failure — anything else is an
 engine defect; please report it.
@@ -52,17 +52,17 @@ enum Command {
         /// File globs (relative to project root) — an explicit, ad-hoc
         /// jurisdiction. Without --files, jurisdiction comes from
         /// .mdatron/config.yaml's `file_globs`; an absent or globless config is
-        /// refused (jurisdiction is never guessed). (#125/#126)
-        #[arg(long = "files", value_name = "GLOB", num_args = 1..)]
+        /// refused (jurisdiction is never guessed).
+        #[arg(long = "files", visible_alias = "file-globs", value_name = "GLOB", num_args = 1..)]
         files: Vec<String>,
 
         /// Emit the versioned JSON output envelope on stdout
-        /// (schema: schema/mdatron-output.schema.json). (#126)
+        /// (schema: schema/mdatron-output.schema.json).
         #[arg(long = "json")]
         json: bool,
 
         /// Emit the compact agent-context form on stdout: one size-capped block
-        /// per finding (512 bytes, DESIGN §Output; #80 D4), adopter content
+        /// per finding (512 bytes, a contract limit), adopter content
         /// prefix-marked, truncation at line boundaries with an elision marker.
         #[arg(long = "compact", conflicts_with = "json")]
         compact: bool,
@@ -71,65 +71,63 @@ enum Command {
         #[arg(long = "quiet", short = 'q')]
         quiet: bool,
 
-        /// Incremental mode (#102): verify only this changed file and its
+        /// Incremental mode: verify only this changed file and its
         /// transitive dependents, reporting the same findings a whole-tree run
         /// would for those files. A change under `.mdatron/` falls back to a
         /// whole-tree run. The verified (visited) file set prints to stderr.
         #[arg(long = "changed", value_name = "FILE")]
         changed: Option<PathBuf>,
 
-        /// Escalate warnings to a failing exit (#121, requested by vsdd-cli): a
-        /// warnings-only run exits `1` instead of `0`, so a consumer wiring
+        /// Escalate warnings to a failing exit: a
+        /// warnings-only run exits `1` instead of `0`, so an adopter wiring
         /// `verify` as a hard gate need not parse the envelope. Errors still exit
         /// `1`, a clean run `0`, and a pipeline failure `2`, unchanged.
         #[arg(long = "deny-warnings", visible_alias = "strict")]
         deny_warnings: bool,
 
-        /// Include run-phase wall-clock timings in the JSON envelope (#175):
-        /// an optional `timings` object with `total_ms`/`load_ms`/`capture_ms`/
-        /// `check_ms`. Requires --json — timings ride ONLY in the envelope, so
-        /// without it the flag would silently do nothing (cold-review R4). The
-        /// explicit --compact conflict closes clap's requires-waiver (R6:
-        /// `compact` conflicts with `json`, and clap 4.5 waives an arg's
-        /// `requires` when another present arg conflicts the required arg away
-        /// — so `--timings --compact` was accepted and silently dropped
-        /// timings). Off by default so the default envelope stays
-        /// deterministic (timings are its sole non-deterministic zone).
+        /// Include run-phase wall-clock timings in the JSON envelope: an
+        /// optional `timings` object with `total_ms`/`load_ms`/`capture_ms`/
+        /// `check_ms`. Requires --json (timings ride only in the envelope) and
+        /// conflicts with --compact. Off by default so the default envelope
+        /// stays deterministic (timings are its sole non-deterministic zone).
+        // The explicit --compact conflict closes clap's requires-waiver:
+        // `compact` conflicts with `json`, and clap 4.5 waives an arg's
+        // `requires` when another present arg conflicts the required arg away
+        // — so `--timings --compact` was once accepted and silently dropped
+        // timings (#175 cold-review R4/R6).
         #[arg(long = "timings", requires = "json", conflicts_with = "compact")]
         timings: bool,
     },
 
-    /// Show extended documentation for an error code (rustc --explain pattern).
+    /// Show extended documentation for a diagnostic code (rustc --explain pattern).
     Explain {
-        /// The error code, e.g. MDATRON-E0001 or VSDD-E0017.
+        /// The diagnostic code, e.g. MDATRON-E0001 or VSDD-E0017.
         /// Must match `^[A-Z][A-Z0-9]*-[ELW][0-9]{4}$` — operator-pasted from
-        /// diagnostic output. Rejects ANSI escapes and shell-meta injection
-        /// (crosslink #13 SEC/F1 + RT/F2 convergence).
+        /// diagnostic output. Rejects ANSI escapes and shell-meta injection.
         #[arg(value_parser = parse_explain_code, required_unless_present = "list")]
         code: Option<String>,
 
         /// List every code in mdatron's explain catalog (`code — summary`),
         /// sorted, then exit — so an operator can discover codes without a full
-        /// code in hand (#117, vsdd W4).
+        /// code in hand.
         #[arg(long = "list")]
         list: bool,
 
-        /// Emit the explain page as a structured JSON object on stdout
-        /// (per crosslink #13 AIE/F7); with --list, the catalog as a JSON
-        /// array of {code, summary} objects (#180 — previously the flag was
-        /// silently ignored under --list). Without this flag, the markdown
-        /// body (or the plain list) is printed verbatim.
+        /// Emit the explain page as a structured JSON object on stdout; with
+        /// --list, the catalog as a JSON array of {code, summary} objects.
+        /// Without this flag, the markdown body (or the plain list) is printed
+        /// verbatim.
         #[arg(long = "json")]
         json: bool,
 
         /// Emit a one-line compact form: `<code> <severity>: <summary> —
         /// <first-sentence-of-fix>`. Suitable for agent-loop hot paths +
-        /// PostToolUse hook context budgets (per crosslink #13 AIE/F2).
+        /// PostToolUse hook context budgets.
         #[arg(long = "compact", conflicts_with = "json")]
         compact: bool,
     },
 
-    /// Verify the pin record, or recompute it with --update (#84).
+    /// Verify the pin record, or recompute it with --update.
     Pin {
         /// Project root. Defaults to the current directory.
         #[arg(long = "project-root", value_name = "DIR")]
@@ -149,7 +147,7 @@ enum Command {
         quiet: bool,
     },
 
-    /// Scaffold the `.mdatron/` skeleton and its managed manifest. Idempotent;
+    /// Scaffold the `.mdatron/` skeleton and its init manifest. Idempotent;
     /// refuses a hand-modified managed file with MDATRON-E0060.
     Init {
         /// Project root. Defaults to the current directory.
@@ -162,11 +160,14 @@ enum Command {
     },
 
     /// Print the published `verify --json` output-envelope JSON Schema on stdout
-    /// (#127) — so a binary-only consumer can pin and validate against it without
-    /// a repo checkout. Kept in lockstep with `mdatron_output_version`.
-    Schema,
+    /// — so a binary-only consumer can pin and validate against it without
+    /// a repo checkout. Kept in lockstep with `mdatron_output_version`. (`schema`
+    /// is the retired 0.6.0 name, kept as an alias — the bare word otherwise
+    /// means the frontmatter schema family.)
+    #[command(name = "envelope-schema", visible_alias = "schema")]
+    EnvelopeSchema,
 
-    /// Print bundled documentation on stdout (#180 discoverability): the
+    /// Print bundled documentation on stdout: the
     /// complete DSL reference (default), the declared-limits table, or the
     /// FAQ — the same files the crate ships, so a binary-only `cargo install`
     /// consumer reads them without a repo checkout (`mdatron docs | less`).
@@ -263,13 +264,13 @@ fn main() -> ExitCode {
             project_root,
             quiet,
         } => cmd_init(project_root, quiet),
-        Command::Schema => cmd_schema(),
+        Command::EnvelopeSchema => cmd_schema(),
         Command::Docs { topic } => cmd_docs(&topic),
     }
 }
 
 /// Print the embedded output-envelope schema to stdout (#127). A binary-only
-/// consumer can `mdatron schema > mdatron-output.schema.json` and validate the
+/// consumer can `mdatron envelope-schema > mdatron-output.schema.json` and validate the
 /// `verify --json` envelope against it.
 fn cmd_schema() -> ExitCode {
     print_page(mdatron::output::OUTPUT_SCHEMA)
@@ -289,7 +290,7 @@ fn print_page(body: &str) -> ExitCode {
         Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => ExitCode::SUCCESS,
         Err(e) => {
             eprintln!(
-                "error[MDATRON-E0080]: writing to stdout failed\n   = note: {}",
+                "error[MDATRON-E0080]: pipeline-orchestration-failure\n   = note: writing to stdout failed: {}",
                 stderr_safe(&e, &[])
             );
             ExitCode::from(2)
@@ -374,7 +375,7 @@ fn cmd_pin(project_root: Option<PathBuf>, update: bool, dry_run: bool, quiet: bo
                     // escape at the print boundary and strip the resolved root
                     // (DEF4) from the rendered note.
                     eprintln!(
-                        "error[MDATRON-E0080]: pin update failed\n   = note: {}",
+                        "error[MDATRON-E0080]: pipeline-orchestration-failure\n   = note: pin update failed: {}",
                         stderr_safe(&e, &[root.as_path()])
                     );
                 }
@@ -416,7 +417,7 @@ fn cmd_pin(project_root: Option<PathBuf>, update: bool, dry_run: bool, quiet: bo
                                 );
                                 if !quiet {
                                     eprintln!(
-                                        "error[MDATRON-E0080]: pin check failed\n   = note: {}",
+                                        "error[MDATRON-E0080]: pipeline-orchestration-failure\n   = note: pin check failed: {}",
                                         stderr_safe(&e, &[root.as_path()])
                                     );
                                 }
@@ -426,7 +427,7 @@ fn cmd_pin(project_root: Option<PathBuf>, update: bool, dry_run: bool, quiet: bo
                             Err(e) => {
                                 if !quiet {
                                     eprintln!(
-                                        "error[MDATRON-E0080]: pin check failed\n   = note: {}",
+                                        "error[MDATRON-E0080]: pipeline-orchestration-failure\n   = note: pin check failed: {}",
                                         stderr_safe(&e, &[root.as_path()])
                                     );
                                 }
@@ -461,7 +462,7 @@ fn cmd_pin(project_root: Option<PathBuf>, update: bool, dry_run: bool, quiet: bo
                     // #167: pin::load errors interpolate the pins.yaml path —
                     // root-relativize (DEF4) + escape at the print boundary.
                     eprintln!(
-                        "error[MDATRON-E0080]: pin check failed\n   = note: {}",
+                        "error[MDATRON-E0080]: pipeline-orchestration-failure\n   = note: pin check failed: {}",
                         stderr_safe(&e, &[root.as_path()])
                     );
                 }
@@ -528,7 +529,7 @@ fn cmd_init(project_root: Option<PathBuf>, quiet: bool) -> ExitCode {
                 // #167: InitError::Io/ManifestParse interpolate manifest-derived
                 // paths — root-relativize (DEF4) + escape at the print boundary.
                 eprintln!(
-                    "error[MDATRON-E0080]: init failed\n   = note: {}",
+                    "error[MDATRON-E0080]: pipeline-orchestration-failure\n   = note: init failed: {}",
                     stderr_safe(&e, &[root.as_path()])
                 );
             }
@@ -760,7 +761,7 @@ fn cmd_verify(
                     // escape + root-strip at the print boundary like every
                     // other non-Finding stderr note.
                     eprintln!(
-                        "error[MDATRON-E0080]: output serialization failed\n   = note: {}",
+                        "error[MDATRON-E0080]: pipeline-orchestration-failure\n   = note: output serialization failed: {}",
                         stderr_safe(&e, &[root.as_path()])
                     );
                 }
@@ -890,11 +891,15 @@ fn pipeline_error_finding(e: &VerifyError, roots: &[&Path]) -> Finding {
         VerifyError::Frontmatter { .. } => "a file's frontmatter failed to parse",
         VerifyError::BoundExceeded { .. } => "a declared resource bound was exceeded",
     };
+    // The TTY/compact render of a pipeline failure carries the catalog headline
+    // as its summary like every other finding (#204 round-2 m8: the new
+    // summary<->catalog tripwire caught this one prose summary); the failure
+    // sense rides in the message.
     Finding {
         code: "MDATRON-E0080".into(),
         severity: Severity::Error,
-        summary: "verify pipeline failed".into(),
-        message: kind.into(),
+        summary: "pipeline-orchestration-failure".into(),
+        message: format!("verify pipeline failed: {kind}"),
         help: None,
         location: Location {
             file: std::path::PathBuf::new(),
@@ -932,7 +937,7 @@ fn cmd_explain(code: Option<&str>, list: bool, json: bool, compact: bool) -> Exi
                         Ok(line) => return print_page(&format!("{line}\n")),
                         Err(e) => {
                             eprintln!(
-                                "error[MDATRON-E0080]: output serialization failed\n   = note: {}",
+                                "error[MDATRON-E0080]: pipeline-orchestration-failure\n   = note: output serialization failed: {}",
                                 stderr_safe(&e, &[])
                             );
                             return ExitCode::from(2);
@@ -962,7 +967,7 @@ fn cmd_explain(code: Option<&str>, list: bool, json: bool, compact: bool) -> Exi
                 // #167: routed through the print-boundary escape for
                 // uniformity (no resolved root in this command).
                 eprintln!(
-                    "error[MDATRON-E0080]: explain --list failed\n   = note: {}",
+                    "error[MDATRON-E0080]: pipeline-orchestration-failure\n   = note: explain --list failed: {}",
                     stderr_safe(&e, &[])
                 );
                 return ExitCode::from(2);
@@ -983,7 +988,7 @@ fn cmd_explain(code: Option<&str>, list: bool, json: bool, compact: bool) -> Exi
                 }
                 Err(e) => {
                     eprintln!(
-                        "error[MDATRON-E0080]: output serialization failed\n   = note: {}",
+                        "error[MDATRON-E0080]: pipeline-orchestration-failure\n   = note: output serialization failed: {}",
                         stderr_safe(&e, &[])
                     );
                     return ExitCode::from(2);
@@ -1007,9 +1012,9 @@ fn cmd_explain(code: Option<&str>, list: bool, json: bool, compact: bool) -> Exi
     let code = stderr_safe(code, &[]);
     if explain::is_mdatron_namespace(&code) {
         eprintln!(
-            "error[MDATRON-E0080]: no explain page found for {code}\n   \
-             = note: the explain catalog grows by one entry per emitted code; \
-             {code} is not in the v0.1.0 baseline catalog\n   \
+            "error[MDATRON-E0080]: pipeline-orchestration-failure\n   \
+             = note: no explain page found for {code}: the explain catalog grows \
+             by one entry per emitted code, and {code} is not in it\n   \
              = help: see DESIGN.md \u{00A7} Diagnostics are a versioned contract for \
              the structural meaning of unimplemented codes"
         );
@@ -1019,8 +1024,9 @@ fn cmd_explain(code: Option<&str>, list: bool, json: bool, compact: bool) -> Exi
     // its own namespace only per phase-0-output-format/DESIGN.md
     // namespace-separation contract.
     eprintln!(
-        "error[MDATRON-E0080]: {code} is outside the mdatron namespace\n   \
-         = note: mdatron explain covers MDATRON-Exxxx codes only; \
+        "error[MDATRON-E0080]: pipeline-orchestration-failure\n   \
+         = note: {code} is outside the mdatron namespace: mdatron explain covers \
+         MDATRON-Exxxx codes only; \
          see `vsdd explain {code}` for the VSDD namespace"
     );
     ExitCode::from(2)

@@ -1,4 +1,4 @@
-# mdatron managed-partition manifest — do not edit by hand.
+# mdatron init manifest (the engine-managed partition) — do not edit by hand.
 # (This demotion edit is the sanctioned exception: a tombstoned demotion is
 # anchored by commit review, the manifest's stated root of trust.)
 version: 2

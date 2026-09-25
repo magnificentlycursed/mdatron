@@ -14,7 +14,7 @@
 
 ## Why this dependency
 
-Layer 1 structural validation per DESIGN.md § Five check families requires JSON Schema draft 2020-12 compliance. Hand-rolling a draft-2020-12-complete validator would be ~5000 LoC; this dep is the canonical Rust choice.
+Frontmatter structural validation (the schema family, DESIGN.md § Nine check families) requires JSON Schema draft 2020-12 compliance. Hand-rolling a draft-2020-12-complete validator would be ~5000 LoC; this dep is the canonical Rust choice.
 
 **Alternatives considered:**
 
@@ -28,7 +28,7 @@ Layer 1 structural validation per DESIGN.md § Five check families requires JSON
 - Maintainer: Dmitry Dygalo (Stranger6667); active maintenance; widely adopted
 - Transitive deps: the 0.49 workspace footprint (`referencing`, `jsonschema-regex`, `jsonschema-value`, `regex`, `fancy-regex`, `fluent-uri`, `strum`, `email_address`, `uuid-simd`, `unicode-general-category`, `foldhash`, …) — ~18 crates larger than the 0.18 tree (see the upgrade section above)
 - MSRV: still 1.88 (matches `rust-toolchain.toml`)
-- License: MIT; compatible with mdatron's MIT (the expanded tree is license-gated by the C4 `cargo-deny` lane)
+- License: MIT; compatible with mdatron's MIT (the expanded tree is license-gated by the `cargo-deny` lane)
 
 ## Security notes
 
@@ -40,7 +40,7 @@ Layer 1 structural validation per DESIGN.md § Five check families requires JSON
 
 ## Operator approval
 
-Layer 1 JSON Schema validation is foundational for mdatron's primary purpose. jsonschema crate is the established Rust choice. Cost is proportionate.
+JSON Schema validation (the schema family) is foundational for mdatron's primary purpose. jsonschema crate is the established Rust choice. Cost is proportionate.
 
 ## Attribution
 

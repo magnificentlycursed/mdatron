@@ -1,7 +1,7 @@
 # mdatron CI gauntlet (tracker issue #68).
 #
 # Shape follows the crosslink/Thermite reference (operator ruling 2026-07-19,
-# DESIGN.md § Structural inspiration): lint -> {test-matrix, security-audit}.
+# DESIGN.md § References, the crosslink/Thermite entry): lint -> {test-matrix, security-audit}.
 # Deliberate divergence from vsdd-cli's `vsdd-*.yml` / `vsdd init` deployment
 # convention: mdatron's default engineering reference is crosslink/Thermite, not
 # vsdd-cli, so this is a hand-authored `ci.yml` (DESIGN.md: divergence from an

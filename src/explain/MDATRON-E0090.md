@@ -6,7 +6,7 @@
 
 ## What this means
 
-A bold-introduced term in governed prose is absent from the vocabulary registry. Coinages proliferate faster than review can police them (the coinage-log discipline of the bootstrap period, now mechanized); a term introduced in bold either enters the registry or is not introduced. Draft-status terms are exempt from strict findings — registration can lag deliberately, but visibly.
+A bold-introduced term in governed prose is absent from the vocabulary registry. Coinages proliferate faster than review can police them (a register reviewed only by hand cannot keep up); a term introduced in bold either enters the registry or is not introduced. Draft-status terms are exempt from strict findings — registration can lag deliberately, but visibly.
 
 ## How to fix
 

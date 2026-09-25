@@ -1,4 +1,4 @@
-//! Link family (#145; `DESIGN.md` § check families): inline body links in
+//! Link family (#145; `DESIGN.md` § Nine check families): inline body links in
 //! governed markdown are resolved against the snapshot of the working tree
 //! (#103 — the run's capture-time view; uncommitted content counts, no git
 //! history is consulted) — a link to a file that is not there, or a fragment
@@ -396,8 +396,8 @@ fn resolve_link(
                 path,
                 content,
                 at,
-                "MDATRON-E0080",
-                "pipeline-orchestration-failure",
+                "MDATRON-E0081",
+                "reference-target-not-captured",
                 "this link's target was never captured into the run snapshot — \
                  an engine defect in target discovery, not a defect in this \
                  document; please report it upstream",

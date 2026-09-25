@@ -6,7 +6,7 @@
 //! the rule applied to — a shared target referenced from N files cost
 //! O(N × target-size) inside the hook-time budget `docs/limits.md` bounds — and
 //! re-emitted the same rule-level findings (target_doc confinement
-//! `E0010`/`E0011`/`E0012`, `E0114` target-section-not-found, the `E0080`
+//! `E0010`/`E0011`/`E0012`, `E0114` target-section-not-found, the `E0081`
 //! never-captured defect) once per governed file. The link family likewise
 //! re-parsed a target's heading-slug set per referring file (its cache was
 //! local to one `check_file` call).

@@ -1,6 +1,6 @@
 # mdatron DSL reference
 
-The complete Layer-2 construct inventory (`DESIGN.md` § Cross-file semantics
+The complete rule-DSL construct inventory (`DESIGN.md` § Cross-file semantics
 stay narrowed). The DSL serves one lane: **cross-file and registry integrity
 over frontmatter**. Body-content extraction is excluded by design; there are no
 markdown-AST helpers, no regex functions, and no string-extraction functions.
@@ -21,7 +21,6 @@ mdatron_dsl_version: 1
 pattern:
   id: my-pattern            # required
   description: optional prose
-  phases: []                # optional; runtime-selectable subsets
   keys: []                  # optional; cross-file indices, see below
   rules:                    # one or more
     - id: my-rule           # required
@@ -242,6 +241,17 @@ value is NOT inlined into the message text: the rendered diagnostic carries an
 engine-authored `{expr}` placeholder in the message line and the value beneath
 it as a quoted, prefix-marked block (adopter-derived text never rides inline in
 an engine line).
+
+## Deprecated keys (accepted, inert — `MDATRON-W0052`)
+
+Two keys are parsed for DSL-v1 compatibility but have **no effect**, and the
+engine says so at load with `MDATRON-W0052` (inert-pattern-key) instead of
+accepting them silently: a pattern's `phases:` (described through 0.6.0 as
+"runtime-selectable subsets" — no selector ever existed; every rule runs on
+every verify) and a rule's `location: {field, expression}` (parsed, never
+consumed; a rule finding is located at the whole artifact). Both are retired at
+DSL v2, where a file carrying them is refused as unknown keys. Delete them to
+clear the warning; nothing else changes.
 
 ## What is deliberately absent
 

@@ -6,7 +6,7 @@
 
 ## What this means
 
-A prose numeral restates a configured frontmatter field's count and disagrees with it — e.g. a sentence saying "17 items" over a list frontmatter of 18, or "seven entries" over six. An adopter reported paying for this drift class three times in one review cycle, each instance caught only by expensive manual review. The check is scoped to configured field references (numeric_claims entries), never free inference.
+A prose numeral restates a configured frontmatter field's count and disagrees with it — e.g. a sentence saying "17 items" over a list frontmatter of 18, or "seven entries" over six. This drift class recurs, and without a mechanical check it is caught only by expensive manual review. The check is scoped to configured field references (numeric_claims entries), never free inference.
 
 ## How to fix
 

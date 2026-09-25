@@ -7,8 +7,8 @@
 ## What this means
 
 The file's YAML frontmatter (the block between `---` markers at the top of the
-markdown document) could not be parsed as valid YAML. mdatron stops Layer 1 and
-Layer 2 processing for this file because both layers depend on a well-formed
+markdown document) could not be parsed as valid YAML. mdatron stops both the schema family
+and the rule DSL for this file because both depend on a well-formed
 frontmatter document; subsequent diagnostics for the file would be cascade
 noise.
 

@@ -9,7 +9,9 @@
 //!
 //! - `pattern` — a linear-time regex (`regex_lite`); its first capture group is
 //!   the referenced `<name>`.
-//! - `element` — the class the name resolves against: a markdown `heading`, or a
+//! - `element` — the class the name resolves against (the one
+//!   [`ElementClass`] vocabulary shared with section rules): a markdown
+//!   `heading` of any level, `h1`…`h6` for one level, or a
 //!   `list-item-bold-name` (the leading `**bold**` of a `- ` list item — vsdd's
 //!   live shape: `- **Slice 1 — …** …`, referenced by that leading name).
 //! - `target_doc` — the document the reference resolves INTO, named in the rule
@@ -38,7 +40,7 @@ use std::path::Path;
 
 use crate::confine::{confine_lexically, LexicalViolation};
 use crate::diagnostic::{Finding, Location, QuotedRegion, Severity};
-use crate::markup::{atx_heading, list_item_bold_name, non_fenced_lines};
+use crate::markup::{atx_heading, non_fenced_lines};
 use crate::memo::{MarkerKey, MarkerMembers, RefMemo};
 use crate::route::{ElementClass, MarkerRule};
 use crate::snapshot::{Captured, Snapshot};
@@ -251,8 +253,8 @@ fn resolve_members(
                 path,
                 "",
                 0,
-                "MDATRON-E0080",
-                "pipeline-orchestration-failure",
+                "MDATRON-E0081",
+                "reference-target-not-captured",
                 "this rule's target_doc was never captured into the run \
                  snapshot — an engine defect in target discovery, not a defect \
                  in this document; please report it upstream",
@@ -336,18 +338,20 @@ fn extract_members(
                     continue;
                 }
             }
-            if in_section && matches!(element, ElementClass::Heading) {
-                members.insert(normalize_name(text));
+            if in_section {
+                // Level-agnostic for `heading`, exact for `h1`…`h6`; a bullet
+                // class never names a heading line.
+                if let Some(name) = element.name_in(line) {
+                    members.insert(normalize_name(name));
+                }
             }
             continue;
         }
         if !in_section {
             continue;
         }
-        if let ElementClass::ListItemBoldName = element {
-            if let Some(name) = list_item_bold_name(line) {
-                members.insert(normalize_name(name));
-            }
+        if let Some(name) = element.name_in(line) {
+            members.insert(normalize_name(name));
         }
     }
     section_matched.then_some(members)
@@ -416,6 +420,30 @@ mod tests {
         assert!(
             members.contains("First") && members.contains("Second"),
             "members under an adjacent duplicate heading must resolve: {members:?}"
+        );
+    }
+
+    // #204 D2-1: `h1`…`h6` resolve level-specifically, `heading` stays
+    // level-agnostic, and both share the section gating (the section's own
+    // heading is never a member).
+    #[test]
+    fn extract_members_level_specific_heading_classes() {
+        let body =
+            "# T\n\n## A\n\n### Three\n#### Four\n- **Bullet.** x\n\n## B\n\n### Elsewhere\n";
+        let h3 = extract_members(body, ElementClass::H3, Some("## A")).unwrap();
+        assert_eq!(h3, HashSet::from(["Three".to_string()]));
+        let any = extract_members(body, ElementClass::Heading, Some("## A")).unwrap();
+        assert_eq!(
+            any,
+            HashSet::from(["Three".to_string(), "Four".to_string()]),
+            "`heading` collects every level under the section, not the section's own heading"
+        );
+        let whole_h3 = extract_members(body, ElementClass::H3, None).unwrap();
+        assert!(whole_h3.contains("Three") && whole_h3.contains("Elsewhere"));
+        assert!(!whole_h3.contains("Four"), "h3 is exact-level");
+        assert_eq!(
+            extract_members(body, ElementClass::H2, None).unwrap(),
+            HashSet::from(["A".to_string(), "B".to_string()])
         );
     }
 

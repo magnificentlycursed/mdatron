@@ -15,8 +15,8 @@ namespace over the governed corpus. A catalog declares a `namespace` (the
 ownership prefix), the `codes` it contains, and `comprehensive: true` when it is
 the sole authority for that prefix — which is what licenses this finding: under
 a comprehensive catalog, a cited token that is not declared is a dangling
-reference (the motivating evidence: nine orphaned codes across six live files
-after doc sunsets). A token detected in prose is a namespace prefix on a word
+reference (the typical drift: codes orphaned across live files after their
+documentation is retired). A token detected in prose is a namespace prefix on a word
 boundary followed by a code body; tokens inside fenced code blocks are examples,
 not citations. English plurals are tolerated: a single trailing lowercase `s`
 immediately after the code's final digit ("both `VSDD-E0016s` were fixed") is

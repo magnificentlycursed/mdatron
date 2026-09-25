@@ -37,3 +37,7 @@
 # Rust build artifacts
 target/
 
+
+# Any build directory, including a reviewer's own (target-review, target-review-win, ...):
+# never stageable, so `git add -A` cannot sweep artifacts into a commit (#204 round 2).
+/target-*/

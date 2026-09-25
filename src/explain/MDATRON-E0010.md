@@ -1,4 +1,4 @@
-# MDATRON-E0010 — key-source-absolute-path
+# MDATRON-E0010 — absolute-path-refused
 
 **Severity:** error
 **Status:** accepted

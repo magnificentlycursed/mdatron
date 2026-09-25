@@ -6,12 +6,24 @@
 
 ## What this means
 
-The verify pipeline failed to complete — schemas could not be loaded, patterns
-could not be read, the project layout was malformed at the structural level, or
-JSON-output serialization itself failed. The pipeline did not run to
-completion; no finding-level diagnostics were emitted for the project files.
+The `verify` pipeline did not run to completion — configuration or schemas
+could not be loaded, patterns could not be read, the project layout was
+malformed at the structural level, a declared input bound was exceeded, or
+JSON-output serialization itself failed. No finding-level diagnostics were
+emitted for the project files, and the exit status is `2`.
 
-`E0080` is a single code spanning several failure senses. Under `--json` the
+`E0080` is exactly that one thing — "the run did not happen" — never a
+finding. (Through 0.6.0 a never-captured reference target was also reported
+under this code as a *finding* at exit `1`; that is `MDATRON-E0081` from
+0.7.0.) The other subcommands report their own did-not-complete failures under
+the same code and exit status, because the exit contract is one contract:
+`pin` when the record cannot be read, checked, or rewritten; `init` when the
+skeleton cannot be scaffolded; `explain` when no page exists for the code or
+the code is outside the mdatron namespace; and any subcommand whose stdout
+write fails. Those are stderr-only (`error[MDATRON-E0080]: … = note: …`); the
+structured `pipeline_error` object below is `verify --json`'s.
+
+`E0080` spans several failure senses. Under `--json` the
 envelope carries a structured `pipeline_error` object that names the specific
 sense so a machine consumer need not parse prose:
 
@@ -22,7 +34,7 @@ sense so a machine consumer need not parse prose:
 `kind` is one of: `config` (jurisdiction/config load), `io` (a read failed),
 `schema_load`, `pattern_load`, `glob` (a bad `file_globs` pattern),
 `frontmatter`, `index_build`, `expr_parse` (a rule expression failed to parse —
-including an over-deep expression past `MAX_EXPR_DEPTH`), `eval` (a rule
+including an over-deep expression past the declared DSL expression-depth limit, see `mdatron docs limits`), `eval` (a rule
 expression), and `bound_exceeded` (a declared input resource bound — per-file or
 aggregate byte size, or structural nesting depth — was exceeded). The
 object is present only when `pipeline_status` is `failed`, and — unlike the
@@ -62,6 +74,8 @@ apply the matching corrective pattern below.
 
 ## Related codes
 
+- MDATRON-E0081 — a reference target the run never captured: a FINDING at
+  exit `1`, reported under this code through 0.6.0
 - MDATRON-E0070 — project root could not be resolved (fires before pipeline
   orchestration)
 - MDATRON-E0001 / E0050 — per-file diagnostics that emit when the pipeline

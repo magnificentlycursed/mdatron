@@ -1,4 +1,4 @@
-//! Layer 1: JSON Schema dispatch for frontmatter validation.
+//! The schema family: JSON Schema dispatch for frontmatter validation.
 //!
 //! Adopters ship JSON Schema files (draft 2020-12) at `.mdatron/schemas/<class>.json`.
 //! mdatron parses YAML frontmatter from markdown files via [`crate::frontmatter::parse`],
@@ -49,7 +49,7 @@ pub struct ValidationError {
     pub schema_path: String,
     /// Engine-authored message describing WHAT failed. Carries no adopter-derived
     /// document content inline: the failing value and any adopter-authored keys
-    /// live in [`Self::quoted`] instead (per `DESIGN.md` § Output).
+    /// live in [`Self::quoted`] instead (per `DESIGN.md` § Agents are the first consumer).
     pub message: String,
     /// Adopter-derived text from the failing document (the value that failed, or
     /// the unexpected keys it carried), for prefix-marked rendering rather than
@@ -102,7 +102,7 @@ impl Schema {
         // LINEAR-time `regex` engine, not the default backtracking `fancy-regex`.
         // A backtracking engine on adopter-authored patterns over contributor
         // frontmatter is a ReDoS surface on the verify gate; the linear engine
-        // guarantees O(n) matching (DESIGN § Validation: linear-time engines), at
+        // guarantees O(n) matching (DESIGN § Project declarations, linear-time engines), at
         // the cost of rejecting look-around/backreferences (which we do not need
         // for frontmatter shape validation).
         let compiled = jsonschema::options()
@@ -220,7 +220,7 @@ impl Schema {
 ///
 /// The `jsonschema` crate's own `Display` interpolates the failing document
 /// value straight into the message; that is exactly the inline, unmarked adopter
-/// content `DESIGN.md` § Output forbids (and the agent-context injection surface).
+/// content `DESIGN.md` § Agents are the first consumer forbids (and the agent-context injection surface).
 /// Here the message is built from the error *kind* using only schema-side data
 /// (keyword, allowed options, limits — the adopter's committed config), while the
 /// failing document value and any adopter-authored keys are routed to

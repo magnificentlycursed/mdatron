@@ -6,7 +6,7 @@
 
 ## Why this dependency
 
-Provides `Sha256` for the `mdatron init` managed-partition manifest (adopted
+Provides `Sha256` for the init manifest `mdatron init` writes (adopted
 with the managed-manifest work, 2026-07). The
 manifest records each engine-deployed managed file with its sha256 content hash;
 on re-run, `init` recomputes and compares to detect drift (`MDATRON-E0060`).
@@ -47,7 +47,7 @@ required.
 - **Threat model:** sha256 here is used for drift *detection* of engine-owned
   files, not as a security boundary against an adversary who controls the tree —
   the manifest itself is anchored by commit review, not by the engine
-  (`DESIGN.md` § Governance data is governed). Content hashing is
+  (`DESIGN.md` § Validation is data-driven, governance data is governed). Content hashing is
   collision-irrelevant for this use (accidental edits, not forged collisions),
   so even the theoretical sha256 threat surface does not bind here. Pure-Rust
   implementation with runtime CPU-feature detection (`cpufeatures`); no C
@@ -56,7 +56,7 @@ required.
 ## Approval
 
 - **Operator-attribution:** Solution Owner confirms sha256 content hashing is
-  foundational for the init managed-partition governance contract; reusing the
+  foundational for the init-manifest governance contract; reusing the
   PIN-family primitive rather than adding a second hash family is the
   scope-minimal choice.
 - **Scope justification:** one hash function for drift detection; `sha2` is the

@@ -20,12 +20,14 @@ pub enum Severity {
 
 impl Severity {
     /// The string used in TTY-style diagnostic output (rustc convention):
-    /// `Error` → `"error"`, `Warning` → `"warning"`, `Lint` → `"info"`.
+    /// `Error` → `"error"`, `Warning` → `"warning"`, `Lint` → `"lint"` — the
+    /// same three words the envelope's `severity` enum and `explain` use (#204:
+    /// the TTY header said `info` through 0.6.0, the one surface that did).
     pub fn label(self) -> &'static str {
         match self {
             Self::Error => "error",
             Self::Warning => "warning",
-            Self::Lint => "info",
+            Self::Lint => "lint",
         }
     }
 }
@@ -135,7 +137,7 @@ impl Location {
 
 /// The split set: code points any consumer may treat as a line break. Each is
 /// consumed as a break inside a quoted region and the resulting lines are
-/// individually prefixed. Per `DESIGN.md` § Output: LF, CR, VT, FF, NEL, and the
+/// individually prefixed. Per `DESIGN.md` § Agents are the first consumer: LF, CR, VT, FF, NEL, and the
 /// Unicode line/paragraph separators (Zl = U+2028, Zp = U+2029).
 const SPLIT_SET: &[char] = &[
     '\u{000A}', // LF
@@ -149,7 +151,7 @@ const SPLIT_SET: &[char] = &[
 
 /// Render adopter-derived `content` as a prefix-marked quoted region.
 ///
-/// The rendering alphabet is a partition (`DESIGN.md` § Output): the **split
+/// The rendering alphabet is a partition (`DESIGN.md` § Agents are the first consumer): the **split
 /// set** ([`SPLIT_SET`]) is consumed as line breaks and each resulting line is
 /// prefixed; the **escape set** — the remaining control characters (`Cc`,
 /// including FS/GS/RS which some consumers split on) — renders as inert visible
@@ -206,7 +208,7 @@ pub(crate) fn escape_label(label: &str) -> String {
 }
 
 /// A region of adopter-derived text carried alongside a finding's engine-authored
-/// `message`. Kept structurally separate (per `DESIGN.md` § Output) so it is a
+/// `message`. Kept structurally separate (per `DESIGN.md` § Agents are the first consumer) so it is a
 /// distinct field in the JSON envelope and a prefix-marked block in the TTY /
 /// compact forms — never interpolated inline into an engine-authored line, where
 /// an inline marking delimiter would be forgeable.
@@ -239,7 +241,7 @@ pub struct QuotedRegion {
 
 /// Serialize with the trust marking baked in (#114, vsdd item 9). Every quoted
 /// region is adopter-derived, untrusted content by construction (that is the
-/// type's whole purpose — DESIGN § Output), so `origin: "adopter"` and
+/// type's whole purpose — DESIGN § Agents are the first consumer), so `origin: "adopter"` and
 /// `trusted: false` are constants of the type rather than per-instance data.
 /// Emitting them here — not from each of the ~two dozen construction sites —
 /// makes the property unforgeable: no code path can produce a quoted region that
@@ -265,7 +267,7 @@ impl Serialize for QuotedRegion {
 const TTY_QUOTE_PREFIX: &str = "           > ";
 
 /// Compact per-finding size limit in bytes — a CONTRACT limit, not a band from
-/// actuals (`DESIGN.md` § Output; number ratified 2026-07-25, #80 D4). A
+/// actuals (`DESIGN.md` § Agents are the first consumer; number ratified 2026-07-25, #80 D4). A
 /// compact finding exceeding it is a falsifier.
 pub const COMPACT_FINDING_LIMIT: usize = 512;
 
@@ -380,7 +382,7 @@ impl Finding {
     }
 
     /// Render the compact form: the agent-context view of the finding, hard-
-    /// capped at [`COMPACT_FINDING_LIMIT`] bytes (`DESIGN.md` § Output; #80 D4).
+    /// capped at [`COMPACT_FINDING_LIMIT`] bytes (`DESIGN.md` § Agents are the first consumer; #80 D4).
     ///
     /// Shape: one engine-authored head line —
     /// `<sev-letter>[<code>] <file>:<line>[:<col>] <summary> — <message>` —
@@ -657,7 +659,7 @@ mod tests {
         let finding = Finding {
             code: "MDATRON-E0050".into(),
             severity: Severity::Error,
-            summary: "s".into(),
+            summary: "frontmatter-schema-violation".into(),
             message: "m".repeat(470),
             help: None,
             location: Location {
@@ -695,7 +697,7 @@ mod tests {
         let finding = Finding {
             code: "MDATRON-E0050".into(),
             severity: Severity::Error,
-            summary: "schema-violation".into(),
+            summary: "frontmatter-schema-violation".into(),
             message: words.join(" "),
             help: None,
             location: Location {
@@ -732,7 +734,7 @@ mod tests {
         let finding = Finding {
             code: "MDATRON-E0050".into(),
             severity: Severity::Error,
-            summary: "schema-violation".into(),
+            summary: "frontmatter-schema-violation".into(),
             message: "x".repeat(800), // one whitespace-free token > 512
             help: None,
             location: Location {
@@ -762,7 +764,7 @@ mod tests {
         let finding = Finding {
             code: "MDATRON-E0050".into(),
             severity: Severity::Error,
-            summary: "s".into(),
+            summary: "frontmatter-schema-violation".into(),
             message: "   ".into(), // whitespace-only, but != summary
             help: None,
             location: Location::whole_file("doc.md"),
@@ -1044,7 +1046,7 @@ mod tests {
         let mut finding = Finding {
             code: "MDATRON-E0050".into(),
             severity: Severity::Error,
-            summary: "s".into(),
+            summary: "frontmatter-schema-violation".into(),
             message: "m".into(),
             help: None,
             location: Location::whole_file("doc.md"),
@@ -1079,9 +1081,10 @@ mod tests {
     }
 
     #[test]
-    fn severity_lint_label_is_info() {
-        // Lint maps to "info" per rustc convention (info-level diagnostics).
-        assert_eq!(Severity::Lint.label(), "info");
+    fn severity_lint_label_is_lint() {
+        // #204 S10: one word for the severity on every surface — the envelope
+        // enum, `explain`, and the TTY header all say `lint`.
+        assert_eq!(Severity::Lint.label(), "lint");
     }
 
     #[test]
@@ -1161,7 +1164,7 @@ mod tests {
         let finding = Finding {
             code: "MDATRON-W0050".into(),
             severity: Severity::Warning,
-            summary: "header-count-mismatch".into(),
+            summary: "comparison-dead-clause".into(),
             message: "header declares (3) but table has 4 rows".into(),
             help: None,
             location: Location {
@@ -1188,7 +1191,7 @@ mod tests {
         let finding = Finding {
             code: "MDATRON-W0050".into(),
             severity: Severity::Warning,
-            summary: "header-count-mismatch".into(),
+            summary: "comparison-dead-clause".into(),
             message: "header declares (3) but table has 4 rows".into(),
             help: Some("change the header count or remove an extra row".into()),
             location: Location {

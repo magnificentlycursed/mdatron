@@ -1,4 +1,4 @@
-//! Vocabulary family (#85; `DESIGN.md` § Five check families): prose in
+//! Vocabulary family (#85; `DESIGN.md` § Nine check families): prose in
 //! governed artifacts is scanned against a supplied registry.
 //!
 //! `.mdatron/vocabulary.yaml` is an engine-defined interface parsed strictly.
@@ -17,7 +17,7 @@
 //! field references only, no free inference.
 //!
 //! All adopter patterns compile on the linear-time engine (`regex_lite`,
-//! `DESIGN.md` L17); matched prose rides quoted regions, never inline; finding
+//! `DESIGN.md` § Project declarations (linear-time pattern engines)); matched prose rides quoted regions, never inline; finding
 //! locations carry the precise source line.
 
 use std::path::Path;
@@ -41,6 +41,14 @@ struct RawVocab {
     mdatron_format_version: Option<u32>,
     #[serde(default)]
     terms: Vec<RawTerm>,
+    /// Where `**bold**` introduces a term (the coinage check, `E0090`). Absent
+    /// or empty = every file the vocabulary family scans (`vocabulary_globs`).
+    /// The bold-means-coinage convention rarely holds across a whole corpus —
+    /// `**Status:**` labels and emphasis are not coinages — so a register that
+    /// governs a wide scope names the files where the convention does hold
+    /// (#204 D1). Root-relative globs, confined like `vocabulary_globs`.
+    #[serde(default)]
+    coinage_globs: Vec<String>,
     #[serde(default)]
     label_schemes: RawLabelSchemes,
     #[serde(default)]
@@ -77,7 +85,12 @@ struct RawLabelSchemes {
 #[serde(deny_unknown_fields)]
 struct RawAntiPattern {
     pattern: String,
-    register: String,
+    /// The corrective wording surfaced with an `E0093` match. `register` is the
+    /// retired 0.6.0 key (it collided with the naming register itself and with
+    /// the linguistic-register sense in the code's name); accepted as an alias
+    /// per `docs/field-rename-ledger.md`.
+    #[serde(alias = "register")]
+    guidance: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -89,9 +102,12 @@ struct RawNumericClaim {
 /// The compiled registry.
 pub struct LoadedVocab {
     terms: Vec<(String, TermStatus)>,
+    /// Raw `coinage_globs` (compiled + confined by the walk, like the config's
+    /// scope globs); empty = coinage applies wherever the register applies.
+    coinage_globs: Vec<String>,
     /// The active cluster allowlist: `Some` when a non-empty `label_schemes.allow`
     /// opts the scan in — the engine's [`DEFAULT_REF_ID_SCHEMES`] unioned with the
-    /// consumer's patterns (#159). `None` (an absent/empty allowlist) leaves the
+    /// adopter's patterns (#159). `None` (an absent/empty allowlist) leaves the
     /// cluster scan disabled.
     label_allow: Option<Vec<regex_lite::Regex>>,
     anti: Vec<(regex_lite::Regex, String)>,
@@ -110,7 +126,7 @@ pub struct LoadedVocab {
 /// standardized spec conventions — IEEE/ISO requirement IDs, architecture
 /// decision records, RFCs — whose IDs *reference* numbered items rather than coin
 /// a label scheme, so flagging them as invented is a false positive (327 of 336
-/// E0091 findings on the first consumer's spec corpus were this class). Unioned
+/// E0091 findings on the first adopter's spec corpus were this class). Unioned
 /// into every active cluster allowlist (see [`load`]) so spec corpora validate
 /// out of the box; a consumer extends the set for local schemes via
 /// `label_schemes.allow` (e.g. `^C\d+$`). Deliberately conservative — multi-
@@ -152,7 +168,7 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedVocab>, Error> {
     // The cluster scan activates only on a non-empty consumer allowlist (an
     // absent/empty one leaves it off — unchanged, so the defaults never
     // newly-activate the scan on anyone). When active, the engine's default
-    // reference-ID schemes are UNIONED with the consumer's patterns (#159), so a
+    // reference-ID schemes are UNIONED with the adopter's patterns (#159), so a
     // spec's REQ-N/AC-N/… IDs are exempt out of the box and a consumer supplies
     // only its local schemes.
     let label_allow = if raw.label_schemes.allow.is_empty() {
@@ -170,10 +186,10 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedVocab>, Error> {
     let anti = raw
         .anti_patterns
         .iter()
-        .map(|a| Ok((compile(&a.pattern, "anti_pattern")?, a.register.clone())))
+        .map(|a| Ok((compile(&a.pattern, "anti_pattern")?, a.guidance.clone())))
         .collect::<Result<Vec<_>, Error>>()?;
 
-    // #95 (DESIGN § agnosticism conflict outcome): group terms by name; a term
+    // #95 (DESIGN § Validation is data-driven, the agnosticism conflict outcome): group terms by name; a term
     // declared both `registered` and `draft` resolves to draft (the permissive
     // status) and names a W0044 warning. Non-draft duplicates keep first-wins.
     let mut order: Vec<String> = Vec::new();
@@ -201,6 +217,7 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedVocab>, Error> {
 
     Ok(Some(LoadedVocab {
         terms,
+        coinage_globs: raw.coinage_globs,
         label_allow,
         anti,
         numeric: raw.numeric_claims.into_iter().map(|c| c.field).collect(),
@@ -243,44 +260,57 @@ pub fn registry_findings(vocab: &LoadedVocab, vocab_path: &Path, findings: &mut 
     }
 }
 
+impl LoadedVocab {
+    /// The register's `coinage_globs` as written (empty = every scanned file).
+    pub fn coinage_globs(&self) -> &[String] {
+        &self.coinage_globs
+    }
+}
+
 /// Scan one file's prose. `content` is the whole file; `body_offset` is where
 /// prose begins (after the frontmatter block; 0 when there is none);
 /// `frontmatter` feeds the numeric-claims comparison (claims are skipped
-/// without it).
+/// without it). `coinage` says whether this file is inside the register's
+/// `coinage_globs` (the caller decides against the confined walk): the
+/// bold-introduced-term check (`E0090`) runs only there, while reserved words,
+/// label clusters, anti-patterns, and numeric claims run on every scanned file.
 pub fn check_file(
     vocab: &LoadedVocab,
     path: &Path,
     content: &str,
     body_offset: usize,
     frontmatter: Option<&serde_yaml_ng::Value>,
+    coinage: bool,
     findings: &mut Vec<Finding>,
 ) {
     let body = &content[body_offset..];
 
     // ── coinage + reserved words (terms section supplied) ─────────────────
     if !vocab.terms.is_empty() {
-        for (start, term) in bold_spans(body) {
-            let status = vocab
-                .terms
-                .iter()
-                .find(|(t, _)| t == &term)
-                .map(|(_, s)| *s);
-            if status.is_none() {
-                findings.push(prose_finding(
-                    path,
-                    content,
-                    body_offset + start,
-                    "MDATRON-E0090",
-                    "unregistered-coinage",
-                    "a bold-introduced term is not in the vocabulary registry \
+        if coinage {
+            for (start, term) in bold_spans(body) {
+                let status = vocab
+                    .terms
+                    .iter()
+                    .find(|(t, _)| t == &term)
+                    .map(|(_, s)| *s);
+                if status.is_none() {
+                    findings.push(prose_finding(
+                        path,
+                        content,
+                        body_offset + start,
+                        "MDATRON-E0090",
+                        "unregistered-coinage",
+                        "a bold-introduced term is not in the vocabulary registry \
                      (draft-status terms are exempt; register the coinage or \
                      unbold the emphasis)",
-                    vec![QuotedRegion {
-                        platform_variant: false,
-                        label: "term".into(),
-                        content: term.clone(),
-                    }],
-                ));
+                        vec![QuotedRegion {
+                            platform_variant: false,
+                            label: "term".into(),
+                            content: term.clone(),
+                        }],
+                    ));
+                }
             }
         }
         for (term, status) in &vocab.terms {
@@ -355,7 +385,7 @@ pub fn check_file(
     }
 
     // ── register anti-patterns ─────────────────────────────────────────────
-    for (pattern, register) in &vocab.anti {
+    for (pattern, guidance) in &vocab.anti {
         for m in pattern.find_iter(body) {
             if crate::markup::in_code_span(&code_ranges, m.start()) || in_fenced(m.start()) {
                 continue;
@@ -377,8 +407,8 @@ pub fn check_file(
                     },
                     QuotedRegion {
                         platform_variant: false,
-                        label: "register".into(),
-                        content: register.clone(),
+                        label: "guidance".into(),
+                        content: guidance.clone(),
                     },
                 ],
             ));
@@ -595,7 +625,15 @@ mod tests {
         let proj = TempProj::new(label, vocab_yaml);
         let vocab = load(&proj.0).expect("vocab loads").expect("vocab present");
         let mut findings = Vec::new();
-        check_file(&vocab, Path::new("doc.md"), body, 0, None, &mut findings);
+        check_file(
+            &vocab,
+            Path::new("doc.md"),
+            body,
+            0,
+            None,
+            true,
+            &mut findings,
+        );
         let mut out: Vec<String> = findings
             .into_iter()
             .filter(|f| f.code == "MDATRON-E0091")
@@ -660,7 +698,15 @@ mod tests {
         let proj = TempProj::new(label, vocab_yaml);
         let vocab = load(&proj.0).expect("vocab loads").expect("vocab present");
         let mut findings = Vec::new();
-        check_file(&vocab, Path::new("doc.md"), body, 0, None, &mut findings);
+        check_file(
+            &vocab,
+            Path::new("doc.md"),
+            body,
+            0,
+            None,
+            true,
+            &mut findings,
+        );
         findings.into_iter().map(|f| f.code).collect()
     }
 
@@ -671,7 +717,7 @@ mod tests {
     #[test]
     fn anti_pattern_inside_a_fence_is_masked_outside_still_fires() {
         let vocab =
-            "anti_patterns:\n- pattern: \"layer: chassis\"\n  register: deprecated-config\n";
+            "anti_patterns:\n- pattern: \"layer: chassis\"\n  guidance: deprecated-config\n";
         let fenced = "Migration doc.\n\n```yaml\nlayer: chassis\n```\n\nDone.\n";
         assert_eq!(
             codes_in(vocab, fenced, "anti-fenced"),
@@ -683,6 +729,40 @@ mod tests {
             codes_in(vocab, live, "anti-live"),
             vec!["MDATRON-E0093".to_string()],
             "the same text outside the fence still fires"
+        );
+    }
+
+    // #204 D1: `coinage` gates ONLY the bold-introduced-term check — a reserved
+    // word still fires in a file outside `coinage_globs`.
+    #[test]
+    fn coinage_flag_gates_e0090_but_not_reserved_words() {
+        let vocab = "terms:\n- term: old name\n  status: reserved\n  sense: retired\ncoinage_globs:\n- \"notes/**\"\n";
+        let proj = TempProj::new("coinage-flag", vocab);
+        let loaded = load(&proj.0).expect("loads").expect("present");
+        assert_eq!(loaded.coinage_globs(), ["notes/**"]);
+        let body = "A **new coinage** and the old name.\n";
+        let mut off = Vec::new();
+        check_file(&loaded, Path::new("doc.md"), body, 0, None, false, &mut off);
+        let mut on = Vec::new();
+        check_file(&loaded, Path::new("doc.md"), body, 0, None, true, &mut on);
+        let codes = |v: &Vec<Finding>| v.iter().map(|f| f.code.clone()).collect::<Vec<_>>();
+        assert_eq!(codes(&off), vec!["MDATRON-E0092".to_string()], "{off:?}");
+        assert_eq!(
+            codes(&on),
+            vec!["MDATRON-E0090".to_string(), "MDATRON-E0092".to_string()],
+            "{on:?}"
+        );
+    }
+
+    // #204 D3: the retired `register:` key on an anti-pattern is accepted as an
+    // alias of `guidance:` (docs/field-rename-ledger.md) — an existing
+    // vocabulary.yaml keeps loading and its anti-patterns keep firing.
+    #[test]
+    fn anti_pattern_register_key_is_an_accepted_alias_of_guidance() {
+        let vocab = "anti_patterns:\n- pattern: \"very unique\"\n  register: say unique\n";
+        assert_eq!(
+            codes_in(vocab, "This is very unique.\n", "anti-alias"),
+            vec!["MDATRON-E0093".to_string()]
         );
     }
 
@@ -728,6 +808,7 @@ mod tests {
             "REQ-10 and W0070 appear here.",
             0,
             None,
+            true,
             &mut findings,
         );
         assert_eq!(

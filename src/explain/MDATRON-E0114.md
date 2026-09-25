@@ -33,7 +33,7 @@ misconfiguration. The absence is now reported once, as itself.
   Update the rule's `target_section` to the heading's current text and level,
   or restore the heading.
 - **Typo in the `target_section` spec.** It must be the full ATX heading line,
-  e.g. `target_section: "## Decomposition (phase 1c)"`.
+  e.g. `target_section: "## Requirements"`.
 - **You meant to resolve against the whole document.** Remove the
   `target_section` field; resolution then scans every element of the rule's
   `element` class in the target.

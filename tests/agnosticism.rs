@@ -217,7 +217,7 @@ mod symlink_fixture {
 //
 // The closed-world no-follow enumeration terminates on a symlink cycle: a
 // self-referential symlink is listed as a Symlink entry and NOT descended, so
-// the scan cannot loop. (DESIGN § Five check families: "symlink cycles cannot
+// the scan cannot loop. (DESIGN § Nine check families: "symlink cycles cannot
 // extend a walk".)
 #[cfg(any(unix, windows))]
 #[test]

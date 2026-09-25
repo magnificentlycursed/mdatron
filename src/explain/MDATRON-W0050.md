@@ -7,9 +7,9 @@
 ## What this means
 
 A rule compares a `$self.<field>` against a literal that is **not among the
-field's declared `enum`** — for example `$self.phase == "phase-99"` where
-`phase` is declared `enum: ["phase-1a", "phase-2a"]`. No conforming document
-can carry `phase-99` (the schema forbids it), so the comparison has the same
+field's declared `enum`** — for example `$self.status == "archived"` where
+`status` is declared `enum: ["draft", "final"]`. No conforming document
+can carry `archived` (the schema forbids it), so the comparison has the same
 value for every document the rule ever sees: the clause is constant, it never
 varies, and it contributes nothing. An `==` is always false; a `!=` always
 true.
@@ -38,7 +38,7 @@ only schema-decidable enum membership is checked.
 
 ## See also
 
-- the mdatron design reference, § the DSL and its narrowed surface (in the
+- the mdatron design reference, § Cross-file semantics stay narrowed (in the
   project repository)
 
 ## Related codes

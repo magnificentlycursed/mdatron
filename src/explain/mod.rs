@@ -32,6 +32,7 @@ const E0050: &str = include_str!("MDATRON-E0050.md");
 const E0060: &str = include_str!("MDATRON-E0060.md");
 const E0070: &str = include_str!("MDATRON-E0070.md");
 const E0080: &str = include_str!("MDATRON-E0080.md");
+const E0081: &str = include_str!("MDATRON-E0081.md");
 const E0040: &str = include_str!("MDATRON-E0040.md");
 const W0040: &str = include_str!("MDATRON-W0040.md");
 const E0030: &str = include_str!("MDATRON-E0030.md");
@@ -69,6 +70,7 @@ const E0120: &str = include_str!("MDATRON-E0120.md");
 const E0121: &str = include_str!("MDATRON-E0121.md");
 const E0122: &str = include_str!("MDATRON-E0122.md");
 const W0051: &str = include_str!("MDATRON-W0051.md");
+const W0052: &str = include_str!("MDATRON-W0052.md");
 
 /// Structured shape of an explain page. Surfaces the required fields named
 /// in the Phase 1a behavioral spec. Used by `mdatron explain --json <code>`.
@@ -102,6 +104,7 @@ pub fn lookup(code: &str) -> Option<&'static str> {
         "MDATRON-E0060" => Some(E0060),
         "MDATRON-E0070" => Some(E0070),
         "MDATRON-E0080" => Some(E0080),
+        "MDATRON-E0081" => Some(E0081),
         "MDATRON-E0040" => Some(E0040),
         "MDATRON-W0040" => Some(W0040),
         "MDATRON-E0030" => Some(E0030),
@@ -139,6 +142,7 @@ pub fn lookup(code: &str) -> Option<&'static str> {
         "MDATRON-E0121" => Some(E0121),
         "MDATRON-E0122" => Some(E0122),
         "MDATRON-W0051" => Some(W0051),
+        "MDATRON-W0052" => Some(W0052),
         _ => None,
     }
 }
@@ -284,15 +288,82 @@ pub fn catalog() -> Result<Vec<(String, String)>, String> {
 /// E0000-series convention; this table grows by one entry per future
 /// rename event with the previous meaning preserved as the durable
 /// migration record.
-pub const MIGRATION_NOTES: &[(&str, &str)] = &[(
-    "MDATRON-E0001",
-    "Pre-Phase-1 bootstrap snapshots emitted this code for \
+pub const MIGRATION_NOTES: &[(&str, &str)] = &[
+    (
+        "MDATRON-E0001",
+        "Pre-Phase-1 bootstrap snapshots emitted this code for \
          frontmatter-schema-violation; from Phase 1 onward, E0001 is \
          exclusively frontmatter-parse-failed and schema-violation \
          moved to MDATRON-E0050. If you saw E0001 in pre-Phase-1 \
          output and the message body said 'schema-violation', see \
          `mdatron explain MDATRON-E0050`.",
-)];
+    ),
+    (
+        "MDATRON-E0061",
+        "0.7.0 renamed the quoted-region label `governing` to `governed_by` \
+         (the pins.yaml key was renamed the same way; the old key is still \
+         accepted and `pin --update` rewrites it). The finding's meaning is \
+         unchanged; because quoted labels are fingerprint inputs, every \
+         E0061 fingerprint turned over ONCE at 0.7.0 — a consumer diffing \
+         0.6.x fingerprints against 0.7.0 sees that one-time shift, not a \
+         new defect.",
+    ),
+    (
+        "MDATRON-E0062",
+        "0.7.0 renamed the quoted-region label `governing` to `governed_by` \
+         (the pins.yaml key was renamed the same way; the old key is still \
+         accepted and `pin --update` rewrites it). The finding's meaning is \
+         unchanged; because quoted labels are fingerprint inputs, every \
+         E0062 fingerprint turned over ONCE at 0.7.0.",
+    ),
+    (
+        "MDATRON-E0010",
+        "0.7.0 collapsed this code's headline to ONE spelling, \
+         `absolute-path-refused`: through 0.6.0 the catalog and this page said \
+         `key-source-absolute-path` (a headline no finding ever carried), the \
+         file_globs walk said `governed-path-absolute`, and the family \
+         surfaces said `absolute-path-refused`. The meaning is unchanged. \
+         Fingerprints of the walk-site shape turned over once, and on the \
+         pins.yaml surface (where the quoted label is the pin field's name) \
+         `governing` became `governed_by`.",
+    ),
+    (
+        "MDATRON-E0011",
+        "0.7.0 collapsed this code's headline to ONE spelling, \
+         `parent-segment-refused`: through 0.6.0 the catalog and this page said \
+         `key-source-parent-traversal` (a headline no finding ever carried), \
+         the file_globs walk said `governed-path-parent-traversal`, and the \
+         family surfaces said `parent-segment-refused`. The meaning is \
+         unchanged. Fingerprints of the walk-site shape turned over once, and \
+         on the pins.yaml surface the quoted label `governing` became \
+         `governed_by`.",
+    ),
+    (
+        "MDATRON-W0045",
+        "0.7.0 renamed this warning's headline from `schema-class-unrouted` to \
+         `schema-class-unvalidated`: it has nothing to do with routes.yaml — a \
+         declared schema_class that no schema and no rule context validates. \
+         The meaning is unchanged; fingerprints turned over once.",
+    ),
+    (
+        "MDATRON-E0080",
+        "Through 0.6.0 this code carried TWO meanings: the pipeline failure \
+         (exit 2, no findings) and a FINDING (exit 1) for a pin, citation, \
+         link, or marker target the run never captured. From 0.7.0 the \
+         finding is `MDATRON-E0081` (reference-target-not-captured) and E0080 \
+         is only ever the did-not-run failure. If you saw E0080 as a finding \
+         with 'never captured into the run snapshot' in its message, see \
+         `mdatron explain MDATRON-E0081`.",
+    ),
+    (
+        "MDATRON-E0093",
+        "0.7.0 renamed the quoted-region label `register` to `guidance` (the \
+         vocabulary.yaml `anti_patterns[].register` key was renamed the same \
+         way; the old key is still accepted). The finding's meaning is \
+         unchanged; because quoted labels are fingerprint inputs, every \
+         E0093 fingerprint turned over ONCE at 0.7.0.",
+    ),
+];
 
 /// Look up the migration note for a code, if one exists.
 pub fn migration_note(code: &str) -> Option<&'static str> {

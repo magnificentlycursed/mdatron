@@ -1,24 +1,25 @@
 # mdatron
 
-**A Rust CLI that validates markdown documents using JSON Schema (frontmatter)
-and a small Schematron-derived DSL (cross-field rules).** Descended from XML's
-Schematron (ISO/IEC 19757-3).
+**A Rust CLI conformance engine for typed markdown: JSON Schema over
+frontmatter, nine data-driven check families, and a small Schematron-derived
+DSL for cross-file rules.** Descended from XML's Schematron (ISO/IEC 19757-3).
 
-mdatron validates markdown documents in two layers:
+mdatron checks markdown documents on two axes:
 
-- **Layer 1 — Structural.** JSON Schema (draft 2020-12) over the frontmatter.
-  Required fields, enums, types, `additionalProperties: false`. Universal
-  vocabulary; zero learning curve for anyone who has authored an OpenAPI
-  schema, a Kubernetes CRD, or a tsconfig.
-- **Layer 2 — Semantic.** A small Schematron-derived DSL over cross-field,
-  cross-file, and cross-document constraints. The 80% of validation value
+- **Structure.** JSON Schema (draft 2020-12) over the frontmatter — the schema
+  family. Required fields, enums, types, `additionalProperties: false`.
+  Universal vocabulary; zero learning curve for anyone who has authored an
+  OpenAPI schema, a Kubernetes CRD, or a tsconfig.
+- **Semantics.** Cross-field, cross-file, and cross-document constraints — the
+  eight further check families, driven by adopter data, plus a small
+  Schematron-derived rule DSL over frontmatter. The 80% of validation value
   that JSON Schema cannot express: "the number of rows in this table matches
   the count declared in frontmatter," "every owner listed here appears in the
   team registry," "every link target resolves to a heading in the project."
 
 Where mdatron fits relative to neighbouring tooling: markdownlint enforces
 style; Vale catches prose-quality concerns; dprint and mdformat reformat;
-mdatron is the only validator built around the typed-frontmatter + cross-
+mdatron is the only conformance engine built around the typed-frontmatter + cross-
 document rules pattern. Errors are rustc-shaped — codes, source spans,
 `= help:` hints, `= explain:` references to per-code prose, structured JSON
 output for machine consumers.
@@ -62,7 +63,8 @@ mdatron --version
 
 Scaffold with `mdatron init`, which deploys the `.mdatron/` skeleton — the
 `schemas/` and `patterns/` directories, a seeded `config.yaml` (adopter-owned
-from then on), and the managed-partition manifest:
+from then on), and the init manifest (the record of the engine-managed
+partition):
 
 ```
 mkdir my-typed-docs && cd my-typed-docs
@@ -76,7 +78,7 @@ tools is never mdatron's to refuse. A tree with no config refuses loudly
 globs for an ad-hoc run without one. Re-running `init` is a no-op on an intact
 tree; a hand-modified *managed* file is refused with `MDATRON-E0060`.
 
-Drop a JSON Schema at `.mdatron/schemas/blog.json` (a Layer 1 example follows
+Drop a JSON Schema at `.mdatron/schemas/blog.json` (a schema example follows
 below), drop a markdown file with matching frontmatter inside your globs, and
 run:
 
@@ -122,7 +124,7 @@ a contract limit) for agent-context consumers; add `--quiet` to silence the
 stderr rendering (and, under `--json`, to keep stdout the only stream).
 
 The `--json` envelope is a published, versioned contract (`mdatron_output_version`,
-currently `3.0.0`). The load-bearing fields for a machine consumer:
+currently `3.1.0`). The load-bearing fields for a machine consumer:
 
 - `pipeline_status` — `"ok"` or `"failed"`; on failure, `pipeline_error`
   `{code, kind, message}` carries the reason **in-band** (it survives `--quiet`),
@@ -130,7 +132,8 @@ currently `3.0.0`). The load-bearing fields for a machine consumer:
 - `summary.files_checked` — the true count of files **validated** (a clean run
   over N reports N, not 0).
 - `families` — each of the nine check families (schema, route, pin,
-  vocabulary, citation, link, marker, code_catalog, section) as
+  vocabulary, citation, link, marker, code_catalog, section) and the rule-DSL
+  lane (`rule_dsl`) as
   `{state, reason}` (`active` / `inert` / `inactive`), so "checked N, all
   clean" is distinguishable from "checked nothing"; the object is
   forward-extensible, so a consumer must tolerate unknown family keys.
@@ -154,7 +157,7 @@ currently `3.0.0`). The load-bearing fields for a machine consumer:
 
 Pin and validate against the schema at
 [`schema/mdatron-output.schema.json`](schema/mdatron-output.schema.json); a
-binary-only install can print it with `mdatron schema`. `mdatron explain --list`
+binary-only install can print it with `mdatron envelope-schema`. `mdatron explain --list`
 enumerates every diagnostic code; `mdatron explain <code>` (the short form
 `E0050` works too) shows a code's page.
 
@@ -168,7 +171,7 @@ Wire `mdatron verify` into your pre-commit hook so typed-document errors block
 the commit that introduces them. Make the wrapper **fail closed**: if the
 `mdatron` binary is missing — not yet installed, off `PATH`, or absent from the
 hook's shell environment — block the commit rather than skip the check
-silently. A validator that silently skips is invisible in exactly the moment it
+silently. A checker that silently skips is invisible in exactly the moment it
 is needed.
 
 ```sh
@@ -192,7 +195,7 @@ by design; a gate that must not pass an unverified reference needs this switch
 binary, findings, and pipeline failure. Reserve `git commit --no-verify` for a
 deliberate, visible bypass rather than letting a missing checker pass unseen.
 
-## Schema example (Layer 1)
+## Schema example (the schema family)
 
 A minimal blog-post schema that requires `schema_class`, `title`, and
 `published_on`; rejects extra frontmatter fields:
@@ -231,15 +234,15 @@ This file's frontmatter binds to the `blog` schema because the
 <!-- mdatron-roundtrip:md-end -->
 
 Drop both files into a project, run `mdatron verify`, and the file passes
-Layer 1. Add a frontmatter field the schema does not allow (e.g.,
-`extra: "nope"`) and Layer 1 emits `MDATRON-E0050:
+the schema family. Add a frontmatter field the schema does not allow (e.g.,
+`extra: "nope"`) and it emits `MDATRON-E0050:
 frontmatter-schema-violation`. Run `mdatron explain MDATRON-E0050` for the
 per-code prose.
 
-## Pattern example (Layer 2)
+## Pattern example (the rule DSL)
 
 JSON Schema is great for shapes but cannot express "this `published_on` must
-not be in the future." That is Layer 2 territory — DSL patterns at
+not be in the future." That is rule-DSL territory — DSL patterns at
 `.mdatron/patterns/<name>.yaml`:
 
 <!-- mdatron-roundtrip:pattern-start -->
@@ -267,10 +270,10 @@ DSL's scope is
 cross-file and registry validation; body-content extraction functions are
 out of scope.
 
-## Conformance families (Layer 2 data)
+## Check families
 
-The schema family (Layer 1) is the first of **nine** check families. Beyond it,
-eight generic Layer-2 engines activate on adopter data under `.mdatron/` — each
+The schema family is the first of **nine** check families. Beyond it, eight
+generic families activate on adopter data under `.mdatron/` — each
 inactive until its data exists, each strict-parsed, every path confined to the
 governed tree:
 
@@ -331,25 +334,29 @@ codification for your project's own terms. The registry:
 ```yaml
 mdatron_format_version: 1
 terms:
-  - term: "governed tree"
+  - term: "jurisdiction"
     status: registered        # a coined term, formally registered
-    sense: "the file set inside the declared jurisdiction"
+    sense: "the file set the declared file_globs walk"
   - term: "spend shape"
     status: draft             # draft terms are exempt from strict findings
     sense: "how a review round's agent budget is declared"
   - term: "contract"
     status: reserved          # reserved: use outside the sense flags E0092
     sense: "a versioned behavioral commitment, never a soft promise"
+coinage_globs:                # where **bold** introduces a term (E0090);
+  - "docs/spec/**/*.md"       # absent = wherever the register scans
 label_schemes:
   allow:
     - "^C\\d+$"               # local scheme: C1, C2, ...
 anti_patterns:
   - pattern: "very unique"
-    register: "say 'unique' — uniqueness does not grade"
+    guidance: "say 'unique' — uniqueness does not grade"
 ```
 
 What it flags: unregistered
-bold-introduced coinages (`E0090`, draft-status exempt), letter-plus-number
+bold-introduced coinages (`E0090`, draft-status exempt — inside `coinage_globs`
+when the registry sets them, since bold-means-coinage rarely holds across a
+whole corpus of `**Label:**` lead-ins and emphasis), letter-plus-number
 label clusters outside your allowlist (`E0091` — structured reference-IDs
 `REQ-<n>`/`AC-<n>`/`ADR-<n>`/`RFC-<n>`/`Q<n>` are exempt by default and unioned
 with your allowlist, so specs validate out of the box; add local schemes like
@@ -359,8 +366,9 @@ restating a configured frontmatter field's count and drifting from it
 (`E0094`). By default the scan covers every walked file; set `vocabulary_globs`
 in `config.yaml` (a scope list beside `require_frontmatter`) to restrict it —
 e.g. to apply the register to your live specs while leaving a historical archive
-walked and routed but unscanned. A `vocabulary_globs` that matches nothing is
-loud (`W0043`), so a mistyped glob can't silently disable the register. A term
+walked and routed but unscanned. A `vocabulary_globs` or `coinage_globs` that
+matches nothing is loud (`W0043`), so a mistyped glob can't silently disable a
+check. A term
 declared both `registered` and `draft` resolves to draft with a warning
 (`W0044`), so a conflicting declaration is surfaced, not silently resolved.
 
@@ -466,21 +474,24 @@ routes:
       # a slice is open XOR complete — ids extracted per element, never a full-span scan
       - disjoint:
           - section: "## Requirements"
-            id_from: h3-heading          # id from the H3 heading text
+            element: h3                  # ids from the H3 heading text
             id_pattern: 'Slice (\d+)'
           - section: "## Completed phases"
-            id_from: bullet-lead         # id from the `- **bold**` lead
+            element: list-item-bold-name # ids from the `- **bold**` lead
             id_pattern: 'Slice (\d+)'
 ```
 
-A count rule counts the `element`-level headings in the `section`'s span (until
-the next heading of the same or higher level) whose line matches `match`, and
-asserts the `count` predicate (`>= 1`, `== 1`, …); a violation is `E0120`. A
-`disjoint` rule extracts an id (the `id_pattern`'s first capture) from each
-section's declared element and asserts the two sets share none; an overlap is
-`E0121`. Ids come **only** from the declared element (H3 heading text, or a
-bullet's bold lead), never surrounding prose — so a body mention of an id
-doesn't cause a false overlap. A `section` spec that matches no heading in the
+A count rule counts the elements of the `element` class in the `section`'s span
+(until the next heading of the same or higher level) whose line matches `match`,
+and asserts the `count` predicate (`>= 1`, `== 1`, …); a violation is `E0120`.
+`element` is the one vocabulary marker rules use too: `heading` (a heading of
+any level), `h1`…`h6` (one level), or `list-item-bold-name` (the `**bold**` lead
+of a `- ` list item). A `disjoint` rule extracts an id (the `id_pattern`'s first
+capture) from each section's declared element and asserts the two sets share
+none; an overlap is `E0121`. Ids come **only** from the declared element (an `h3`
+heading's text, or a `list-item-bold-name` bullet's bold name), never
+surrounding prose and never the section's own heading line — so a body mention
+of an id doesn't cause a false overlap. A `section` spec that matches no heading in the
 document blocks (`E0122`, section-not-found; matching is exact on level and
 text) instead of silently passing, and the assertion is not evaluated; when a
 heading occurs more than once, the rule evaluates over **all** matching spans
@@ -513,7 +524,7 @@ The adoption sequence, each step optional after the first:
 - [`DESIGN.md`](./DESIGN.md) — the standing design: behavioral contracts,
   the nine check families, output marking discipline, path confinement,
   governance-data governance
-- [`docs/dsl-reference.md`](./docs/dsl-reference.md) — the complete Layer 2
+- [`docs/dsl-reference.md`](./docs/dsl-reference.md) — the complete rule-DSL
   construct inventory with evaluation semantics; held to the implementation
   continuously by CI tripwires (the construct-inventory check and the
   operator-semantics pins), so an engine construct absent from the reference —

@@ -13,7 +13,7 @@
 //! (`repetition limit exceeded`) and recursion (`recursion limit exceeded`)
 //! guards ride the parser (`serde_yaml_ng`) and surface as parse diagnostics —
 //! pinned by fixture, not re-implemented; and there is no global wall-clock
-//! budget (the DESIGN § enforcement-status note records that honestly).
+//! budget (DESIGN's enforcement-status note records that honestly).
 
 use std::path::Path;
 

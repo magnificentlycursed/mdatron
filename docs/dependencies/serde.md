@@ -6,12 +6,12 @@
 
 ## Why this dependency
 
-The de-facto Rust serialization framework. Used for `Serialize`/`Deserialize` derives on `mdatron-core`'s public types (`Finding`, `Severity`, `Location`) so they can round-trip across JSON / YAML / SARIF output formats per DESIGN.md § Diagnostics are a versioned contract.
+The de-facto Rust serialization framework. Used for `Serialize`/`Deserialize` derives on `mdatron-core`'s public types (`Finding`, `Severity`, `Location`) so they can round-trip across the JSON envelope and the YAML inputs per DESIGN.md § Diagnostics are a versioned contract.
 
 **Alternatives considered:**
 
 - Hand-rolled per-type serialization: rejected — bespoke serialization for `mdatron-core`'s ~10 public types would be ~500 LoC of boilerplate vs. ~10 LoC of derives + dep
-- `rkyv` / `bincode`: rejected — binary-only formats; doesn't serve mdatron's JSON/YAML/SARIF text-output use cases
+- `rkyv` / `bincode`: rejected — binary-only formats; doesn't serve mdatron's JSON/YAML text use cases
 
 ## Supply-chain notes
 

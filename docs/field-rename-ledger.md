@@ -4,10 +4,10 @@ Renaming a field on one of mdatron's input contracts breaks adopters who use the
 old name — but the *shape* of the breakage differs by parse mode:
 
 - **Strict** (`deny_unknown_fields`): `routes.yaml`, `vocabulary.yaml`,
-  `pins.yaml`, `code-catalogs.yaml`. An adopter file that still uses the old field
+  `pins.yaml`, `code-catalogs.yaml`, and the engine-written `manifest.yaml`. An adopter file that still uses the old field
   name fails to parse with a **loud** unknown-field error.
 - **Lenient** (`.mdatron/config.yaml` / `ProjectConfig`): unknown fields are
-  tolerated (#80 D1). A rename here is *worse* — the old key is **silently
+  tolerated (#80, decision 1). A rename here is *worse* — the old key is **silently
   ignored** and the field falls back to its `#[serde(default)]` (empty). For
   `require_frontmatter`/`vocabulary_globs` that is precisely the fail-open class
   `MDATRON-W0051`/`W0043` exist to catch, but the rename itself slips in with the
@@ -39,4 +39,10 @@ Format: `old-name → new-name` | input file | aliased since | alias removable i
 
 | old → new | input file | aliased since | alias removable in |
 |-----------|------------|---------------|--------------------|
-| _(none yet)_ | — | — | — |
+| `id_from` → `element` (section-rule `disjoint` operands) | `routes.yaml` | 0.7.0 | format v2 |
+| `h3-heading` → `h3` (element value) | `routes.yaml` | 0.7.0 | format v2 |
+| `bullet-lead` → `list-item-bold-name` (element value) | `routes.yaml` | 0.7.0 | format v2 |
+| `governing` → `governed_by` (`pins[]` and `unpinned[]`; `pin --update` rewrites) | `pins.yaml` | 0.7.0 | format v2 |
+| `register` → `guidance` (`anti_patterns[]`) | `vocabulary.yaml` | 0.7.0 | format v2 |
+| `mdatron schema` → `mdatron envelope-schema` (subcommand; `schema` stays a visible alias) | CLI | 0.7.0 | — (CLI aliases are free) |
+| `--file-globs` added as a visible alias of `--files` (`--files` stays primary) | CLI | 0.7.0 | — (CLI aliases are free) |

@@ -1,7 +1,7 @@
 //! Path confinement: component-wise resolution and validated no-follow opens
 //! under a governed root.
 //!
-//! Implements the family-wide confinement discipline of `DESIGN.md` § Five
+//! Implements the family-wide confinement discipline of `DESIGN.md` § Nine
 //! check families: adopter-supplied paths resolve inside the governed tree,
 //! with parent-directory, absolute-path, and symlink escapes rejected —
 //! including paths whose targets do not exist. Two layers:
@@ -56,7 +56,7 @@ pub enum LexicalViolation {
     Absolute,
     /// A `..` component. Parent segments are rejected outright, escaping or
     /// not, and in glob patterns too (BOUNDARY-PREAMBLE § 7, carried per
-    /// `DESIGN.md` § Five check families). MDATRON-E0011 territory.
+    /// `DESIGN.md` § Nine check families). MDATRON-E0011 territory.
     ParentSegment,
 }
 
@@ -296,7 +296,7 @@ fn open_confined_impl(root: &Path, components: &[&std::ffi::OsStr]) -> Result<Fi
 // ── Closed-world directory enumeration ──────────────────────────────────────────
 //
 // The engine-owned, no-follow, bounded walk primitive that `dsl::index`'s glob
-// resolution and the extras scan build on. `DESIGN.md` § Five check families:
+// resolution and the extras scan build on. `DESIGN.md` § Nine check families:
 // the engine enumerates rather than discovering the tree — symlinks are not
 // followed during enumeration, so symlink cycles cannot extend a walk. Listing
 // is decided on validated no-follow handles exactly as `open_confined` decides
@@ -491,7 +491,7 @@ pub fn describe_reparse(tag: Option<u32>) -> ReparseDescription {
 /// Every component of `rel` is opened relative to its parent with no-follow
 /// semantics before the directory is read, so a symlinked intermediate
 /// directory is refused ([`ListViolation::Symlink`]) rather than followed —
-/// the closed-world discipline of `DESIGN.md` § Five check families. `rel` must
+/// the closed-world discipline of `DESIGN.md` § Nine check families. `rel` must
 /// be a [`confine_lexically`] result (relative, no parent segments); `root` is
 /// engine-supplied and trusted — on Unix symlinks in the root path itself are
 /// followed, on Windows a reparse point AS the root is refused (canonicalize

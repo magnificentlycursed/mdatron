@@ -6,7 +6,7 @@
 
 ## Why this dependency
 
-JSON Schema files (Layer 1 structural validation per DESIGN.md § Five check families) ship as `.json` files at `.mdatron/schemas/<class>.json`. Adopters consuming SARIF output (per DESIGN.md § Diagnostics are a versioned contract) need JSON serialization. Both paths require a JSON library.
+JSON Schema files (the schema family's frontmatter structural validation, DESIGN.md § Nine check families) ship as `.json` files at `.mdatron/schemas/<class>.json`, and the `verify --json` envelope (DESIGN.md § Diagnostics are a versioned contract) is JSON. Both paths require a JSON library.
 
 **Alternatives considered:**
 
@@ -24,9 +24,9 @@ JSON Schema files (Layer 1 structural validation per DESIGN.md § Five check fam
 
 - **CVE history:** no CVEs for `serde_json` 1.x.
 - **License:** MIT OR Apache-2.0; compatible with mdatron's MIT license.
-- **Threat model:** JSON deserialization of operator-controlled schemas + machine-generated SARIF output. Schemas are loaded only from `.mdatron/schemas/` per canonical-schema-path discipline (BOUNDARY-PREAMBLE § 7); not PR-modifiable in the operational threat model.
+- **Threat model:** JSON deserialization of adopter-controlled schemas + the machine-generated envelope. Schemas are loaded only from `.mdatron/schemas/` per canonical-schema-path discipline (BOUNDARY-PREAMBLE § 7); not PR-modifiable in the operational threat model.
 
 ## Approval
 
-- **Operator-attribution:** Solution Owner confirms JSON Schema + SARIF emission are foundational v0.1.0 deliverables; the dep is well-justified.
-- **Scope justification:** Both Layer 1 (JSON Schema input) and SARIF (output) workflows depend on JSON serialization; one dep serves two use cases.
+- **Operator-attribution:** Solution Owner confirms JSON Schema input + JSON envelope emission are foundational v0.1.0 deliverables; the dep is well-justified.
+- **Scope justification:** Both the schema family (JSON Schema input) and the envelope (output) depend on JSON serialization; one dep serves two use cases.

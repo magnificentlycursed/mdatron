@@ -22,6 +22,6 @@ changed, or the target is not a text file.
 - **The heading was renamed or its level changed.** Update the pin's `section`
   to the heading's current text and level, then `mdatron pin --update`.
 - **Typo in the `section` spec.** It must be the full heading line, e.g.
-  `section: "## Decomposition (phase 1c)"`.
+  `section: "## Requirements"`.
 - **You meant to pin the whole file.** Remove the `section` field; the pin then
   covers the entire file as before.
