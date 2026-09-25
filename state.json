@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1142,
-        "tip_oid": "9915c4464344620712c94a29650c89e96d3bd5a6",
-        "prefix_sha256": "0c1bd0c8432b4d66962c86c5b31aaa8fa9174b599440545a79daf2c20929d552"
+        "sequence": 1143,
+        "tip_oid": "db083809dc8b0f04a5c187b98f0ec072546c12e1",
+        "prefix_sha256": "47b144242fd6a3541ea6e5d3cf6adcb1e39e7ae23e80e9eaf17837d71d0b21e5"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 205,
-  "next_comment_id": 574,
+  "next_comment_id": 575,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "03beb708-b15d-4522-950e-3fdaa3a3d16b": 196,
@@ -1282,7 +1282,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-09-24T22:05:25.081803Z",
-      "updated_at": "2026-09-25T02:51:09.988536Z",
+      "updated_at": "2026-09-25T03:05:01.041610Z",
       "comments": {
         "001b2717-0609-4d13-a23d-4d775df7e6ac": {
           "display_id": 549,
@@ -1328,6 +1328,15 @@
           "kind": "result",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAHjSbVkIDQtId/mFiffH6I7tcGPwxjxGstU+xFvPxOHUAaTHBCvUhxMIk7D1vh4RKUfvyJoxK1sCJ0U766BhTCA=="
+        },
+        "9310140b-c320-46e4-b4d4-4cf8f8f8c25a": {
+          "display_id": 574,
+          "author": "79Ig",
+          "content": "CI on 68fb190: Self-validation failed (the job runs init before verify as its no-op proof; round-2's template repair deployed templates into this repo and rewrote the pinned manifest -> E0061) and windows-latest failed the hint tripwire (CRLF pages via include_str!). Fixed: this repo took its own upgrade path (init once, templates committed as managed files, manifest re-pinned; init a no-op again); first_fix_hint normalises CRLF and src/explain/*.md is pinned LF in .gitattributes. Gates green; operator pushes; PR #59 merges on green.",
+          "created_at": "2026-09-25T03:05:00.850169Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAVjU8yCufyBXkDFJsr8JGoi1vbTUAiKEo0n63JK0q+WlK4Zfm5qtEB+iuFoPVEWGLdprojmgRhr17LSn9QU0aAw=="
         },
         "953e611c-05b6-4a41-83dc-53eb0aeee976": {
           "display_id": 548,
