@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1138,
-        "tip_oid": "ed18c75f27087a6c8f31a79a627736bf3c2a9836",
-        "prefix_sha256": "0b21c07f669d30b52bec0479d9005f31d706f9c3bb05c03d0fbd5ba6eaecc7e8"
+        "sequence": 1139,
+        "tip_oid": "4d9cfb89c6544772e94dd05dde313dd45584872b",
+        "prefix_sha256": "8894392fcb607fc267bc0ab670f3ce7cdb4a7f3170a26fff48de58e84c23c196"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 205,
-  "next_comment_id": 570,
+  "next_comment_id": 571,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "03beb708-b15d-4522-950e-3fdaa3a3d16b": 196,
@@ -1282,7 +1282,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-09-24T22:05:25.081803Z",
-      "updated_at": "2026-09-25T00:01:46.352939Z",
+      "updated_at": "2026-09-25T01:56:19.003470Z",
       "comments": {
         "001b2717-0609-4d13-a23d-4d775df7e6ac": {
           "display_id": 549,
@@ -1310,6 +1310,15 @@
           "kind": "observation",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAnjIo2/re1s7Y2X0JNTwibAKZTC5/CV/hHY6UNHsF8GZ4nn0qqK+vdhdPSalOWCmSJkj1J44F9d/JPITm3So/AQ=="
+        },
+        "765d7180-fd12-4c17-a222-cb6b4c7af03d": {
+          "display_id": 570,
+          "author": "79Ig",
+          "content": "PROGRESS: F2 (85959e4), F3 (a3a257f), F5, F4 committed on feature/203-gh56-adoption — W0053/W0054/W0055 + code_catalog_globs + fix-item compact hints + inert *.example templates + docs inputs, all with red gates; every gate green on both targets. F7 was done at 0.6.0 (Release object) — the runbook step lives in #202. F8 (relay template additions): there is no relay template file — the capability-delta relay is authored at release time; the two additions (every route-attached feature carries the gateway consequence; a pointer to mdatron docs inputs) go into the 0.7.0 relay text and are noted on #202. REMAINING in this lane: F1/F6 docs pass (required/optional annotations on pins/vocabulary/section-rules examples — the README pins example still shows the retired governing: key; gateway line as the first sentence of § Citations/§ Links/§ Markers/§ Section rules; count operators enumerated in README/E0120/the load message; E0114 gloss; roundtrip markers per family example), then CHANGELOG, cold review, PR.",
+          "created_at": "2026-09-25T01:56:18.903070Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAHjSbVkIDQtId/mFiffH6I7tcGPwxjxGstU+xFvPxOHUAaTHBCvUhxMIk7D1vh4RKUfvyJoxK1sCJ0U766BhTCA=="
         },
         "953e611c-05b6-4a41-83dc-53eb0aeee976": {
           "display_id": 548,
