@@ -280,6 +280,50 @@ pub struct Output {
     pub findings: Vec<Finding>,
 }
 
+/// Serialize a machine-JSON value through the JS-safe formatter (#185 L1).
+/// `serde_json` escapes only `"`, `\`, and the C0 controls (< U+0020); the
+/// Unicode line/paragraph separators U+2028/U+2029 and the C1 controls
+/// U+0080..=U+009F survived into every envelope string raw — the classic
+/// JSON-in-JS / terminal-re-injection hazard for an agent embedding the
+/// envelope. This formatter additionally emits those as `\uXXXX` escapes.
+/// SEMANTICS ARE UNCHANGED: only the JSON *text* differs, and only for strings
+/// that contain those chars; a decoding consumer receives the identical
+/// string, so no schema change and no envelope-version bump. Every machine-JSON
+/// emission (the verify envelope, `explain --json`, `explain --list --json`)
+/// routes through here so no path can regress to the raw form.
+pub fn to_js_safe_json<T: serde::Serialize>(value: &T) -> Result<String, serde_json::Error> {
+    let mut out = Vec::new();
+    let mut ser = serde_json::Serializer::with_formatter(&mut out, JsSafeFormatter);
+    value.serialize(&mut ser)?;
+    // serde_json writes UTF-8 and this formatter writes only ASCII escapes.
+    String::from_utf8(out).map_err(<serde_json::Error as serde::ser::Error>::custom)
+}
+
+/// Compact JSON with the JS-safe string escapes (see [`to_js_safe_json`]).
+/// Every other `Formatter` method keeps the trait default — byte-identical to
+/// `CompactFormatter` — so output for strings without the escaped chars is
+/// unchanged.
+struct JsSafeFormatter;
+
+impl serde_json::ser::Formatter for JsSafeFormatter {
+    fn write_string_fragment<W>(&mut self, writer: &mut W, fragment: &str) -> std::io::Result<()>
+    where
+        W: ?Sized + std::io::Write,
+    {
+        // serde_json hands over only the runs it did NOT escape itself, so
+        // this scan sees no `"`, `\`, or C0 controls.
+        let mut start = 0;
+        for (i, ch) in fragment.char_indices() {
+            if matches!(ch, '\u{2028}' | '\u{2029}' | '\u{80}'..='\u{9f}') {
+                writer.write_all(&fragment.as_bytes()[start..i])?;
+                write!(writer, "\\u{:04x}", ch as u32)?;
+                start = i + ch.len_utf8();
+            }
+        }
+        writer.write_all(&fragment.as_bytes()[start..])
+    }
+}
+
 /// The `v1` per-finding fingerprints for a run's findings, positionally aligned
 /// (#177): `sha256` over an INJECTIVE, netstring-style encoding of — in order —
 /// the finding's `code`, its FORWARD-SLASHED project-root-relative file path,
@@ -1010,6 +1054,39 @@ mod tests {
                 errs.join("\n")
             );
         }
+    }
+
+    // #185 L1: the JS-safe formatter escapes the separators and C1 controls
+    // that serde_json leaves raw, and ONLY those — everything else is
+    // byte-identical to the compact form, and the escaped text decodes to the
+    // identical string (semantics preserved; no version bump).
+    #[test]
+    fn js_safe_json_escapes_separators_and_c1_only() {
+        let hostile = "a\u{2028}b\u{2029}c\u{85}d\u{9f}e\u{1b}f\"g\u{7f}h\u{a0}i";
+        let js_safe = to_js_safe_json(&hostile).unwrap();
+        assert!(
+            js_safe.contains("\\u2028")
+                && js_safe.contains("\\u2029")
+                && js_safe.contains("\\u0085")
+                && js_safe.contains("\\u009f"),
+            "separators + C1 are \\u-escaped: {js_safe}"
+        );
+        assert!(
+            !js_safe.contains('\u{2028}') && !js_safe.contains('\u{85}'),
+            "no raw separator/C1 bytes remain: {js_safe:?}"
+        );
+        // Not over-escaped: DEL (U+007F) and NBSP (U+00A0) are not in the
+        // partition and stay raw, exactly as serde_json emits them.
+        assert!(js_safe.contains('\u{7f}') && js_safe.contains('\u{a0}'));
+        // Round-trip: the decoded string is the original, char for char.
+        let back: String = serde_json::from_str(&js_safe).unwrap();
+        assert_eq!(back, hostile);
+        // A string without the partition chars is byte-identical to compact.
+        let plain = serde_json::json!({"k": "plain \u{1b} text", "n": 1});
+        assert_eq!(
+            to_js_safe_json(&plain).unwrap(),
+            serde_json::to_string(&plain).unwrap()
+        );
     }
 
     #[test]
