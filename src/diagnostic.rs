@@ -268,8 +268,9 @@ const TTY_QUOTE_PREFIX: &str = "           > ";
 
 /// Compact per-finding size limit in bytes — a CONTRACT limit, not a band from
 /// actuals (`DESIGN.md` § Agents are the first consumer; number ratified 2026-07-25, #80 D4). A
-/// compact finding exceeding it is a falsifier.
-pub const COMPACT_FINDING_LIMIT: usize = 512;
+/// compact finding exceeding it is a falsifier. Declared in the limits
+/// catalog with the input bounds (#189), so `docs/limits.md` renders it.
+pub const COMPACT_FINDING_LIMIT: usize = crate::limits::SHIPPED.compact_finding_bytes;
 
 /// Compact quote prefix: minimal marking, same no-forgeable-end-of-quote
 /// property as the TTY form.

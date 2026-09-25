@@ -312,7 +312,17 @@ fn print_page(body: &str) -> ExitCode {
 /// clap's value_parser closes the topic set, so the match is total.
 fn cmd_docs(topic: &str) -> ExitCode {
     let body = match topic {
-        "limits" => include_str!("../docs/limits.md"),
+        // Rendered from the running binary's own catalog (#189): the printed
+        // table is the enforced values, never a hand-synced copy. A template
+        // that lost its markers is printed as-is (the shipped test
+        // limits::docs_limits_page_is_rendered_from_shipped keeps that from
+        // ever being the packaged page).
+        "limits" => {
+            let template = include_str!("../docs/limits.md");
+            let page = mdatron::limits::render_page(&mdatron::limits::SHIPPED, template)
+                .unwrap_or_else(|_| template.to_string());
+            return print_page(&page);
+        }
         "faq" => include_str!("../docs/faq.md"),
         "inputs" => include_str!("../docs/inputs.md"),
         _ => include_str!("../docs/dsl-reference.md"),

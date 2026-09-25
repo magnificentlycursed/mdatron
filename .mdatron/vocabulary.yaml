@@ -266,7 +266,7 @@ label_schemes:
   allow:
     - "^MDATRON-[EWL][0-9]{4}$"
     # Bare code bodies (a registered term): the reserved-range table and the
-    # cost ledger name codes without the namespace.
+    # measured-sizes record in docs/limits.md name codes without the namespace.
     - "^[EWL][0-9]{4}$"
     # Reference-shaped clusters that name things rather than coin schemes:
     # encodings, heading levels, advisories, version labels, DESIGN's own

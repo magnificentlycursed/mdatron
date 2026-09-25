@@ -5,9 +5,15 @@
 //! ONE data structure declares every input/enumeration bound the engine
 //! enforces, with the bound-name strings that surface in `bound_exceeded`
 //! diagnostics — so the catalog, the enforcement sites, and the operator-facing
-//! documentation (`docs/limits.md`) cannot drift apart. Enforcement sites take
-//! their values from here; the historical `pub const` names re-export the
-//! shipped values for compatibility.
+//! documentation cannot drift apart. Enforcement sites take their values from
+//! here; the historical `pub const` names re-export the shipped values for
+//! compatibility; and `docs/limits.md` is RENDERED from here ([`render_page`]),
+//! not hand-synced and checked (#189: the registry-as-generator idiom, reference
+//! `ruff-registry-audit` — drift made impossible rather than caught). The
+//! committed page must equal its own rendering (a shipped test enforces it and
+//! regenerates it under `MDATRON_UPDATE_DOCS=1`), and `mdatron docs limits`
+//! renders the running binary's catalog, so the printed page cannot disagree
+//! with the enforced values.
 //!
 //! Two bound classes are deliberately NOT in this catalog: the YAML alias
 //! (`repetition limit exceeded`) and recursion (`recursion limit exceeded`)
@@ -40,6 +46,11 @@ pub struct Limits {
     /// Maximum concurrent verify invocations per user per project root
     /// (`concurrent-invocation-count`).
     pub concurrent_invocations: usize,
+    /// Maximum bytes of one `--compact` finding block — an OUTPUT contract
+    /// limit rather than an input bound (`DESIGN.md` § Agents are the first
+    /// consumer; ratified 2026-07-25, #80 D4), shipped as data with the rest
+    /// (#189). A block is cut to fit; it never exceeds this.
+    pub compact_finding_bytes: usize,
 }
 
 /// The shipped catalog. Generous phase-1 values; every change here is a
@@ -52,7 +63,153 @@ pub const SHIPPED: Limits = Limits {
     walk_depth: 64,
     walk_entries: 100_000,
     concurrent_invocations: 8,
+    compact_finding_bytes: 512,
 };
+
+/// One row of the operator-facing table in `docs/limits.md` (#189): the
+/// catalog is the source and the page is its rendering. The surface and
+/// on-exceedance prose lives HERE, beside the value it describes, so a bound
+/// cannot change without its documentation changing in the same edit.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LimitRow {
+    /// The bound as diagnostics and DESIGN spell it.
+    pub limit: &'static str,
+    /// The shipped value rendered for humans (`8 MiB`, `100 000`, `512 B`).
+    pub shipped: String,
+    /// What the bound measures.
+    pub surface: &'static str,
+    /// What exceeding it produces.
+    pub on_exceedance: &'static str,
+}
+
+impl Limits {
+    /// The catalog as table rows, in the order of DESIGN's bounds sentence,
+    /// with the compact output limit last.
+    pub fn rows(&self) -> Vec<LimitRow> {
+        vec![
+            LimitRow {
+                limit: "`max-input-size-per-file`",
+                shipped: fmt_bytes(self.per_file_bytes),
+                surface:
+                    "every captured input (bodies, index sources, pin/cite/link/marker targets)",
+                on_exceedance: "config-scoped: `bound_exceeded`; prose-scoped: `W0048` degrade",
+            },
+            LimitRow {
+                limit: "`aggregate-snapshot-size`",
+                shipped: fmt_bytes(self.aggregate_bytes),
+                surface: "total bytes stored in one run's snapshot",
+                on_exceedance: "config-scoped: `bound_exceeded`; prose-scoped: `W0048` degrade",
+            },
+            LimitRow {
+                limit: "`structural-nesting-depth`",
+                shipped: fmt_count(self.structural_nesting),
+                surface: "flow-collection nesting in governed-body YAML",
+                on_exceedance: "`bound_exceeded`",
+            },
+            LimitRow {
+                limit: "DSL expression depth",
+                shipped: fmt_count(self.expr_depth),
+                surface: "adopter `assert:` expression nesting",
+                on_exceedance: "expression `ParseError` at pattern load",
+            },
+            LimitRow {
+                limit: "walk `depth`",
+                shipped: fmt_count(self.walk_depth),
+                surface: "engine-owned no-follow glob walk (index sources)",
+                on_exceedance: "`WalkBounded` index error",
+            },
+            LimitRow {
+                limit: "walk `entries`",
+                shipped: fmt_count(self.walk_entries),
+                surface: "directory entries listed across one glob walk",
+                on_exceedance: "`WalkBounded` index error",
+            },
+            LimitRow {
+                limit: "`concurrent-invocation-count`",
+                shipped: fmt_count(self.concurrent_invocations),
+                surface: "simultaneous `verify` runs per user per project root",
+                on_exceedance: "`bound_exceeded`",
+            },
+            LimitRow {
+                limit: "compact per-finding size",
+                shipped: fmt_bytes(self.compact_finding_bytes),
+                surface: "one finding block of `--compact` output",
+                on_exceedance: "the block is cut to fit (`…`); never exceeded",
+            },
+        ]
+    }
+
+    /// The markdown table `docs/limits.md` carries between its generated-block
+    /// markers: a header row and one row per [`LimitRow`].
+    pub fn render_table(&self) -> String {
+        let mut out = String::from(
+            "| Limit | Shipped value | Surface | On exceedance |\n|---|---|---|---|\n",
+        );
+        for r in self.rows() {
+            out.push_str(&format!(
+                "| {} | {} | {} | {} |\n",
+                r.limit, r.shipped, r.surface, r.on_exceedance
+            ));
+        }
+        out
+    }
+}
+
+/// Opens the generated block in `docs/limits.md`; everything between it and
+/// [`GENERATED_END`] is replaced by [`Limits::render_table`] on render.
+pub const GENERATED_START: &str =
+    "<!-- mdatron-generated: rendered from src/limits.rs (SHIPPED) — do not edit by hand -->";
+/// Closes the generated block in `docs/limits.md`.
+pub const GENERATED_END: &str = "<!-- mdatron-generated: end -->";
+
+/// Render the limits page: `template` (the committed `docs/limits.md`) with
+/// the block between the generated markers replaced by `limits`' table. Errs,
+/// naming the defect, when the template lacks either marker or has them out of
+/// order — a page that cannot carry the rendering must not be printed as if
+/// it did.
+pub fn render_page(limits: &Limits, template: &str) -> Result<String, String> {
+    let start = template.find(GENERATED_START).ok_or_else(|| {
+        format!("the limits page lacks its generated-block start marker `{GENERATED_START}`")
+    })?;
+    let after_start = start + GENERATED_START.len();
+    let end = template[after_start..]
+        .find(GENERATED_END)
+        .map(|rel| after_start + rel)
+        .ok_or_else(|| {
+            format!("the limits page lacks its generated-block end marker `{GENERATED_END}` after the start marker")
+        })?;
+    let mut out = String::with_capacity(template.len() + 512);
+    out.push_str(&template[..after_start]);
+    out.push('\n');
+    out.push_str(&limits.render_table());
+    out.push_str(&template[end..]);
+    Ok(out)
+}
+
+/// Bytes for humans: whole MiB or KiB when exact, else bytes.
+fn fmt_bytes(n: usize) -> String {
+    const MIB: usize = 1024 * 1024;
+    if n != 0 && n % MIB == 0 {
+        format!("{} MiB", n / MIB)
+    } else if n != 0 && n % 1024 == 0 {
+        format!("{} KiB", n / 1024)
+    } else {
+        format!("{n} B")
+    }
+}
+
+/// Counts for humans: thousands separated by a space (`100 000`).
+fn fmt_count(n: usize) -> String {
+    let digits = n.to_string();
+    let mut out = String::with_capacity(digits.len() + digits.len() / 3);
+    for (i, ch) in digits.chars().enumerate() {
+        if i > 0 && (digits.len() - i) % 3 == 0 {
+            out.push(' ');
+        }
+        out.push(ch);
+    }
+    out
+}
 
 /// A held invocation slot: releasing (dropping) it frees the slot. The LOCK
 /// (not the file) dies with the process — advisory `flock` on unix, a
@@ -395,35 +552,95 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 
-    // Drift tripwire (reference: ruff-registry-audit — hand-synced peer
-    // artifacts drift unless a check forces agreement): every SHIPPED value
-    // must appear in its docs/limits.md table row, and SHIPPED itself must
-    // carry the values those rows render.
+    // The inversion (#189; reference: ruff-registry-audit — a registry as the
+    // GENERATOR of its derived artifacts): docs/limits.md is the rendering of
+    // SHIPPED, so the page must EQUAL render_page(&SHIPPED, page). Under
+    // MDATRON_UPDATE_DOCS=1 the test rewrites the page from the catalog instead
+    // of failing (expect-test style). CRLF is normalized for Windows checkouts.
     #[test]
-    fn docs_limits_table_matches_shipped() {
-        let doc =
-            std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("docs/limits.md"))
-                .unwrap();
+    fn docs_limits_page_is_rendered_from_shipped() {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("docs/limits.md");
+        let page = std::fs::read_to_string(&path)
+            .unwrap()
+            .replace("\r\n", "\n");
+        let rendered = render_page(&SHIPPED, &page)
+            .unwrap_or_else(|e| panic!("docs/limits.md cannot carry the rendering: {e}"));
+        if rendered == page {
+            return;
+        }
+        if std::env::var_os("MDATRON_UPDATE_DOCS").is_some() {
+            std::fs::write(&path, &rendered).unwrap();
+            return;
+        }
+        panic!(
+            "docs/limits.md is not the rendering of limits::SHIPPED — regenerate it with \
+             `MDATRON_UPDATE_DOCS=1 cargo test docs_limits_page` (or paste the block below \
+             between the generated markers):\n{}",
+            SHIPPED.render_table()
+        );
+    }
+
+    // The render is a function of the catalog, not a constant: every shipped
+    // value lands in its own pipe-delimited cell, and a different catalog
+    // renders a different table (a bare "8 MiB" substring would stay green
+    // under a bump to "128 MiB", R2-1).
+    #[test]
+    fn render_table_carries_every_shipped_value_in_its_own_cell() {
+        let table = SHIPPED.render_table();
         let row = |needle: &str| {
-            doc.lines()
+            table
+                .lines()
                 .find(|l| l.starts_with('|') && l.contains(needle))
-                .unwrap_or_else(|| panic!("docs/limits.md lacks a table row for {needle}"))
+                .unwrap_or_else(|| panic!("no rendered row for {needle}"))
         };
-        // Pipe-delimited cells (R2-1): a bare "8 MiB" substring would stay
-        // green under a doc-side bump to "128 MiB".
-        assert_eq!(SHIPPED.per_file_bytes, 8 * 1024 * 1024);
         assert!(row("max-input-size-per-file").contains("| 8 MiB |"));
-        assert_eq!(SHIPPED.aggregate_bytes, 64 * 1024 * 1024);
         assert!(row("aggregate-snapshot-size").contains("| 64 MiB |"));
-        assert_eq!(SHIPPED.structural_nesting, 256);
         assert!(row("structural-nesting-depth").contains("| 256 |"));
-        assert_eq!(SHIPPED.expr_depth, 256);
         assert!(row("DSL expression depth").contains("| 256 |"));
-        assert_eq!(SHIPPED.walk_depth, 64);
         assert!(row("walk `depth`").contains("| 64 |"));
-        assert_eq!(SHIPPED.walk_entries, 100_000);
         assert!(row("walk `entries`").contains("| 100 000 |"));
-        assert_eq!(SHIPPED.concurrent_invocations, 8);
         assert!(row("concurrent-invocation-count").contains("| 8 |"));
+        assert!(row("compact per-finding size").contains("| 512 B |"));
+        assert_eq!(table.lines().count(), 2 + SHIPPED.rows().len());
+
+        let mut other = SHIPPED;
+        other.per_file_bytes = 128 * 1024 * 1024;
+        other.walk_entries = 1_234_567;
+        let table = other.render_table();
+        assert!(table.contains("| 128 MiB |"), "{table}");
+        assert!(table.contains("| 1 234 567 |"), "{table}");
+        assert!(!table.contains("| 8 MiB |"));
+    }
+
+    #[test]
+    fn render_page_replaces_only_the_generated_block_and_refuses_marker_less_pages() {
+        let template = format!(
+            "# Title\n\nprose before\n\n{GENERATED_START}\n| stale | table |\n{GENERATED_END}\n\nprose after\n"
+        );
+        let page = render_page(&SHIPPED, &template).unwrap();
+        assert!(page.starts_with("# Title\n\nprose before\n\n"));
+        assert!(page.ends_with(&format!("{GENERATED_END}\n\nprose after\n")));
+        assert!(!page.contains("stale"));
+        assert!(page.contains(&format!("{GENERATED_START}\n| Limit |")));
+        // Idempotent: rendering a rendered page is the same page.
+        assert_eq!(render_page(&SHIPPED, &page).unwrap(), page);
+
+        assert!(render_page(&SHIPPED, "no markers at all").is_err());
+        assert!(render_page(&SHIPPED, &format!("{GENERATED_START}\nopen only")).is_err());
+        assert!(render_page(&SHIPPED, &format!("{GENERATED_END}\n{GENERATED_START}\n")).is_err());
+    }
+
+    #[test]
+    fn human_formatting_is_exact_units_or_bytes() {
+        assert_eq!(fmt_bytes(8 * 1024 * 1024), "8 MiB");
+        assert_eq!(fmt_bytes(512), "512 B");
+        assert_eq!(fmt_bytes(3 * 1024), "3 KiB");
+        assert_eq!(fmt_bytes(1000), "1000 B");
+        assert_eq!(fmt_bytes(0), "0 B");
+        assert_eq!(fmt_count(8), "8");
+        assert_eq!(fmt_count(256), "256");
+        assert_eq!(fmt_count(1000), "1 000");
+        assert_eq!(fmt_count(100_000), "100 000");
+        assert_eq!(fmt_count(0), "0");
     }
 }
