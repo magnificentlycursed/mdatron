@@ -496,7 +496,7 @@ fn code_in_header(line: &str) -> Option<&str> {
     let is_compact =
         line.len() > 1 && line.starts_with(['E', 'W', 'L']) && line[1..].starts_with('[');
     let is_tty =
-        line.starts_with("error[") || line.starts_with("warning[") || line.starts_with("info[");
+        line.starts_with("error[") || line.starts_with("warning[") || line.starts_with("lint[");
     if !(is_compact || is_tty) {
         return None;
     }
