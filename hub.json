@@ -1,0 +1,12 @@
+{
+  "hub_version": 3,
+  "migrated_from_commit": "50ff88a4430d22fb06cf38b15d001397d13a70b6",
+  "migrated_at": "2026-09-25T01:21:58.258106Z",
+  "genesis_checkpoint_commit": "e9509e2e2865518f664d85e7e61c2bafcb747b97",
+  "seed_agent_tips": {
+    "79Ig": "6bcd854f30c6156190deee926c0b66a893b7cb27",
+    "IMWa": "a933b6d1c12c77bf4b13ec312b5eb7881e09b927",
+    "i8fm": "845f0eba7beddac7fea60d72b05f696bc3c3c7f9",
+    "ohMM": "40ef9478e96b019b1c971077dd7336c10f819bc9"
+  }
+}
