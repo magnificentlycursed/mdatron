@@ -349,15 +349,19 @@ fn resolve_link(
                 findings.push(f);
             }
         }
-        Some(Captured::SymlinkRefused { .. }) => {
+        Some(Captured::SymlinkRefused { tag, .. }) => {
+            let reparse = crate::confine::describe_reparse(tag.as_ref().copied());
             findings.push(link_finding(
                 path,
                 content,
                 at,
                 "MDATRON-E0012",
                 "symlinked-component-refused",
-                "a link's target resolves through a symbolic link; no-follow \
-                 resolution refuses it",
+                &format!(
+                    "a link's target resolves through {}; no-follow resolution \
+                     refuses it",
+                    reparse.what
+                ),
                 dest,
             ));
         }

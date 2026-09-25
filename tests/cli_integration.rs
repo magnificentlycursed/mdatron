@@ -682,6 +682,80 @@ fn pin_update_repins_and_dry_run_does_not_write() {
     assert!(!record.contains("stale"), "hash rewritten: {record}");
 }
 
+// #64 cold-review W2: a junction-rooted project (`mklink /J C:\proj D:\real`)
+// pins like any other. The CLI canonicalizes the root before the confine walk
+// sees it; the walk itself refuses a reparse point AS the root (fail-closed),
+// so without that canonicalization `pin --update` walked nothing, updated
+// nothing, and exited 0 — the silent regression this gate pins shut.
+#[cfg(windows)]
+#[test]
+fn pin_update_through_junction_root_updates_the_pin() {
+    use std::os::windows::process::CommandExt;
+    let proj = TempProject::new("pin-junction-root");
+    std::fs::create_dir_all(proj.path().join(".mdatron/schemas")).unwrap();
+    proj.write("GOVERNING.md", "# gov\n");
+    proj.write("governed.md", "v1\n");
+    proj.write(
+        ".mdatron/pins.yaml",
+        "pins:\n- governing: GOVERNING.md\n  file: governed.md\n  sha256: \"stale\"\n",
+    );
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let junction = std::env::temp_dir().join(format!("mdatron-junction-root-{nanos}"));
+    // cmd.exe parses its own line: one raw, quoted argument.
+    let out = Command::new("cmd")
+        .raw_arg(format!(
+            "/C mklink /J \"{}\" \"{}\"",
+            junction.display(),
+            proj.path().display()
+        ))
+        .output()
+        .expect("cmd runs");
+    assert!(
+        out.status.success(),
+        "mklink /J must succeed on this runner: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    // #64 review N5: remove the junction entry on every exit path, so an
+    // assertion failure below never leaks it in %TEMP% (RemoveDirectoryW on a
+    // reparse point removes the entry, never the target tree).
+    struct JunctionGuard(PathBuf);
+    impl Drop for JunctionGuard {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir(&self.0);
+        }
+    }
+    let _junction_guard = JunctionGuard(junction.clone());
+
+    let run_pin = |args: &[&str]| {
+        Command::new(mdatron_bin())
+            .args(["pin", "--project-root"])
+            .arg(&junction)
+            .args(args)
+            .output()
+            .expect("mdatron binary executes")
+    };
+    let out = run_pin(&["--update"]);
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "pin --update through the junction root: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let record = std::fs::read_to_string(proj.path().join(".mdatron/pins.yaml")).unwrap();
+    assert!(
+        !record.contains("stale"),
+        "the pin behind the junction root must be rewritten: {record}"
+    );
+    assert_eq!(
+        run_pin(&[]).status.code(),
+        Some(0),
+        "check through the junction is clean"
+    );
+}
+
 // GH #48 finding 4 (lane C): the pin subcommand renders adopter-authored
 // pins.yaml values safely. (a) A recorded sha with a multibyte char straddling
 // byte 12 must not panic the truncation (the #165 byte-slice class, previously

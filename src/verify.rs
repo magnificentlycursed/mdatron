@@ -734,21 +734,24 @@ fn run_inner(
                     }
                 }
             }
-            crate::snapshot::Captured::SymlinkRefused { component } => {
+            crate::snapshot::Captured::SymlinkRefused { component, tag } => {
                 let component = component.to_string_lossy().into_owned();
+                // #64 W1: name the reparse class (a cloud placeholder is not
+                // fixed by "replacing the symlink"); the refusal is the same.
+                let reparse = crate::confine::describe_reparse(tag.as_ref().copied());
                 findings.push(Finding {
                     code: "MDATRON-E0012".into(),
                     severity: Severity::Error,
                     summary: "symlinked-component-refused".into(),
-                    message: "a governed file resolves through a symbolic link; \
-                              no-follow resolution refuses it (the handle that \
-                              passed confinement is the handle that is read)"
-                        .into(),
-                    help: Some(
-                        "replace the symlink with the real file inside the \
-                         governed tree"
-                            .into(),
+                    message: format!(
+                        "a governed file resolves through {}; no-follow resolution \
+                         refuses it (the handle that passed confinement is the \
+                         handle that is read)",
+                        reparse.what
                     ),
+                    help: Some(reparse.help.unwrap_or_else(|| {
+                        "replace the symlink with the real file inside the governed tree".into()
+                    })),
                     location: Location {
                         file: abs.clone(),
                         line: 1,
@@ -7103,7 +7106,7 @@ pattern:
     // #103 security: a symlinked governed file is REFUSED at capture (E0012),
     // not followed — closing the raw-read gap where verify_file read the
     // symlink's target.
-    #[cfg(unix)]
+    #[cfg(any(unix, windows))]
     #[test]
     fn symlinked_governed_file_is_refused_not_followed() {
         let proj = TempProject::new("snapshot-symlink");
@@ -7116,7 +7119,7 @@ pattern:
         proj.write("docs/real.md", "---\nschema_class: x\n---\n");
         // docs/link.md is a symlink to ../secret.md — a symlinked governed file.
         let link = proj.0.join("docs/link.md");
-        std::os::unix::fs::symlink("../secret.md", &link).unwrap();
+        crate::confine::test_symlink::file("../secret.md", &link);
         let cfg = VerifyConfig::from_project(&proj.0).unwrap();
         let findings = verify(&cfg).unwrap();
         assert_eq!(
@@ -7749,6 +7752,16 @@ pattern:
     // DESIGN:147 "a symlink-cycle fixture terminates": a directory symlink
     // cycle under the MAIN file_globs walk terminates promptly, every
     // cycle-path capture refused loudly (E0012) — no unbounded enumeration.
+    // Unix-only by fixture, not by guarantee (#64): the main walk's `**`
+    // expansion (glob::glob over file_globs) follows the cycle PATH-BASED on
+    // every platform and terminates only when the OS path limit ends it
+    // (~4 KiB on Unix). Windows' 32K-character verbatim limit would — by
+    // reasoning, not measurement; nobody has run this fixture there — make
+    // that bound ~8x deeper and likely blow the 10 s watchdog, so the gate is
+    // not flipped. The no-follow REFUSAL it asserts is pinned on both
+    // platforms by the confine/index gates; the engine's own closed-world
+    // walk (`list_dir`, the index/extras enumeration) never descends a
+    // symlink at all — that is the enumeration guarantee, not a file_globs one.
     #[cfg(unix)]
     #[test]
     fn main_walk_symlink_cycle_terminates_with_refusals() {
@@ -7928,7 +7941,7 @@ pattern:
 
     // Phase-3 I-2: pipeline-level pinning of the capture-state -> IndexError
     // taxonomy build_from_parts applies (the path production executes).
-    #[cfg(unix)]
+    #[cfg(any(unix, windows))]
     #[test]
     fn symlinked_index_source_aborts_via_build_from_parts() {
         let proj = TempProject::new("index-symlink");
@@ -7938,7 +7951,7 @@ pattern:
             "file_globs:\n  - \"docs/**/*.md\"\n",
         );
         proj.write("real.yaml", "k: v\n");
-        std::os::unix::fs::symlink(proj.0.join("real.yaml"), proj.0.join("alias.yaml")).unwrap();
+        crate::confine::test_symlink::file(proj.0.join("real.yaml"), proj.0.join("alias.yaml"));
         proj.write(
             ".mdatron/patterns/p.yaml",
             "mdatron_dsl_version: 1\npattern:\n  id: sym\n  keys:\n    - name: k\n      source: alias.yaml\n      select: $\n      indexed_by: $key\n  rules:\n    - id: r\n      context: no-such-class\n      assert: \"true\"\n      code: T-E0001\n      message: never\n",

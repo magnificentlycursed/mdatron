@@ -165,10 +165,11 @@ impl IndexRegistry {
                             continue;
                         }
                     },
-                    Some(Captured::SymlinkRefused { component }) => {
+                    Some(Captured::SymlinkRefused { component, tag }) => {
                         return Err(IndexError::SymlinkRefused {
                             path: display_text,
                             component: escape_path_text(&component.to_string_lossy()),
+                            reparse: reparse_suffix(tag.as_ref().copied()),
                         })
                     }
                     // Config-scoped posture: an oversized index source is the
@@ -248,6 +249,15 @@ impl IndexRegistry {
     }
 }
 
+/// The E0012 message suffix naming a non-symlink reparse class (#64 W1):
+/// empty for a plain link, " — a cloud-file placeholder (reparse tag …)" etc.
+fn reparse_suffix(tag: Option<u32>) -> String {
+    match confine::classify_reparse(tag) {
+        confine::ReparseClass::NameSurrogate => String::new(),
+        _ => format!(" — {}", confine::describe_reparse(tag).what),
+    }
+}
+
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum IndexError {
     #[error("glob error in '{pattern}': {error}")]
@@ -271,9 +281,15 @@ pub enum IndexError {
     PathTraversal { path: String },
 
     /// Maps to MDATRON-E0012: key-source-symlink-refused. No-follow resolution
-    /// refuses a symlink at any component, whatever its target.
-    #[error("path confinement: symlink component '{component}' in '{path}' is refused under no-follow resolution (MDATRON-E0012)")]
-    SymlinkRefused { path: String, component: String },
+    /// refuses a symlink — on Windows, any reparse point — at any component,
+    /// whatever its target. `reparse` names a non-symlink class (" — a
+    /// cloud-file placeholder (…)"), empty for a plain link (#64 W1).
+    #[error("path confinement: symlink component '{component}' in '{path}' is refused under no-follow resolution (MDATRON-E0012){reparse}")]
+    SymlinkRefused {
+        path: String,
+        component: String,
+        reparse: String,
+    },
 
     /// The engine-owned enumeration walk exceeded a declared bound (entry or
     /// depth maximum). Closed-world discipline: enumeration is a bounded,
@@ -639,11 +655,12 @@ fn list_for_walk(
         // A missing directory matches nothing (closed-world: enumerate what is
         // present) — not a hard error.
         Err(confine::ListViolation::NotFound) => return Ok(Vec::new()),
-        Err(confine::ListViolation::Symlink { component }) => {
+        Err(confine::ListViolation::Symlink { component, tag }) => {
             let display = root.join(prefix);
             return Err(IndexError::SymlinkRefused {
                 path: escape_path_text(&display.to_string_lossy()),
                 component: escape_path_text(&component.to_string_lossy()),
+                reparse: reparse_suffix(tag),
             });
         }
         Err(confine::ListViolation::Io(e)) => {
@@ -1150,40 +1167,38 @@ mod tests {
         assert_eq!(degraded[0].key_name, "m");
     }
 
-    #[cfg(unix)]
+    #[cfg(any(unix, windows))]
     #[test]
     fn symlink_source_refused_even_when_target_is_inside_root() {
         // No-follow is unconditional: a symlink is refused whatever its
         // target, so escape detection never depends on resolving it.
         let temp = TempDir::new("symlink-inside");
         temp.write("real.yaml", "k: v\n");
-        std::os::unix::fs::symlink(
+        crate::confine::test_symlink::file(
             temp.path().join("real.yaml"),
             temp.path().join("alias.yaml"),
-        )
-        .unwrap();
+        );
         let d = decl("s", "alias.yaml", "$", "$key");
         let err = IndexRegistry::build(temp.path(), &[d]).unwrap_err();
         assert!(matches!(err, IndexError::SymlinkRefused { .. }));
     }
 
-    #[cfg(unix)]
+    #[cfg(any(unix, windows))]
     #[test]
     fn symlink_source_pointing_outside_root_refused() {
         let temp = TempDir::new("symlink-escape");
         let outside = TempDir::new("symlink-escape-target");
         outside.write("target.yaml", "k: v\n");
-        std::os::unix::fs::symlink(
+        crate::confine::test_symlink::file(
             outside.path().join("target.yaml"),
             temp.path().join("link.yaml"),
-        )
-        .unwrap();
+        );
         let d = decl("s", "link.yaml", "$", "$key");
         let err = IndexRegistry::build(temp.path(), &[d]).unwrap_err();
         assert!(matches!(err, IndexError::SymlinkRefused { .. }));
     }
 
-    #[cfg(unix)]
+    #[cfg(any(unix, windows))]
     #[test]
     fn symlinked_intermediate_component_refused() {
         // Component-wise resolution: a symlinked directory in the middle of
@@ -1191,7 +1206,7 @@ mod tests {
         let temp = TempDir::new("symlink-mid");
         let outside = TempDir::new("symlink-mid-target");
         outside.write("data.yaml", "k: v\n");
-        std::os::unix::fs::symlink(outside.path(), temp.path().join("sub")).unwrap();
+        crate::confine::test_symlink::dir(outside.path(), temp.path().join("sub"));
         let d = decl("s", "sub/data.yaml", "$", "$key");
         let err = IndexRegistry::build(temp.path(), &[d]).unwrap_err();
         match err {
@@ -1200,7 +1215,7 @@ mod tests {
         }
     }
 
-    #[cfg(unix)]
+    #[cfg(any(unix, windows))]
     #[test]
     fn glob_matched_symlink_refused() {
         // Glob expansion may match a symlink; the handle-based open still
@@ -1208,11 +1223,10 @@ mod tests {
         let temp = TempDir::new("glob-symlink");
         let outside = TempDir::new("glob-symlink-target");
         outside.write("target.yaml", "k: v\n");
-        std::os::unix::fs::symlink(
+        crate::confine::test_symlink::file(
             outside.path().join("target.yaml"),
             temp.path().join("linked.yaml"),
-        )
-        .unwrap();
+        );
         let d = decl("g", "*.yaml", "$", "$key");
         let err = IndexRegistry::build(temp.path(), &[d]).unwrap_err();
         assert!(matches!(err, IndexError::SymlinkRefused { .. }));
@@ -1331,7 +1345,7 @@ mod tests {
         assert!(idx.lookup("alpha").is_some());
     }
 
-    #[cfg(unix)]
+    #[cfg(any(unix, windows))]
     #[test]
     fn symlinked_intermediate_enumeration_refused_without_disclosure() {
         // Symptom 3 (SEC-F2) + symptom 5 (SEC-F3): glob::glob enumerated
@@ -1343,7 +1357,7 @@ mod tests {
         let temp = TempDir::new("enum-symlink");
         let outside = TempDir::new("enum-symlink-outside");
         outside.write("SECRET-OUTSIDE.yaml", "leaked: 1\n");
-        std::os::unix::fs::symlink(outside.path(), temp.path().join("sub")).unwrap();
+        crate::confine::test_symlink::dir(outside.path(), temp.path().join("sub"));
 
         let d = decl("g", "sub/*.yaml", "$", "$key");
         let err = IndexRegistry::build(temp.path(), &[d]).unwrap_err();
@@ -1361,7 +1375,7 @@ mod tests {
         );
     }
 
-    #[cfg(unix)]
+    #[cfg(any(unix, windows))]
     #[test]
     fn symlink_cycle_under_recursive_pattern_terminates() {
         // Symptom 4 (I10): a symlink cycle under a recursive `**` pattern was
@@ -1373,7 +1387,7 @@ mod tests {
         let temp = TempDir::new("cycle");
         temp.write("real.yaml", "found: 1\n");
         // A self-referential directory symlink: loop -> the root itself.
-        std::os::unix::fs::symlink(temp.path(), temp.path().join("loop")).unwrap();
+        crate::confine::test_symlink::dir(temp.path(), temp.path().join("loop"));
         let root = temp.path().to_path_buf();
         let d = decl("c", "**/*.yaml", "$", "$key");
 

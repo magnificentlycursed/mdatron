@@ -161,16 +161,45 @@ fn rg_absolute_source_absent_target_rejected() {
     }
 }
 
+/// Per-platform symlink fixtures (#64): the confinement guarantee is
+/// universal, so these gates run on Unix AND Windows. A creation failure
+/// FAILS the test loudly (Windows: the runner needs
+/// SeCreateSymbolicLinkPrivilege or Developer Mode), never skips it.
+#[cfg(any(unix, windows))]
+mod symlink_fixture {
+    use std::path::Path;
+
+    pub fn file(target: impl AsRef<Path>, link: impl AsRef<Path>) {
+        #[cfg(unix)]
+        let result = std::os::unix::fs::symlink(target.as_ref(), link.as_ref());
+        #[cfg(windows)]
+        let result = std::os::windows::fs::symlink_file(target.as_ref(), link.as_ref());
+        result.unwrap_or_else(|e| {
+            panic!("file symlink fixture must be creatable on this runner: {e}")
+        });
+    }
+
+    pub fn dir(target: impl AsRef<Path>, link: impl AsRef<Path>) {
+        #[cfg(unix)]
+        let result = std::os::unix::fs::symlink(target.as_ref(), link.as_ref());
+        #[cfg(windows)]
+        let result = std::os::windows::fs::symlink_dir(target.as_ref(), link.as_ref());
+        result.unwrap_or_else(|e| {
+            panic!("directory symlink fixture must be creatable on this runner: {e}")
+        });
+    }
+}
+
 // ── Symlink class (retrofits: symlink_source_refused_even_when_target_is_inside_root,
 //    symlink_source_pointing_outside_root_refused,
 //    symlinked_intermediate_component_refused, glob_matched_symlink_refused) ───
 
-#[cfg(unix)]
+#[cfg(any(unix, windows))]
 #[test]
 fn rg_symlink_source_inside_root_refused() {
     let root = canonical_temp_root("symlink-inside");
     std::fs::write(root.join("real.yaml"), "k: v\n").unwrap();
-    std::os::unix::fs::symlink(root.join("real.yaml"), root.join("alias.yaml")).unwrap();
+    symlink_fixture::file(root.join("real.yaml"), root.join("alias.yaml"));
     let d = decl("s", "alias.yaml", "$", "$key");
     let result = IndexRegistry::build(&root, &[d]);
     std::fs::remove_dir_all(&root).unwrap();
@@ -183,13 +212,13 @@ fn rg_symlink_source_inside_root_refused() {
     }
 }
 
-#[cfg(unix)]
+#[cfg(any(unix, windows))]
 #[test]
 fn rg_symlink_source_outside_root_refused() {
     let root = canonical_temp_root("symlink-escape");
     let outside = canonical_temp_root("symlink-escape-target");
     std::fs::write(outside.join("target.yaml"), "k: v\n").unwrap();
-    std::os::unix::fs::symlink(outside.join("target.yaml"), root.join("link.yaml")).unwrap();
+    symlink_fixture::file(outside.join("target.yaml"), root.join("link.yaml"));
     let d = decl("s", "link.yaml", "$", "$key");
     let result = IndexRegistry::build(&root, &[d]);
     std::fs::remove_dir_all(&root).unwrap();
@@ -202,13 +231,13 @@ fn rg_symlink_source_outside_root_refused() {
     }
 }
 
-#[cfg(unix)]
+#[cfg(any(unix, windows))]
 #[test]
 fn rg_symlinked_intermediate_component_refused() {
     let root = canonical_temp_root("symlink-mid");
     let outside = canonical_temp_root("symlink-mid-target");
     std::fs::write(outside.join("data.yaml"), "k: v\n").unwrap();
-    std::os::unix::fs::symlink(&outside, root.join("sub")).unwrap();
+    symlink_fixture::dir(&outside, root.join("sub"));
     let d = decl("s", "sub/data.yaml", "$", "$key");
     let result = IndexRegistry::build(&root, &[d]);
     std::fs::remove_dir_all(&root).unwrap();
@@ -221,13 +250,13 @@ fn rg_symlinked_intermediate_component_refused() {
     }
 }
 
-#[cfg(unix)]
+#[cfg(any(unix, windows))]
 #[test]
 fn rg_glob_matched_symlink_refused() {
     let root = canonical_temp_root("glob-symlink");
     let outside = canonical_temp_root("glob-symlink-target");
     std::fs::write(outside.join("target.yaml"), "k: v\n").unwrap();
-    std::os::unix::fs::symlink(outside.join("target.yaml"), root.join("linked.yaml")).unwrap();
+    symlink_fixture::file(outside.join("target.yaml"), root.join("linked.yaml"));
     let d = decl("g", "*.yaml", "$", "$key");
     let result = IndexRegistry::build(&root, &[d]);
     std::fs::remove_dir_all(&root).unwrap();

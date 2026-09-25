@@ -219,15 +219,19 @@ fn resolve_members(
         Some(Captured::OpenedUnreadable { .. }) | Some(Captured::TooLarge { .. }) => {
             return MarkerMembers::Unverifiable
         }
-        Some(Captured::SymlinkRefused { .. }) => {
+        Some(Captured::SymlinkRefused { tag, .. }) => {
+            let reparse = crate::confine::describe_reparse(tag.as_ref().copied());
             findings.push(marker_finding(
                 path,
                 "",
                 0,
                 "MDATRON-E0012",
                 "symlinked-component-refused",
-                "a marker rule's target_doc resolves through a symbolic link; \
-                 no-follow resolution refuses it",
+                &format!(
+                    "a marker rule's target_doc resolves through {}; no-follow \
+                     resolution refuses it",
+                    reparse.what
+                ),
                 "target_doc",
                 &rule.target_doc,
             ));

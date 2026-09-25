@@ -310,6 +310,24 @@ fn cmd_docs(topic: &str) -> ExitCode {
     print_page(body)
 }
 
+/// Resolve the as-passed project root to its canonical absolute form ONCE,
+/// before any path is derived from it, so every derived path — the
+/// `.mdatron/` dirs the config joins, the loaders' free-form messages, the
+/// pipeline's own root — is canonical-rooted and relativizes
+/// deterministically whatever spelling (`.`, `docs`, `/abs/docs`) the caller
+/// used, and so the confine walk never sees a reparse point AS the root: on
+/// Windows the walk refuses one, so a junction-rooted project
+/// (`mklink /J C:\proj D:\real`) must be resolved here, for EVERY subcommand
+/// (#64 cold-review W2; the same helper #185 H1 adds on main). A root that
+/// does not exist cannot be canonicalized; it is made absolute lexically
+/// instead (cwd-joined, `.` components dropped), and only if even that fails
+/// (no cwd) is the spelling kept as passed.
+fn canonical_project_root(root: PathBuf) -> PathBuf {
+    root.canonicalize()
+        .or_else(|_| std::path::absolute(&root))
+        .unwrap_or(root)
+}
+
 fn cmd_pin(project_root: Option<PathBuf>, update: bool, dry_run: bool, quiet: bool) -> ExitCode {
     let root = match project_root.map(Ok).unwrap_or_else(std::env::current_dir) {
         Ok(r) => r,
@@ -324,6 +342,8 @@ fn cmd_pin(project_root: Option<PathBuf>, update: bool, dry_run: bool, quiet: bo
             return ExitCode::from(2);
         }
     };
+    // #64 W2: canonical root before ANY derived path or confine walk.
+    let root = canonical_project_root(root);
 
     if update {
         match mdatron::pin::update(&root, dry_run) {
@@ -467,6 +487,8 @@ fn cmd_init(project_root: Option<PathBuf>, quiet: bool) -> ExitCode {
             return ExitCode::from(2);
         }
     };
+    // #64 W2: canonical root before ANY derived path or confine walk.
+    let root = canonical_project_root(root);
 
     match init(&root) {
         Ok(InitOutcome::Deployed { created }) => {
@@ -570,6 +592,7 @@ fn cmd_verify(
     // canonical root every derived path is canonical-rooted and relativizes
     // deterministically; `--files` globs and `--changed` were always resolved
     // against the pipeline's canonical root, so they are unaffected.
+    // #64 W2: the same canonical root fronts every confine walk (pin, init).
     let root = canonical_project_root(root);
 
     // The committed .mdatron/config.yaml's file_globs are the consumer-authored
@@ -805,21 +828,6 @@ fn print_finding(f: &Finding) {
     // diagnostics through one code path. Per Phase 1a behavioral spec
     // (vsdd-cli/docs/refactor/phase-2-mdatron-json/phase-1a-behavioral-spec.md).
     eprintln!("{}", f.format_tty());
-}
-
-/// Resolve the as-passed project root to its canonical absolute form (#185
-/// cold-review H1), so every path derived from it — the `.mdatron/` dirs the
-/// config joins, the loaders' free-form `cannot parse '<path>'` messages, the
-/// pipeline's own root — is canonical-rooted and `strip_prefix`-relativizes
-/// deterministically, whatever spelling (`.`, `docs`, `/abs/docs`) the caller
-/// used. A root that does not exist cannot be canonicalized; it is made
-/// absolute lexically instead (cwd-joined, `.` components dropped) so its
-/// derived paths still strip to the same relative rendering, and only if even
-/// that fails (no cwd) is the spelling kept as passed.
-fn canonical_project_root(root: PathBuf) -> PathBuf {
-    root.canonicalize()
-        .or_else(|_| std::path::absolute(&root))
-        .unwrap_or(root)
 }
 
 /// Strip any ROOTED `<root>/` prefix from a free-form error message so no
