@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1135,
-        "tip_oid": "b59ca57a698522d940978feea5b7a3bc6a333f44",
-        "prefix_sha256": "cdcfdf98e40893b3d1d7312399d0a26668d8281bb51c10c79cbed0c5b32f2b80"
+        "sequence": 1136,
+        "tip_oid": "575a90ade8d3078a026e86d12515850ddd33216e",
+        "prefix_sha256": "c979b3168a6c36830de70a71c309517773a1b9d7efba85d20f2043414abc5753"
       },
       "IMWa": {
         "sequence": 2,
@@ -2424,11 +2424,12 @@
       "uuid": "4be4a713-0fe0-45e4-9e07-9a859da5e49a",
       "display_id": 204,
       "title": "Ontological review of the codebase (operator request 2026-09-24): one concept, one name across DESIGN / code identifiers / config keys / envelope fields / diagnostic codes / explain pages / README — find synonyms, overloads, orphans, leaked internal names, and convention drift; classify renames by adopter-facing (SemVer + rename ledger) vs internal (free)",
-      "status": "open",
+      "status": "closed",
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-24T22:16:23.986226Z",
-      "updated_at": "2026-09-25T01:31:56.655253Z",
+      "updated_at": "2026-09-25T01:33:43.266991Z",
+      "closed_at": "2026-09-25T01:33:43.209233Z",
       "comments": {
         "0115b9a8-4fd5-44b5-8aaa-b6d58e3c9a5c": {
           "display_id": 569,
