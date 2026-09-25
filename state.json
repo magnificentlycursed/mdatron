@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1143,
-        "tip_oid": "db083809dc8b0f04a5c187b98f0ec072546c12e1",
-        "prefix_sha256": "47b144242fd6a3541ea6e5d3cf6adcb1e39e7ae23e80e9eaf17837d71d0b21e5"
+        "sequence": 1144,
+        "tip_oid": "e8cfc5601d0521cc23d8a7a7a32986425f319c09",
+        "prefix_sha256": "dde2fafdd6067be1dbdeedba374708f5bcdfb054903565741a651451dec79526"
       },
       "IMWa": {
         "sequence": 2,
@@ -1278,11 +1278,12 @@
       "uuid": "266badfe-b56b-409e-9f46-bdb0954f3adf",
       "display_id": 203,
       "title": "GH #56 adoption feedback (vsdd-cli 0.6.0 move): routes are the undocumented closed-world gateway to four families (major); 'routes supplied' undefined — routes: [] E0030s every file (major); code-catalog scan has no scope control (major); init seeds no shapes; compact hints are case labels not fixes; docs/help polish; GitHub Releases page stale; notes format to keep",
-      "status": "open",
+      "status": "closed",
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-09-24T22:05:25.081803Z",
-      "updated_at": "2026-09-25T03:05:01.041610Z",
+      "updated_at": "2026-09-25T10:48:10.406737Z",
+      "closed_at": "2026-09-25T10:48:10.376009Z",
       "comments": {
         "001b2717-0609-4d13-a23d-4d775df7e6ac": {
           "display_id": 549,
