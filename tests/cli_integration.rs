@@ -1,3 +1,7 @@
+// Test code: an unwrap IS the assertion — opt out of the [lints.clippy]
+// panic-path restrictions production code is held to (#185).
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
 //! CLI integration tests for Phase 2 of the binary-first refactor
 //! (crosslink #13). Covers the operator-facing CLI surfaces added in
 //! Phase 2 — `mdatron explain CODE` against the v0.1.0 embedded catalog,

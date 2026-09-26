@@ -141,6 +141,18 @@ const DEFAULT_REF_ID_SCHEMES: &[&str] = &[
     r"^Q-?\d+$",  // design questions (Q1 or Q-1)
 ];
 
+/// The engine's cluster detector: uppercase letters, optional dashed second
+/// segment, trailing digits — the incident shapes (M2, L2, SEC-F3, AIE-F2,
+/// MDATRON-E0050).
+#[allow(
+    clippy::expect_used,
+    reason = "an engine literal; a compile failure is a build defect, pinned by the unit tests"
+)]
+fn engine_cluster_detector() -> regex_lite::Regex {
+    regex_lite::Regex::new(r"\b[A-Z]{1,7}(?:-[A-Z]{0,7})?[0-9]{1,4}\b")
+        .expect("engine cluster detector compiles")
+}
+
 /// Load `.mdatron/vocabulary.yaml`. `Ok(None)` when absent (family inactive);
 /// `Err` when unreadable, structurally malformed, or carrying a pattern that
 /// does not compile (loud, never a silent no-op).
@@ -174,6 +186,10 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedVocab>, Error> {
     let label_allow = if raw.label_schemes.allow.is_empty() {
         None
     } else {
+        #[allow(
+            clippy::expect_used,
+            reason = "engine literals; a compile failure is a build defect, pinned by the unit tests"
+        )]
         let mut compiled: Vec<regex_lite::Regex> = DEFAULT_REF_ID_SCHEMES
             .iter()
             .map(|p| regex_lite::Regex::new(p).expect("engine default ref-id scheme compiles"))
@@ -224,8 +240,7 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedVocab>, Error> {
         // The engine's cluster detector: uppercase letters, optional dashed
         // second segment, trailing digits — the incident shapes (M2, L2,
         // SEC-F3, AIE-F2, MDATRON-E0050).
-        cluster: regex_lite::Regex::new(r"\b[A-Z]{1,7}(?:-[A-Z]{0,7})?[0-9]{1,4}\b")
-            .expect("engine cluster detector compiles"),
+        cluster: engine_cluster_detector(),
         draft_conflicts,
         digest: crate::init::sha256_hex(content.as_bytes()),
     }))

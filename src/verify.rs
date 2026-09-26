@@ -3208,7 +3208,9 @@ fn interpolate_message(
         // escaped to inert `\xNN` as they are copied (the escape_label
         // predicate: Cc ∪ {U+2028, U+2029}) — values already ride `[see:]`
         // quoted regions; this closes the template-TEXT channel.
-        let ch = template[i..].chars().next().expect("i is a char boundary");
+        let Some(ch) = template[i..].chars().next() else {
+            break; // `i == len`: nothing left to copy
+        };
         if ch.is_control() || matches!(ch, '\u{2028}' | '\u{2029}') {
             use std::fmt::Write;
             let _ = write!(out, "\\x{:02X}", ch as u32);

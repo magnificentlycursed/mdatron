@@ -1,3 +1,7 @@
+// Test code: an unwrap IS the assertion — opt out of the [lints.clippy]
+// panic-path restrictions production code is held to (#185).
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
 //! Red-gate retrofit for mdatron tracker issue #52 (L2 fix at 0b21986).
 //!
 //! This file is placed into the PRE-FIX worktree (0b21986^ = b30251b) at

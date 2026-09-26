@@ -299,8 +299,8 @@ pub struct Finding {
 
 impl Finding {
     /// Render the finding in rustc-style TTY format. Single source of truth
-    /// for TTY rendering across the engine + CLI per
-    /// `vsdd-cli/docs/refactor/phase-2-mdatron-json/phase-1a-behavioral-spec.md`.
+    /// for TTY rendering across the engine + CLI (`DESIGN.md` § Diagnostics are
+    /// a versioned contract: the three output forms render the same findings).
     ///
     /// Output structure (matches rustc / clippy convention):
     /// - Line 1: `<severity_label>[<code>]: <summary>`

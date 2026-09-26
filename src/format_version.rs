@@ -2,8 +2,10 @@
 //! scoping-consistency pass, #34). Each adopter input file — `routes.yaml`,
 //! `vocabulary.yaml`, `pins.yaml`, `code-catalogs.yaml` — may declare
 //! `mdatron_format_version`: a per-file version on the **input** contract, its
-//! own SemVer axis, independent of the DSL's `mdatron_dsl_version` and the JSON
-//! output's `mdatron_output_version` (three axes, one release).
+//! own version axis, independent of the DSL's `mdatron_dsl_version` and the JSON
+//! output's `mdatron_output_version` (three axes, one release). The input and
+//! DSL axes are bare integers — every increment is a break, so they are
+//! major-only; the envelope's is the one SemVer triple (#185, GH #52 minor).
 //!
 //! The version turns an unknown-future-format file into a **legible break**
 //! ("declares format v2, engine supports v1") instead of an opaque parse error.

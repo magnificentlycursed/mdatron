@@ -111,3 +111,14 @@ windows-sys = { version = "0.61", features = [
 # do not want: an abort inside a property must fail the harness loudly, not be
 # absorbed by a forked child. See docs/dependencies/proptest.md.
 proptest = { version = "1", default-features = false, features = ["std"] }
+
+# The project's panic-path restriction lints (GH #52 nit, #185): production
+# code reaches for `?` and a named error, never `unwrap`/`expect`/`panic!`. The
+# four engine-literal regex compiles carry a reasoned `allow`; test code opts
+# out at each crate root (`cfg_attr(test, allow(..))` in lib.rs/main.rs, an
+# inner `#![allow]` in each tests/*.rs) — in a test, an unwrap IS the assertion.
+# CI runs clippy with `-D warnings`, which makes these hard gates.
+[lints.clippy]
+unwrap_used = "warn"
+expect_used = "warn"
+panic = "warn"

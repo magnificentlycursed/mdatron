@@ -233,7 +233,13 @@ fn open_confined_impl(root: &Path, components: &[&std::ffi::OsStr]) -> Result<Fi
         .into();
 
     let mut dir = root_handle;
-    let (leaf, intermediates) = components.split_last().expect("checked non-empty");
+    // The caller refuses an empty path; state it here without a panic path.
+    let Some((leaf, intermediates)) = components.split_last() else {
+        return Err(OpenViolation::Io(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "empty source path",
+        )));
+    };
     for name in intermediates {
         dir = openat_no_follow(&dir, name, true)?;
     }

@@ -11,13 +11,9 @@
 
 /// Returns true if `code` is a syntactically valid mdatron-reserved code.
 ///
-/// **Stability: unstable at v0.1.x.** This function is `pub` to enable the
-/// cross-crate reserved-range enforcement check at
-/// `tests/phase_1_contracts.rs`, but is NOT part of the stable
-/// public API. External crates should not depend on this surface; it may
-/// move, rename, or change signature at any v0.1.x release. Per crosslink
-/// #12 PE/F6 (revisit at v0.2). After binary-first Phase 4 collapses the
-/// workspace, this becomes a `pub(crate)` test-only helper.
+/// `pub` only so the integration-test crate (`tests/phase_1_contracts.rs`,
+/// the reserved-range enforcement check) can call it; the lib is not a public
+/// API (`lib.rs`), so this carries no stability promise.
 ///
 /// Reserved ranges (phase-1b catalog, ratified 2026-07-21, issue #50):
 /// - `MDATRON-E0001` — `E0009` Frontmatter parsing failures
@@ -132,10 +128,12 @@ mod tests {
 
     #[test]
     fn other_prefixes_are_not_mdatron_codes() {
-        // Constructed at runtime to avoid a literal "VSDD-" prefix in source,
-        // which would trip the cross-repo namespace-separation lint.
-        let other_namespace_code = format!("{}{}-E0001", "VS", "DD");
-        assert!(!is_reserved_mdatron_code(&other_namespace_code));
+        // An adopter namespace: the engine knows it only as code-catalog data,
+        // never as a reserved range. Naming the code here is legal — the
+        // namespace-separation control (tests/output_format.rs::
+        // mdatron_source_never_emits_vsdd_code_prefix) scans PRODUCTION
+        // regions for emitted literals, not test modules (#185).
+        assert!(!is_reserved_mdatron_code("VSDD-E0001"));
     }
 
     #[test]

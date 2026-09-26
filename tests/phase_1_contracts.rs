@@ -1,3 +1,7 @@
+// Test code: an unwrap IS the assertion — opt out of the [lints.clippy]
+// panic-path restrictions production code is held to (#185).
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
 //! Phase 2a Red Gate for crosslink #12 (codes + DSL Field + defined() fixes).
 //!
 //! Tests fail by default; Phase 2b implementation turns each green. Each

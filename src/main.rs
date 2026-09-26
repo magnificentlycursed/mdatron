@@ -5,6 +5,10 @@
 //! the project per `--files` globs, and applies the schema family (JSON Schema) + the rule DSL
 //! against every matched markdown file.
 
+// Test code opts out of the panic-path restriction lints ([lints.clippy],
+// #185); production code stays under them.
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
+
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
@@ -851,8 +855,8 @@ fn cmd_verify(
 
 fn print_finding(f: &Finding) {
     // Delegate to Finding::format_tty so the engine + CLI render TTY
-    // diagnostics through one code path. Per Phase 1a behavioral spec
-    // (vsdd-cli/docs/refactor/phase-2-mdatron-json/phase-1a-behavioral-spec.md).
+    // diagnostics through one code path (DESIGN.md § Diagnostics are a
+    // versioned contract: the three output forms render the same findings).
     eprintln!("{}", f.format_tty());
 }
 
@@ -999,8 +1003,15 @@ fn cmd_explain(code: Option<&str>, list: bool, json: bool, compact: bool) -> Exi
             }
         }
     }
-    // clap's `required_unless_present = "list"` guarantees a code here.
-    let code = code.expect("a code is required unless --list");
+    // clap's `required_unless_present = "list"` guarantees a code here; if the
+    // argument surface ever drifts, refuse legibly rather than panic.
+    let Some(code) = code else {
+        eprintln!(
+            "error[MDATRON-E0080]: pipeline-orchestration-failure\n   = note: explain needs a CODE \
+             argument unless --list is given"
+        );
+        return ExitCode::from(2);
+    };
     if compact {
         if let Some(line) = explain::lookup_compact(code) {
             return print_page(&format!("{line}\n"));

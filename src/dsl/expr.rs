@@ -1,19 +1,23 @@
 //! Expression AST + evaluator + minimal standard library.
 //!
-//! v0.1.x scope: equality (`==`, `!=`), boolean logic (`and`, `or`, `not`), set membership
-//! (`in`, `not_in`), and the quantifier forms `every(x in xs, pred)` / `some(x in xs, pred)`.
-//! Standard library: `count`, `len`, `union`, `intersect`, `difference`, `join`, `defined`.
+//! The surface: equality (`==`, `!=`), boolean logic (`and`, `or`, `not`), set
+//! membership (`in`, `not_in`), the quantifier forms `every(x in xs, pred)` /
+//! `some(x in xs, pred)` / `filter`, the `key()` cross-file lookup (served by the
+//! `index` module through the evaluation context), and the standard library
+//! (`count`, `len`, `union`, `intersect`, `difference`, `concat`, `join`,
+//! `defined`). `let:` bindings are resolved by the pattern layer before
+//! evaluation. The canonical construct inventory is `DESIGN.md` § Cross-file
+//! semantics stay narrowed, held to this module by the docs tripwires.
 //!
-//! Deferred for subsequent iterations: arithmetic (`+ - * / %`), ordered comparisons
-//! (`< <= > >=`), array indexing (`[i]`), the `let:` rebinding mechanism (currently
-//! handled by the caller before calling `evaluate`), string functions (`match`,
-//! `extract`, `slug`, etc.), markdown AST helpers (`headings`, `tables`, ...), the
-//! `key()` cross-file lookup (depends on a separate cross-file index module).
+//! Deliberately absent — a ratified narrowing, not a backlog: arithmetic
+//! (`+ - * / %`), ordered comparison (`< <= > >=`), array indexing (`[i]`),
+//! string functions, and markdown-AST helpers (body-content extraction is the
+//! section family's job, not the DSL's).
 //!
-//! Callers construct [`Expr`] trees directly; a string parser ("0.1.0 -> Expr") will land
-//! in a follow-up iteration once the evaluator surface is stable.
+//! `expr_parser` parses the string form into these [`Expr`] trees; callers
+//! that build trees directly (tests) get the same evaluator.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 
 use thiserror::Error;
 
@@ -24,7 +28,7 @@ use super::index::IndexRegistry;
 /// A runtime value produced by evaluating an expression. Maps cleanly to/from
 /// `serde_json::Value` and `serde_yaml_ng::Value`; we use our own type so the evaluator
 /// can return owned values without leaking the serde representation through its API.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Value {
     Null,
     Bool(bool),
@@ -360,13 +364,17 @@ fn call_function(name: &str, args: &[Expr], ctx: &EvalContext) -> Result<Value, 
             // conflated "exists" with "non-empty" and broke orthogonality.
             Ok(Value::Bool(!matches!(v, Value::Null)))
         }
+        // Set operations keep the LEFT operand's order and multiplicity and
+        // consult the right operand through a set built once (#185: the
+        // `Vec::contains` form was O(n·m), quadratic on wide frontmatter
+        // arrays bounded only by the per-file byte cap).
         "union" => {
             arity(name, args, 2)?;
-            let a = expect_array(evaluate(&args[0], ctx)?)?;
+            let mut out = expect_array(evaluate(&args[0], ctx)?)?;
             let b = expect_array(evaluate(&args[1], ctx)?)?;
-            let mut out = a.clone();
+            let mut seen: HashSet<Value> = out.iter().cloned().collect();
             for v in b {
-                if !out.contains(&v) {
+                if seen.insert(v.clone()) {
                     out.push(v);
                 }
             }
@@ -376,14 +384,16 @@ fn call_function(name: &str, args: &[Expr], ctx: &EvalContext) -> Result<Value, 
             arity(name, args, 2)?;
             let a = expect_array(evaluate(&args[0], ctx)?)?;
             let b = expect_array(evaluate(&args[1], ctx)?)?;
-            let out: Vec<Value> = a.into_iter().filter(|v| b.contains(v)).collect();
+            let right: HashSet<&Value> = b.iter().collect();
+            let out: Vec<Value> = a.into_iter().filter(|v| right.contains(v)).collect();
             Ok(Value::Array(out))
         }
         "difference" => {
             arity(name, args, 2)?;
             let a = expect_array(evaluate(&args[0], ctx)?)?;
             let b = expect_array(evaluate(&args[1], ctx)?)?;
-            let out: Vec<Value> = a.into_iter().filter(|v| !b.contains(v)).collect();
+            let right: HashSet<&Value> = b.iter().collect();
+            let out: Vec<Value> = a.into_iter().filter(|v| !right.contains(v)).collect();
             Ok(Value::Array(out))
         }
         "concat" => {
@@ -880,6 +890,42 @@ mod tests {
         )
         .unwrap();
         assert_eq!(result, arr([s("a"), s("b"), s("c")]));
+    }
+
+    // The semantics the HashSet rewrite (#185) must preserve: the left operand
+    // is kept verbatim — order AND multiplicity — and the right operand is
+    // consulted as a set. A right-hand duplicate joins a union once.
+    #[test]
+    fn set_ops_keep_left_order_and_multiplicity() {
+        let cv = null_ctx();
+        let call = |op: &str, l: Value, r: Value| {
+            evaluate(
+                &Expr::Call(op.into(), vec![Expr::Lit(l), Expr::Lit(r)]),
+                &ctx(&cv),
+            )
+            .unwrap()
+        };
+        assert_eq!(
+            call(
+                "union",
+                arr([s("a"), s("a"), s("b")]),
+                arr([s("c"), s("b"), s("c")])
+            ),
+            arr([s("a"), s("a"), s("b"), s("c")])
+        );
+        assert_eq!(
+            call("intersect", arr([s("b"), s("a"), s("b")]), arr([s("b")])),
+            arr([s("b"), s("b")])
+        );
+        assert_eq!(
+            call("difference", arr([s("b"), s("a"), s("b")]), arr([s("b")])),
+            arr([s("a")])
+        );
+        // Structural equality, not identity: nested values compare by content.
+        assert_eq!(
+            call("intersect", arr([arr([s("x")])]), arr([arr([s("x")])])),
+            arr([arr([s("x")])])
+        );
     }
 
     #[test]

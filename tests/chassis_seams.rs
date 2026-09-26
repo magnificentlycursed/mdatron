@@ -1,3 +1,7 @@
+// Test code: an unwrap IS the assertion — opt out of the [lints.clippy]
+// panic-path restrictions production code is held to (#185).
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
 //! Chassis seams (#200): the TRACKED crosslink policy, `.crosslink/hook-config.json`,
 //! against the hook that consumes it.
 //!
@@ -82,7 +86,13 @@ def after(): pass
 "#;
     assert_eq!(
         python_string_list(src, "DEFAULT_ALLOWED_BASH"),
-        ["crosslink ", "git status", "git diff", "single quoted", "with # hash inside"]
+        [
+            "crosslink ",
+            "git status",
+            "git diff",
+            "single quoted",
+            "with # hash inside"
+        ]
     );
     assert_eq!(python_string_list(src, "OTHER"), ["not", "this"]);
 }
@@ -128,7 +138,10 @@ fn tracked_hook_config_carries_every_hook_default() {
     let mut missing: Vec<String> = Vec::new();
     for (hook_list, path) in seams {
         let defaults = python_string_list(&hook, hook_list);
-        assert!(!defaults.is_empty(), "parsed no entries from the hook's {hook_list}");
+        assert!(
+            !defaults.is_empty(),
+            "parsed no entries from the hook's {hook_list}"
+        );
         let snapshot = tracked(path);
         for default in defaults {
             if !snapshot.contains(&default) {

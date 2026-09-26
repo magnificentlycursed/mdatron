@@ -1,3 +1,7 @@
+// Test code: an unwrap IS the assertion — opt out of the [lints.clippy]
+// panic-path restrictions production code is held to (#185).
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
 //! Agnosticism-audit residuals (#91; `DESIGN.md` § Validation is data-driven,
 //! the Agnosticism-audit acceptance cluster). Four mechanized criteria:
 //! the methodology-vocabulary denylist over engine-authored strings, the

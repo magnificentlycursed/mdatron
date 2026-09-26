@@ -1,3 +1,7 @@
+// Test code: an unwrap IS the assertion — opt out of the [lints.clippy]
+// panic-path restrictions production code is held to (#185).
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
 //! Parser-robustness harness (GH #52 major 1, crosslink #184): every input
 //! parser is driven with hostile input under the NEVER-PANIC property — every
 //! outcome must be `Ok` or a structured error, caught via the API, never a

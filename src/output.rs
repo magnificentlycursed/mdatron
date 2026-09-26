@@ -1,7 +1,9 @@
 //! Output-format output object for `mdatron verify --json`.
 //!
-//! Implements the Phase 0 output contract behavioral contracts BC-1 through BC-3 + BC-8 per
-//! `vsdd-cli/docs/refactor/phase-0-output-format/DESIGN.md` (cross-repo design).
+//! Implements the envelope contract of `DESIGN.md` § Diagnostics are a
+//! versioned contract. The `BC-n` labels in this module are the numbering of
+//! the original output-format design the envelope was born from, kept because
+//! the tests carry them; the governing text is DESIGN's.
 //!
 //! Phase 2b: this module turns the output_format Red Gate green for output object-shape
 //! contracts. Exit-code semantics (BC-4) + stream contract (BC-5) live at the binary
