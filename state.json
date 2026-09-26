@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1155,
-        "tip_oid": "14ce3723285e78c38dea6e950f9e0e98f3d84fd0",
-        "prefix_sha256": "1c338fcf8d1de5a04690cb10e929f81cf0413f42bbfbd69ac91a7811e13d9c16"
+        "sequence": 1156,
+        "tip_oid": "b743d896673787961ae4b71e498810e9db38caf7",
+        "prefix_sha256": "fb1c3ea112465eeb3ceace41c06bc2676076fcb4daff4315e5d165ab00a7d9ff"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 205,
-  "next_comment_id": 583,
+  "next_comment_id": 584,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "03beb708-b15d-4522-950e-3fdaa3a3d16b": 196,
@@ -8334,7 +8334,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-20T00:10:00.982073Z",
-      "updated_at": "2026-09-26T23:10:37.153665Z",
+      "updated_at": "2026-09-26T23:24:14.327318Z",
       "comments": {
         "0229a4fb-8dc3-48ce-930e-1d2b8e82c834": {
           "display_id": 580,
@@ -8344,6 +8344,15 @@
           "kind": "result",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAvDYA0rn5bTDYHHt3F6y9ChTrPOmr0rzgJxhiBfG+s3SnfwCynD41c6KTrDaAZ2yU6nuwREbT2lMV57LCRyWqCQ=="
+        },
+        "0c518dd5-f862-41c2-a5b8-6af66afcffe9": {
+          "display_id": 583,
+          "author": "79Ig",
+          "content": "COLD REVIEW round 2 (42b0120): MVR — all 16 round-1 items CLOSED at source and by seed (namespace/explain/denylist controls red on a literal after verify.rs's early cfg(test) fn; gated seam red; absent key skip; absent hook fail/declare; docs limits E0080; CRLF; etc.), nothing regressed. Five latent gaps in the two new heuristics (MINOR-A production_region cuts at a file module  / a marker in a comment; MINOR-B growth tripwire false-fails on an emptied default; NIT-C typed annotation invisible; NIT-D pub(crate)/comments/attr-with-] between cfg and mod; NIT-E  substring). Round 3 fixup: inline-module-only cut with line-anchored marker + balanced attribute skip + pub qualifier; empty/typed lists visible + NON_SEAMS; key-boundary version match; fixtures for each.",
+          "created_at": "2026-09-26T23:24:14.284302Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAchmDvo5vl5m3+77CHoUVp4vfg5nrU1N1xLhuShTT3sTBiA/krm19rM8MzKvfrCS7bhOlqqb2GNhYZhY+6u3uCg=="
         },
         "175b261c-1c44-424e-a7ee-960bf4f24ef7": {
           "display_id": 543,
