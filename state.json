@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1149,
-        "tip_oid": "2a39f41b9d956831688c7b59234c06fd78e37327",
-        "prefix_sha256": "fbd6468bfa9983de5c24ec843fb0ec70cd6f5ad7e7defe32dc663ba89edf687b"
+        "sequence": 1150,
+        "tip_oid": "035d5907d5f793becefdbd4fc22becab32ce9ce8",
+        "prefix_sha256": "7b73d81638621866ba70c29958ea6f8b64814ef2d9961cb039ad09b26c0e068b"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 205,
-  "next_comment_id": 577,
+  "next_comment_id": 578,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "03beb708-b15d-4522-950e-3fdaa3a3d16b": 196,
@@ -8316,7 +8316,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-20T00:10:00.982073Z",
-      "updated_at": "2026-09-24T21:48:22.814382Z",
+      "updated_at": "2026-09-26T01:17:44.789400Z",
       "comments": {
         "175b261c-1c44-424e-a7ee-960bf4f24ef7": {
           "display_id": 543,
@@ -8335,6 +8335,15 @@
           "kind": "result",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAeEDvcSPaF4Pt9ODXs/Y7Sc9hTnZXwNVnH8JY9JQlpUrL8G7ISeC907z693wL1q4omuO53axnszpfytA9nKZvCg=="
+        },
+        "3b19afd1-7951-4f8c-b5e9-00911ee2425b": {
+          "display_id": 577,
+          "author": "79Ig",
+          "content": "PLAN (remainder, L3): lib surface — cite/dep/link/marker/memo/section/error → pub(crate) (nothing outside the crate uses them; Error stays re-exported), every remaining pub mod and re-export #[doc(hidden)] (the lib is not an API per lib.rs; the bin and tests/ are the only consumers); DSL rustdoc — dsl/mod.rs drops the 'arithmetic and comparison' overclaim (Eq/Ne only), expr.rs header loses 'v0.1.x scope' and the shipped-parser promise; version axes — format_version.rs + DESIGN § Diagnostics are a versioned contract call mdatron_format_version a version axis (bare integer, every increment a break), not SemVer (#185, GH #52 cold review); set ops — Value derives Eq+Hash, union/intersect/difference build a HashSet of the right operand once, left order + multiplicity pinned by test; [lints.clippy] unwrap_used/expect_used/panic (+missing_panics_doc if the count is small) with test crates opted out at their roots and the 4 engine-literal regex compiles carrying a reasoned allow; dead cross-repo rustdoc paths (output.rs, diagnostic.rs, main.rs) repoint to DESIGN sections; codes.rs uses the literal VSDD-E0001 (no namespace lint exists in this repo) and its v0.1.x/workspace-collapse prose goes, as does explain/mod.rs's enumerated stale catalog list.",
+          "created_at": "2026-09-26T01:17:44.748475Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAdODLgM6N7b1paGEloQdBpTGmFeiI+7hLHEEf1VtwI0dt4C4K2yFRsw5SpGd9riu6JrXV+PDoAqppHpe+vjZIDA=="
         },
         "669ed969-87f2-45d6-a115-44865628dddf": {
           "display_id": 509,
