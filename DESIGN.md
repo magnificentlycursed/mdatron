@@ -78,6 +78,28 @@ Falsification: an emitted code absent from the catalog; an envelope-shape or cod
 
 Evidence: the reserved-code semantic swap shipped as a silent contract break and was caught by three review lenses independently (vsdd-cli tracker, #12 children).
 
+### Input-field renames are aliased and ledgered
+
+Renaming a field on an input contract breaks adopters who use the old name, and the shape of the break differs by parse mode: the strict inputs (`routes.yaml`, `vocabulary.yaml`, `pins.yaml`, `code-catalogs.yaml`, and the engine-written `manifest.yaml`, unknown fields refused at parse) fail **loudly** on the old spelling, while the lenient `.mdatron/config.yaml` (#80, decision 1) drops the old key **silently** to its default — precisely the fail-open class `MDATRON-W0051`/`W0043` exist to catch, except that the rename itself slips in with the old data gone and no error at all. Either way a bare rename is an unfriendly break (GH #36 item 3, Ruff's `REDIRECTS` lesson), so a rename is non-breaking at introduction and legible at removal:
+
+- The old name stays accepted as a `#[serde(alias)]` of the new field for at least one MAJOR `mdatron_format_version` cycle. An alias is a *known* name, so it composes with `deny_unknown_fields`; on the lenient config it is what prevents the silent drop-to-default. A file carrying both spellings is refused as a duplicate field, never resolved by precedence.
+- Every rename is a row in the ledger below: old → new, the input file, the version the new name landed in, and the earliest version the alias may be dropped.
+- Dropping an alias is itself a MAJOR input-contract change, versioned through `mdatron_format_version` (DEF5) — never a silent removal.
+
+| old → new | input file | aliased since | alias removable in |
+|-----------|------------|---------------|--------------------|
+| `id_from` → `element` (section-rule `disjoint` operands) | `routes.yaml` | 0.7.0 | format v2 |
+| `h3-heading` → `h3` (element value) | `routes.yaml` | 0.7.0 | format v2 |
+| `bullet-lead` → `list-item-bold-name` (element value) | `routes.yaml` | 0.7.0 | format v2 |
+| `governing` → `governed_by` (`pins[]` and `unpinned[]`; `pin --update` rewrites) | `pins.yaml` | 0.7.0 | format v2 |
+| `register` → `guidance` (`anti_patterns[]`) | `vocabulary.yaml` | 0.7.0 | format v2 |
+| `mdatron schema` → `mdatron envelope-schema` (subcommand; `schema` stays a visible alias) | CLI | 0.7.0 | — (CLI aliases are free) |
+| `--file-globs` added as a visible alias of `--files` (`--files` stays primary) | CLI | 0.7.0 | — (CLI aliases are free) |
+
+Falsification: an input field renamed without its alias or its ledger row; an alias dropped without a `mdatron_format_version` major bump; an old spelling refused as unknown while its row says the alias is live.
+
+Evidence: the seven #204 renames landed alias-first under this discipline (this ledger folds in from the former `docs/field-rename-ledger.md`, #190 — a contract record belongs in the contract).
+
 ### Validation is data-driven
 
 The engine knows no methodology. Every check family executes adopter-supplied data.

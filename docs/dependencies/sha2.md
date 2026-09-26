@@ -1,3 +1,12 @@
+---
+schema_class: dependency-record
+crate: sha2
+scope: runtime
+version_req: "0.10"
+status: approved
+tracker: "#74"
+---
+
 # sha2
 
 **Status:** Approved.

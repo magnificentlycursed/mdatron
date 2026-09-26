@@ -1,3 +1,11 @@
+---
+schema_class: dependency-record
+crate: glob
+scope: runtime
+version_req: "0.3"
+status: approved
+---
+
 # glob
 
 **Status:** Approved.

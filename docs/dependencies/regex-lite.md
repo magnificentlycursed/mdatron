@@ -1,3 +1,12 @@
+---
+schema_class: dependency-record
+crate: regex-lite
+scope: runtime
+version_req: "0.1"
+status: approved
+tracker: "#83"
+---
+
 # regex-lite
 
 **Status:** Approved.

@@ -1,3 +1,11 @@
+---
+schema_class: dependency-record
+crate: jsonschema
+scope: runtime
+version_req: "0.49"
+status: approved
+---
+
 # jsonschema
 
 **Status:** Approved. Upgraded `0.18 → 0.49` (security-driven, 2026-07-30 — a pre-publish adversarial security review finding).

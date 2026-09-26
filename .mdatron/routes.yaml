@@ -5,15 +5,29 @@ routes:
 # The LIVING docs corpus (#187 part 2): route-only governance with the link
 # family on — dead links and dead anchors in the shipped documentation block
 # from day one. No frontmatter requirement (phase 1; the link family needs
-# none). `docs/[!m]*.md` claims everything under docs/ EXCEPT the methodology
-# pair (route `*` crosses `/`, so `docs/dependencies/**` is covered; the
-# `[!m]` class excludes `methodology*`, which the standing methodology route
-# below claims — two routes claiming one file is an error by contract). A
-# future docs path whose first segment-start letter is `m` will land unrouted
-# (E0030) — loud and fail-closed, a deliberate routing decision.
-- files: "docs/[!m]*.md"
+# none). Route `*` crosses `/`, and a route glob has no exclusion form, so the
+# corpus is carved by character class: `docs/[!dm]*.md` claims every docs path
+# whose first letter is neither `d` nor `m`, and `docs/d[!e]*.md` takes the
+# `d` paths back except `docs/de…` — leaving `docs/dependencies/**` to the
+# typed dependency-record route below (#190) and `docs/methodology*` to the
+# standing methodology route (two routes claiming one file is an error by
+# contract). A future docs path starting `de` or `m` lands unrouted (E0030) —
+# loud and fail-closed, a deliberate routing decision.
+- files: "docs/[!dm]*.md"
   governed_by: DESIGN.md
   links: true
+- files: "docs/d[!e]*.md"
+  governed_by: DESIGN.md
+  links: true
+# Dependency records (#190): one typed record per Cargo dependency. The
+# frontmatter is required (config.yaml `require_frontmatter`) and its shape is
+# validated by `.mdatron/schemas/dependency-record.json` through
+# `schema_class`; the agnosticism suite holds the record set in bijection with
+# Cargo.toml. The naming grammar is the crate-name grammar plus `.md`.
+- files: "docs/dependencies/*.md"
+  governed_by: DESIGN.md
+  links: true
+  naming: "^[a-z0-9_-]+\\.md$"
 - files: "README.md"
   governed_by: DESIGN.md
   links: true

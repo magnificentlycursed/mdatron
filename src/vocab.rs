@@ -88,7 +88,7 @@ struct RawAntiPattern {
     /// The corrective wording surfaced with an `E0093` match. `register` is the
     /// retired 0.6.0 key (it collided with the naming register itself and with
     /// the linguistic-register sense in the code's name); accepted as an alias
-    /// per `docs/field-rename-ledger.md`.
+    /// per `DESIGN.md` § Input-field renames are aliased and ledgered.
     #[serde(alias = "register")]
     guidance: String,
 }
@@ -755,7 +755,7 @@ mod tests {
     }
 
     // #204 D3: the retired `register:` key on an anti-pattern is accepted as an
-    // alias of `guidance:` (docs/field-rename-ledger.md) — an existing
+    // alias of `guidance:` (DESIGN.md § Input-field renames are aliased and ledgered) — an existing
     // vocabulary.yaml keeps loading and its anti-patterns keep firing.
     #[test]
     fn anti_pattern_register_key_is_an_accepted_alias_of_guidance() {

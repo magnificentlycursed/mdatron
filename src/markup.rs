@@ -49,7 +49,7 @@ use serde::Deserialize;
 ///
 /// The retired spellings `h3-heading` and `bullet-lead` (the 0.6.0
 /// section-disjoint `id_from` values) are accepted as aliases per
-/// `docs/field-rename-ledger.md`. `frontmatter-key` stays reserved for a later
+/// `DESIGN.md` § Input-field renames are aliased and ledgered. `frontmatter-key` stays reserved for a later
 /// cut.
 #[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "kebab-case")]

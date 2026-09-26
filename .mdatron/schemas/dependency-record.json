@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "dependency record",
+  "description": "Frontmatter of docs/dependencies/<crate>.md: the living investigation record for one Cargo dependency (#190). The shape is checked here by the schema family; the agnosticism suite holds the record set in bijection with Cargo.toml (every dependency has a record, every record names a dependency) and checks the fields no schema can — crate equals the file stem, scope names the declaring table, version_req is Cargo's requirement string verbatim.",
+  "type": "object",
+  "required": [
+    "schema_class",
+    "crate",
+    "scope",
+    "version_req",
+    "status"
+  ],
+  "properties": {
+    "schema_class": {
+      "const": "dependency-record"
+    },
+    "crate": {
+      "type": "string",
+      "pattern": "^[a-z0-9_-]+$",
+      "description": "The crate name as Cargo.toml spells it; equals the record's file stem."
+    },
+    "scope": {
+      "enum": [
+        "runtime",
+        "dev",
+        "unix",
+        "windows"
+      ],
+      "description": "The Cargo table that declares it: [dependencies], [dev-dependencies], [target.'cfg(unix)'.dependencies], [target.'cfg(windows)'.dependencies]."
+    },
+    "version_req": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The version requirement exactly as Cargo.toml carries it (\"4.5\", \"0.13.4\")."
+    },
+    "status": {
+      "enum": [
+        "approved",
+        "provisional"
+      ],
+      "description": "approved: investigated and accepted; provisional: accepted pending a named follow-up in the record."
+    },
+    "tracker": {
+      "type": "string",
+      "pattern": "^#[0-9]+$",
+      "description": "The tracker issue that carried the investigation, when one did."
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,3 +1,11 @@
+---
+schema_class: dependency-record
+crate: serde
+scope: runtime
+version_req: "1"
+status: approved
+---
+
 # serde
 
 **Status:** Approved (retroactive — the dependency was added early in the project, June 2026, before the dependency-approval discipline existed; this record was written under the project's bootstrap-period exception, since discharged, to bring it into compliance).

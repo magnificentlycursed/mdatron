@@ -71,7 +71,7 @@ pub(crate) struct RawOperand {
     /// …) — the same vocabulary as marker and count `element`. `id_from` is the
     /// retired 0.6.0 spelling of this key, and `h3-heading` / `bullet-lead` its
     /// retired values; all three are accepted as aliases
-    /// (`docs/field-rename-ledger.md`).
+    /// (`DESIGN.md` § Input-field renames are aliased and ledgered).
     #[serde(alias = "id_from")]
     element: ElementClass,
     id_pattern: String,
@@ -516,7 +516,7 @@ mod tests {
 
     // #204 D2-1: one element vocabulary for count and disjoint rules, and the
     // retired 0.6.0 spellings (`id_from`, `h3-heading`, `bullet-lead`) parse to
-    // the same variants as aliases (docs/field-rename-ledger.md).
+    // the same variants as aliases (DESIGN.md § Input-field renames are aliased and ledgered).
     #[test]
     fn element_aliases_parse_to_the_unified_class() {
         let parse = |y: &str| serde_yaml_ng::from_str::<RawOperand>(y).unwrap().element;
