@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1150,
-        "tip_oid": "035d5907d5f793becefdbd4fc22becab32ce9ce8",
-        "prefix_sha256": "7b73d81638621866ba70c29958ea6f8b64814ef2d9961cb039ad09b26c0e068b"
+        "sequence": 1151,
+        "tip_oid": "438fa34403689c001e24ad57ac76070e91a00dc7",
+        "prefix_sha256": "46436c662f8436c5c9e1a70695741b37ceb896336e63671ebf814a932a0af67d"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 205,
-  "next_comment_id": 578,
+  "next_comment_id": 579,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "03beb708-b15d-4522-950e-3fdaa3a3d16b": 196,
@@ -3552,8 +3552,17 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-20T01:09:38.927412Z",
-      "updated_at": "2026-09-25T11:01:52.533895Z",
+      "updated_at": "2026-09-26T22:23:53.573558Z",
       "comments": {
+        "1af52789-0bb5-4843-8efb-b64900c7e690": {
+          "display_id": 578,
+          "author": "79Ig",
+          "content": "RESULT: commit 6f1a73c on feature/189-l3-inversions. Limits gains compact_finding_bytes (COMPACT_FINDING_LIMIT re-exports it); Limits::rows/render_table carry surface + on-exceedance prose beside the values; render_page splices between generated markers; mdatron docs limits renders the running binary's catalog; test docs_limits_page_is_rendered_from_shipped asserts page == rendering (MDATRON_UPDATE_DOCS=1 regenerates). docs/cost-ledger.md folded into docs/limits.md § Compact per-finding sizes (measured) with fresh 0.7.0-dev rows (181 B / 138 B); DESIGN cost-ledger clause + enforcement-status note repointed; FAQ/Cargo/CI comments follow. Cold review round 1 in flight (whole L3 lane).",
+          "created_at": "2026-09-26T22:23:53.364567Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAamS1yGa6avtiDA0358sbsneTtsVC65WGO9962TfukyYmpE6LVUPmW7JXWIHSfTqWUczU71f903N2VE0a34RIAQ=="
+        },
         "fa48c9c2-4bff-48e1-b08d-91df3e48ad1a": {
           "display_id": 575,
           "author": "79Ig",
