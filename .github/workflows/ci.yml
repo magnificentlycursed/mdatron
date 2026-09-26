@@ -54,6 +54,9 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  # The crosslink chassis (its hooks) is not deployed on CI; the chassis seam
+  # test (tests/chassis_seams.rs, #200) fails closed on an undeclared absence.
+  MDATRON_NO_CHASSIS: "1"
   CARGO_TERM_COLOR: always
 
 jobs:

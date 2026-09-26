@@ -6,21 +6,24 @@
 //! against the hook that consumes it.
 //!
 //! The behavioral-guard hook (`.claude/hooks/work-check.py`, deployed into the
-//! checkout by `crosslink init` and gitignored) carries its own default lists
-//! (`DEFAULT_ALLOWED_BASH`, `DEFAULT_BLOCKED_GIT`, `DEFAULT_AGENT_BLOCKED_GIT`),
-//! and a config key that is PRESENT replaces the matching default list
-//! wholesale. The tracked config is therefore a frozen snapshot of one hook
-//! version's defaults: upgrade the hook and a default it grew is silently
-//! absent from the snapshot — the #196 drift class, where the guard's own
-//! suggested remedy had become blockable. The seam asserted here: every hook
-//! default is present in the tracked list (the config may ADD entries; it
-//! must never silently DROP a default).
+//! checkout by `crosslink init` and gitignored) carries default lists
+//! (`DEFAULT_ALLOWED_BASH`, `DEFAULT_BLOCKED_GIT`, `DEFAULT_GATED_GIT`,
+//! `DEFAULT_AGENT_BLOCKED_GIT`), and a config key that is PRESENT replaces the
+//! matching default list wholesale. The tracked config is therefore a frozen
+//! snapshot of one hook version's defaults: upgrade the hook and a default it
+//! grew is silently absent from the snapshot — the #196 drift class, where the
+//! guard's own suggested remedy had become blockable. The seam asserted here:
+//! every hook default is present in the tracked list that replaces it (the
+//! config may ADD entries; it must never silently DROP a default). A key the
+//! config does not carry replaces nothing — the hook's default applies — so it
+//! is not a seam. A growth tripwire pins the seam table to the hook's list
+//! count, so a fifth list cannot arrive unnoticed.
 //!
-//! The hook is machine-local. Where it is not deployed (CI, a clone without
-//! crosslink) there is no seam to compare, and the test says so and passes;
-//! the drift arises on developer machines, which is where `cargo test` runs
-//! before every PR. The list extractor is exercised on a fixture regardless,
-//! so the test has teeth on every machine.
+//! The hook is machine-local. This repository develops under the chassis, so a
+//! checkout without the hook is a defect UNLESS the absence is declared:
+//! `MDATRON_NO_CHASSIS=1` (CI sets it; a clone that will never commit may). A
+//! silent pass was the alternative — and a control that passes silently where
+//! it cannot look is no control (L3 cold review MINOR-4).
 
 use std::fs;
 use std::path::PathBuf;
@@ -30,27 +33,38 @@ fn repo() -> PathBuf {
 }
 
 /// The string literals of the Python list assignment `NAME = [ ... ]` in
-/// `src`, in order. Comments (`#` to end of line, outside a literal) are
-/// dropped; both quote styles are accepted; the list must not nest.
+/// `src`, in order. The assignment must start a line; comments (`#` to end of
+/// line, outside a literal) are dropped; both quote styles are accepted; `\"`,
+/// `\'` and `\\` unescape and any other backslash pair is kept verbatim; the
+/// list must not nest.
 fn python_string_list(src: &str, name: &str) -> Vec<String> {
     let assignment = format!("{name} = [");
-    let start = src
-        .find(&assignment)
-        .unwrap_or_else(|| panic!("hook source lacks `{assignment}`"));
+    let start = if src.starts_with(&assignment) {
+        0
+    } else {
+        src.find(&format!("\n{assignment}"))
+            .map(|i| i + 1)
+            .unwrap_or_else(|| panic!("hook source lacks a line opening `{assignment}`"))
+    };
     let body = &src[start + assignment.len()..];
     let mut out = Vec::new();
     let mut current: Option<String> = None;
     let mut quote = '"';
-    let mut chars = body.chars().peekable();
+    let mut chars = body.chars();
     while let Some(c) = chars.next() {
         match current.as_mut() {
-            Some(lit) => {
-                if c == quote {
-                    out.push(current.take().unwrap_or_default());
-                } else {
-                    lit.push(c);
-                }
-            }
+            Some(lit) => match c {
+                '\\' => match chars.next() {
+                    Some(e @ ('"' | '\'' | '\\')) => lit.push(e),
+                    Some(e) => {
+                        lit.push('\\');
+                        lit.push(e);
+                    }
+                    None => panic!("`{name}`: dangling escape at end of source"),
+                },
+                c if c == quote => out.push(current.take().unwrap_or_default()),
+                c => lit.push(c),
+            },
             None => match c {
                 '"' | '\'' => {
                     quote = c;
@@ -72,16 +86,31 @@ fn python_string_list(src: &str, name: &str) -> Vec<String> {
     panic!("`{name}` list never closes")
 }
 
+/// Every `DEFAULT_…` list the hook declares at line start, in order.
+fn default_list_names(src: &str) -> Vec<String> {
+    src.lines()
+        .filter_map(|l| {
+            let (name, rest) = l.split_once(" = [")?;
+            (name.starts_with("DEFAULT_")
+                && name.chars().all(|c| c.is_ascii_uppercase() || c == '_')
+                && !rest.trim_start().starts_with(']'))
+            .then(|| name.to_string())
+        })
+        .collect()
+}
+
 #[test]
-fn python_string_list_reads_literals_and_skips_comments() {
+fn python_string_list_reads_literals_skips_comments_and_unescapes() {
     let src = r#"
 OTHER = ["not", "this"]
+  # DEFAULT_ALLOWED_BASH = ["an indented decoy in a comment"]
 DEFAULT_ALLOWED_BASH = [
     "crosslink ",
     "git status", "git diff",  # trailing comment, "quoted" inside it
     # a full-line comment with a ] bracket
-    'single quoted', "with # hash inside",
+    'single quoted', "with # hash inside", "say \"hi\"", "back\\slash", 'it\'s',
 ]
+DEFAULT_EMPTY = []
 def after(): pass
 "#;
     assert_eq!(
@@ -91,58 +120,94 @@ def after(): pass
             "git status",
             "git diff",
             "single quoted",
-            "with # hash inside"
+            "with # hash inside",
+            "say \"hi\"",
+            "back\\slash",
+            "it's"
         ]
     );
     assert_eq!(python_string_list(src, "OTHER"), ["not", "this"]);
+    assert_eq!(default_list_names(src), ["DEFAULT_ALLOWED_BASH"]);
 }
+
+/// (hook default list, the tracked key path that REPLACES it when present)
+const SEAMS: [(&str, &[&str]); 4] = [
+    ("DEFAULT_ALLOWED_BASH", &["allowed_bash_prefixes"]),
+    ("DEFAULT_BLOCKED_GIT", &["blocked_git_commands"]),
+    ("DEFAULT_GATED_GIT", &["gated_git_commands"]),
+    (
+        "DEFAULT_AGENT_BLOCKED_GIT",
+        &["agent_overrides", "blocked_git_commands"],
+    ),
+];
 
 #[test]
 fn tracked_hook_config_carries_every_hook_default() {
     let hook_path = repo().join(".claude/hooks/work-check.py");
-    let Ok(hook) = fs::read_to_string(&hook_path) else {
-        eprintln!(
-            "chassis seam absent: {} is not deployed here (CI, or a clone without crosslink); \
-             nothing to compare against the tracked hook-config.json",
+    let hook = match fs::read_to_string(&hook_path) {
+        Ok(hook) => hook,
+        Err(_) if std::env::var_os("MDATRON_NO_CHASSIS").is_some() => {
+            eprintln!(
+                "chassis declared absent (MDATRON_NO_CHASSIS): {} is not deployed here, so there \
+                 is no hook to compare the tracked hook-config.json against",
+                hook_path.display()
+            );
+            return;
+        }
+        Err(e) => panic!(
+            "the crosslink hook is not deployed at {} ({e}). This repository develops under the \
+             crosslink chassis (`crosslink init` deploys it), and the tracked hook-config.json can \
+             only be checked against a deployed hook. Where the chassis is deliberately absent — CI, \
+             a clone that will never commit — declare it: MDATRON_NO_CHASSIS=1.",
             hook_path.display()
-        );
-        return;
+        ),
     };
     let config: serde_json::Value = serde_json::from_str(
         &fs::read_to_string(repo().join(".crosslink/hook-config.json")).unwrap(),
     )
     .unwrap();
-    let tracked = |path: &[&str]| -> Vec<String> {
+    let tracked = |path: &[&str]| -> Option<Vec<String>> {
         let mut node = &config;
         for key in path {
-            node = node
-                .get(key)
-                .unwrap_or_else(|| panic!("hook-config.json lacks `{}`", path.join(".")));
+            node = node.get(key)?;
         }
-        node.as_array()
-            .unwrap_or_else(|| panic!("hook-config.json `{}` is not a list", path.join(".")))
-            .iter()
-            .map(|v| v.as_str().expect("list entries are strings").to_string())
-            .collect()
+        Some(
+            node.as_array()
+                .unwrap_or_else(|| panic!("hook-config.json `{}` is not a list", path.join(".")))
+                .iter()
+                .map(|v| v.as_str().expect("list entries are strings").to_string())
+                .collect(),
+        )
     };
 
-    // (hook default list, tracked key path that REPLACES it when present)
-    let seams: [(&str, &[&str]); 3] = [
-        ("DEFAULT_ALLOWED_BASH", &["allowed_bash_prefixes"]),
-        ("DEFAULT_BLOCKED_GIT", &["blocked_git_commands"]),
-        (
-            "DEFAULT_AGENT_BLOCKED_GIT",
-            &["agent_overrides", "blocked_git_commands"],
-        ),
-    ];
+    // Growth tripwire: a list the hook declares that this table does not know
+    // is a seam nobody is watching (or a deliberate non-seam that must be
+    // recorded here).
+    let declared: std::collections::BTreeSet<String> =
+        default_list_names(&hook).into_iter().collect();
+    let known: std::collections::BTreeSet<String> =
+        SEAMS.iter().map(|(name, _)| name.to_string()).collect();
+    assert_eq!(
+        declared, known,
+        "the hook declares {declared:?}; this seam table covers {known:?} — add the missing \
+         list's seam (which config key replaces it?), or record here why it is not one"
+    );
+
     let mut missing: Vec<String> = Vec::new();
-    for (hook_list, path) in seams {
+    for (hook_list, path) in SEAMS {
         let defaults = python_string_list(&hook, hook_list);
         assert!(
             !defaults.is_empty(),
             "parsed no entries from the hook's {hook_list}"
         );
-        let snapshot = tracked(path);
+        let Some(snapshot) = tracked(path) else {
+            eprintln!(
+                "`{}` is not in hook-config.json: the hook's {hook_list} applies unreplaced — no \
+                 snapshot, so nothing to drift",
+                path.join(".")
+            );
+            continue;
+        };
         for default in defaults {
             if !snapshot.contains(&default) {
                 missing.push(format!(

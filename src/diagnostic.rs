@@ -152,7 +152,7 @@ const SPLIT_SET: &[char] = &[
 /// Render adopter-derived `content` as a prefix-marked quoted region.
 ///
 /// The rendering alphabet is a partition (`DESIGN.md` § Agents are the first consumer): the **split
-/// set** ([`SPLIT_SET`]) is consumed as line breaks and each resulting line is
+/// set** (`SPLIT_SET`) is consumed as line breaks and each resulting line is
 /// prefixed; the **escape set** — the remaining control characters (`Cc`,
 /// including FS/GS/RS which some consumers split on) — renders as inert visible
 /// `\xNN` escapes. Every line, including an empty one produced by adjacent

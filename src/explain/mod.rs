@@ -713,7 +713,9 @@ mod tests {
     }
 
     // CONTRACT-STABILITY TRIPWIRE (#90): every MDATRON-* code literal in
-    // PRODUCTION source (the region before the file's `#[cfg(test)]` module)
+    // PRODUCTION source (the region before the file's test MODULE, per
+    // `codes::production_region` — not its first `#[cfg(test)]` item, which
+    // blinded this tripwire to verify.rs; L3 cold review MAJOR-1)
     // resolves in the explain catalog. Emitting or referencing a code without
     // a page fails here — the "every emitted code resolves in explain" criterion
     // (DESIGN § Diagnostics are a versioned contract).
@@ -732,7 +734,8 @@ mod tests {
             }
             let content = std::fs::read_to_string(&f).unwrap_or_default();
             // Production region only: test fixtures use non-emitted codes.
-            let prod = content.split("#[cfg(test)]").next().unwrap_or(&content);
+            let prod = mdatron::codes::production_region(&content)
+                .unwrap_or_else(|e| panic!("{}: {e}", f.display()));
             for code in mdatron_codes_in(prod) {
                 if lookup(&code).is_none() {
                     missing.push((f.display().to_string(), code));

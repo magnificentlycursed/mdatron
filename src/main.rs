@@ -318,14 +318,21 @@ fn cmd_docs(topic: &str) -> ExitCode {
     let body = match topic {
         // Rendered from the running binary's own catalog (#189): the printed
         // table is the enforced values, never a hand-synced copy. A template
-        // that lost its markers is printed as-is (the shipped test
-        // limits::docs_limits_page_is_rendered_from_shipped keeps that from
-        // ever being the packaged page).
+        // that cannot carry the rendering is refused, not printed as if it
+        // could (the shipped test limits::docs_limits_page_is_rendered_from_
+        // shipped keeps that from ever being the packaged page).
         "limits" => {
             let template = include_str!("../docs/limits.md");
-            let page = mdatron::limits::render_page(&mdatron::limits::SHIPPED, template)
-                .unwrap_or_else(|_| template.to_string());
-            return print_page(&page);
+            return match mdatron::limits::render_page(&mdatron::limits::SHIPPED, template) {
+                Ok(page) => print_page(&page),
+                Err(e) => {
+                    eprintln!(
+                        "error[MDATRON-E0080]: pipeline-orchestration-failure\n   = note: the \
+                         embedded limits page cannot carry its rendering: {e}"
+                    );
+                    ExitCode::from(2)
+                }
+            };
         }
         "faq" => include_str!("../docs/faq.md"),
         "inputs" => include_str!("../docs/inputs.md"),

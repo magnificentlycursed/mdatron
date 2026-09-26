@@ -66,8 +66,16 @@ cost ledger, kept here beside the limit it measures against (#189).
 | 2026-09-25 | #189 lane (0.7.0-dev, envelope 3.1.0) | E0050 enum violation, root-relative path, allowed-options list, one quoted value | 181 | 331 |
 | 2026-09-25 | #189 lane (0.7.0-dev, envelope 3.1.0) | E0050 additionalProperties, root-relative path, one quoted key | 138 | 374 |
 
-Method: seeded violations in a fixture project, driven via
-`mdatron verify --project-root <fixture> --compact -q`, byte-measured per
-blank-line-separated block. Contract tests additionally assert the limit on
-typical, hostile, and over-limit-quoted shapes (`src/diagnostic.rs` compact
-tests) and on the CLI surface (`tests/cli_integration.rs`).
+Method (the 2026-09-25 rows; the 2026-07-25 rows used the since-archived
+review-log corpus): a fixture project whose `.mdatron/config.yaml` walks
+`posts/*.md`; a `.mdatron/schemas/blog.json` requiring `schema_class`
+(`const: blog`), `title` and `status` (enum `draft`, `published`, `retired`)
+with `additionalProperties: false`; and two posts — `posts/enum.md` carrying
+`status: archived` (the enum row) and `posts/extra.md` carrying a stray
+`extra: nope` field (the additionalProperties row). Run
+`mdatron verify --project-root <fixture> --compact -q` and byte-count each
+blank-line-separated block; the path in each block is root-relative, so the
+file names above are part of the measurement. Contract tests additionally
+assert the limit on typical, hostile, and over-limit-quoted shapes
+(`src/diagnostic.rs` compact tests) and on the CLI surface
+(`tests/cli_integration.rs`).

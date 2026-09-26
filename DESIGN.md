@@ -82,9 +82,9 @@ Evidence: the reserved-code semantic swap shipped as a silent contract break and
 
 Renaming a field on an input contract breaks adopters who use the old name, and the shape of the break differs by parse mode: the strict inputs (`routes.yaml`, `vocabulary.yaml`, `pins.yaml`, `code-catalogs.yaml`, and the engine-written `manifest.yaml`, unknown fields refused at parse) fail **loudly** on the old spelling, while the lenient `.mdatron/config.yaml` (#80, decision 1) drops the old key **silently** to its default — precisely the fail-open class `MDATRON-W0051`/`W0043` exist to catch, except that the rename itself slips in with the old data gone and no error at all. Either way a bare rename is an unfriendly break (GH #36 item 3, Ruff's `REDIRECTS` lesson), so a rename is non-breaking at introduction and legible at removal:
 
-- The old name stays accepted as a `#[serde(alias)]` of the new field for at least one MAJOR `mdatron_format_version` cycle. An alias is a *known* name, so it composes with `deny_unknown_fields`; on the lenient config it is what prevents the silent drop-to-default. A file carrying both spellings is refused as a duplicate field, never resolved by precedence.
+- The old name stays accepted as a `#[serde(alias)]` of the new field until at least the next `mdatron_format_version` increment. An alias is a *known* name, so it composes with `deny_unknown_fields`; on the lenient config it is what prevents the silent drop-to-default. A file carrying both spellings is refused as a duplicate field, never resolved by precedence.
 - Every rename is a row in the ledger below: old → new, the input file, the version the new name landed in, and the earliest version the alias may be dropped.
-- Dropping an alias is itself a MAJOR input-contract change, versioned through `mdatron_format_version` (DEF5) — never a silent removal.
+- Dropping an alias is itself a breaking input-contract change — an increment of `mdatron_format_version` (DEF5) — never a silent removal.
 
 | old → new | input file | aliased since | alias removable in |
 |-----------|------------|---------------|--------------------|

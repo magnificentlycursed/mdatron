@@ -29,8 +29,9 @@ fn rs_files(dir: &Path, out: &mut Vec<PathBuf>) {
 // ── 1. Methodology-vocabulary denylist ──────────────────────────────────────
 //
 // No methodology CONCEPT appears in engine-authored text: production source
-// (the region before each file's `#[cfg(test)]` module — fixtures legally use
-// methodology-shaped field names) and the engine-authored explain pages. The
+// (the region before each file's test MODULE per `codes::production_region` —
+// fixtures legally use methodology-shaped field names) and the engine-authored
+// explain pages. The
 // adopter name "vsdd" is NOT on the denylist: DESIGN permits naming vsdd as an
 // adopter. The denylist is the methodology's own vocabulary, which the engine
 // must never know.
@@ -55,7 +56,10 @@ fn engine_authored_text_is_methodology_free() {
     rs_files(&repo().join("src"), &mut files);
     for f in files {
         let content = fs::read_to_string(&f).unwrap_or_default();
-        let prod = normalize(content.split("#[cfg(test)]").next().unwrap_or(&content));
+        let prod = normalize(
+            mdatron::codes::production_region(&content)
+                .unwrap_or_else(|e| panic!("{}: {e}", f.display())),
+        );
         for term in DENYLIST {
             if prod.contains(term) {
                 offenders.push(format!("{}: '{term}'", f.display()));
@@ -108,6 +112,13 @@ fn dependency_records_and_cargo_manifest_are_in_bijection() {
                 "[dev-dependencies]" => Some("dev"),
                 "[target.'cfg(unix)'.dependencies]" => Some("unix"),
                 "[target.'cfg(windows)'.dependencies]" => Some("windows"),
+                other
+                    if other.starts_with("[dependencies.")
+                        || other.starts_with("[dev-dependencies.")
+                        || (other.starts_with("[target.") && other.contains(".dependencies.")) =>
+                {
+                    panic!("Cargo.toml declares a dependency as its own table {other}; this test reads the inline `name = …` form under a dependency table — declare it inline")
+                }
                 other if other.contains("dependencies") => {
                     panic!("Cargo.toml table {other} has no record scope name; teach this test and the dependency-record schema its scope")
                 }
@@ -129,11 +140,17 @@ fn dependency_records_and_cargo_manifest_are_in_bijection() {
         }
         let spec = spec.trim();
         let version = if let Some(inline) = spec.strip_prefix('{') {
+            // `version = "x"`, whatever the spacing around `=`.
             inline
-                .split_once("version = \"")
-                .and_then(|(_, rest)| rest.split_once('"'))
+                .split_once("version")
+                .map(|(_, rest)| rest.trim_start())
+                .and_then(|rest| rest.strip_prefix('='))
+                .and_then(|rest| rest.trim_start().strip_prefix('"'))
+                .and_then(|rest| rest.split_once('"'))
                 .map(|(v, _)| v.to_string())
-                .unwrap_or_else(|| panic!("dependency {name} declares no version requirement"))
+                .unwrap_or_else(|| {
+                    panic!("dependency {name}: inline table {spec:?} carries no `version = \"…\"` (a git or path dependency has no version requirement for a record to mirror)")
+                })
         } else {
             spec.trim_matches('"').to_string()
         };
@@ -152,6 +169,11 @@ fn dependency_records_and_cargo_manifest_are_in_bijection() {
         .flatten()
     {
         let path = e.path();
+        // Only markdown records are records (a Finder `.DS_Store` is not an
+        // orphan; the route's naming grammar governs what else may live here).
+        if path.extension().and_then(|s| s.to_str()) != Some("md") {
+            continue;
+        }
         let stem = path
             .file_stem()
             .and_then(|s| s.to_str())

@@ -138,6 +138,10 @@ pub fn open_confined(root: &Path, rel: &ConfinedPath) -> Result<File, OpenViolat
         .components()
         .map(|c| match c {
             Component::Normal(name) => name,
+            #[allow(
+                clippy::unreachable,
+                reason = "ConfinedPath's constructor admits Normal components only"
+            )]
             other => {
                 unreachable!("ConfinedPath invariant violated: non-normal component {other:?}")
             }

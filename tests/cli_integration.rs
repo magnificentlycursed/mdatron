@@ -11,7 +11,7 @@
 //! row 3 that `tests/output_format.rs` did not yet exercise.
 //!
 //! Specification anchor:
-//!   vsdd-cli/docs/refactor/phase-2-mdatron-json/phase-1c-decomposition.md
+//!   DESIGN.md § Diagnostics are a versioned contract (exit codes and streams)
 //!
 //! Test groups (mirroring the Phase 1c Red Gate seeds):
 //!   1. `--json` finalization — the rendered `= explain:` line

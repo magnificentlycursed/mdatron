@@ -78,6 +78,48 @@ pub fn is_reserved_mdatron_code(code: &str) -> bool {
     }
 }
 
+/// The PRODUCTION region of a Rust source file, for the code-discipline
+/// controls (the namespace-separation check, the every-code-resolves-in-explain
+/// tripwire, the methodology denylist): the text before the file's unit-test
+/// MODULE — a `#[cfg(test)]` whose item is a `mod`. A `#[cfg(test)]` on a lone
+/// item (a test-only helper fn, an inline block) is NOT the cut: cutting at the
+/// first `#[cfg(test)]` of any kind blinded the controls to everything after
+/// such an item — none of verify.rs's emitted codes were being scanned (L3
+/// cold review, MAJOR-1). A file with no test module is scanned whole. `Err`
+/// when a file carries two test modules: the region is then undefined and the
+/// caller must not guess.
+///
+/// `pub` for the integration-test crates, like [`is_reserved_mdatron_code`].
+pub fn production_region(source: &str) -> Result<&str, String> {
+    const MARKER: &str = "#[cfg(test)]";
+    let mut cut: Option<usize> = None;
+    let mut from = 0;
+    while let Some(rel) = source[from..].find(MARKER) {
+        let at = from + rel;
+        let mut rest = source[at + MARKER.len()..].trim_start();
+        // Further attributes may sit between the cfg and its item.
+        while let Some(after_attr) = rest
+            .strip_prefix("#[")
+            .and_then(|r| r.find(']').map(|i| &r[i + 1..]))
+        {
+            rest = after_attr.trim_start();
+        }
+        let is_module = rest
+            .strip_prefix("mod")
+            .is_some_and(|tail| tail.starts_with(char::is_whitespace));
+        if is_module {
+            if let Some(first) = cut {
+                return Err(format!(
+                    "two test modules (byte offsets {first} and {at}); the production region is undefined"
+                ));
+            }
+            cut = Some(at);
+        }
+        from = at + MARKER.len();
+    }
+    Ok(cut.map_or(source, |c| &source[..c]))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -124,6 +166,41 @@ mod tests {
         assert!(is_reserved_mdatron_code("MDATRON-E0090")); // vocabulary
         assert!(is_reserved_mdatron_code("MDATRON-E0100")); // citation
         assert!(is_reserved_mdatron_code("MDATRON-E0110")); // link (#145)
+    }
+
+    // MAJOR-1 regression: an early `#[cfg(test)]` on a lone item must not end
+    // the production region; only the test MODULE does.
+    #[test]
+    fn production_region_cuts_at_the_test_module_not_the_first_cfg_test() {
+        let cfg = "#[cfg(test)]";
+        let src = format!(
+            "fn a() {{}}\n{cfg}\nfn helper() {{}}\npub const LEAK: &str = \"after the helper\";\n\
+             {cfg} {{ inline_block(); }}\nfn b() {{}}\n{cfg}\n#[allow(dead_code)]\nmod tests {{\n    \
+             const IN_TESTS: &str = \"not production\";\n}}\n"
+        );
+        let prod = production_region(&src).unwrap();
+        assert!(prod.contains("after the helper"), "{prod}");
+        assert!(prod.contains("fn b()"));
+        assert!(!prod.contains("not production"));
+        assert!(prod.ends_with("fn b() {}\n"), "{prod:?}");
+
+        // No test module: the whole file is production.
+        let src = format!("fn a() {{}}\n{cfg}\nfn helper() {{}}\nconst X: &str = \"x\";\n");
+        assert_eq!(production_region(&src).unwrap(), src);
+
+        // A test-only `modern_thing` fn is not a module.
+        let src = format!("{cfg}\nfn modern() {{}}\nconst X: &str = \"x\";\n");
+        assert_eq!(production_region(&src).unwrap(), src);
+
+        // Two test modules: undefined, refused.
+        let src = format!("{cfg}\nmod tests {{}}\nfn c() {{}}\n{cfg}\nmod more_tests {{}}\n");
+        assert!(production_region(&src).is_err());
+
+        // This very file: the region ends before its own test module.
+        let me = std::fs::read_to_string(file!()).unwrap();
+        let prod = production_region(&me).unwrap();
+        assert!(prod.contains("pub fn production_region"));
+        assert!(!prod.contains("fn production_region_cuts_at_the_test_module"));
     }
 
     #[test]

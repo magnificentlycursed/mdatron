@@ -121,6 +121,10 @@ pub fn check_file(
             };
             let name = name_match.as_str();
             match state {
+                #[allow(
+                    clippy::unreachable,
+                    reason = "the Disabled state is filtered out before this match"
+                )]
                 MarkerMembers::Disabled => unreachable!("skipped above"),
                 // Present-but-unverifiable target (GH #48 lane G): the check
                 // was skipped, which is loud (W0048) — never a false "resolves

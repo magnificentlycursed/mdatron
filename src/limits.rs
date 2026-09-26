@@ -166,8 +166,11 @@ pub const GENERATED_END: &str = "<!-- mdatron-generated: end -->";
 /// the block between the generated markers replaced by `limits`' table. Errs,
 /// naming the defect, when the template lacks either marker or has them out of
 /// order — a page that cannot carry the rendering must not be printed as if
-/// it did.
+/// it did. Line endings are normalized to LF first, so a CRLF checkout (a
+/// Windows `autocrlf` clone) renders the same bytes as an LF one and the
+/// regenerated page is always LF (L3 cold review MINOR-8).
 pub fn render_page(limits: &Limits, template: &str) -> Result<String, String> {
+    let template = &template.replace("\r\n", "\n");
     let start = template.find(GENERATED_START).ok_or_else(|| {
         format!("the limits page lacks its generated-block start marker `{GENERATED_START}`")
     })?;
@@ -556,7 +559,9 @@ mod tests {
     // GENERATOR of its derived artifacts): docs/limits.md is the rendering of
     // SHIPPED, so the page must EQUAL render_page(&SHIPPED, page). Under
     // MDATRON_UPDATE_DOCS=1 the test rewrites the page from the catalog instead
-    // of failing (expect-test style). CRLF is normalized for Windows checkouts.
+    // of failing (expect-test style); the regenerated page is LF (the
+    // .gitattributes pin keeps the checkout LF too), and a CRLF checkout is
+    // compared after normalization so Windows CI reads the same bytes.
     #[test]
     fn docs_limits_page_is_rendered_from_shipped() {
         let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("docs/limits.md");
@@ -580,12 +585,12 @@ mod tests {
         );
     }
 
-    // The render is a function of the catalog, not a constant: every shipped
-    // value lands in its own pipe-delimited cell, and a different catalog
-    // renders a different table (a bare "8 MiB" substring would stay green
-    // under a bump to "128 MiB", R2-1).
+    // The shipped values, pinned literally (a bump edits SHIPPED, this test,
+    // and — via MDATRON_UPDATE_DOCS — the page): each lands in its own
+    // pipe-delimited cell, so a bare "8 MiB" substring cannot stay green under
+    // a bump to "128 MiB" (R2-1).
     #[test]
-    fn render_table_carries_every_shipped_value_in_its_own_cell() {
+    fn shipped_values_are_pinned() {
         let table = SHIPPED.render_table();
         let row = |needle: &str| {
             table
@@ -602,7 +607,12 @@ mod tests {
         assert!(row("concurrent-invocation-count").contains("| 8 |"));
         assert!(row("compact per-finding size").contains("| 512 B |"));
         assert_eq!(table.lines().count(), 2 + SHIPPED.rows().len());
+    }
 
+    // The render is a function of the catalog, not a constant: a different
+    // catalog renders a different table.
+    #[test]
+    fn render_table_is_a_function_of_the_catalog() {
         let mut other = SHIPPED;
         other.per_file_bytes = 128 * 1024 * 1024;
         other.walk_entries = 1_234_567;
@@ -628,6 +638,11 @@ mod tests {
         assert!(render_page(&SHIPPED, "no markers at all").is_err());
         assert!(render_page(&SHIPPED, &format!("{GENERATED_START}\nopen only")).is_err());
         assert!(render_page(&SHIPPED, &format!("{GENERATED_END}\n{GENERATED_START}\n")).is_err());
+
+        // CRLF in, LF out — the same bytes as the LF template (MINOR-8).
+        let crlf = template.replace('\n', "\r\n");
+        assert_eq!(render_page(&SHIPPED, &crlf).unwrap(), page);
+        assert!(!page.contains('\r'));
     }
 
     #[test]

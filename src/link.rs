@@ -296,6 +296,10 @@ fn resolve_link(
                     f.severity = Severity::Warning;
                     findings.push(f);
                 }
+                #[allow(
+                    clippy::unreachable,
+                    reason = "the entry was inserted a few lines above in this same branch"
+                )]
                 None => unreachable!("inserted above"),
             }
         }

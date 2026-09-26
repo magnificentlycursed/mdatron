@@ -6,7 +6,7 @@
 //!
 //! Tests fail by default; Phase 2b implementation turns each green. Each
 //! grouping below corresponds to one of the three changes documented in
-//! `vsdd-cli/docs/refactor/phase-1-codes-and-dsl/DESIGN.md`.
+//! `DESIGN.md` § Diagnostics are a versioned contract (the reserved code ranges).
 
 use mdatron::codes::is_reserved_mdatron_code;
 use mdatron::dsl::{evaluate, EvalContext, EvalError, Expr, Value, VarRef};
