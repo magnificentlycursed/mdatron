@@ -80,44 +80,94 @@ pub fn is_reserved_mdatron_code(code: &str) -> bool {
 
 /// The PRODUCTION region of a Rust source file, for the code-discipline
 /// controls (the namespace-separation check, the every-code-resolves-in-explain
-/// tripwire, the methodology denylist): the text before the file's unit-test
-/// MODULE — a `#[cfg(test)]` whose item is a `mod`. A `#[cfg(test)]` on a lone
-/// item (a test-only helper fn, an inline block) is NOT the cut: cutting at the
-/// first `#[cfg(test)]` of any kind blinded the controls to everything after
-/// such an item — none of verify.rs's emitted codes were being scanned (L3
-/// cold review, MAJOR-1). A file with no test module is scanned whole. `Err`
-/// when a file carries two test modules: the region is then undefined and the
-/// caller must not guess.
+/// tripwire, the methodology denylist): the text before the file's INLINE
+/// unit-test module — a line opening with `#[cfg(test)]` whose item, after any
+/// further attributes, `//` comments and a `pub`/`pub(...)` qualifier, is
+/// `mod <name> {`. Everything else is production: a `#[cfg(test)]` on a lone
+/// item (a test-only helper fn, an inline block) — cutting at the first
+/// `#[cfg(test)]` of any kind blinded the controls to everything after such an
+/// item, none of verify.rs's emitted codes were being scanned (L3 cold review,
+/// MAJOR-1); a `mod tests;` FILE module, which removes nothing from this file
+/// (round 2, MINOR-A); a marker that is not the first token on its line, as in
+/// a comment or a string. A file with no inline test module is scanned whole.
+/// `Err` when a file carries two: the region is then undefined and the caller
+/// must not guess.
+///
+/// The heuristic's boundary: only the bare `#[cfg(test)]` spelling is a
+/// module marker; a combined `#[cfg(all(test, …))]` module is scanned as
+/// production — the loud direction (a false positive, never a blind spot).
 ///
 /// `pub` for the integration-test crates, like [`is_reserved_mdatron_code`].
 pub fn production_region(source: &str) -> Result<&str, String> {
     const MARKER: &str = "#[cfg(test)]";
     let mut cut: Option<usize> = None;
-    let mut from = 0;
-    while let Some(rel) = source[from..].find(MARKER) {
-        let at = from + rel;
-        let mut rest = source[at + MARKER.len()..].trim_start();
-        // Further attributes may sit between the cfg and its item.
-        while let Some(after_attr) = rest
-            .strip_prefix("#[")
-            .and_then(|r| r.find(']').map(|i| &r[i + 1..]))
-        {
-            rest = after_attr.trim_start();
+    let mut line_start = 0;
+    for line in source.split_inclusive('\n') {
+        let at = line_start;
+        line_start += line.len();
+        let indent = line.len() - line.trim_start().len();
+        if !line[indent..].starts_with(MARKER) {
+            continue;
         }
-        let is_module = rest
-            .strip_prefix("mod")
-            .is_some_and(|tail| tail.starts_with(char::is_whitespace));
-        if is_module {
-            if let Some(first) = cut {
-                return Err(format!(
-                    "two test modules (byte offsets {first} and {at}); the production region is undefined"
-                ));
+        let marker_at = at + indent;
+        let mut rest = source[marker_at + MARKER.len()..].trim_start();
+        loop {
+            if rest.starts_with("#[") {
+                rest = skip_attribute(rest).trim_start();
+            } else if rest.starts_with("//") {
+                rest = rest.split_once('\n').map_or("", |(_, r)| r).trim_start();
+            } else {
+                break;
             }
-            cut = Some(at);
         }
-        from = at + MARKER.len();
+        if let Some(after_pub) = rest.strip_prefix("pub") {
+            rest = if after_pub.starts_with('(') {
+                after_pub.split_once(')').map_or("", |(_, r)| r)
+            } else {
+                after_pub
+            }
+            .trim_start();
+        }
+        let Some(tail) = rest.strip_prefix("mod") else {
+            continue;
+        };
+        if !tail.starts_with(char::is_whitespace) {
+            continue;
+        }
+        let after_name = tail
+            .trim_start()
+            .trim_start_matches(|c: char| c.is_alphanumeric() || c == '_')
+            .trim_start();
+        if !after_name.starts_with('{') {
+            continue; // `mod tests;` declares a file module: nothing here is test code
+        }
+        if let Some(first) = cut {
+            return Err(format!(
+                "two inline test modules (byte offsets {first} and {marker_at}); the production region is undefined"
+            ));
+        }
+        cut = Some(marker_at);
     }
     Ok(cut.map_or(source, |c| &source[..c]))
+}
+
+/// The text after one `#[…]` attribute that opens `s`, brackets balanced (so a
+/// `]` inside the attribute, as in `#[doc = "x[y]"]`, does not end it early).
+fn skip_attribute(s: &str) -> &str {
+    let mut depth = 0usize;
+    for (i, c) in s.char_indices() {
+        match c {
+            '[' => depth += 1,
+            ']' => {
+                depth = depth.saturating_sub(1);
+                if depth == 0 {
+                    return &s[i + 1..];
+                }
+            }
+            _ => {}
+        }
+    }
+    ""
 }
 
 #[cfg(test)]
@@ -192,9 +242,30 @@ mod tests {
         let src = format!("{cfg}\nfn modern() {{}}\nconst X: &str = \"x\";\n");
         assert_eq!(production_region(&src).unwrap(), src);
 
-        // Two test modules: undefined, refused.
+        // Two inline test modules: undefined, refused.
         let src = format!("{cfg}\nmod tests {{}}\nfn c() {{}}\n{cfg}\nmod more_tests {{}}\n");
         assert!(production_region(&src).is_err());
+
+        // Round-2 MINOR-A: a FILE module (`mod tests;`) removes nothing from
+        // this file — the whole file stays production; and a marker that is
+        // not the first token on its line (a comment, a string) is no marker.
+        let src = format!("{cfg}\nmod tests;\nconst X: &str = \"x\";\n");
+        assert_eq!(production_region(&src).unwrap(), src);
+        let src = format!(
+            "// TODO: move these into a {cfg} mod tests later\nconst X: &str = \"x\";\n\
+             const S: &str = \"{cfg} mod tests {{\";\nfn f() {{}}\n"
+        );
+        assert_eq!(production_region(&src).unwrap(), src);
+
+        // Round-2 NIT-D: a `pub(crate)` module, `//` comments and an attribute
+        // with `]` inside between the cfg and the item are still the module.
+        let src = format!(
+            "fn a() {{}}\n{cfg}\n// why this module exists\n#[doc = \"x[y]\"]\n\
+             pub(crate) mod test_support {{ const T: &str = \"t\"; }}\n"
+        );
+        assert_eq!(production_region(&src).unwrap(), "fn a() {}\n");
+        let src = format!("{cfg} pub mod tests {{}}\n");
+        assert_eq!(production_region(&src).unwrap(), "");
 
         // This very file: the region ends before its own test module.
         let me = std::fs::read_to_string(file!()).unwrap();

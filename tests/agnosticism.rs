@@ -140,12 +140,19 @@ fn dependency_records_and_cargo_manifest_are_in_bijection() {
         }
         let spec = spec.trim();
         let version = if let Some(inline) = spec.strip_prefix('{') {
-            // `version = "x"`, whatever the spacing around `=`.
+            // The `version` KEY (at a key boundary: table start, `,` or space
+            // before it, `=` after it — not the substring inside `package =
+            // "foo-version"`), whatever the spacing around `=`.
             inline
-                .split_once("version")
-                .map(|(_, rest)| rest.trim_start())
-                .and_then(|rest| rest.strip_prefix('='))
-                .and_then(|rest| rest.trim_start().strip_prefix('"'))
+                .match_indices("version")
+                .find_map(|(i, _)| {
+                    let boundary = i == 0
+                        || inline[..i].ends_with([',', ' ', '\t']);
+                    let rest = inline[i + "version".len()..].trim_start();
+                    (boundary && rest.starts_with('=') && !rest.starts_with("=="))
+                        .then(|| rest[1..].trim_start())
+                })
+                .and_then(|rest| rest.strip_prefix('"'))
                 .and_then(|rest| rest.split_once('"'))
                 .map(|(v, _)| v.to_string())
                 .unwrap_or_else(|| {
