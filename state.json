@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1167,
-        "tip_oid": "1531b53d33396a5531240cb3a03cb40eb2ef1c12",
-        "prefix_sha256": "1eda50cafa4d1e882b85fdad437590f91b65011de0ed74b30395f2ab19d158f2"
+        "sequence": 1168,
+        "tip_oid": "af8e31569f55ca7b6409a72d44babe4f5e2b4272",
+        "prefix_sha256": "600317047995532a66eae3d8977bce037dc52ace30cd4fb41ab06ab771bd92fc"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 205,
-  "next_comment_id": 587,
+  "next_comment_id": 588,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "03beb708-b15d-4522-950e-3fdaa3a3d16b": 196,
@@ -1428,8 +1428,17 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-20T01:30:54.698406Z",
-      "updated_at": "2026-09-27T01:14:47.081768Z",
+      "updated_at": "2026-09-27T02:37:43.513622Z",
       "comments": {
+        "9b10192e-3d5b-46b3-857b-68d982fd0905": {
+          "display_id": 587,
+          "author": "79Ig",
+          "content": "COLD REVIEW round 1 (6196be2): NOT MVR — 3 MAJOR / 5 MINOR / 3 NIT. MAJOR-1 the vocabulary property read the repo's .mdatron/vocabulary.yaml, so cargo test on the PACKAGED crate failed (docs/limits.md class). MAJOR-2 a proptest! cases pin is re-contextualized from PROPTEST_CASES and did not hold (1024 scratch roots per bounded run; the harness's loader property and ci.yml C8 note carried the same false claim). MAJOR-3 coverage: 10 percent of section rules compiled, disjoint ran 0 times, no body reached the marker section or a cross-file target, the live register had no anti-patterns/numeric claims (a seeded find_word off-by-one survived 16384 cases by construction). Minors: body_offset 0 in snapshot driver; Rust {:?} is not YAML escaping; seeds did not pin the shrunk inputs; per-case register load; docs overclaim. Fix round 1: fixture register + catalog loaded once (LazyLock) from a scratch root; TestRunner hard cap (holds: 0.16 s under PROPTEST_CASES=1024); sectioned bodies + fragments carrying sections/members/link targets/terms/tokens; rules as YAML values; frontmatter generated; codecat scan added; body_offset threaded; REACH seeds asserting E0120/E0121/E0122/E0091/E0092/E0093/E0113/E0110/E0111/E0112/E0114/E0101; seeds from shrinks; honest scope; proptest-regressions gitignored. Bounded run 1.6 s (was 10 s); deep 4096 6 s; red gate still red.",
+          "created_at": "2026-09-27T02:37:43.472341Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAc2rOE2DfKLk7qDspql039AJmE8qESizCgY4Jp5mmphYNkc5mIDtxQpcyyhtyv2OQZEUKE+I7bZpb8hwpDFEaDg=="
+        },
         "cff723e5-d6b1-497c-b4a6-34e2947269bb": {
           "display_id": 585,
           "author": "79Ig",
