@@ -16,11 +16,13 @@
 //! through an explicit `TestRunner` because a `proptest!` config pin is
 //! re-contextualized from the env and would not hold).
 //!
-//! Three layers: deterministic revert-detector seeds pinning the known hostile
-//! classes; REACH seeds asserting that the drivers actually arrive at the
-//! scanner branches the properties claim to cover (a finding of the expected
-//! code, so a strategy that quietly stops reaching a branch is caught); and
-//! bounded property exploration. Only panic-freedom is pinned by the
+//! Four layers: deterministic revert-detector seeds pinning the known hostile
+//! classes; REACH seeds feeding hand-written inputs to the drivers and
+//! asserting each scanner branch produces its finding; STRATEGY-LEVEL reach
+//! tests running the properties' own strategies at a fixed seed and counting
+//! those findings (so a strategy that quietly stops reaching a branch fails —
+//! round 2 found the disjoint comparison reached 0 times while every
+//! hand-written reach seed was green); and bounded property exploration. Only panic-freedom is pinned by the
 //! properties — a finding, no finding, or a structured error are all
 //! acceptable; a panic (or an abort) is the defect.
 //!
@@ -33,15 +35,17 @@
 //! COVERED: the `markup` primitives per body and per line; `section_span(s)`
 //! with hostile specs; `cite::cited_targets` and `link::link_targets` at every
 //! char-boundary body offset; section rules built as YAML VALUES (so hostile
-//! section names survive to `compile_rule`) over bodies that carry the named
-//! sections half the time (count and disjoint arms both run); the vocabulary
-//! scan with reserved spellings, anti-patterns, label schemes and numeric
-//! claims (with generated frontmatter) all reachable from the body strategy;
+//! section names survive to `compile_rule`) and drawn TOGETHER with the body
+//! from one section prefix, so the count and disjoint comparisons run
+//! (asserted by the strategy-level reach test); the vocabulary scan with
+//! reserved spellings, anti-patterns, label schemes and numeric claims (with
+//! generated frontmatter), each reached from the body strategy (asserted);
 //! the code-catalog scan against a comprehensive fixture catalog; and the
 //! snapshot-backed cite/link/marker `check_file`s at a generated body offset
 //! over a scratch root whose target documents (both the document-relative and
 //! the root-relative resolution of the fragments' links) are hostile too and
-//! carry the marker rules' section and members half the time.
+//! carry the marker rules' section and members half the time (cross-file
+//! anchors, missing members and resolved members all asserted).
 //! NOT COVERED: pulldown-cmark's own parse (hardened upstream); the
 //! snapshot/confinement IO paths (symlinks, unreadable files, size bounds —
 //! the confine tests own them); semantic/differential properties; and
@@ -56,7 +60,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::LazyLock;
 
 use proptest::prelude::*;
-use proptest::test_runner::TestRunner;
+use proptest::test_runner::{RngAlgorithm, TestRng, TestRunner};
 use serde_yaml_ng::Value as Yaml;
 
 use crate::codecat::CodeCatalog;
@@ -267,14 +271,16 @@ const FRAGMENTS: &[&str] = &[
     "<a name=\"members\">",
     "<!-- unterminated",
     "<!-- -->",
-    // list items with bold names (marker shapes)
-    "- **Bold**: item\n",
-    "- **Nope**: item\n",
-    "- **é**\n",
-    "* **Name** — text\n",
-    "-  **spaced**\n",
-    "- **\n",
-    "- **REQ-2**: item\n",
+    // list items with bold names (marker shapes) — line-initial, since a marker
+    // rule's pattern is anchored at the line start (round 2, MINOR-E)
+    "\n- **Bold**: item\n",
+    "\n- **Nope**: item\n",
+    "\n- **é**\n",
+    "\n* **Name** — text\n",
+    "\n-  **spaced**\n",
+    "\n- **\n",
+    "\n- **REQ-2**: item\n",
+    "- **Bold**",
     // citations
     "docs/x.md:12-3",
     "../x.md:999999",
@@ -285,7 +291,7 @@ const FRAGMENTS: &[&str] = &[
     "docs/target.md:1",
     "docs/target.md:999",
     "\u{FEFF}docs/x.md:12-3",
-    // vocabulary: terms, reserved spellings, anti-patterns, label clusters, numeric claims
+    // vocabulary: terms, reserved spellings, anti-patterns, label clusters
     "conformance engine",
     "café engine",
     "walked file",
@@ -301,8 +307,14 @@ const FRAGMENTS: &[&str] = &[
     "M2",
     "L2",
     "ABC-12",
+    // numeric claims: the field name (or its spaced form) with a number in the
+    // words before it is what the comparison keys on (round 2, MINOR-B)
+    "12 latency_ms\n",
+    "twelve latency ms",
+    "we measured 12 latency_ms today",
+    "3 latency ms",
+    "latency_ms",
     "latency is 12 ms",
-    "latency_ms 13",
     "12",
     "e",
     // code-catalog tokens: declared, undeclared, mistyped
@@ -351,13 +363,15 @@ fn hostile_body() -> impl Strategy<Value = String> {
 }
 
 /// Section prefixes the section and marker rules resolve against: the named
-/// sections with id-bearing elements of every class the rules use.
+/// sections with id-bearing elements of every class the rules use; four of
+/// the five carry an id in BOTH sections, so a disjoint rule over them finds
+/// an overlap (the E0121 arm) and not only the clean case.
 const SECTION_PREFIXES: &[&str] = &[
-    "## Members\n### REQ-1\n- **REQ-2**: item\n#### ABC-12\n### Bold\n",
-    "## Others\n### REQ-1\n### REQ-3\n",
-    "## Members\n### é\n- **é**\n### Bold\n",
-    "# Title\n## Members\n\n## Others\n### REQ-1\n",
-    "## Members\n### REQ-1\n## Others\n### REQ-1\n",
+    "## Members\n### REQ-1\n- **REQ-2**: item\n#### ABC-12\n### Bold\n## Others\n### REQ-1\n- **REQ-2**\n",
+    "## Others\n### REQ-1\n### REQ-3\n### Bold\n## Members\n### REQ-3\n",
+    "## Members\n### é\n- **é**\n### Bold\n## Others\n### é\n",
+    "# Title\n## Members\n### Bold\n\n## Others\n### REQ-1\n",
+    "## Members\n### REQ-1\n### Bold\n## Others\n### REQ-1\n",
 ];
 
 /// A hostile body that, half the time, opens with a section prefix — so the
@@ -413,73 +427,185 @@ fn ystr(s: impl Into<String>) -> Yaml {
     Yaml::String(s.into())
 }
 
-/// A section rule as a YAML VALUE — not text, so BOM/bidi/combining
-/// characters in a section name reach `compile_rule` and the scanners rather
-/// than dying as a YAML escape error (MINOR-2). Valid shapes dominate (the
-/// loader property in the harness owns the config-error paths); a few
-/// invalid elements, patterns and predicates keep the `Err` arms honest.
-fn section_rule() -> impl Strategy<Value = Yaml> {
-    let element = prop::sample::select(vec![
-        "heading",
-        "h1",
-        "h2",
-        "h3",
-        "h3",
-        "h4",
-        "h6",
-        "list-item-bold-name",
-        "list-item-bold-name",
-        "h3-heading",
-        "bullet-lead",
-        "bogus",
-    ]);
-    // A count rule's `match` is tested against the whole element LINE; a
-    // disjoint operand's `id_pattern` against the element's NAME, with the id
-    // in capture group 1 — the two matchers of the section family.
-    let pattern = prop::sample::select(vec![
-        "REQ-[0-9]+",
-        "REQ-[0-9]+",
-        "^#{3} REQ-[0-9]+$",
-        "[A-Z]+-[0-9]+",
-        ".*",
-        "^$",
-        "é",
-        "REQ",
-        "(",
-        "[",
-    ]);
-    let id_pattern = prop::sample::select(vec![
-        "^(REQ-[0-9]+)$",
-        "^(REQ-[0-9]+)$",
-        "^([A-Z]+-[0-9]+)$",
-        "(.*)",
-        "(é+)",
-        "^$",
-        "REQ-[0-9]+",
-        "(",
-    ]);
-    let count = prop::sample::select(vec![
-        ">= 1", ">= 1", "== 0", "<= 3", "> 0", "!= 2", "== 1", "1", ">=", "", "> -1",
-    ]);
+fn element_pick() -> impl Strategy<Value = &'static str> {
+    // Valid classes dominate; the aliases and one bogus class keep the
+    // compile-error arm honest without starving the scanners.
+    prop::sample::select(
+        &[
+            "heading",
+            "h1",
+            "h2",
+            "h3",
+            "h3",
+            "h3",
+            "h4",
+            "h6",
+            "list-item-bold-name",
+            "list-item-bold-name",
+            "h3-heading",
+            "bullet-lead",
+            "bogus",
+        ][..],
+    )
+}
+
+/// Disjoint operands lean on the classes whose ids the prefixes carry in both
+/// sections (`h3`, `heading`), so the overlap arm is reached, not only the
+/// clean and not-found arms.
+fn disjoint_element_pick() -> impl Strategy<Value = &'static str> {
+    prop::sample::select(
+        &[
+            "h3",
+            "h3",
+            "h3",
+            "heading",
+            "heading",
+            "list-item-bold-name",
+            "h2",
+            "h3-heading",
+            "bogus",
+        ][..],
+    )
+}
+
+/// A count rule's `match` is tested against the whole element LINE.
+fn match_pick() -> impl Strategy<Value = &'static str> {
+    prop::sample::select(
+        &[
+            "REQ-[0-9]+",
+            "REQ-[0-9]+",
+            "^#{3} REQ-[0-9]+$",
+            "[A-Z]+-[0-9]+",
+            ".*",
+            "^$",
+            "é",
+            "REQ",
+            "Bold",
+            "(",
+        ][..],
+    )
+}
+
+/// A disjoint operand's `id_pattern` is tested against the element's NAME, with
+/// the id in capture group 1.
+fn id_pick() -> impl Strategy<Value = &'static str> {
+    prop::sample::select(
+        &[
+            "^(REQ-[0-9]+)$",
+            "^(REQ-[0-9]+)$",
+            "^(REQ-[0-9]+)$",
+            "^([A-Z]+-[0-9]+)$",
+            "(.*)",
+            "(.*)",
+            "(é+)",
+            "^$",
+            "REQ-[0-9]+",
+            "(",
+        ][..],
+    )
+}
+
+fn count_pick() -> impl Strategy<Value = &'static str> {
+    prop::sample::select(
+        &[
+            ">= 1", ">= 1", ">= 1", "== 0", "<= 3", "> 0", "!= 2", "== 1", "1", ">=",
+        ][..],
+    )
+}
+
+/// The rule's section: one of the SECTIONS (`##` headings) the chosen prefix
+/// carries three times in five — those are the spans with id-bearing
+/// elements inside, so the count and disjoint comparisons run — any of its
+/// headings one time in five (a sub-heading names an empty span: the
+/// nothing-to-count arm), and a hostile spec one time in five.
+fn section_pick(headings: Vec<String>) -> impl Strategy<Value = String> {
+    let sections: Vec<String> = headings
+        .iter()
+        .filter(|h| markup::atx_heading(h).is_some_and(|(level, _)| level == 2))
+        .cloned()
+        .collect();
     prop_oneof![
-        3 => (heading_spec(), element.clone(), pattern.clone(), count, any::<bool>()).prop_map(
-            |(s, e, p, c, drop_match)| {
-                let mut pairs = vec![("section", ystr(s)), ("element", ystr(e)), ("count", ystr(c))];
-                if !drop_match {
-                    pairs.insert(2, ("match", ystr(p)));
-                }
-                yaml_map(pairs)
-            }
-        ),
-        2 => (heading_spec(), element.clone(), id_pattern.clone(), heading_spec(), element, id_pattern).prop_map(
-            |(s1, e1, p1, s2, e2, p2)| {
-                let operand = |s: String, e: &str, p: &str| {
-                    yaml_map(vec![("section", ystr(s)), ("element", ystr(e)), ("id_pattern", ystr(p))])
-                };
-                yaml_map(vec![("disjoint", Yaml::Sequence(vec![operand(s1, e1, p1), operand(s2, e2, p2)]))])
-            }
-        ),
+        3 => prop::sample::select(sections),
+        1 => prop::sample::select(headings),
+        1 => heading_spec(),
     ]
+}
+
+fn headings_of(prefix: &str) -> Vec<String> {
+    prefix
+        .lines()
+        .filter(|l| markup::atx_heading(l).is_some())
+        .map(str::to_string)
+        .collect()
+}
+
+fn yaml_rule_count(section: String, element: &str, matcher: Option<&str>, count: &str) -> Yaml {
+    let mut pairs = vec![
+        ("section", ystr(section)),
+        ("element", ystr(element)),
+        ("count", ystr(count)),
+    ];
+    if let Some(m) = matcher {
+        pairs.insert(2, ("match", ystr(m)));
+    }
+    yaml_map(pairs)
+}
+
+fn yaml_rule_disjoint(a: (String, &str, &str), b: (String, &str, &str)) -> Yaml {
+    let operand = |(s, e, p): (String, &str, &str)| {
+        yaml_map(vec![
+            ("section", ystr(s)),
+            ("element", ystr(e)),
+            ("id_pattern", ystr(p)),
+        ])
+    };
+    yaml_map(vec![(
+        "disjoint",
+        Yaml::Sequence(vec![operand(a), operand(b)]),
+    )])
+}
+
+/// A body and a section rule drawn TOGETHER (L4 round 2, MAJOR-A): the same
+/// section prefix seeds the body (three cases in four) and supplies the
+/// rule's section names, so the rule resolves a section that exists and the
+/// count and disjoint comparisons actually run — a rule drawn independently
+/// of the body found its section 3 times in 1024 and compared two id sets
+/// never. Rules are YAML VALUES, not text, so BOM/bidi/combining characters
+/// in a section name reach `compile_rule` and the scanners rather than dying
+/// as a YAML escape error (MINOR-2). Valid shapes dominate; the harness's
+/// loader property owns the config-error paths.
+fn rule_case() -> impl Strategy<Value = (String, Yaml)> {
+    (0..SECTION_PREFIXES.len()).prop_flat_map(|i| {
+        let prefix = SECTION_PREFIXES[i];
+        let headings = headings_of(prefix);
+        let body = (prop::bool::weighted(0.75), hostile_body()).prop_map(move |(with, h)| {
+            if with {
+                format!("{prefix}{h}")
+            } else {
+                h
+            }
+        });
+        let count_rule = (
+            section_pick(headings.clone()),
+            element_pick(),
+            match_pick(),
+            count_pick(),
+            prop::bool::weighted(0.1),
+        )
+            .prop_map(|(s, e, m, c, drop_match)| {
+                yaml_rule_count(s, e, (!drop_match).then_some(m), c)
+            });
+        let disjoint_rule = (
+            section_pick(headings.clone()),
+            disjoint_element_pick(),
+            id_pick(),
+            section_pick(headings),
+            disjoint_element_pick(),
+            id_pick(),
+        )
+            .prop_map(|(s1, e1, p1, s2, e2, p2)| yaml_rule_disjoint((s1, e1, p1), (s2, e2, p2)));
+        (body, prop_oneof![3 => count_rule, 2 => disjoint_rule])
+    })
 }
 
 /// Frontmatter for the numeric-claims comparison: the claimed field in every
@@ -744,6 +870,13 @@ const SEEDS: &[&str] = &[
     "🟠",
     "`🟠",
     "very café engine Layer 1 bullet lead — ADOPTER-X9 OTHER-Y2 ZZZZZ-9",
+    // a reserved spelling or term ENDING the body (the find_word end bound;
+    // round 2, MINOR-D)
+    "Layer 1",
+    "x bullet lead",
+    "—",
+    "### REQ-1\nZZZZZ-90¡A豈0𑌵## Others\nLayer 1",
+    "12 latency_ms",
 ];
 
 const SEED_TARGET: &str = "## Members\n### Bold\n### é\n\n## Others\n### REQ-1\n";
@@ -875,9 +1008,148 @@ fn reach_vocabulary_reserved_anti_pattern_label_and_numeric_arms() {
         c.iter().any(|code| code.starts_with("MDATRON-W")),
         "draft conflict warning: {c:?}"
     );
-    // Numeric claims: the comparison runs when the field is present.
+    // Numeric claims: a prose number before the field name, disagreeing with
+    // the frontmatter value, is the drift finding (MINOR-B).
+    let f = drive_vocabulary_scan("we measured 12 latency_ms today\n", 0, Some(&fm), false);
+    assert!(
+        codes(&f).contains(&"MDATRON-E0094"),
+        "numeric-claim drift: {f:?}"
+    );
     let clean = drive_vocabulary_scan("conformance engine\n", 0, Some(&fm), false);
-    assert!(!codes(&clean).contains(&"MDATRON-E0092"), "{clean:?}");
+    assert!(
+        clean.is_empty() || !codes(&clean).contains(&"MDATRON-E0092"),
+        "{clean:?}"
+    );
+}
+
+// ── Strategy-level reach ─────────────────────────────────────────────────────
+//
+// The reach seeds above feed hand-written inputs to the drivers. These run the
+// PROPERTIES' OWN STRATEGIES at a fixed seed and count the findings, so a
+// strategy that quietly stops reaching a branch fails here — the gap round 2
+// found (MAJOR-A: the disjoint comparison ran 0 times in 1024 cases while
+// every hand-written reach seed was green). Fixed seed, fixed case count:
+// deterministic, independent of PROPTEST_RNG_SEED.
+
+fn count_over_strategy<S: Strategy>(strategy: S, cases: u32, tally: impl Fn(S::Value)) {
+    let config = ProptestConfig {
+        cases,
+        max_shrink_iters: 0,
+        failure_persistence: None,
+        ..ProptestConfig::default()
+    };
+    let rng = TestRng::from_seed(RngAlgorithm::ChaCha, &[7u8; 32]);
+    let mut runner = TestRunner::new_with_rng(config, rng);
+    runner
+        .run(&strategy, |v| {
+            tally(v);
+            Ok(())
+        })
+        .unwrap_or_else(|e| panic!("strategy run failed: {e}"));
+}
+
+#[test]
+fn reach_strategy_section_rules_hit_the_count_and_disjoint_arms() {
+    use std::cell::Cell;
+    let (compiled, e0120, e0121, e0122) = (Cell::new(0), Cell::new(0), Cell::new(0), Cell::new(0));
+    count_over_strategy(rule_case(), 512, |(body, rule)| {
+        if let Some(f) = drive_section_rule(&rule, &body, 0) {
+            compiled.set(compiled.get() + 1);
+            for c in codes(&f) {
+                match c {
+                    "MDATRON-E0120" => e0120.set(e0120.get() + 1),
+                    "MDATRON-E0121" => e0121.set(e0121.get() + 1),
+                    "MDATRON-E0122" => e0122.set(e0122.get() + 1),
+                    _ => {}
+                }
+            }
+        }
+    });
+    let (compiled, e0120, e0121, e0122) = (compiled.get(), e0120.get(), e0121.get(), e0122.get());
+    eprintln!("section rules over 512 cases: compiled {compiled}, E0120 {e0120}, E0121 {e0121}, E0122 {e0122}");
+    assert!(
+        compiled >= 256,
+        "most generated rules must compile (got {compiled}/512)"
+    );
+    assert!(
+        e0120 >= 10,
+        "the count arm must fail sometimes (E0120 {e0120})"
+    );
+    assert!(
+        e0121 >= 3,
+        "the disjoint comparison must find overlaps sometimes (E0121 {e0121})"
+    );
+    assert!(
+        e0122 >= 10,
+        "the section-not-found arm must run too (E0122 {e0122})"
+    );
+}
+
+#[test]
+fn reach_strategy_vocabulary_hits_reserved_anti_pattern_and_numeric_arms() {
+    use std::cell::Cell;
+    let (e0092, e0093, e0094) = (Cell::new(0), Cell::new(0), Cell::new(0));
+    count_over_strategy(
+        (sectioned_body(), frontmatter_value()),
+        512,
+        |(body, fm)| {
+            for c in codes(&drive_vocabulary_scan(&body, 0, fm.as_ref(), true)) {
+                match c {
+                    "MDATRON-E0092" => e0092.set(e0092.get() + 1),
+                    "MDATRON-E0093" => e0093.set(e0093.get() + 1),
+                    "MDATRON-E0094" => e0094.set(e0094.get() + 1),
+                    _ => {}
+                }
+            }
+        },
+    );
+    let (e0092, e0093, e0094) = (e0092.get(), e0093.get(), e0094.get());
+    eprintln!("vocabulary over 512 cases: E0092 {e0092}, E0093 {e0093}, E0094 {e0094}");
+    assert!(e0092 >= 20, "reserved spellings (E0092 {e0092})");
+    assert!(e0093 >= 20, "anti-patterns (E0093 {e0093})");
+    assert!(e0094 >= 5, "numeric-claim drift (E0094 {e0094})");
+}
+
+#[test]
+fn reach_strategy_snapshot_backed_scanners_resolve_targets_and_members() {
+    use std::cell::Cell;
+    // A marker line whose name IS a member yields no E0112; count lines that
+    // matched the first rule against the E0112s to show members resolve.
+    let (e0111, e0112, e0114, matched_members) =
+        (Cell::new(0), Cell::new(0), Cell::new(0), Cell::new(0));
+    let rule = &marker_rules()[0];
+    count_over_strategy(
+        (sectioned_body(), sectioned_body()),
+        48,
+        |(body, target)| {
+            let f = drive_snapshot_backed_scanners(&body, &target, false, 0);
+            let c = codes(&f);
+            let dead = c.iter().filter(|c| **c == "MDATRON-E0112").count();
+            let matched = body.lines().filter(|l| rule.pattern.is_match(l)).count();
+            if target.contains("## Members") && matched > dead {
+                matched_members.set(matched_members.get() + 1);
+            }
+            e0111.set(e0111.get() + c.iter().filter(|c| **c == "MDATRON-E0111").count());
+            e0112.set(e0112.get() + dead);
+            e0114.set(e0114.get() + c.iter().filter(|c| **c == "MDATRON-E0114").count());
+        },
+    );
+    let (e0111, e0112, e0114, matched_members) =
+        (e0111.get(), e0112.get(), e0114.get(), matched_members.get());
+    eprintln!("snapshot-backed over 48 cases: E0111 {e0111}, E0112 {e0112}, E0114 {e0114}, cases with a resolved member {matched_members}");
+    assert!(
+        e0111 >= 1,
+        "a cross-file dead anchor on a captured target (E0111 {e0111})"
+    );
+    assert!(
+        e0112 >= 1,
+        "a marker name that is not a member (E0112 {e0112})"
+    );
+    assert!(e0114 >= 1, "a target without the section (E0114 {e0114})");
+    assert!(
+        matched_members >= 1,
+        "a marker name that IS a member resolves (cases {matched_members})"
+    );
 }
 
 #[test]
@@ -968,11 +1240,7 @@ proptest! {
     }
 
     #[test]
-    fn prop_section_rules_never_panic(
-        body in sectioned_body(),
-        rule in section_rule(),
-        pick in any::<usize>(),
-    ) {
+    fn prop_section_rules_never_panic((body, rule) in rule_case(), pick in any::<usize>()) {
         drive_section_rule(&rule, &body, char_boundary(&body, pick));
     }
 
@@ -1001,6 +1269,11 @@ proptest! {
 fn prop_snapshot_backed_scanners_never_panic() {
     let config = ProptestConfig {
         cases: 32,
+        // The default shrink budget derives from `cases` (×4 = 128 iterations),
+        // which left seeded failures half-shrunk (round 2, MINOR-C); the pure
+        // properties get 4096 from PROPTEST_CASES=1024, so match that.
+        max_shrink_iters: 4096,
+        source_file: Some(file!()),
         ..ProptestConfig::default()
     };
     let mut runner = TestRunner::new(config);

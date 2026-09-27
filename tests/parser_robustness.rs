@@ -497,6 +497,10 @@ proptest! {
 fn prop_loaders_never_panic() {
     let config = ProptestConfig {
         cases: 24,
+        // The default shrink budget derives from `cases` (×4); keep the pure
+        // properties' budget so a failure shrinks to a legible minimum.
+        max_shrink_iters: 4096,
+        source_file: Some(file!()),
         ..ProptestConfig::default()
     };
     let mut runner = proptest::test_runner::TestRunner::new(config);
