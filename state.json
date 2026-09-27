@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1159,
-        "tip_oid": "d5afb345665a5e8a1950b05eb0046249c39e98db",
-        "prefix_sha256": "407b427ec24ea05bcbce94ef915b0bec6e4eef118581a5c92ef306f5b5f68c4a"
+        "sequence": 1160,
+        "tip_oid": "faf8b09ce063d67c566d90efe9d6f1c720856b8d",
+        "prefix_sha256": "56c187f51dbab7795eaaa9cbe1a0ee5e42cd557dd5d131b18cc1c07a125dc8bb"
       },
       "IMWa": {
         "sequence": 2,
@@ -3247,11 +3247,12 @@
       "uuid": "67a3e712-80ac-4942-b424-751fe00183d5",
       "display_id": 190,
       "title": "REPLACE docs/dependencies edge: typed frontmatter + dependency-record schema in .mdatron/schemas, agnosticism test shrinks to name<->dep bijection + gains orphan-record direction; fold docs/field-rename-ledger.md into DESIGN (post-cut; #187 addendum)",
-      "status": "open",
+      "status": "closed",
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-20T01:09:44.378006Z",
-      "updated_at": "2026-09-26T22:24:54.007285Z",
+      "updated_at": "2026-09-27T00:42:39.535440Z",
+      "closed_at": "2026-09-27T00:42:39.506818Z",
       "comments": {
         "35ea5424-40db-4a7b-8bee-39457ab6b88b": {
           "display_id": 579,
