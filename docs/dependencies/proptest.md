@@ -1,3 +1,12 @@
+---
+schema_class: dependency-record
+crate: proptest
+scope: dev
+version_req: "1"
+status: approved
+tracker: "#184"
+---
+
 # proptest
 
 **Status:** Approved (dev-dependency only — never in the shipped binary).

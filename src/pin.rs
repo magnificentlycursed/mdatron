@@ -53,7 +53,7 @@ struct RawPins {
 struct RawPin {
     /// The governing document attesting this pin (the route table's `governed_by`
     /// relation, one spelling). `governing` is the retired 0.6.0 key, accepted
-    /// as an alias; `pin --update` rewrites it (`docs/field-rename-ledger.md`).
+    /// as an alias; `pin --update` rewrites it (`DESIGN.md` § Input-field renames are aliased and ledgered).
     #[serde(alias = "governing")]
     governed_by: String,
     file: String,

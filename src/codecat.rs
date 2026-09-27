@@ -15,7 +15,7 @@
 //! resolver answers "does this token resolve?" the same way for every namespace.
 //!
 //! The legal token grammar is declared by the CATALOG, not the detector:
-//! [`candidate_tokens`] is deliberately BROADER than the grammar — the namespace
+//! `candidate_tokens` is deliberately BROADER than the grammar — the namespace
 //! prefix on a word boundary followed by an alphanumeric run that must contain a
 //! digit — so a mistyped or unknown class is still detected and caught as an
 //! orphan by the resolver rather than silently skipped (vsdd-cli#27's explicit

@@ -3,7 +3,8 @@
 //! Implemented: the pattern-file parser (`parser`), the expression parser
 //! (`expr_parser`) and evaluator (`expr`) with quantifiers (`every`, `some`, `in`),
 //! the value/collection builtins (`defined`, `count`, `len`, `union`, `intersect`,
-//! `difference`, `concat`, `join`), arithmetic and comparison, `let:` bindings,
+//! `difference`, `concat`, `join`), equality (`==`, `!=`) and boolean logic — no
+//! arithmetic and no ordered comparison, a deliberate narrowing — `let:` bindings,
 //! `{{expr}}` message interpolation, and the path-confined cross-file `key()` index
 //! (`index`). Scope is cross-file and registry validation; body-content extraction
 //! is out of scope (a ratified narrowing; expansion is gated on a falsifiability

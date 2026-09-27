@@ -5,6 +5,10 @@
 //! the project per `--files` globs, and applies the schema family (JSON Schema) + the rule DSL
 //! against every matched markdown file.
 
+// Test code opts out of the panic-path restriction lints ([lints.clippy],
+// #185); production code stays under them.
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used, clippy::panic))]
+
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
@@ -312,7 +316,24 @@ fn print_page(body: &str) -> ExitCode {
 /// clap's value_parser closes the topic set, so the match is total.
 fn cmd_docs(topic: &str) -> ExitCode {
     let body = match topic {
-        "limits" => include_str!("../docs/limits.md"),
+        // Rendered from the running binary's own catalog (#189): the printed
+        // table is the enforced values, never a hand-synced copy. A template
+        // that cannot carry the rendering is refused, not printed as if it
+        // could (the shipped test limits::docs_limits_page_is_rendered_from_
+        // shipped keeps that from ever being the packaged page).
+        "limits" => {
+            let template = include_str!("../docs/limits.md");
+            return match mdatron::limits::render_page(&mdatron::limits::SHIPPED, template) {
+                Ok(page) => print_page(&page),
+                Err(e) => {
+                    eprintln!(
+                        "error[MDATRON-E0080]: pipeline-orchestration-failure\n   = note: the \
+                         embedded limits page cannot carry its rendering: {e}"
+                    );
+                    ExitCode::from(2)
+                }
+            };
+        }
         "faq" => include_str!("../docs/faq.md"),
         "inputs" => include_str!("../docs/inputs.md"),
         _ => include_str!("../docs/dsl-reference.md"),
@@ -841,8 +862,8 @@ fn cmd_verify(
 
 fn print_finding(f: &Finding) {
     // Delegate to Finding::format_tty so the engine + CLI render TTY
-    // diagnostics through one code path. Per Phase 1a behavioral spec
-    // (vsdd-cli/docs/refactor/phase-2-mdatron-json/phase-1a-behavioral-spec.md).
+    // diagnostics through one code path (DESIGN.md § Diagnostics are a
+    // versioned contract: the three output forms render the same findings).
     eprintln!("{}", f.format_tty());
 }
 
@@ -989,8 +1010,15 @@ fn cmd_explain(code: Option<&str>, list: bool, json: bool, compact: bool) -> Exi
             }
         }
     }
-    // clap's `required_unless_present = "list"` guarantees a code here.
-    let code = code.expect("a code is required unless --list");
+    // clap's `required_unless_present = "list"` guarantees a code here; if the
+    // argument surface ever drifts, refuse legibly rather than panic.
+    let Some(code) = code else {
+        eprintln!(
+            "error[MDATRON-E0080]: pipeline-orchestration-failure\n   = note: explain needs a CODE \
+             argument unless --list is given"
+        );
+        return ExitCode::from(2);
+    };
     if compact {
         if let Some(line) = explain::lookup_compact(code) {
             return print_page(&format!("{line}\n"));

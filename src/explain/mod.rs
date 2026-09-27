@@ -1,10 +1,11 @@
 //! Embedded `mdatron explain CODE` catalog.
 //!
-//! v0.1.x catalog: MDATRON-E0001, E0002, E0010, E0011, E0012, E0050, E0060, E0070,
-//! E0080, W0040; schema-load family E0040; route family E0030, E0031, E0032, W0041; pin family E0061, E0062, E0063, W0042, L0001; vocabulary family E0090-E0094; citation family E0100, E0101; link family E0110, E0111; marker family E0112, E0114; code-catalog family E0113; section-structural family E0120, E0121, E0122; DSL rule field-reference validation E0021. The catalog grows by one entry per newly-emitted code per the
-//! Phase 0 DESIGN open question #2 SO disposition (2026-06-02); the
-//! path-confinement trio (E0010/E0011/E0012) landed with the confinement
-//! rework (the path-confinement defect issue in this tracker).
+//! One page per emitted code (`DESIGN.md` § Diagnostics are a versioned
+//! contract: every emitted code has an explain page, and the catalog grows one
+//! entry per emitted code with no seeded-count targets). Coverage is enforced
+//! rather than listed here: every code the engine emits resolves to a page, and
+//! every page's summary matches what the engine emits (the catalog tripwires in
+//! `tests/phase_1_contracts.rs` and this module).
 //!
 //! Pages are author-Markdown with four required structural elements per the
 //! Phase 1a behavioral spec:
@@ -712,7 +713,9 @@ mod tests {
     }
 
     // CONTRACT-STABILITY TRIPWIRE (#90): every MDATRON-* code literal in
-    // PRODUCTION source (the region before the file's `#[cfg(test)]` module)
+    // PRODUCTION source (the region before the file's test MODULE, per
+    // `codes::production_region` — not its first `#[cfg(test)]` item, which
+    // blinded this tripwire to verify.rs; L3 cold review MAJOR-1)
     // resolves in the explain catalog. Emitting or referencing a code without
     // a page fails here — the "every emitted code resolves in explain" criterion
     // (DESIGN § Diagnostics are a versioned contract).
@@ -731,7 +734,8 @@ mod tests {
             }
             let content = std::fs::read_to_string(&f).unwrap_or_default();
             // Production region only: test fixtures use non-emitted codes.
-            let prod = content.split("#[cfg(test)]").next().unwrap_or(&content);
+            let prod = mdatron::codes::production_region(&content)
+                .unwrap_or_else(|e| panic!("{}: {e}", f.display()));
             for code in mdatron_codes_in(prod) {
                 if lookup(&code).is_none() {
                     missing.push((f.display().to_string(), code));

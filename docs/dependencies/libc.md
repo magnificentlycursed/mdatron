@@ -1,3 +1,12 @@
+---
+schema_class: dependency-record
+crate: libc
+scope: unix
+version_req: "0.2"
+status: approved
+tracker: "#64"
+---
+
 # libc
 
 **Status:** Approved.

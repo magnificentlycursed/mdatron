@@ -41,6 +41,10 @@ fn citations(content: &str, body_offset: usize) -> Vec<Citation<'_>> {
     // branch's class and is still confinement-refused).
     // Compiled once: this extraction runs twice per opted-in file (discovery +
     // check), so a per-call compile would tax the hot path (phase-3 I-6).
+    #[allow(
+        clippy::expect_used,
+        reason = "an engine literal; a compile failure is a build defect, pinned by the unit tests"
+    )]
     static DETECTOR: std::sync::LazyLock<regex_lite::Regex> = std::sync::LazyLock::new(|| {
         regex_lite::Regex::new(
             r"((?:\.\./)+[A-Za-z0-9_/.-]*\.[A-Za-z][A-Za-z0-9]{0,7}|/[A-Za-z0-9_][A-Za-z0-9_/.-]*\.[A-Za-z][A-Za-z0-9]{0,7}|\b[A-Za-z0-9_][A-Za-z0-9_/.-]*\.[A-Za-z][A-Za-z0-9]{0,7}):([0-9]{1,6})(?:-([0-9]{1,6}))?",
@@ -52,7 +56,11 @@ fn citations(content: &str, body_offset: usize) -> Vec<Citation<'_>> {
     let body = &content[body_offset..];
     let mut out = Vec::new();
     for caps in detector.captures_iter(body) {
-        let whole = caps.get(0).expect("match exists");
+        // Group 0 is the whole match and group 1 is unconditional in the
+        // pattern; `else continue` states that without a panic path.
+        let (Some(whole), Some(cited)) = (caps.get(0), caps.get(1)) else {
+            continue;
+        };
         // URL guard: a token whose match begins right after `/` or `:` is a
         // URL tail (http://x.md:1), not a citation.
         let prefix = &body[..whole.start()];
@@ -61,7 +69,7 @@ fn citations(content: &str, body_offset: usize) -> Vec<Citation<'_>> {
         }
         out.push(Citation {
             token: whole.as_str().to_string(),
-            cited_path: caps.get(1).expect("path group").as_str(),
+            cited_path: cited.as_str(),
             start_line: caps
                 .get(2)
                 .and_then(|m| m.as_str().parse().ok())

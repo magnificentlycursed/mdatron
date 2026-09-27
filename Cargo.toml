@@ -24,11 +24,12 @@ include = [
     "DESIGN.md",
     "LICENSE",
     "docs/dsl-reference.md",
-    # docs/limits.md is REQUIRED by a shipped test (limits::docs_limits_table_
-    # matches_shipped reads it via CARGO_MANIFEST_DIR), so `cargo test` from the
-    # published crate fails without it — and it is the operator rendering of the
-    # declared-limits catalog anyway (GH #48 lane E). CI's package-rehearsal
-    # step asserts its presence in the payload.
+    # docs/limits.md is REQUIRED by a shipped test (limits::docs_limits_page_
+    # is_rendered_from_shipped reads it via CARGO_MANIFEST_DIR), so `cargo test`
+    # from the published crate fails without it — and it is the operator
+    # rendering of the declared-limits catalog anyway (GH #48 lane E; rendered
+    # from the catalog since #189). CI's package-rehearsal step asserts its
+    # presence in the payload.
     "docs/limits.md",
     "docs/dependencies/*.md",
     # Prior-art comparisons + influences (#187): crates.io-reader material,
@@ -110,3 +111,17 @@ windows-sys = { version = "0.61", features = [
 # do not want: an abort inside a property must fail the harness loudly, not be
 # absorbed by a forked child. See docs/dependencies/proptest.md.
 proptest = { version = "1", default-features = false, features = ["std"] }
+
+# The project's panic-path restriction lints (GH #52 nit, #185): production
+# code reaches for `?` and a named error, never `unwrap`/`expect`/`panic!`. The
+# four engine-literal regex compiles carry a reasoned `allow`; test code opts
+# out at each crate root (`cfg_attr(test, allow(..))` in lib.rs/main.rs, an
+# inner `#![allow]` in each tests/*.rs) — in a test, an unwrap IS the assertion.
+# CI runs clippy with `-D warnings`, which makes these hard gates.
+[lints.clippy]
+unwrap_used = "warn"
+expect_used = "warn"
+panic = "warn"
+# `unreachable!` is a panic path too; the three invariant arms that keep it
+# carry a reasoned `allow` naming the invariant.
+unreachable = "warn"

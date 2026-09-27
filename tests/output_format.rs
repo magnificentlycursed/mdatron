@@ -1,6 +1,10 @@
+// Test code: an unwrap IS the assertion — opt out of the [lints.clippy]
+// panic-path restrictions production code is held to (#185).
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
 //! Integration tests for `mdatron verify --json` against the output-format
 //! contract documented at
-//! `vsdd-cli/docs/refactor/phase-0-output-format/DESIGN.md`.
+//! `DESIGN.md` § Diagnostics are a versioned contract (the envelope contract).
 //!
 //! Three test groupings:
 //!   1. Output shape — top-level fields, output version, finding structure
@@ -1059,6 +1063,16 @@ fn unknown_flag_is_rejected() {
 fn mdatron_source_never_emits_vsdd_code_prefix() {
     // Lint-style fixture: grep the mdatron source for the literal string
     // "VSDD-E" as a quoted literal. mdatron MUST NOT emit VSDD-Exxxx codes.
+    //
+    // Scope (#185, GH #52 nit — the control's reach was unknowable from the
+    // repo): the PRODUCTION region of every src/**/*.rs, as
+    // `mdatron::codes::production_region` defines it — the text before the
+    // file's test MODULE, not before its first `#[cfg(test)]` item (L3 cold
+    // review MAJOR-1: verify.rs opens a test-only fn early, and a first-cfg
+    // cut scanned none of its emitted codes). A unit test may legitimately
+    // name a foreign code to assert it is NOT an mdatron code (codes.rs does);
+    // what this guards is the engine emitting one. Doc comments and unquoted
+    // prose are not string literals and are not scanned.
     use std::collections::HashSet;
 
     // Single-crate layout (#81): CARGO_MANIFEST_DIR is the repo root.
@@ -1077,7 +1091,9 @@ fn mdatron_source_never_emits_vsdd_code_prefix() {
                 continue;
             }
             let content = fs::read_to_string(&entry).unwrap_or_default();
-            if content.contains("\"VSDD-E") || content.contains("\"VSDD-W") {
+            let production = mdatron::codes::production_region(&content)
+                .unwrap_or_else(|e| panic!("{}: {e}", entry.display()));
+            if production.contains("\"VSDD-E") || production.contains("\"VSDD-W") {
                 offenders.push(entry.display().to_string());
             }
         }

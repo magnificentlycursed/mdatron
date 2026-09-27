@@ -152,7 +152,7 @@ const SPLIT_SET: &[char] = &[
 /// Render adopter-derived `content` as a prefix-marked quoted region.
 ///
 /// The rendering alphabet is a partition (`DESIGN.md` § Agents are the first consumer): the **split
-/// set** ([`SPLIT_SET`]) is consumed as line breaks and each resulting line is
+/// set** (`SPLIT_SET`) is consumed as line breaks and each resulting line is
 /// prefixed; the **escape set** — the remaining control characters (`Cc`,
 /// including FS/GS/RS which some consumers split on) — renders as inert visible
 /// `\xNN` escapes. Every line, including an empty one produced by adjacent
@@ -268,8 +268,9 @@ const TTY_QUOTE_PREFIX: &str = "           > ";
 
 /// Compact per-finding size limit in bytes — a CONTRACT limit, not a band from
 /// actuals (`DESIGN.md` § Agents are the first consumer; number ratified 2026-07-25, #80 D4). A
-/// compact finding exceeding it is a falsifier.
-pub const COMPACT_FINDING_LIMIT: usize = 512;
+/// compact finding exceeding it is a falsifier. Declared in the limits
+/// catalog with the input bounds (#189), so `docs/limits.md` renders it.
+pub const COMPACT_FINDING_LIMIT: usize = crate::limits::SHIPPED.compact_finding_bytes;
 
 /// Compact quote prefix: minimal marking, same no-forgeable-end-of-quote
 /// property as the TTY form.
@@ -298,8 +299,8 @@ pub struct Finding {
 
 impl Finding {
     /// Render the finding in rustc-style TTY format. Single source of truth
-    /// for TTY rendering across the engine + CLI per
-    /// `vsdd-cli/docs/refactor/phase-2-mdatron-json/phase-1a-behavioral-spec.md`.
+    /// for TTY rendering across the engine + CLI (`DESIGN.md` § Diagnostics are
+    /// a versioned contract: the three output forms render the same findings).
     ///
     /// Output structure (matches rustc / clippy convention):
     /// - Line 1: `<severity_label>[<code>]: <summary>`

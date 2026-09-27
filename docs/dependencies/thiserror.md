@@ -1,3 +1,11 @@
+---
+schema_class: dependency-record
+crate: thiserror
+scope: runtime
+version_req: "1"
+status: approved
+---
+
 # thiserror
 
 **Status:** Approved.

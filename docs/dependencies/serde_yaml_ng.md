@@ -1,3 +1,12 @@
+---
+schema_class: dependency-record
+crate: serde_yaml_ng
+scope: runtime
+version_req: "0.10"
+status: approved
+tracker: "#69"
+---
+
 # serde_yaml_ng
 
 **Status:** Approved.

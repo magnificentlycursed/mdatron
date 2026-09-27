@@ -1,8 +1,12 @@
+// Test code: an unwrap IS the assertion — opt out of the [lints.clippy]
+// panic-path restrictions production code is held to (#185).
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
 //! Agnosticism-audit residuals (#91; `DESIGN.md` § Validation is data-driven,
 //! the Agnosticism-audit acceptance cluster). Four mechanized criteria:
 //! the methodology-vocabulary denylist over engine-authored strings, the
-//! dependency-manifest allowlist, the no-adopter-data run (families inactive
-//! and reported), and the symlink-cycle bounded extras scan.
+//! dependency-record ↔ manifest bijection (#190), the no-adopter-data run
+//! (families inactive and reported), and the symlink-cycle bounded extras scan.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -25,8 +29,9 @@ fn rs_files(dir: &Path, out: &mut Vec<PathBuf>) {
 // ── 1. Methodology-vocabulary denylist ──────────────────────────────────────
 //
 // No methodology CONCEPT appears in engine-authored text: production source
-// (the region before each file's `#[cfg(test)]` module — fixtures legally use
-// methodology-shaped field names) and the engine-authored explain pages. The
+// (the region before each file's test MODULE per `codes::production_region` —
+// fixtures legally use methodology-shaped field names) and the engine-authored
+// explain pages. The
 // adopter name "vsdd" is NOT on the denylist: DESIGN permits naming vsdd as an
 // adopter. The denylist is the methodology's own vocabulary, which the engine
 // must never know.
@@ -51,7 +56,10 @@ fn engine_authored_text_is_methodology_free() {
     rs_files(&repo().join("src"), &mut files);
     for f in files {
         let content = fs::read_to_string(&f).unwrap_or_default();
-        let prod = normalize(content.split("#[cfg(test)]").next().unwrap_or(&content));
+        let prod = normalize(
+            mdatron::codes::production_region(&content)
+                .unwrap_or_else(|e| panic!("{}: {e}", f.display())),
+        );
         for term in DENYLIST {
             if prod.contains(term) {
                 offenders.push(format!("{}: '{term}'", f.display()));
@@ -77,47 +85,157 @@ fn engine_authored_text_is_methodology_free() {
     );
 }
 
-// ── 2. Dependency-manifest allowlist ────────────────────────────────────────
+// ── 2. Dependency records ↔ Cargo.toml bijection ─────────────────────────────
 //
-// Every dependency in Cargo.toml has an investigation record under
-// docs/dependencies/ (the VSDD-E0100 dependency-approval discipline). The
-// consume graph is auditable against the allowlist.
+// Every dependency in Cargo.toml has a typed investigation record under
+// docs/dependencies/<crate>.md, and every record names a current dependency
+// (#190: the orphan direction the old one-way allowlist check lacked). The
+// record's frontmatter is the typed edge — `crate` equals the file stem,
+// `scope` names the declaring Cargo table, `version_req` is Cargo's requirement
+// string verbatim. Its SHAPE is the schema family's job
+// (.mdatron/schemas/dependency-record.json, run by mdatron's own
+// self-verification); this test holds the two sides in AGREEMENT, which no
+// schema can. The consume graph stays auditable against the record set.
 #[test]
-fn every_dependency_has_an_investigation_record() {
+fn dependency_records_and_cargo_manifest_are_in_bijection() {
+    use std::collections::BTreeMap;
+
+    // name -> (scope, version requirement), from every dependency table.
     let cargo = fs::read_to_string(repo().join("Cargo.toml")).unwrap();
-    // Collect dep names from every `[*dependencies*]` table.
-    let mut deps: Vec<String> = Vec::new();
-    let mut in_deps = false;
+    let mut deps: BTreeMap<String, (String, String)> = BTreeMap::new();
+    let mut scope: Option<&str> = None;
     for line in cargo.lines() {
         let t = line.trim();
         if t.starts_with('[') && t.ends_with(']') {
-            in_deps = t.contains("dependencies");
+            scope = match t {
+                "[dependencies]" => Some("runtime"),
+                "[dev-dependencies]" => Some("dev"),
+                "[target.'cfg(unix)'.dependencies]" => Some("unix"),
+                "[target.'cfg(windows)'.dependencies]" => Some("windows"),
+                other
+                    if other.starts_with("[dependencies.")
+                        || other.starts_with("[dev-dependencies.")
+                        || (other.starts_with("[target.") && other.contains(".dependencies.")) =>
+                {
+                    panic!("Cargo.toml declares a dependency as its own table {other}; this test reads the inline `name = …` form under a dependency table — declare it inline")
+                }
+                other if other.contains("dependencies") => {
+                    panic!("Cargo.toml table {other} has no record scope name; teach this test and the dependency-record schema its scope")
+                }
+                _ => None,
+            };
             continue;
         }
-        if !in_deps || t.is_empty() || t.starts_with('#') {
+        let Some(scope) = scope else { continue };
+        if t.is_empty() || t.starts_with('#') {
             continue;
         }
-        if let Some((name, _)) = t.split_once('=') {
-            deps.push(name.trim().trim_matches('"').to_string());
+        let Some((name, spec)) = t.split_once('=') else {
+            continue;
+        };
+        let name = name.trim().trim_matches('"');
+        if name.contains(' ') || name.contains('"') {
+            // A continuation line of a multi-line spec (`features = [`), not a key.
+            continue;
         }
+        let spec = spec.trim();
+        let version = if let Some(inline) = spec.strip_prefix('{') {
+            // The `version` KEY (at a key boundary: table start, `,` or space
+            // before it, `=` after it — not the substring inside `package =
+            // "foo-version"`), whatever the spacing around `=`.
+            inline
+                .match_indices("version")
+                .find_map(|(i, _)| {
+                    let boundary = i == 0
+                        || inline[..i].ends_with([',', ' ', '\t']);
+                    let rest = inline[i + "version".len()..].trim_start();
+                    (boundary && rest.starts_with('=') && !rest.starts_with("=="))
+                        .then(|| rest[1..].trim_start())
+                })
+                .and_then(|rest| rest.strip_prefix('"'))
+                .and_then(|rest| rest.split_once('"'))
+                .map(|(v, _)| v.to_string())
+                .unwrap_or_else(|| {
+                    panic!("dependency {name}: inline table {spec:?} carries no `version = \"…\"` (a git or path dependency has no version requirement for a record to mirror)")
+                })
+        } else {
+            spec.trim_matches('"').to_string()
+        };
+        assert!(
+            deps.insert(name.to_string(), (scope.to_string(), version))
+                .is_none(),
+            "dependency {name} is declared twice"
+        );
     }
     assert!(!deps.is_empty(), "parsed no dependencies");
 
-    let records: std::collections::HashSet<String> = fs::read_dir(repo().join("docs/dependencies"))
+    // stem -> (crate, scope, version_req) from each record's frontmatter.
+    let mut records: BTreeMap<String, (String, String, String)> = BTreeMap::new();
+    for e in fs::read_dir(repo().join("docs/dependencies"))
         .unwrap()
         .flatten()
-        .filter_map(|e| {
-            e.path()
-                .file_stem()
-                .and_then(|s| s.to_str())
-                .map(str::to_string)
-        })
-        .collect();
+    {
+        let path = e.path();
+        // Only markdown records are records (a Finder `.DS_Store` is not an
+        // orphan; the route's naming grammar governs what else may live here).
+        if path.extension().and_then(|s| s.to_str()) != Some("md") {
+            continue;
+        }
+        let stem = path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap()
+            .to_string();
+        let content = fs::read_to_string(&path).unwrap();
+        let (fm, _) = mdatron::frontmatter::parse(&content)
+            .unwrap_or_else(|err| panic!("{}: malformed frontmatter: {err}", path.display()))
+            .unwrap_or_else(|| {
+                panic!(
+                    "{}: no frontmatter block (the typed record is the edge)",
+                    path.display()
+                )
+            });
+        let field = |key: &str| {
+            fm.get(key)
+                .and_then(|v| v.as_str())
+                .unwrap_or_else(|| panic!("{}: frontmatter lacks a string `{key}`", path.display()))
+                .to_string()
+        };
+        records.insert(stem, (field("crate"), field("scope"), field("version_req")));
+    }
 
-    let missing: Vec<&String> = deps.iter().filter(|d| !records.contains(*d)).collect();
+    let mut defects: Vec<String> = Vec::new();
+    for (name, (scope, version)) in &deps {
+        match records.get(name) {
+            None => defects.push(format!(
+                "dependency `{name}` has no docs/dependencies/{name}.md record"
+            )),
+            Some((krate, rscope, rversion)) => {
+                if krate != name {
+                    defects.push(format!(
+                        "docs/dependencies/{name}.md names crate `{krate}`, not its stem"
+                    ));
+                }
+                if rscope != scope {
+                    defects.push(format!("docs/dependencies/{name}.md says scope `{rscope}`; Cargo.toml declares it under `{scope}`"));
+                }
+                if rversion != version {
+                    defects.push(format!("docs/dependencies/{name}.md says version_req \"{rversion}\"; Cargo.toml requires \"{version}\""));
+                }
+            }
+        }
+    }
+    for stem in records.keys() {
+        if !deps.contains_key(stem) {
+            defects.push(format!(
+                "docs/dependencies/{stem}.md is an orphan record: no such dependency in Cargo.toml"
+            ));
+        }
+    }
     assert!(
-        missing.is_empty(),
-        "dependencies without a docs/dependencies/<crate>.md record: {missing:?}"
+        defects.is_empty(),
+        "dependency records and Cargo.toml disagree:\n  {}",
+        defects.join("\n  ")
     );
 }
 

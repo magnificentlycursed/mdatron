@@ -23,3 +23,8 @@ vocabulary_globs:
   - "DESIGN.md"
   - "README.md"
   - "docs/**/*.md"
+# Dependency records carry typed frontmatter (#190): a record without it is
+# W0040-loud here rather than silently untyped, and the agnosticism suite's
+# bijection test is the hard gate (no frontmatter, no record).
+require_frontmatter:
+  - "docs/dependencies/*.md"

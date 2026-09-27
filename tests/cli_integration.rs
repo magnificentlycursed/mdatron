@@ -1,3 +1,7 @@
+// Test code: an unwrap IS the assertion — opt out of the [lints.clippy]
+// panic-path restrictions production code is held to (#185).
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
 //! CLI integration tests for Phase 2 of the binary-first refactor
 //! (crosslink #13). Covers the operator-facing CLI surfaces added in
 //! Phase 2 — `mdatron explain CODE` against the v0.1.0 embedded catalog,
@@ -7,7 +11,7 @@
 //! row 3 that `tests/output_format.rs` did not yet exercise.
 //!
 //! Specification anchor:
-//!   vsdd-cli/docs/refactor/phase-2-mdatron-json/phase-1c-decomposition.md
+//!   DESIGN.md § Diagnostics are a versioned contract (exit codes and streams)
 //!
 //! Test groups (mirroring the Phase 1c Red Gate seeds):
 //!   1. `--json` finalization — the rendered `= explain:` line

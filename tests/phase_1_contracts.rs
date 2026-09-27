@@ -1,8 +1,12 @@
+// Test code: an unwrap IS the assertion — opt out of the [lints.clippy]
+// panic-path restrictions production code is held to (#185).
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
 //! Phase 2a Red Gate for crosslink #12 (codes + DSL Field + defined() fixes).
 //!
 //! Tests fail by default; Phase 2b implementation turns each green. Each
 //! grouping below corresponds to one of the three changes documented in
-//! `vsdd-cli/docs/refactor/phase-1-codes-and-dsl/DESIGN.md`.
+//! `DESIGN.md` § Diagnostics are a versioned contract (the reserved code ranges).
 
 use mdatron::codes::is_reserved_mdatron_code;
 use mdatron::dsl::{evaluate, EvalContext, EvalError, Expr, Value, VarRef};

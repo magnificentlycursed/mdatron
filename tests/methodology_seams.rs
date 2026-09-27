@@ -1,3 +1,7 @@
+// Test code: an unwrap IS the assertion — opt out of the [lints.clippy]
+// panic-path restrictions production code is held to (#185).
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
 //! Methodology-enforcement seams: regression seeds proving each bound seam
 //! catches its escape-corpus dodge (#96; `docs/methodology-enforcement.md`).
 //! "If your seams don't catch each, they're insufficient."

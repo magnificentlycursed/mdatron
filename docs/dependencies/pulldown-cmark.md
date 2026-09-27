@@ -1,3 +1,12 @@
+---
+schema_class: dependency-record
+crate: pulldown-cmark
+scope: runtime
+version_req: "0.13.4"
+status: approved
+tracker: "#155"
+---
+
 # pulldown-cmark
 
 **Status:** Approved. Adopted for the link-check family, 2026-08-02, after a comparative architecture review against lychee (the mature Rust link checker).

@@ -1,3 +1,11 @@
+---
+schema_class: dependency-record
+crate: serde_json
+scope: runtime
+version_req: "1"
+status: approved
+---
+
 # serde_json
 
 **Status:** Approved.

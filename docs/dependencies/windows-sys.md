@@ -1,3 +1,12 @@
+---
+schema_class: dependency-record
+crate: windows-sys
+scope: windows
+version_req: "0.61"
+status: approved
+tracker: "#64"
+---
+
 # windows-sys
 
 **Status:** Approved (ratified by the operator 2026-09-24, #64 — the record

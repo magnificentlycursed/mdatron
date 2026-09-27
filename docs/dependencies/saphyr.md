@@ -1,3 +1,12 @@
+---
+schema_class: dependency-record
+crate: saphyr
+scope: runtime
+version_req: "0.0.11"
+status: approved
+tracker: "#65"
+---
+
 # saphyr
 
 **Status:** Approved.

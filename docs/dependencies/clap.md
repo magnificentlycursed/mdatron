@@ -1,3 +1,11 @@
+---
+schema_class: dependency-record
+crate: clap
+scope: runtime
+version_req: "4.5"
+status: approved
+---
+
 # clap
 
 **Status:** Approved.

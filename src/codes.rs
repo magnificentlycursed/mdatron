@@ -11,13 +11,9 @@
 
 /// Returns true if `code` is a syntactically valid mdatron-reserved code.
 ///
-/// **Stability: unstable at v0.1.x.** This function is `pub` to enable the
-/// cross-crate reserved-range enforcement check at
-/// `tests/phase_1_contracts.rs`, but is NOT part of the stable
-/// public API. External crates should not depend on this surface; it may
-/// move, rename, or change signature at any v0.1.x release. Per crosslink
-/// #12 PE/F6 (revisit at v0.2). After binary-first Phase 4 collapses the
-/// workspace, this becomes a `pub(crate)` test-only helper.
+/// `pub` only so the integration-test crate (`tests/phase_1_contracts.rs`,
+/// the reserved-range enforcement check) can call it; the lib is not a public
+/// API (`lib.rs`), so this carries no stability promise.
 ///
 /// Reserved ranges (phase-1b catalog, ratified 2026-07-21, issue #50):
 /// - `MDATRON-E0001` — `E0009` Frontmatter parsing failures
@@ -82,6 +78,98 @@ pub fn is_reserved_mdatron_code(code: &str) -> bool {
     }
 }
 
+/// The PRODUCTION region of a Rust source file, for the code-discipline
+/// controls (the namespace-separation check, the every-code-resolves-in-explain
+/// tripwire, the methodology denylist): the text before the file's INLINE
+/// unit-test module — a line opening with `#[cfg(test)]` whose item, after any
+/// further attributes, `//` comments and a `pub`/`pub(...)` qualifier, is
+/// `mod <name> {`. Everything else is production: a `#[cfg(test)]` on a lone
+/// item (a test-only helper fn, an inline block) — cutting at the first
+/// `#[cfg(test)]` of any kind blinded the controls to everything after such an
+/// item, none of verify.rs's emitted codes were being scanned (L3 cold review,
+/// MAJOR-1); a `mod tests;` FILE module, which removes nothing from this file
+/// (round 2, MINOR-A); a marker that is not the first token on its line, as in
+/// a comment or a string. A file with no inline test module is scanned whole.
+/// `Err` when a file carries two: the region is then undefined and the caller
+/// must not guess.
+///
+/// The heuristic's boundary: only the bare `#[cfg(test)]` spelling is a
+/// module marker; a combined `#[cfg(all(test, …))]` module is scanned as
+/// production — the loud direction (a false positive, never a blind spot).
+///
+/// `pub` for the integration-test crates, like [`is_reserved_mdatron_code`].
+pub fn production_region(source: &str) -> Result<&str, String> {
+    const MARKER: &str = "#[cfg(test)]";
+    let mut cut: Option<usize> = None;
+    let mut line_start = 0;
+    for line in source.split_inclusive('\n') {
+        let at = line_start;
+        line_start += line.len();
+        let indent = line.len() - line.trim_start().len();
+        if !line[indent..].starts_with(MARKER) {
+            continue;
+        }
+        let marker_at = at + indent;
+        let mut rest = source[marker_at + MARKER.len()..].trim_start();
+        loop {
+            if rest.starts_with("#[") {
+                rest = skip_attribute(rest).trim_start();
+            } else if rest.starts_with("//") {
+                rest = rest.split_once('\n').map_or("", |(_, r)| r).trim_start();
+            } else {
+                break;
+            }
+        }
+        if let Some(after_pub) = rest.strip_prefix("pub") {
+            rest = if after_pub.starts_with('(') {
+                after_pub.split_once(')').map_or("", |(_, r)| r)
+            } else {
+                after_pub
+            }
+            .trim_start();
+        }
+        let Some(tail) = rest.strip_prefix("mod") else {
+            continue;
+        };
+        if !tail.starts_with(char::is_whitespace) {
+            continue;
+        }
+        let after_name = tail
+            .trim_start()
+            .trim_start_matches(|c: char| c.is_alphanumeric() || c == '_')
+            .trim_start();
+        if !after_name.starts_with('{') {
+            continue; // `mod tests;` declares a file module: nothing here is test code
+        }
+        if let Some(first) = cut {
+            return Err(format!(
+                "two inline test modules (byte offsets {first} and {marker_at}); the production region is undefined"
+            ));
+        }
+        cut = Some(marker_at);
+    }
+    Ok(cut.map_or(source, |c| &source[..c]))
+}
+
+/// The text after one `#[…]` attribute that opens `s`, brackets balanced (so a
+/// `]` inside the attribute, as in `#[doc = "x[y]"]`, does not end it early).
+fn skip_attribute(s: &str) -> &str {
+    let mut depth = 0usize;
+    for (i, c) in s.char_indices() {
+        match c {
+            '[' => depth += 1,
+            ']' => {
+                depth = depth.saturating_sub(1);
+                if depth == 0 {
+                    return &s[i + 1..];
+                }
+            }
+            _ => {}
+        }
+    }
+    ""
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -130,12 +218,70 @@ mod tests {
         assert!(is_reserved_mdatron_code("MDATRON-E0110")); // link (#145)
     }
 
+    // MAJOR-1 regression: an early `#[cfg(test)]` on a lone item must not end
+    // the production region; only the test MODULE does.
+    #[test]
+    fn production_region_cuts_at_the_test_module_not_the_first_cfg_test() {
+        let cfg = "#[cfg(test)]";
+        let src = format!(
+            "fn a() {{}}\n{cfg}\nfn helper() {{}}\npub const LEAK: &str = \"after the helper\";\n\
+             {cfg} {{ inline_block(); }}\nfn b() {{}}\n{cfg}\n#[allow(dead_code)]\nmod tests {{\n    \
+             const IN_TESTS: &str = \"not production\";\n}}\n"
+        );
+        let prod = production_region(&src).unwrap();
+        assert!(prod.contains("after the helper"), "{prod}");
+        assert!(prod.contains("fn b()"));
+        assert!(!prod.contains("not production"));
+        assert!(prod.ends_with("fn b() {}\n"), "{prod:?}");
+
+        // No test module: the whole file is production.
+        let src = format!("fn a() {{}}\n{cfg}\nfn helper() {{}}\nconst X: &str = \"x\";\n");
+        assert_eq!(production_region(&src).unwrap(), src);
+
+        // A test-only `modern_thing` fn is not a module.
+        let src = format!("{cfg}\nfn modern() {{}}\nconst X: &str = \"x\";\n");
+        assert_eq!(production_region(&src).unwrap(), src);
+
+        // Two inline test modules: undefined, refused.
+        let src = format!("{cfg}\nmod tests {{}}\nfn c() {{}}\n{cfg}\nmod more_tests {{}}\n");
+        assert!(production_region(&src).is_err());
+
+        // Round-2 MINOR-A: a FILE module (`mod tests;`) removes nothing from
+        // this file — the whole file stays production; and a marker that is
+        // not the first token on its line (a comment, a string) is no marker.
+        let src = format!("{cfg}\nmod tests;\nconst X: &str = \"x\";\n");
+        assert_eq!(production_region(&src).unwrap(), src);
+        let src = format!(
+            "// TODO: move these into a {cfg} mod tests later\nconst X: &str = \"x\";\n\
+             const S: &str = \"{cfg} mod tests {{\";\nfn f() {{}}\n"
+        );
+        assert_eq!(production_region(&src).unwrap(), src);
+
+        // Round-2 NIT-D: a `pub(crate)` module, `//` comments and an attribute
+        // with `]` inside between the cfg and the item are still the module.
+        let src = format!(
+            "fn a() {{}}\n{cfg}\n// why this module exists\n#[doc = \"x[y]\"]\n\
+             pub(crate) mod test_support {{ const T: &str = \"t\"; }}\n"
+        );
+        assert_eq!(production_region(&src).unwrap(), "fn a() {}\n");
+        let src = format!("{cfg} pub mod tests {{}}\n");
+        assert_eq!(production_region(&src).unwrap(), "");
+
+        // This very file: the region ends before its own test module.
+        let me = std::fs::read_to_string(file!()).unwrap();
+        let prod = production_region(&me).unwrap();
+        assert!(prod.contains("pub fn production_region"));
+        assert!(!prod.contains("fn production_region_cuts_at_the_test_module"));
+    }
+
     #[test]
     fn other_prefixes_are_not_mdatron_codes() {
-        // Constructed at runtime to avoid a literal "VSDD-" prefix in source,
-        // which would trip the cross-repo namespace-separation lint.
-        let other_namespace_code = format!("{}{}-E0001", "VS", "DD");
-        assert!(!is_reserved_mdatron_code(&other_namespace_code));
+        // An adopter namespace: the engine knows it only as code-catalog data,
+        // never as a reserved range. Naming the code here is legal — the
+        // namespace-separation control (tests/output_format.rs::
+        // mdatron_source_never_emits_vsdd_code_prefix) scans PRODUCTION
+        // regions for emitted literals, not test modules (#185).
+        assert!(!is_reserved_mdatron_code("VSDD-E0001"));
     }
 
     #[test]
