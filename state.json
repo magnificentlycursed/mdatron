@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1170,
-        "tip_oid": "665048c90cd99298991f35fa8f242cc19b07371e",
-        "prefix_sha256": "f688e5fe1bc89612c8aaeef159469fc5fdce94af55414b92b3a12b076a8234e0"
+        "sequence": 1171,
+        "tip_oid": "7cab261051b4e5f3051100eaf363eda2385f2d2b",
+        "prefix_sha256": "ede85631cc6987d8291acb83d426353594ed7e62476369cfef2f6cb08b16918e"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 205,
-  "next_comment_id": 590,
+  "next_comment_id": 591,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "03beb708-b15d-4522-950e-3fdaa3a3d16b": 196,
@@ -1428,7 +1428,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-20T01:30:54.698406Z",
-      "updated_at": "2026-09-27T02:43:56.091410Z",
+      "updated_at": "2026-09-27T02:46:13.164754Z",
       "comments": {
         "10f06006-f7bf-4d32-8c20-9c89920dfdc7": {
           "display_id": 588,
@@ -1438,6 +1438,15 @@
           "kind": "observation",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABARWB16m3q+3oY/o2e4DD4hFiqW2tI/ahhZFSwCJTLkGMmVc2DAfNkUYZFGzcX333Ec/jcgINj+PO4YUYqBnzJCA=="
+        },
+        "7e50b292-7a90-4fdb-8cb5-2b449e536201": {
+          "display_id": 590,
+          "author": "79Ig",
+          "content": "PR #61 CI 8/8 PASS on 1eb5982 (ubuntu/macos/windows tests, lint, parser robustness incl. the in-crate body-scanner properties, security audit, package rehearsal, Self-validation). Awaiting round 2 before undrafting.",
+          "created_at": "2026-09-27T02:46:13.068574Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAZM+7CJH3cW3yR7JGz6+JflQTWO+yAwk82zCT3ENbVcqDQtMulrj0Dzd2nmxhLhoTrVvtdB3AqUuMTGZAuYTsDg=="
         },
         "9b10192e-3d5b-46b3-857b-68d982fd0905": {
           "display_id": 587,
