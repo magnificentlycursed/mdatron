@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1161,
-        "tip_oid": "093f56eb07619b89f19c987c969c214d4d6fd68c",
-        "prefix_sha256": "d82eda96713bc5abea2e2dd9904ee6d27e0229027d71a767a41002d6f9c8d98e"
+        "sequence": 1162,
+        "tip_oid": "4a1307e59c611fb83b0fc10d0e016e83a767f24d",
+        "prefix_sha256": "3e8ebfa09389ccdfc1ffce895644b4e42e879cb863ed24f47cb4d22c8ae18261"
       },
       "IMWa": {
         "sequence": 2,
@@ -7771,11 +7771,12 @@
       "uuid": "ea8c6a55-a4f2-46c6-be99-258d8ac13684",
       "display_id": 200,
       "title": "Seam test: deployed .crosslink/hook-config.json allowlist must be a superset of the hook's DEFAULT_ALLOWED_BASH (the #196 drift class — a frozen config snapshot silently diverged from its own defaults; generate or assert)",
-      "status": "open",
+      "status": "closed",
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-24T00:55:38.857931Z",
-      "updated_at": "2026-09-26T01:17:06.635515Z",
+      "updated_at": "2026-09-27T00:43:58.798041Z",
+      "closed_at": "2026-09-27T00:43:58.769956Z",
       "comments": {
         "8f02b209-033b-4624-9c61-09019fbb1bc8": {
           "display_id": 576,
