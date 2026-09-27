@@ -486,44 +486,51 @@ proptest! {
     }
 }
 
-proptest! {
-    // The five `.mdatron/` YAML loaders + the schema-file JSON text layer:
-    // arbitrary bytes on disk never panic. File-backed, so bounded tighter
-    // than the pure parsers (this explicit `cases` also means the deep
-    // workflow_dispatch profile does NOT deepen this property — deliberate).
-    #![proptest_config(ProptestConfig {
+// The five `.mdatron/` YAML loaders + the schema-file JSON text layer:
+// arbitrary bytes on disk never panic. File-backed, so bounded tighter than
+// the pure parsers — through an explicit `TestRunner`, because a
+// `#![proptest_config(cases)]` pin inside `proptest!` is re-contextualized
+// from PROPTEST_CASES and does not hold under CI's env (L4 cold review
+// MAJOR-2; the earlier note here claimed the opposite). PROPTEST_RNG_SEED
+// still applies through `ProptestConfig::default()`.
+#[test]
+fn prop_loaders_never_panic() {
+    let config = ProptestConfig {
         cases: 24,
         ..ProptestConfig::default()
-    })]
-    #[test]
-    fn prop_loaders_never_panic(bytes in prop::collection::vec(any::<u8>(), 0..512)) {
-        let scratch = ScratchRoot::new();
-        let root = &scratch.0;
-        for name in [
-            "config.yaml",
-            "routes.yaml",
-            "pins.yaml",
-            "vocabulary.yaml",
-            "code-catalogs.yaml",
-            "manifest.yaml",
-        ] {
-            std::fs::write(root.join(".mdatron").join(name), &bytes).unwrap();
-        }
-        let _ = mdatron::config::load(root);
-        let _ = mdatron::init::load_tombstones(root);
-        let _ = mdatron::route::load(root);
-        let _ = mdatron::pin::load(root);
-        let _ = mdatron::vocab::load(root);
-        let _ = mdatron::codecat::load(root);
+    };
+    let mut runner = proptest::test_runner::TestRunner::new(config);
+    runner
+        .run(&prop::collection::vec(any::<u8>(), 0..512), |bytes| {
+            let scratch = ScratchRoot::new();
+            let root = &scratch.0;
+            for name in [
+                "config.yaml",
+                "routes.yaml",
+                "pins.yaml",
+                "vocabulary.yaml",
+                "code-catalogs.yaml",
+                "manifest.yaml",
+            ] {
+                std::fs::write(root.join(".mdatron").join(name), &bytes).unwrap();
+            }
+            let _ = mdatron::config::load(root);
+            let _ = mdatron::init::load_tombstones(root);
+            let _ = mdatron::route::load(root);
+            let _ = mdatron::pin::load(root);
+            let _ = mdatron::vocab::load(root);
+            let _ = mdatron::codecat::load(root);
 
-        // The schema-file JSON TEXT layer (lane-C review C2): a separate
-        // scratch where ONLY a schema file is hostile, driven through the
-        // real verify load path so serde_json::from_str sees the raw bytes
-        // (the pure-compile properties above feed already-parsed Values).
-        let schema_scratch = ScratchRoot::new();
-        let sroot = &schema_scratch.0;
-        std::fs::create_dir_all(sroot.join(".mdatron/schemas")).unwrap();
-        std::fs::write(sroot.join(".mdatron/schemas/h.json"), &bytes).unwrap();
-        let _ = verify(&VerifyConfig::new(sroot.clone()));
-    }
+            // The schema-file JSON TEXT layer (lane-C review C2): a separate
+            // scratch where ONLY a schema file is hostile, driven through the
+            // real verify load path so serde_json::from_str sees the raw bytes
+            // (the pure-compile properties above feed already-parsed Values).
+            let schema_scratch = ScratchRoot::new();
+            let sroot = &schema_scratch.0;
+            std::fs::create_dir_all(sroot.join(".mdatron/schemas")).unwrap();
+            std::fs::write(sroot.join(".mdatron/schemas/h.json"), &bytes).unwrap();
+            let _ = verify(&VerifyConfig::new(sroot.clone()));
+            Ok(())
+        })
+        .unwrap_or_else(|e| panic!("loader property failed: {e}"));
 }
