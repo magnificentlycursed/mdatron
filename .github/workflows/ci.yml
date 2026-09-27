@@ -149,13 +149,19 @@ jobs:
         env:
           PROPTEST_CASES: "1024"
           PROPTEST_RNG_SEED: "20260919"
-        run: cargo test --locked --test parser_robustness
+        # The public-API harness, then the in-crate properties over the
+        # crate-private body-text scanners (src/robustness.rs, #193).
+        run: |
+          cargo test --locked --test parser_robustness
+          cargo test --locked --lib robustness::
 
       - name: Deep property fuzz (on-demand only)
         if: github.event_name == 'workflow_dispatch'
         env:
           PROPTEST_CASES: "16384"
-        run: cargo test --locked --test parser_robustness
+        run: |
+          cargo test --locked --test parser_robustness
+          cargo test --locked --lib robustness::
 
   audit:
     name: Security audit (cargo-audit + cargo-deny)

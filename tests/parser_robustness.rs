@@ -30,16 +30,17 @@
 //! pattern-file YAML loader, frontmatter parsing, JSON-Schema compile (both
 //! arbitrary JSON and keyword-shaped schemas), the five `.mdatron/` YAML
 //! loaders (config/route/pin/vocab/codecat), and the schema-file JSON text
-//! layer via the verify load path — all at the public API. NOT covered
-//! (lane-C review C2/C3 scoped this list honestly): coverage-guided byte
-//! mutation (no libFuzzer/cargo-fuzz — nightly-only, tracked as the on-demand
-//! deep-fuzz follow-up); the markdown BODY surface — both pulldown-cmark
-//! (hardened upstream) and mdatron's OWN first-party body scanners (marker
-//! and citation checks, link resolution including percent-decoding and the
-//! heading-slug algorithm, inline-code ranges, section scanning, the
-//! vocabulary scan), whose never-panic properties are tracked as crosslink
-//! #193; the snapshot/confinement IO paths; and semantic differential
-//! properties (only panic-freedom is pinned here).
+//! layer via the verify load path — all at the public API. mdatron's OWN
+//! first-party markdown-body scanners (marker and citation checks, link
+//! resolution including percent-decoding and the heading-slug algorithm,
+//! inline-code ranges, section scanning, the vocabulary scan) are covered by
+//! the in-crate twin of this file, `src/robustness.rs` (#193) — in-crate
+//! because those modules are crate-private; CI's parser-robustness job runs
+//! both. NOT covered (lane-C review C2/C3 scoped this list honestly):
+//! coverage-guided byte mutation (no libFuzzer/cargo-fuzz — nightly-only,
+//! tracked as the on-demand deep-fuzz follow-up); pulldown-cmark's own parse
+//! (hardened upstream); the snapshot/confinement IO paths; and semantic
+//! differential properties (only panic-freedom is pinned here).
 
 use mdatron::dsl::{evaluate, parse_expression, parse_pattern_file, EvalContext, Value};
 use mdatron::schema::Schema;
