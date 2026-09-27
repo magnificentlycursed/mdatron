@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1165,
-        "tip_oid": "583ed8b2dc4543892cc4f818d8be5354b770531a",
-        "prefix_sha256": "3b8bf8013e9792ea4f802d5c8c7afff026c242a295f2857b90f97e5a9d9e97a7"
+        "sequence": 1166,
+        "tip_oid": "1a30f21f538dd9c91468e5d30d24a95672d56429",
+        "prefix_sha256": "87eecf5235ad4d9496354405bcde4b05fec8d1d2e2f245f0cd8b9435dc77af4e"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 205,
-  "next_comment_id": 585,
+  "next_comment_id": 586,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "03beb708-b15d-4522-950e-3fdaa3a3d16b": 196,
@@ -1428,7 +1428,18 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-20T01:30:54.698406Z",
-      "updated_at": "2026-09-20T01:30:54.698406Z"
+      "updated_at": "2026-09-27T01:12:56.563455Z",
+      "comments": {
+        "cff723e5-d6b1-497c-b4a6-34e2947269bb": {
+          "display_id": 585,
+          "author": "79Ig",
+          "content": "PLAN (L4, branch feature/193-parser-robustness off origin/main f41a656; reference audit: lychee-link-family-audit). After #185 the scanners are pub(crate), so the properties live IN-CRATE: src/robustness.rs, a cfg(test)-only module with proptest strategies for hostile markdown bodies (multibyte adjacent to every syntax char; percent-decode edges; unterminated fences/code spans; NUL/BOM/bidi/U+2028; CRLF and lone CR; bracket floods; citation and marker shapes) and never-panic properties over the markup primitives, section spans with hostile specs, cite/link target extraction at every char-boundary body offset, section rules from generated adopter YAML, the vocabulary scan with the repo's own register, and the three snapshot-backed check_files (cite/link/marker) over a scratch root with a hostile TARGET doc too. Deterministic seeds pin the known classes. CI parser-robustness job runs cargo test --lib robustness:: bounded + deep. RESULT so far: no scanner panics at 4096 cases; a seeded byte-slice defect in atx_heading is caught by seeds and shrunk by the properties (red gate proven).",
+          "created_at": "2026-09-27T01:12:56.522062Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA1f1YZTsGoCGuDfI3Msu8loKafhnvpuPIdcZ3prCi7/qHS3cwN+NwhFej66mylLC0RQDGOMgClH2/Mh+H+ACSAw=="
+        }
+      }
     },
     "2881253a-3641-4d7b-a6c1-e09cbbd2d140": {
       "uuid": "2881253a-3641-4d7b-a6c1-e09cbbd2d140",
