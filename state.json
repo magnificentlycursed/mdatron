@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1171,
-        "tip_oid": "7cab261051b4e5f3051100eaf363eda2385f2d2b",
-        "prefix_sha256": "ede85631cc6987d8291acb83d426353594ed7e62476369cfef2f6cb08b16918e"
+        "sequence": 1172,
+        "tip_oid": "df715ab98a77af74916254e4aa45f8a7e9e4fd4a",
+        "prefix_sha256": "fd4a8f11e859cf050b47e35f2bd372352c827076727ef9c2f61b6d291ae1cb43"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 205,
-  "next_comment_id": 591,
+  "next_comment_id": 592,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "03beb708-b15d-4522-950e-3fdaa3a3d16b": 196,
@@ -1428,7 +1428,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-20T01:30:54.698406Z",
-      "updated_at": "2026-09-27T02:46:13.164754Z",
+      "updated_at": "2026-09-27T03:07:50.909423Z",
       "comments": {
         "10f06006-f7bf-4d32-8c20-9c89920dfdc7": {
           "display_id": 588,
@@ -1447,6 +1447,15 @@
           "kind": "observation",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAZM+7CJH3cW3yR7JGz6+JflQTWO+yAwk82zCT3ENbVcqDQtMulrj0Dzd2nmxhLhoTrVvtdB3AqUuMTGZAuYTsDg=="
+        },
+        "9190d399-6104-4ab3-ae2c-cb7854f31bb6": {
+          "display_id": 591,
+          "author": "79Ig",
+          "content": "COLD REVIEW round 2 (1eb5982): NOT MVR — MAJOR-A the section-rule strategy drew its section independently of the body (found 3/1024, disjoint compared 0/1024) while the hand-written reach seeds were green; MINOR-B numeric claims 0.29 percent, seed vacuous; MINOR-C the hard case cap also capped shrinking (cases x4 = 128 iters); MINOR-D no seed ended with a reserved spelling (find_word class); MINOR-E members resolved 0 at 32 cases; NIT-F manual runners lacked source_file. Closures verified: packaged-crate cargo test green; case cap holds (32/24 under 1024 and 16384); cross-file links, reserved/anti-pattern, codecat, 5/5 seeded defects red. Round 3 committed 71dc8c4: rule_case() draws body and rule together from one section prefix (sections 3/5, prefixes carry ids in both sections, disjoint operands lean on h3/heading); strategy-level reach tests run the properties' own strategies at a fixed seed and assert counts (512 cases: compiled 273, E0120 68, E0121 8, E0122 103; E0092 320, E0093 889, E0094 45; snapshot 48 cases: E0111 28, E0112 122, E0114 29, resolved member 2); shrink budget 4096 + source_file on both manual runners; reserved-spelling-ending seeds (find_word off-by-one now reds the seed test: 'len is 7 but index is 7'); line-initial marker fragments; docs restated. Bounded run 1.9 s, deep 4096 7 s. Round 3 review launched.",
+          "created_at": "2026-09-27T03:07:50.868359Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAaIEV9VfOaVnIKnJwgigcrsLeFrH/6OGN4tvkpPRd1XPqUR+gi1FksX8/8ygh0bjiKCKNw1qX31A2uq5eWqM7AA=="
         },
         "9b10192e-3d5b-46b3-857b-68d982fd0905": {
           "display_id": 587,
