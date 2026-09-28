@@ -721,6 +721,13 @@ fn run_inner(
     let routes = match routes {
         Some(mut loaded) => {
             findings.append(&mut loaded.findings);
+            route_schema_unserved_findings(
+                &project_root,
+                &loaded.routes,
+                &schemas,
+                &patterns,
+                &mut findings,
+            );
             Some(loaded.routes)
         }
         None => None,
@@ -954,7 +961,12 @@ fn run_inner(
             .iter()
             .map(|(_abs, rel)| crate::dep::GovernedFile {
                 path: rel.clone(),
-                schema_class: snapshot.text(rel).and_then(read_schema_class),
+                // #208: a route-bound class is the file's class for the graph too.
+                schema_class: routes
+                    .as_deref()
+                    .and_then(|r| crate::route::schema_for(r, rel))
+                    .map(str::to_string)
+                    .or_else(|| snapshot.text(rel).and_then(read_schema_class)),
             })
             .collect();
         let graph = crate::dep::DepGraph::build(
@@ -1178,7 +1190,12 @@ fn run_inner(
         let mut link_root = false;
         let mut marker_rules: Vec<&crate::route::MarkerRule> = Vec::new();
         let mut section_rules: Vec<&crate::section::Rule> = Vec::new();
+        let mut binding = RouteBinding::default();
         if let Some(routes) = &routes {
+            binding = RouteBinding {
+                schema: crate::route::schema_for(routes, rel),
+                name_equals_dir: crate::route::name_equals_dir_for(routes, rel),
+            };
             crate::route::check_file(routes, rel, path, &mut findings);
             cite_enabled = crate::route::citations_enabled(routes, rel);
             link_enabled = crate::route::links_enabled(routes, rel);
@@ -1248,6 +1265,7 @@ fn run_inner(
             &patterns,
             &registry,
             schemas_dir_missing,
+            binding,
             &mut memo,
             &mut findings,
         )?;
@@ -2768,7 +2786,145 @@ fn field_ref_finding(
 
 // ── Per-file processing ────────────────────────────────────────────────────────
 
-#[allow(clippy::too_many_arguments)]
+/// What a claiming route binds a file to beyond its own content (#208/#209).
+#[derive(Clone, Copy, Default)]
+struct RouteBinding<'a> {
+    schema: Option<&'a str>,
+    name_equals_dir: Option<&'a str>,
+}
+
+/// `E0034` (#208): a route binds its files to a schema class that neither a
+/// schema file nor any pattern rule's context serves — the files would pass
+/// "validated" by nothing. One finding per route, at the route table.
+fn route_schema_unserved_findings(
+    project_root: &Path,
+    routes: &[crate::route::Route],
+    schemas: &BTreeMap<String, Schema>,
+    patterns: &[PatternFile],
+    findings: &mut Vec<Finding>,
+) {
+    for route in routes {
+        let Some(class) = route.schema.as_deref() else {
+            continue;
+        };
+        let served = schemas.contains_key(class)
+            || patterns.iter().any(|pf| {
+                pf.pattern
+                    .rules
+                    .iter()
+                    .any(|r| context_schema_class(&r.context) == Some(class))
+            });
+        if served {
+            continue;
+        }
+        findings.push(Finding {
+            code: "MDATRON-E0034".into(),
+            severity: Severity::Error,
+            summary: "route-schema-unserved".into(),
+            message: "a route binds its files to a schema class that no \
+                      .mdatron/schemas/<class>.json and no pattern rule context serves, so \
+                      nothing would validate them"
+                .into(),
+            help: Some(
+                "add .mdatron/schemas/<class>.json, or a pattern rule with `context: <class>`, \
+                 or correct the route's schema"
+                    .into(),
+            ),
+            location: Location::whole_file(project_root.join(".mdatron").join("routes.yaml")),
+            explain_ref: Some("MDATRON-E0034".into()),
+            quoted: vec![
+                QuotedRegion {
+                    platform_variant: false,
+                    label: "route files".into(),
+                    content: route.files.as_str().to_string(),
+                },
+                QuotedRegion {
+                    platform_variant: false,
+                    label: "route schema".into(),
+                    content: class.to_string(),
+                },
+            ],
+        });
+    }
+}
+
+/// `E0035` (#209): the route's `name_equals_dir` field must hold a string equal
+/// to the file's parent directory name (the Agent Skills rule: `name` matches
+/// the skill directory).
+fn name_equals_dir_check(
+    path: &Path,
+    project_root: &Path,
+    content: &str,
+    frontmatter: &crate::dsl::Value,
+    field: &str,
+    findings: &mut Vec<Finding>,
+) {
+    let rel = path.strip_prefix(project_root).unwrap_or(path);
+    let dir = rel
+        .parent()
+        .and_then(|p| p.file_name())
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let value = frontmatter
+        .as_object()
+        .and_then(|o| o.get(field))
+        .and_then(|v| v.as_str());
+    if value == Some(dir.as_str()) && !dir.is_empty() {
+        return;
+    }
+    let message = match value {
+        None => {
+            "the route requires this frontmatter field to equal the file's parent \
+                 directory name, but the field is absent or not a string"
+        }
+        Some(_) if dir.is_empty() => {
+            "the route requires this frontmatter field to equal the \
+                 file's parent directory name, but the file is at the project root and has no \
+                 parent directory"
+        }
+        Some(_) => {
+            "the route requires this frontmatter field to equal the file's parent \
+                    directory name, and it does not"
+        }
+    };
+    let mut quoted = vec![QuotedRegion {
+        platform_variant: false,
+        label: "field".into(),
+        content: field.to_string(),
+    }];
+    if let Some(v) = value {
+        quoted.push(QuotedRegion {
+            platform_variant: false,
+            label: "value".into(),
+            content: v.to_string(),
+        });
+    }
+    quoted.push(QuotedRegion {
+        platform_variant: false,
+        label: "directory".into(),
+        content: dir,
+    });
+    findings.push(Finding {
+        code: "MDATRON-E0035".into(),
+        severity: Severity::Error,
+        summary: "name-dir-mismatch".into(),
+        message: message.into(),
+        help: Some(
+            "rename the directory or change the field so the two agree (tools that key a \
+             skill by its directory will not match a differing name)"
+                .into(),
+        ),
+        location: Location {
+            file: path.to_path_buf(),
+            line: crate::frontmatter::resolve_pointer_location(content, &format!("/{field}"))
+                .map_or(1, |(l, _)| l),
+            column: 0,
+        },
+        explain_ref: Some("MDATRON-E0035".into()),
+        quoted,
+    });
+}
+
 #[allow(clippy::too_many_arguments)]
 fn verify_file(
     path: &Path,
@@ -2788,6 +2944,7 @@ fn verify_file(
     patterns: &[PatternFile],
     registry: &IndexRegistry,
     schemas_dir_missing: bool,
+    binding: RouteBinding<'_>,
     memo: &mut crate::memo::RefMemo,
     findings: &mut Vec<Finding>,
 ) -> Result<FileVerdict, VerifyError> {
@@ -2837,6 +2994,13 @@ fn verify_file(
 
     let (frontmatter_value, body_len) = match fm_opt {
         Some((fm, body)) => (fm, body.len()),
+        // #208: a route-bound file with no frontmatter is validated as an EMPTY
+        // mapping, so the bound schema reports its required fields — a vendor
+        // file missing its frontmatter must not pass as "nothing to check".
+        None if binding.schema.is_some() || binding.name_equals_dir.is_some() => (
+            serde_yaml_ng::Value::Mapping(serde_yaml_ng::Mapping::new()),
+            content.len(),
+        ),
         None => {
             // Opt-in loudness (#80 D2): inside a require_frontmatter glob,
             // "no frontmatter" must not be indistinguishable from "passed" —
@@ -2941,11 +3105,61 @@ fn verify_file(
     }
 
     let frontmatter_internal = crate::dsl::index::yaml_to_value(&frontmatter_value);
-    let schema_class_opt = frontmatter_internal
+    let declared_class = frontmatter_internal
         .as_object()
         .and_then(|o| o.get("schema_class"))
         .and_then(|v| v.as_str())
         .map(|s| s.to_string());
+    // #208: the claiming route's binding is the file's class; a file that also
+    // declares one must agree — a disagreement is reported, never resolved by
+    // silent precedence, and the route's class (governance data) is applied.
+    if let (Some(bound), Some(declared)) = (binding.schema, declared_class.as_deref()) {
+        if bound != declared {
+            findings.push(Finding {
+                code: "MDATRON-E0033".into(),
+                severity: Severity::Error,
+                summary: "schema-class-route-conflict".into(),
+                message: "this file declares a schema_class that differs from the class its \
+                          route binds it to; the route's class is applied"
+                    .into(),
+                help: Some(
+                    "remove the file's schema_class (the route binds it), or correct \
+                     whichever of the two is wrong"
+                        .into(),
+                ),
+                location: Location {
+                    file: path.to_path_buf(),
+                    line: crate::frontmatter::resolve_pointer_location(content, "/schema_class")
+                        .map_or(1, |(l, _)| l),
+                    column: 0,
+                },
+                explain_ref: Some("MDATRON-E0033".into()),
+                quoted: vec![
+                    QuotedRegion {
+                        platform_variant: false,
+                        label: "schema_class".into(),
+                        content: declared.to_string(),
+                    },
+                    QuotedRegion {
+                        platform_variant: false,
+                        label: "route schema".into(),
+                        content: bound.to_string(),
+                    },
+                ],
+            });
+        }
+    }
+    let schema_class_opt = binding.schema.map(str::to_string).or(declared_class);
+    if let Some(field) = binding.name_equals_dir {
+        name_equals_dir_check(
+            path,
+            project_root,
+            content,
+            &frontmatter_internal,
+            field,
+            findings,
+        );
+    }
 
     // ── the schema family: structural validation ─────────────────────────────────────
     let mut schema_matched = false;
@@ -10851,5 +11065,164 @@ pattern:
             w.message
         );
         assert!(w.quoted.iter().any(|q| q.content.contains('\u{1b}')));
+    }
+
+    // ── #208/#209: route-attached schema and name_equals_dir ────────────────
+
+    const SKILL_SCHEMA: &str = r#"{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["name", "description"],
+  "properties": {
+    "name": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "maxLength": 64},
+    "description": {"type": "string", "minLength": 1, "maxLength": 1024},
+    "license": {"type": "string"},
+    "compatibility": {"type": "string", "maxLength": 500},
+    "metadata": {"type": "object", "additionalProperties": {"type": "string"}},
+    "allowed-tools": {"type": "string"}
+  },
+  "additionalProperties": false
+}"#;
+
+    fn skills_project(label: &str, routes_extra: &str) -> TempProject {
+        let proj = TempProject::new(label);
+        proj.write(".mdatron/schemas/skill.json", SKILL_SCHEMA);
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \".claude/skills/**/*.md\"\n",
+        );
+        proj.write("GOVERNING.md", "# gov\n");
+        proj.write(
+            ".mdatron/routes.yaml",
+            &format!(
+                "routes:\n- files: \".claude/skills/*/SKILL.md\"\n  governed_by: GOVERNING.md\n{routes_extra}"
+            ),
+        );
+        proj
+    }
+
+    fn route_codes(proj: &TempProject) -> Vec<String> {
+        let mut c: Vec<String> = verify(&VerifyConfig::from_project(&proj.0).unwrap())
+            .unwrap()
+            .into_iter()
+            .map(|f| f.code)
+            .collect();
+        c.sort();
+        c
+    }
+
+    // RED GATE (#208): a route binds files that carry NO schema_class; the
+    // bound schema validates them (a clean skill is clean; an extra key under
+    // the spec-strict profile is E0050), and a file with no frontmatter is
+    // validated as an empty mapping (its required fields are reported).
+    #[test]
+    fn route_schema_binds_files_without_schema_class() {
+        let proj = skills_project("route-schema", "  schema: skill\n");
+        proj.write(
+            ".claude/skills/pdf-tools/SKILL.md",
+            "---\nname: pdf-tools\ndescription: Work with PDF files.\n---\n\n# PDF tools\n",
+        );
+        assert!(route_codes(&proj).is_empty(), "{:?}", route_codes(&proj));
+
+        proj.write(
+            ".claude/skills/pdf-tools/SKILL.md",
+            "---\nname: pdf-tools\ndescription: Work with PDF files.\nmodel: opus\n---\n",
+        );
+        assert_eq!(route_codes(&proj), vec!["MDATRON-E0050"]);
+
+        proj.write(
+            ".claude/skills/pdf-tools/SKILL.md",
+            "# no frontmatter at all\n",
+        );
+        let c = route_codes(&proj);
+        assert!(
+            !c.is_empty() && c.iter().all(|c| c == "MDATRON-E0050"),
+            "{c:?}"
+        );
+    }
+
+    // RED GATE (#208): a declared schema_class that disagrees with the route is
+    // E0033 (the route's class is applied); an agreeing one is clean.
+    #[test]
+    fn declared_schema_class_must_agree_with_the_route() {
+        let proj = skills_project("route-schema-conflict", "  schema: skill\n");
+        proj.write(
+            ".claude/skills/a/SKILL.md",
+            "---\nname: a\ndescription: d\nschema_class: other\n---\n",
+        );
+        let c = route_codes(&proj);
+        assert!(c.contains(&"MDATRON-E0033".to_string()), "{c:?}");
+        // The route's (strict) schema was applied: schema_class is an extra key.
+        assert!(c.contains(&"MDATRON-E0050".to_string()), "{c:?}");
+    }
+
+    // RED GATE (#208): a route binding a class nothing serves is E0034 at the
+    // route table; a pattern rule whose context names the class serves it, and
+    // that rule runs on the route-bound file.
+    #[test]
+    fn route_schema_must_be_served_and_selects_rule_contexts() {
+        let proj = skills_project("route-schema-unserved", "  schema: nosuch\n");
+        proj.write(
+            ".claude/skills/a/SKILL.md",
+            "---\nname: a\ndescription: d\n---\n",
+        );
+        assert!(route_codes(&proj).contains(&"MDATRON-E0034".to_string()));
+
+        proj.write(
+            ".mdatron/patterns/p.yaml",
+            "mdatron_dsl_version: 1\npattern:\n  id: p\n  rules:\n    - id: r\n      \
+             context: nosuch\n      assert: '$self.name == \"b\"'\n      \
+             code: T-E0001\n      message: m\n",
+        );
+        let c = route_codes(&proj);
+        assert!(!c.contains(&"MDATRON-E0034".to_string()), "{c:?}");
+        assert!(
+            c.contains(&"T-E0001".to_string()),
+            "the rule ran on the bound file: {c:?}"
+        );
+    }
+
+    // RED GATE (#209): name_equals_dir — equal is clean; a different value, an
+    // absent field, and a non-string value are each E0035.
+    #[test]
+    fn name_equals_dir_checks_the_parent_directory() {
+        let proj = skills_project("name-dir", "  schema: skill\n  name_equals_dir: name\n");
+        proj.write(
+            ".claude/skills/pdf-tools/SKILL.md",
+            "---\nname: pdf-tools\ndescription: d\n---\n",
+        );
+        assert!(route_codes(&proj).is_empty(), "{:?}", route_codes(&proj));
+
+        proj.write(
+            ".claude/skills/pdf-tools/SKILL.md",
+            "---\nname: pdf\ndescription: d\n---\n",
+        );
+        assert_eq!(route_codes(&proj), vec!["MDATRON-E0035"]);
+
+        let proj2 = skills_project("name-dir-absent", "  name_equals_dir: name\n");
+        proj2.write(".claude/skills/x/SKILL.md", "---\ndescription: d\n---\n");
+        assert_eq!(route_codes(&proj2), vec!["MDATRON-E0035"]);
+        proj2.write(".claude/skills/x/SKILL.md", "---\nname: [x]\n---\n");
+        assert_eq!(route_codes(&proj2), vec!["MDATRON-E0035"]);
+    }
+
+    // RED GATE (#208/#209): bad route keys are refused at load.
+    #[test]
+    fn route_schema_and_name_keys_are_validated_at_load() {
+        for bad in [
+            "  schema: ../x\n",
+            "  schema: a/b\n",
+            "  schema: \"\"\n",
+            "  schema: .hidden\n",
+            "  name_equals_dir: \"\"\n",
+        ] {
+            let proj = skills_project("route-schema-bad", bad);
+            proj.write(
+                ".claude/skills/a/SKILL.md",
+                "---\nname: a\ndescription: d\n---\n",
+            );
+            let err = verify(&VerifyConfig::from_project(&proj.0).unwrap());
+            assert!(err.is_err(), "{bad:?} must be refused at load");
+        }
     }
 }

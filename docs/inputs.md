@@ -52,13 +52,19 @@ Activation: `verify` refuses without it. Codes: `W0040`, `W0043`, `W0046`,
 The route family — the closed-world allowlist over the walked files, and the
 gateway to the citation, link, marker, and section families.
 
-Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `citations`, `links`, `link_root`, `marker_rules`, `pattern`, `element`, `target_doc`, `target_section`, `section_rules`, `section`, `match`, `match_on`, `count`, `disjoint`, `id_pattern`.
+Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `citations`, `links`, `link_root`, `marker_rules`, `pattern`, `element`, `target_doc`, `target_section`, `section_rules`, `section`, `match`, `match_on`, `count`, `disjoint`, `id_pattern`, `schema`, `name_equals_dir`.
 
 - Per route — required: `files` (root-relative glob; `*` crosses `/`),
   `governed_by` (a document that must open inside the governed tree, `E0031`).
   Optional: `naming` (a filename grammar, `W0041`), `citations: true`,
   `links: true`, `link_root: true` (resolve `/root-relative` links; needs
-  `links`), `marker_rules`, `section_rules`.
+  `links`), `marker_rules`, `section_rules`, `schema` (bind every claimed file
+  to `.mdatron/schemas/<class>.json` and to rules with `context: <class>`,
+  without the file carrying `schema_class` — for formats whose frontmatter you
+  do not own; a disagreeing `schema_class` is `E0033`, a class nothing serves
+  `E0034`, and a claimed file with no frontmatter is validated as an empty
+  mapping), `name_equals_dir` (a frontmatter field that must equal the file's
+  parent directory name, `E0035`).
 - A marker rule — required: `pattern` (a regex whose first capture is the
   referenced name), `element` (`heading`, `h1`…`h6`, or `list-item-bold-name`),
   `target_doc`. Optional: `target_section` (a full ATX heading line).
@@ -160,10 +166,11 @@ Activation: written by `mdatron init`; `verify` reads it when present. Codes:
 
 The schema family: one JSON Schema (draft 2020-12 only, `E0040` otherwise) per
 `schema_class`, at `.mdatron/schemas/<class>.json`, validating the frontmatter
-of every walked file that declares that class.
+of every walked file that declares that class or whose route binds it
+(`schema`).
 
 Activation: the directory holds at least one schema. Scope: every walked file
-with a `schema_class`. Codes: `E0002`, `E0040`, `E0050`, `W0045`, `W0047`.
+with a `schema_class` or a route-bound class. Codes: `E0002`, `E0040`, `E0050`, `W0045`, `W0047`.
 
 ## patterns/
 
