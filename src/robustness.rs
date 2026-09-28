@@ -33,8 +33,8 @@
 //! docs/limits.md lesson, GH #48 lane E; L4 cold review MAJOR-1).
 //!
 //! COVERED: the `markup` primitives per body and per line; `section_span(s)`
-//! with hostile specs; `cite::cited_targets` and `link::link_targets` at every
-//! char-boundary body offset; section rules built as YAML VALUES (so hostile
+//! with hostile specs; `cite::cited_targets` and `link::link_targets` at generated
+//! char-boundary body offsets; section rules built as YAML VALUES (so hostile
 //! section names survive to `compile_rule`) and drawn TOGETHER with the body
 //! from one section prefix, so the count and disjoint comparisons run
 //! (asserted by the strategy-level reach test); the vocabulary scan with
@@ -620,8 +620,8 @@ fn rule_case() -> impl Strategy<Value = (String, Yaml)> {
 }
 
 /// ONE input strategy per offset-bearing property, shared by the property and
-/// its strategy-level reach test — so the reach test measures exactly the
-/// inputs CI runs (round 3, MAJOR-1: the reach tests had measured offset 0
+/// its strategy-level reach test — so the reach test measures the same
+/// input distribution CI runs (a fixed seed here, CI's seed there) (round 3, MAJOR-1: the reach tests had measured offset 0
 /// while the properties drew a uniform offset that cut the prefix away).
 fn section_input() -> impl Strategy<Value = ((String, Yaml), Offset)> {
     (rule_case(), offset_pick())
