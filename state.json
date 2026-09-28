@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1176,
-        "tip_oid": "e582fd65f6f1c95ab557d3c3e080e91394ff4120",
-        "prefix_sha256": "c84d4adae6da58eab350db6cdc9ca5f773f3918be30528fc9bf3bf9dedaee495"
+        "sequence": 1177,
+        "tip_oid": "31d18d0d348d13c39f2169e884647064d61a644f",
+        "prefix_sha256": "ee6d3539efe64dc58bf083312431f14a222266507cd44626e36f2c8d98a06ac1"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 207,
-  "next_comment_id": 593,
+  "next_comment_id": 594,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "03beb708-b15d-4522-950e-3fdaa3a3d16b": 196,
@@ -7523,7 +7523,18 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-28T22:52:22.482071Z",
-      "updated_at": "2026-09-28T22:52:22.482071Z"
+      "updated_at": "2026-09-28T22:55:34.241110Z",
+      "comments": {
+        "7f0f648d-d4a6-4922-a608-1d6e53a843f8": {
+          "display_id": 593,
+          "author": "79Ig",
+          "content": "Implemented on feature/201-paths-and-matchers: RawRule gains optional match_on (line default | name); name tests element.name_in(line) (heading text or list-item bold name); disjoint + match_on refused; docs/inputs.md states the three matcher semantics side by side; README count-rule prose; routes template exercises match_on (repo template regenerated via init, manifest re-pinned). Observation, not fixed here: init never refreshes a managed template whose engine content changed (only recreates missing ones), so an adopter's .example templates go stale across upgrades.",
+          "created_at": "2026-09-28T22:55:34.186832Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAobVPErIu4yJMersyBXlTuujLaGZEy5a74b2eBD7q6cChvdmV46lEHphGduDxxS1G86D96vOCgWHNsNiEu492DA=="
+        }
+      }
     },
     "decfc009-3573-4782-ba16-6d89f8898711": {
       "uuid": "decfc009-3573-4782-ba16-6d89f8898711",
