@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1177,
-        "tip_oid": "31d18d0d348d13c39f2169e884647064d61a644f",
-        "prefix_sha256": "ee6d3539efe64dc58bf083312431f14a222266507cd44626e36f2c8d98a06ac1"
+        "sequence": 1178,
+        "tip_oid": "9faa4290bd277413c3f753d757b6c825fbae062e",
+        "prefix_sha256": "5a599105a56fc3e74edfcb233ce56a8951952693a73b3e0aa8b4e972fab11806"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 207,
-  "next_comment_id": 594,
+  "next_comment_id": 595,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "03beb708-b15d-4522-950e-3fdaa3a3d16b": 196,
@@ -1434,8 +1434,17 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-20T01:30:54.698406Z",
-      "updated_at": "2026-09-27T03:07:50.909423Z",
+      "updated_at": "2026-09-28T23:01:43.201396Z",
       "comments": {
+        "10ded119-8046-4c55-8c98-8d2ef3c5a5d2": {
+          "display_id": 594,
+          "author": "79Ig",
+          "content": "COLD REVIEW round 3 (71dc8c4): NOT MVR — MAJOR-1 reach tests measured offset 0 while properties drew a uniform offset that cut the prefix (count arm 32/1024, disjoint 11/1024 at the CI seed); MAJOR-2 pick-modulo-len offsets prevented shrinking; MINOR-3 E0121 thin (six independent draws); MINOR-4 resolved-member proxy could pass with no lookup. Closed: MINOR-B numeric (E0094 38/1024), MINOR-D find_word red in the seed test, MINOR-E, NIT-F; packaged cargo test 600 green; deep 16384 green in 2m31s. Round 4 committed c0bfb02: shared input strategy per property (section/vocabulary/snapshot) used by property and reach test; Option<Index> offsets (fence 3 in 4) that shrink — seeded overlap panic now shrinks to the bare prefix + rule; coherent disjoint pair (E0121 8 to 30 of 512, floor 15); proxy removed; CHANGELOG restated. Round 4 closure review launched.",
+          "created_at": "2026-09-28T23:01:43.160483Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA+QwonuhJTH9Bo8cxbA/nZN0vuEv6FKnwhGqIu8/PAy5KdD2LePOcks5LxQ2rfbncomtKXfWbOXvovnopvXImDA=="
+        },
         "10f06006-f7bf-4d32-8c20-9c89920dfdc7": {
           "display_id": 588,
           "author": "79Ig",
