@@ -125,11 +125,15 @@ jobs:
   # input. This job drives every input parser with hostile generated input
   # (proptest, MSRV-clean on 1.88 — no nightly anywhere) under the never-panic
   # property, plus deterministic revert-detector seeds for the fixed classes.
-  # BOUNDED per PR: a pinned RNG seed + 1024 cases (about ten seconds). The
-  # deep profile runs only on manual workflow_dispatch — and deepens the pure
-  # parser properties only: the file-backed loader property pins its own
-  # tighter case count, which overrides the env (deliberate; lane-C C8). NOT
-  # in the required-check set (operator decision, parked).
+  # BOUNDED per PR: a pinned RNG seed + 1024 cases (about twenty seconds for
+  # the harness plus the in-crate body-scanner properties). The deep profile
+  # runs only on manual workflow_dispatch and deepens the PURE properties
+  # only: the two file-backed properties (the harness's loader property, the
+  # body scanners' snapshot-backed property) run under an explicit
+  # `TestRunner` with a hard case cap — a `#![proptest_config(cases)]` pin
+  # inside `proptest!` is re-contextualized from PROPTEST_CASES and would NOT
+  # hold (L4 cold review MAJOR-2; the earlier lane-C C8 note claimed it did).
+  # NOT in the required-check set (operator decision, parked).
   parser-robustness:
     name: Parser robustness (bounded property fuzz)
     needs: lint
@@ -149,13 +153,19 @@ jobs:
         env:
           PROPTEST_CASES: "1024"
           PROPTEST_RNG_SEED: "20260919"
-        run: cargo test --locked --test parser_robustness
+        # The public-API harness, then the in-crate properties over the
+        # crate-private body-text scanners (src/robustness.rs, #193).
+        run: |
+          cargo test --locked --test parser_robustness
+          cargo test --locked --lib robustness::
 
       - name: Deep property fuzz (on-demand only)
         if: github.event_name == 'workflow_dispatch'
         env:
           PROPTEST_CASES: "16384"
-        run: cargo test --locked --test parser_robustness
+        run: |
+          cargo test --locked --test parser_robustness
+          cargo test --locked --lib robustness::
 
   audit:
     name: Security audit (cargo-audit + cargo-deny)
