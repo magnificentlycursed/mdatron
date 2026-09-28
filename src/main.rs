@@ -45,11 +45,13 @@ enum Command {
         #[arg(long = "project-root", value_name = "DIR")]
         project_root: Option<PathBuf>,
 
-        /// Schemas directory. Defaults to `<project-root>/.mdatron/schemas`.
+        /// Schemas directory; must resolve inside the project root. Defaults to
+        /// `<project-root>/.mdatron/schemas`.
         #[arg(long = "schemas", value_name = "DIR")]
         schemas: Option<PathBuf>,
 
-        /// Patterns directory. Defaults to `<project-root>/.mdatron/patterns`.
+        /// Patterns directory; must resolve inside the project root. Defaults to
+        /// `<project-root>/.mdatron/patterns`.
         #[arg(long = "patterns", value_name = "DIR")]
         patterns: Option<PathBuf>,
 

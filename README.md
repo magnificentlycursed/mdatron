@@ -540,7 +540,9 @@ routes:
 <!-- mdatron-roundtrip:section-rules-end -->
 
 A count rule counts the elements of the `element` class in the `section`'s span
-(until the next heading of the same or higher level) whose line matches `match`,
+(until the next heading of the same or higher level) whose line matches `match`
+(or whose name does, with `match_on: name` — the heading text or the list item's bold name, the
+same text a `disjoint` operand's `id_pattern` sees),
 and asserts the `count` predicate — one of `>=`, `<=`, `==`, `!=`, `>`, `<` and
 an integer (`>= 1`, `== 1`, `< 3`); a violation is `E0120`.
 `element` is the one vocabulary marker rules use too: `heading` (a heading of

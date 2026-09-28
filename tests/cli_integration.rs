@@ -1858,3 +1858,59 @@ fn extract_marked_fence(content: &str, label: &str) -> Option<String> {
     let fence_close = region[after_fence_marker..].find("```")?;
     Some(region[after_fence_marker..after_fence_marker + fence_close].to_string())
 }
+
+// #201 (strict ruling): a `--schemas` override outside the project root is a
+// pipeline failure — exit 2, `pipeline_error.kind == "config"`, and neither
+// the envelope nor stderr carries the host path of either directory.
+#[test]
+fn schemas_override_outside_the_root_is_refused_without_a_host_path() {
+    let proj = TempProject::new("201-strict");
+    proj.seed_blog_schema();
+    proj.seed_clean_md("post.md");
+    let outside = TempProject::new("201-shared");
+    outside.write("schemas/blog.json", "{}");
+    let out = std::process::Command::new(mdatron_bin())
+        .args(["verify", "--json", "--project-root"])
+        .arg(proj.path())
+        .arg("--schemas")
+        .arg(outside.path().join("schemas"))
+        .output()
+        .unwrap();
+    assert_eq!(
+        out.status.code(),
+        Some(2),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let env: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(env["pipeline_error"]["kind"], "config");
+    let msg = env["pipeline_error"]["message"].as_str().unwrap();
+    assert!(msg.contains("schemas directory"), "{msg}");
+    let everything = format!(
+        "{}{}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    );
+    for host in [outside.path(), proj.path()] {
+        let h = host.to_string_lossy();
+        assert!(!everything.contains(&*h), "host path leaked: {everything}");
+    }
+    // An override INSIDE the root still works.
+    proj.write(
+        "config/schemas/blog.json",
+        &std::fs::read_to_string(proj.path().join(".mdatron/schemas/blog.json")).unwrap(),
+    );
+    let ok = std::process::Command::new(mdatron_bin())
+        .args(["verify", "--json", "--project-root"])
+        .arg(proj.path())
+        .arg("--schemas")
+        .arg(proj.path().join("config/schemas"))
+        .output()
+        .unwrap();
+    assert_ne!(
+        ok.status.code(),
+        Some(2),
+        "{}",
+        String::from_utf8_lossy(&ok.stderr)
+    );
+}
