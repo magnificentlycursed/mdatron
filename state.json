@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1183,
-        "tip_oid": "ab63576b89e7ecb3981204abe59d6ae6301d477d",
-        "prefix_sha256": "4628057e3b119fe28323d486e44ca2d7e36a99307505480a8c12451b689ec35f"
+        "sequence": 1184,
+        "tip_oid": "22ac9e28c06f77a07f7c6fe350b9b025ad781908",
+        "prefix_sha256": "6f82d43dcf568580585a9786f5f8418a11be370b9708e4df72cf967845645a73"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,9 +24,10 @@
       }
     }
   },
-  "next_display_id": 209,
+  "next_display_id": 210,
   "next_comment_id": 597,
   "display_id_map": {
+    "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "03beb708-b15d-4522-950e-3fdaa3a3d16b": 196,
     "083ac886-79a0-4b90-a4fc-61a2d9f1877b": 133,
@@ -259,6 +260,16 @@
     }
   },
   "issues": {
+    "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": {
+      "uuid": "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95",
+      "display_id": 209,
+      "title": "Route name_equals_dir: <field>: a claimed file's frontmatter field must equal its parent directory name (SKILL.md name == skill directory; #181 blocker, operator ruling A 2026-09-28)",
+      "status": "open",
+      "priority": "high",
+      "created_by": "79Ig",
+      "created_at": "2026-09-28T23:17:35.582928Z",
+      "updated_at": "2026-09-28T23:17:35.582928Z"
+    },
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": {
       "uuid": "028e84f4-cfd0-45aa-8aee-b43ec885d803",
       "display_id": 77,
