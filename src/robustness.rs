@@ -604,8 +604,45 @@ fn rule_case() -> impl Strategy<Value = (String, Yaml)> {
             id_pick(),
         )
             .prop_map(|(s1, e1, p1, s2, e2, p2)| yaml_rule_disjoint((s1, e1, p1), (s2, e2, p2)));
-        (body, prop_oneof![3 => count_rule, 2 => disjoint_rule])
+        // A COHERENT pair (round 3, MINOR-3): both sections the prefixes
+        // share, one id-bearing class, one id pattern — an overlap otherwise
+        // needed six independent draws to line up. Three of the five prefixes
+        // carry the same REQ id in both sections.
+        let coherent_rule = Just(yaml_rule_disjoint(
+            ("## Members".to_string(), "h3", "^(REQ-[0-9]+)$"),
+            ("## Others".to_string(), "h3", "^(REQ-[0-9]+)$"),
+        ));
+        (
+            body,
+            prop_oneof![3 => count_rule, 2 => disjoint_rule, 1 => coherent_rule],
+        )
     })
+}
+
+/// ONE input strategy per offset-bearing property, shared by the property and
+/// its strategy-level reach test — so the reach test measures exactly the
+/// inputs CI runs (round 3, MAJOR-1: the reach tests had measured offset 0
+/// while the properties drew a uniform offset that cut the prefix away).
+fn section_input() -> impl Strategy<Value = ((String, Yaml), Offset)> {
+    (rule_case(), offset_pick())
+}
+
+fn vocabulary_input() -> impl Strategy<Value = (String, Offset, Option<Yaml>, bool)> {
+    (
+        sectioned_body(),
+        offset_pick(),
+        frontmatter_value(),
+        any::<bool>(),
+    )
+}
+
+fn snapshot_input() -> impl Strategy<Value = (String, String, bool, Offset)> {
+    (
+        sectioned_body(),
+        sectioned_body(),
+        any::<bool>(),
+        offset_pick(),
+    )
 }
 
 /// Frontmatter for the numeric-claims comparison: the claimed field in every
@@ -629,9 +666,37 @@ fn frontmatter_value() -> impl Strategy<Value = Option<Yaml>> {
     .prop_map(|yaml| yaml.map(|y| serde_yaml_ng::from_str::<Yaml>(y).unwrap()))
 }
 
-/// A `body_offset` that is a char boundary of `content` (the pipeline hands
-/// the scanners the offset just past the frontmatter fence; the property
-/// exercises every boundary, including 0 and the end).
+/// A body offset draw (L4 round 3, MAJOR-1/2). Three times in four it is the
+/// fence position (0 here, where the generated bodies carry no frontmatter),
+/// so a body's leading section prefix survives and the section and marker
+/// arms run; one time in four it is a proportional [`prop::sample::Index`]
+/// into the body's char boundaries. Both halves SHRINK: `prop_oneof` prefers
+/// the first arm and `Index` shrinks toward 0 — a raw `usize` taken modulo the
+/// boundary count remapped to an unrelated offset every time a fragment was
+/// removed, so failing bodies never shrank.
+type Offset = Option<prop::sample::Index>;
+
+fn offset_pick() -> impl Strategy<Value = Offset> {
+    prop_oneof![
+        3 => Just(None),
+        1 => any::<prop::sample::Index>().prop_map(Some),
+    ]
+}
+
+/// The char-boundary offset an [`Offset`] names in `content`.
+fn offset_in(content: &str, offset: &Offset) -> usize {
+    match offset {
+        None => 0,
+        Some(ix) => {
+            let mut boundaries: Vec<usize> = content.char_indices().map(|(i, _)| i).collect();
+            boundaries.push(content.len());
+            boundaries[ix.index(boundaries.len())]
+        }
+    }
+}
+
+/// A `body_offset` that is a char boundary of `content`, by position — used by
+/// the deterministic seeds to hit the middle of a body.
 fn char_boundary(content: &str, pick: usize) -> usize {
     let mut boundaries: Vec<usize> = content.char_indices().map(|(i, _)| i).collect();
     boundaries.push(content.len());
@@ -1052,8 +1117,8 @@ fn count_over_strategy<S: Strategy>(strategy: S, cases: u32, tally: impl Fn(S::V
 fn reach_strategy_section_rules_hit_the_count_and_disjoint_arms() {
     use std::cell::Cell;
     let (compiled, e0120, e0121, e0122) = (Cell::new(0), Cell::new(0), Cell::new(0), Cell::new(0));
-    count_over_strategy(rule_case(), 512, |(body, rule)| {
-        if let Some(f) = drive_section_rule(&rule, &body, 0) {
+    count_over_strategy(section_input(), 512, |((body, rule), off)| {
+        if let Some(f) = drive_section_rule(&rule, &body, offset_in(&body, &off)) {
             compiled.set(compiled.get() + 1);
             for c in codes(&f) {
                 match c {
@@ -1072,11 +1137,11 @@ fn reach_strategy_section_rules_hit_the_count_and_disjoint_arms() {
         "most generated rules must compile (got {compiled}/512)"
     );
     assert!(
-        e0120 >= 10,
+        e0120 >= 15,
         "the count arm must fail sometimes (E0120 {e0120})"
     );
     assert!(
-        e0121 >= 3,
+        e0121 >= 15,
         "the disjoint comparison must find overlaps sometimes (E0121 {e0121})"
     );
     assert!(
@@ -1089,20 +1154,21 @@ fn reach_strategy_section_rules_hit_the_count_and_disjoint_arms() {
 fn reach_strategy_vocabulary_hits_reserved_anti_pattern_and_numeric_arms() {
     use std::cell::Cell;
     let (e0092, e0093, e0094) = (Cell::new(0), Cell::new(0), Cell::new(0));
-    count_over_strategy(
-        (sectioned_body(), frontmatter_value()),
-        512,
-        |(body, fm)| {
-            for c in codes(&drive_vocabulary_scan(&body, 0, fm.as_ref(), true)) {
-                match c {
-                    "MDATRON-E0092" => e0092.set(e0092.get() + 1),
-                    "MDATRON-E0093" => e0093.set(e0093.get() + 1),
-                    "MDATRON-E0094" => e0094.set(e0094.get() + 1),
-                    _ => {}
-                }
+    count_over_strategy(vocabulary_input(), 512, |(body, off, fm, coinage)| {
+        for c in codes(&drive_vocabulary_scan(
+            &body,
+            offset_in(&body, &off),
+            fm.as_ref(),
+            coinage,
+        )) {
+            match c {
+                "MDATRON-E0092" => e0092.set(e0092.get() + 1),
+                "MDATRON-E0093" => e0093.set(e0093.get() + 1),
+                "MDATRON-E0094" => e0094.set(e0094.get() + 1),
+                _ => {}
             }
-        },
-    );
+        }
+    });
     let (e0092, e0093, e0094) = (e0092.get(), e0093.get(), e0094.get());
     eprintln!("vocabulary over 512 cases: E0092 {e0092}, E0093 {e0093}, E0094 {e0094}");
     assert!(e0092 >= 20, "reserved spellings (E0092 {e0092})");
@@ -1113,30 +1179,29 @@ fn reach_strategy_vocabulary_hits_reserved_anti_pattern_and_numeric_arms() {
 #[test]
 fn reach_strategy_snapshot_backed_scanners_resolve_targets_and_members() {
     use std::cell::Cell;
-    // A marker line whose name IS a member yields no E0112; count lines that
-    // matched the first rule against the E0112s to show members resolve.
-    let (e0111, e0112, e0114, matched_members) =
-        (Cell::new(0), Cell::new(0), Cell::new(0), Cell::new(0));
-    let rule = &marker_rules()[0];
+    // Resolved members are asserted on a hand-built input in
+    // `reach_snapshot_backed_target_side_arms` ("Bold IS a member"): a
+    // strategy-level proxy (marker lines vs E0112 counts) could pass with no
+    // lookup at all (round 3, MINOR-4), so none is claimed here.
+    let (e0111, e0112, e0114) = (Cell::new(0), Cell::new(0), Cell::new(0));
     count_over_strategy(
-        (sectioned_body(), sectioned_body()),
+        snapshot_input(),
         48,
-        |(body, target)| {
-            let f = drive_snapshot_backed_scanners(&body, &target, false, 0);
+        |(body, target, root_relative, off)| {
+            let f = drive_snapshot_backed_scanners(
+                &body,
+                &target,
+                root_relative,
+                offset_in(&body, &off),
+            );
             let c = codes(&f);
-            let dead = c.iter().filter(|c| **c == "MDATRON-E0112").count();
-            let matched = body.lines().filter(|l| rule.pattern.is_match(l)).count();
-            if target.contains("## Members") && matched > dead {
-                matched_members.set(matched_members.get() + 1);
-            }
             e0111.set(e0111.get() + c.iter().filter(|c| **c == "MDATRON-E0111").count());
-            e0112.set(e0112.get() + dead);
+            e0112.set(e0112.get() + c.iter().filter(|c| **c == "MDATRON-E0112").count());
             e0114.set(e0114.get() + c.iter().filter(|c| **c == "MDATRON-E0114").count());
         },
     );
-    let (e0111, e0112, e0114, matched_members) =
-        (e0111.get(), e0112.get(), e0114.get(), matched_members.get());
-    eprintln!("snapshot-backed over 48 cases: E0111 {e0111}, E0112 {e0112}, E0114 {e0114}, cases with a resolved member {matched_members}");
+    let (e0111, e0112, e0114) = (e0111.get(), e0112.get(), e0114.get());
+    eprintln!("snapshot-backed over 48 cases: E0111 {e0111}, E0112 {e0112}, E0114 {e0114}");
     assert!(
         e0111 >= 1,
         "a cross-file dead anchor on a captured target (E0111 {e0111})"
@@ -1146,10 +1211,6 @@ fn reach_strategy_snapshot_backed_scanners_resolve_targets_and_members() {
         "a marker name that is not a member (E0112 {e0112})"
     );
     assert!(e0114 >= 1, "a target without the section (E0114 {e0114})");
-    assert!(
-        matched_members >= 1,
-        "a marker name that IS a member resolves (cases {matched_members})"
-    );
 }
 
 #[test]
@@ -1233,30 +1294,25 @@ proptest! {
     #[test]
     fn prop_target_extraction_never_panics(
         body in sectioned_body(),
-        pick in any::<usize>(),
+        off in offset_pick(),
         root_relative in any::<bool>(),
     ) {
-        drive_target_extraction(&body, char_boundary(&body, pick), root_relative);
+        drive_target_extraction(&body, offset_in(&body, &off), root_relative);
     }
 
     #[test]
-    fn prop_section_rules_never_panic((body, rule) in rule_case(), pick in any::<usize>()) {
-        drive_section_rule(&rule, &body, char_boundary(&body, pick));
+    fn prop_section_rules_never_panic(((body, rule), off) in section_input()) {
+        drive_section_rule(&rule, &body, offset_in(&body, &off));
     }
 
     #[test]
-    fn prop_vocabulary_scan_never_panics(
-        body in sectioned_body(),
-        pick in any::<usize>(),
-        frontmatter in frontmatter_value(),
-        coinage in any::<bool>(),
-    ) {
-        drive_vocabulary_scan(&body, char_boundary(&body, pick), frontmatter.as_ref(), coinage);
+    fn prop_vocabulary_scan_never_panics((body, off, frontmatter, coinage) in vocabulary_input()) {
+        drive_vocabulary_scan(&body, offset_in(&body, &off), frontmatter.as_ref(), coinage);
     }
 
     #[test]
-    fn prop_code_catalog_scan_never_panics(body in sectioned_body(), pick in any::<usize>()) {
-        drive_code_catalog_scan(&body, char_boundary(&body, pick));
+    fn prop_code_catalog_scan_never_panics(body in sectioned_body(), off in offset_pick()) {
+        drive_code_catalog_scan(&body, offset_in(&body, &off));
     }
 }
 
@@ -1278,22 +1334,9 @@ fn prop_snapshot_backed_scanners_never_panic() {
     };
     let mut runner = TestRunner::new(config);
     runner
-        .run(
-            &(
-                sectioned_body(),
-                sectioned_body(),
-                any::<bool>(),
-                any::<usize>(),
-            ),
-            |(body, target, root_relative, pick)| {
-                drive_snapshot_backed_scanners(
-                    &body,
-                    &target,
-                    root_relative,
-                    char_boundary(&body, pick),
-                );
-                Ok(())
-            },
-        )
+        .run(&snapshot_input(), |(body, target, root_relative, off)| {
+            drive_snapshot_backed_scanners(&body, &target, root_relative, offset_in(&body, &off));
+            Ok(())
+        })
         .unwrap_or_else(|e| panic!("snapshot-backed scanner property failed: {e}"));
 }
