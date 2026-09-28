@@ -68,7 +68,8 @@ and one inert `*.example` template per family file (`routes`, `pins`,
 `vocabulary`, `code-catalogs`) whose header states its activation rule, keys,
 scope, and codes — copy one to its real name to activate that family, or read
 `mdatron docs inputs` (a tree initialized before 0.7.0 gains the templates on
-its next `mdatron init`):
+its next `mdatron init`, which also refreshes any template you have not edited
+to the running version's content):
 
 ```
 mkdir my-typed-docs && cd my-typed-docs

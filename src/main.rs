@@ -524,16 +524,27 @@ fn cmd_init(project_root: Option<PathBuf>, quiet: bool) -> ExitCode {
     let root = canonical_project_root(root);
 
     match init(&root) {
-        Ok(InitOutcome::Deployed { created }) => {
+        Ok(InitOutcome::Deployed { created, refreshed }) => {
             if !quiet {
-                eprintln!(
-                    "mdatron init: deployed .mdatron/ ({} path(s))",
-                    created.len()
-                );
+                if !created.is_empty() {
+                    eprintln!(
+                        "mdatron init: deployed .mdatron/ ({} path(s))",
+                        created.len()
+                    );
+                }
                 for p in &created {
                     // #167 audit find: a repaired MANAGED path echoes the
                     // manifest's (adopter-editable) entry text — escape it.
                     eprintln!("  + {}", stderr_safe(p, &[]));
+                }
+                if !refreshed.is_empty() {
+                    eprintln!(
+                        "mdatron init: refreshed {} template(s) to this version (unedited since recorded)",
+                        refreshed.len()
+                    );
+                }
+                for p in &refreshed {
+                    eprintln!("  ~ {}", stderr_safe(p, &[]));
                 }
             }
             ExitCode::SUCCESS
