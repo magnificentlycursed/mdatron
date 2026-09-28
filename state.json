@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1175,
-        "tip_oid": "9827b4a153b0a7a4c258e0aef200f4c145c71cb4",
-        "prefix_sha256": "a76abc0cf001c34903e0343e6adb6ca5ed00161d725ebfc3fb3321bbff7b3a89"
+        "sequence": 1176,
+        "tip_oid": "e582fd65f6f1c95ab557d3c3e080e91394ff4120",
+        "prefix_sha256": "c84d4adae6da58eab350db6cdc9ca5f773f3918be30528fc9bf3bf9dedaee495"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 207,
-  "next_comment_id": 592,
+  "next_comment_id": 593,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
     "03beb708-b15d-4522-950e-3fdaa3a3d16b": 196,
@@ -4300,7 +4300,18 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-09-24T03:04:01.518408Z",
-      "updated_at": "2026-09-24T03:04:01.518408Z"
+      "updated_at": "2026-09-28T22:54:47.754345Z",
+      "comments": {
+        "1a2c149e-2650-4b27-ade2-f30178ffd8b0": {
+          "display_id": 592,
+          "author": "79Ig",
+          "content": "RULING (operator 2026-09-28): STRICT — the schemas and patterns directories must resolve inside the project root. Placeholder rendering considered and rejected: it fixes the leak but leaves an unconfined, unpinned rules directory invisible to the --changed whole-tree trigger. Verified first: the override flags are documented only in --help, no test exercises them, vsdd-cli never passes them. Implemented at the engine entry (run_inner), so every caller is covered: resolved through symlinks and .. (longest existing ancestor canonicalized), refused as E0080 kind config naming the directory by role, never by path. Branch feature/201-paths-and-matchers (worktree). Companion ruling on the section matcher split filed as #206 and landed in the same lane.",
+          "created_at": "2026-09-28T22:54:47.617739Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA0TWg8YcSbUnlbvWb55aUF6XgD3ux+DVp/lMIV3yamWmpJ8cApb9UrPGr4r0pp035W1gly/2HWQePfBrDOvQrCg=="
+        }
+      }
     },
     "87e35dbb-43b8-4ebb-a0f2-06777d8f956d": {
       "uuid": "87e35dbb-43b8-4ebb-a0f2-06777d8f956d",
