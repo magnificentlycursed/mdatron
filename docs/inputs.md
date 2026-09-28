@@ -5,7 +5,9 @@ accepts, what activates it, what it scans, and the codes it can emit. This is
 the page `mdatron docs inputs` prints. `mdatron init` deploys the skeleton and
 an inert `*.example` template for each family file below (copy a template to
 its real name to activate that family; a tree initialized before the templates
-existed gains them on its next `init`). Two tests hold this page current: one
+existed gains them on its next `init`, and a template you have not edited is
+refreshed to the running version's content, while an edited one is refused as
+drift and left alone). Two tests hold this page current: one
 loads every template through the real parser and cross-checks the keys listed
 here against the keys the template exercises; the other asks each strict
 parser directly — by feeding it an unknown key at every nesting level and
@@ -50,7 +52,7 @@ Activation: `verify` refuses without it. Codes: `W0040`, `W0043`, `W0046`,
 The route family — the closed-world allowlist over the walked files, and the
 gateway to the citation, link, marker, and section families.
 
-Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `citations`, `links`, `link_root`, `marker_rules`, `pattern`, `element`, `target_doc`, `target_section`, `section_rules`, `section`, `match`, `count`, `disjoint`, `id_pattern`.
+Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `citations`, `links`, `link_root`, `marker_rules`, `pattern`, `element`, `target_doc`, `target_section`, `section_rules`, `section`, `match`, `match_on`, `count`, `disjoint`, `id_pattern`.
 
 - Per route — required: `files` (root-relative glob; `*` crosses `/`),
   `governed_by` (a document that must open inside the governed tree, `E0031`).
@@ -61,8 +63,19 @@ Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `cit
   referenced name), `element` (`heading`, `h1`…`h6`, or `list-item-bold-name`),
   `target_doc`. Optional: `target_section` (a full ATX heading line).
 - A section rule — a count rule (`section`, `element`, `match`, `count` with
-  one of `>=`, `<=`, `==`, `!=`, `>`, `<` and an integer) or a `disjoint` rule
-  (exactly two operands of `section`, `element`, `id_pattern`).
+  one of `>=`, `<=`, `==`, `!=`, `>`, `<` and an integer; optional `match_on`:
+  `line`, the default, or `name`) or a `disjoint` rule (exactly two operands
+  of `section`, `element`, `id_pattern`).
+- What each pattern is tested against — the three differ, so read this before
+  writing one:
+  - a marker rule's `pattern` runs against the whole LINE, and its first
+    capture group is the referenced name;
+  - a count rule's `match` runs against the whole LINE by default (`### REQ-1`,
+    so `'^REQ-[0-9]+$'` never matches) or against the element's NAME with
+    `match_on: name` (the heading text or the list item's bold name: `REQ-1`); it needs no
+    capture group;
+  - a disjoint operand's `id_pattern` runs against the element's NAME, and its
+    first capture group is the id.
 
 Activation: the file exists — even `routes: []` (announced as `W0053`); from
 then on every walked file must be claimed by exactly one route. Scope: every

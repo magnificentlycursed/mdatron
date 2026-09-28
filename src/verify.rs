@@ -390,6 +390,64 @@ fn run(
 /// `meta` collects the run's phase timings (#175, `Instant`s at the natural
 /// phase boundaries: load → capture at the governed walk, capture → check at
 /// the capture-complete seam) and the input-lineage digests (#176).
+/// A path resolved as far as the filesystem allows: the longest existing
+/// ancestor canonicalized (symlinks followed), the rest appended lexically
+/// with `.` dropped and `..` popped — so a not-yet-created directory compares
+/// against the canonical root the same way an existing one does.
+fn resolve_for_containment(path: &Path) -> Option<PathBuf> {
+    let abs = std::path::absolute(path).ok()?;
+    let mut existing = abs.clone();
+    let mut rest: Vec<std::ffi::OsString> = Vec::new();
+    let canon = loop {
+        if let Ok(c) = existing.canonicalize() {
+            break c;
+        }
+        let name = existing.file_name()?.to_os_string();
+        rest.push(name);
+        if !existing.pop() {
+            return None;
+        }
+    };
+    let mut out = canon;
+    for part in rest.into_iter().rev() {
+        match part.to_str() {
+            Some(".") => {}
+            Some("..") => {
+                out.pop();
+            }
+            _ => out.push(part),
+        }
+    }
+    Some(out)
+}
+
+/// Refuse a rules directory (schemas or patterns) that resolves outside the
+/// project root (#201, strict ruling). `role` names it in the message; `flag`
+/// names the CLI override that can point it elsewhere.
+fn refuse_rules_dir_outside_root(
+    project_root: &Path,
+    dir: &Path,
+    role: &str,
+    flag: &str,
+) -> Result<(), VerifyError> {
+    let (Some(root), Some(resolved)) = (
+        resolve_for_containment(project_root),
+        resolve_for_containment(dir),
+    ) else {
+        return Ok(()); // unresolvable: the root check and the loaders report it
+    };
+    if resolved.starts_with(&root) {
+        return Ok(());
+    }
+    Err(VerifyError::Config(format!(
+        "the {role} directory (`{flag}`) resolves outside the project root; it is \
+         governance data and must live inside the governed tree (pinned, confined, and \
+         forcing a whole-tree run when it changes) — move it under the project root (a \
+         submodule or subtree for rules shared across repositories), or run with a \
+         project root that contains it"
+    )))
+}
+
 fn run_inner(
     config: &VerifyConfig,
     changed: Option<&Path>,
@@ -403,6 +461,27 @@ fn run_inner(
         meta.inputs
             .insert("config.yaml".into(), format!("sha256:{d}"));
     }
+    // #201 (operator ruling: strict): the schemas and patterns directories must
+    // resolve INSIDE the project root. They are governance data — DESIGN
+    // § Validation is data-driven: `.mdatron/` is routed and pinned, and a
+    // change to it forces a whole-tree run under `--changed` — and a directory
+    // outside the root is none of those: unpinned, invisible to the
+    // incremental whole-tree trigger, read outside the governed tree, and
+    // unrenderable root-relative (DEF4: its paths leaked the host layout).
+    // Resolved through symlinks, so a link that points out is refused too.
+    // The message names the directory by ROLE, never by path (no leak).
+    refuse_rules_dir_outside_root(
+        &config.project_root,
+        &config.schemas_dir,
+        "schemas",
+        "--schemas",
+    )?;
+    refuse_rules_dir_outside_root(
+        &config.project_root,
+        &config.patterns_dir,
+        "patterns",
+        "--patterns",
+    )?;
     // BC-4 pipeline-fail detection: refuse to proceed when neither schemas nor patterns
     // directories exist. A project without either has nothing to validate against; this
     // is a configuration error, not a clean run with zero findings.
@@ -4554,6 +4633,66 @@ mod tests {
     // case that slipped through.) W0047 makes the missing skeleton dir loud. An
     // *empty* dir is a legitimate opt-out and stays quiet — only a *missing* dir,
     // which `mdatron init` would have created, is drift.
+    // #201 (strict ruling): a schemas or patterns directory resolving outside
+    // the project root is refused as a pipeline failure — including through a
+    // symlink and through `..` — and the message names the role, never a path.
+    #[test]
+    fn rules_dirs_outside_the_root_are_refused() {
+        let base = std::env::temp_dir().join(format!("mdatron-201-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        let root = base.join("proj");
+        let outside = base.join("shared");
+        std::fs::create_dir_all(root.join(".mdatron/schemas")).unwrap();
+        std::fs::create_dir_all(root.join(".mdatron/patterns")).unwrap();
+        std::fs::create_dir_all(&outside).unwrap();
+
+        let run = |schemas: PathBuf, patterns: PathBuf| {
+            let mut c = VerifyConfig::new(&root);
+            c.schemas_dir = schemas;
+            c.patterns_dir = patterns;
+            verify_report(&c)
+        };
+        let is_refusal = |r: Result<VerifyReport, VerifyError>, role: &str| match r {
+            Err(VerifyError::Config(m)) => {
+                assert!(m.contains(&format!("the {role} directory")), "{m}");
+                assert!(!m.contains(&*base.to_string_lossy()), "no host path: {m}");
+                true
+            }
+            _ => false,
+        };
+        // Outside, absolute.
+        assert!(is_refusal(
+            run(outside.clone(), root.join(".mdatron/patterns")),
+            "schemas"
+        ));
+        assert!(is_refusal(
+            run(root.join(".mdatron/schemas"), outside.clone()),
+            "patterns"
+        ));
+        // Outside via `..`, and a not-yet-existing directory outside.
+        assert!(is_refusal(
+            run(root.join("../shared"), root.join(".mdatron/patterns")),
+            "schemas"
+        ));
+        assert!(is_refusal(
+            run(outside.join("nope"), root.join(".mdatron/patterns")),
+            "schemas"
+        ));
+        // Inside but not the default: accepted.
+        std::fs::create_dir_all(root.join("config/schemas")).unwrap();
+        assert!(run(root.join("config/schemas"), root.join(".mdatron/patterns")).is_ok());
+        // A symlink inside the root that points outside: refused.
+        #[cfg(unix)]
+        {
+            std::os::unix::fs::symlink(&outside, root.join("linked")).unwrap();
+            assert!(is_refusal(
+                run(root.join("linked"), root.join(".mdatron/patterns")),
+                "schemas"
+            ));
+        }
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
     #[test]
     fn missing_schemas_dir_is_loud() {
         let proj = TempProject::new("missing-schemas");

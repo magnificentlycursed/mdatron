@@ -42,6 +42,11 @@
 #     element: h3
 #     match: "^### "
 #     count: ">= 1"
+#   - section: "## Requirements"
+#     element: h3
+#     match: "^Slice [0-9]+"
+#     match_on: name   # test the heading TEXT, not the line (default: line)
+#     count: ">= 1"
 #   - disjoint:
 #     - section: "## Requirements"
 #       element: h3

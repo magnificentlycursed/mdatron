@@ -106,6 +106,11 @@ const ROUTES_TEMPLATE: &str = r####"# routes.yaml.example — the route family. 
 #     element: h3
 #     match: "^### "
 #     count: ">= 1"
+#   - section: "## Requirements"
+#     element: h3
+#     match: "^Slice [0-9]+"
+#     match_on: name   # test the heading TEXT, not the line (default: line)
+#     count: ">= 1"
 #   - disjoint:
 #     - section: "## Requirements"
 #       element: h3
@@ -221,6 +226,15 @@ fn engine_content(path: &str) -> Option<&'static str> {
     }
 }
 
+/// The shipped content of a managed TEMPLATE (`*.example`), if `path` is one —
+/// the only managed files a refresh may rewrite (#207).
+fn template_content(path: &str) -> Option<&'static str> {
+    TEMPLATE_FILES
+        .iter()
+        .find(|(name, _)| *name == path)
+        .map(|(_, content)| *content)
+}
+
 /// Directories the skeleton creates under `.mdatron/`.
 const SKELETON_DIRS: &[&str] = &["schemas", "patterns"];
 
@@ -233,8 +247,14 @@ const MANIFEST_VERSION: u32 = 2;
 /// Outcome of a successful init run.
 #[derive(Debug, PartialEq, Eq)]
 pub enum InitOutcome {
-    /// First run (or a repair of missing managed files): paths created.
-    Deployed { created: Vec<String> },
+    /// First run, a repair of missing managed files, or a template refresh:
+    /// paths created, and templates rewritten to this version's content
+    /// (a managed template still byte-identical to what was recorded, whose
+    /// shipped content changed).
+    Deployed {
+        created: Vec<String>,
+        refreshed: Vec<String>,
+    },
     /// Re-run on an intact, unmodified tree: nothing to do.
     AlreadyInitialized,
 }
@@ -456,6 +476,13 @@ pub fn sha256_hex(bytes: &[u8]) -> String {
 /// - A manifest-listed managed file missing → repaired from engine-known
 ///   content; the manifest is rewritten preserving entries and tombstones.
 ///   A missing seed is re-seeded.
+/// - A managed TEMPLATE still byte-identical to its recorded hash (nobody
+///   edited it) whose shipped content changed in this version → refreshed to
+///   this version's content and re-hashed, so an upgrade never leaves an
+///   adopter reading a stale example (#207). An edited template is drift and
+///   refused as above — the refresh never overwrites a hand change. Only the
+///   `*.example` templates refresh: a v1 manifest's managed `config.yaml` is
+///   adopter configuration in substance and is never rewritten.
 pub fn init(project_root: &Path) -> Result<InitOutcome, InitError> {
     let dir = project_root.join(".mdatron");
     let manifest_path = dir.join(MANIFEST_NAME);
@@ -464,6 +491,7 @@ pub fn init(project_root: &Path) -> Result<InitOutcome, InitError> {
         let mut manifest = read_manifest(&manifest_path)?;
         let mut drifts = Vec::new();
         let mut missing: Vec<usize> = Vec::new();
+        let mut stale: Vec<usize> = Vec::new();
         for (i, entry) in manifest.managed.iter().enumerate() {
             // The manifest is read from the tree, and it cannot hash itself
             // (fixed point) — so a hand-edit to it is not drift-caught. Hold its
@@ -490,6 +518,12 @@ pub fn init(project_root: &Path) -> Result<InitOutcome, InitError> {
                             expected_sha256: entry.sha256.clone(),
                             actual_sha256: actual,
                         });
+                    } else if let Some(content) = template_content(&entry.path) {
+                        // Untouched since recorded, but this version ships
+                        // different content: refresh below (never on drift).
+                        if sha256_hex(content.as_bytes()) != entry.sha256 {
+                            stale.push(i);
+                        }
                     }
                 }
                 Err(e) if e.kind() == std::io::ErrorKind::NotFound => missing.push(i),
@@ -503,6 +537,23 @@ pub fn init(project_root: &Path) -> Result<InitOutcome, InitError> {
         }
 
         let mut created = Vec::new();
+        let mut refreshed = Vec::new();
+
+        // Refresh untouched templates whose shipped content changed (#207).
+        // Reached only when nothing drifted, so no hand change is overwritten.
+        if !stale.is_empty() {
+            for &i in &stale {
+                let entry = &mut manifest.managed[i];
+                let Some(content) = template_content(&entry.path) else {
+                    continue;
+                };
+                let p = dir.join(&entry.path);
+                crate::atomic::write(&p, content.as_bytes()).map_err(|e| io_err(&p, &e))?;
+                entry.sha256 = sha256_hex(content.as_bytes());
+                refreshed.push(format!(".mdatron/{}", entry.path));
+            }
+            write_manifest(&dir, &manifest)?;
+        }
 
         // Repair missing MANAGED files from engine-known content. The manifest
         // is the authority on what is managed (its entries are data — v1 trees
@@ -546,16 +597,19 @@ pub fn init(project_root: &Path) -> Result<InitOutcome, InitError> {
             write_manifest(&dir, &manifest)?;
         }
 
-        return if created.is_empty() {
+        return if created.is_empty() && refreshed.is_empty() {
             Ok(InitOutcome::AlreadyInitialized)
         } else {
-            Ok(InitOutcome::Deployed { created })
+            Ok(InitOutcome::Deployed { created, refreshed })
         };
     }
 
     // First run: deploy the skeleton, seeds, and a fresh (v2) manifest.
     let created = deploy(&dir)?;
-    Ok(InitOutcome::Deployed { created })
+    Ok(InitOutcome::Deployed {
+        created,
+        refreshed: Vec::new(),
+    })
 }
 
 /// Deploy every template not yet in the manifest: write it when absent and
@@ -953,5 +1007,46 @@ mod tests {
             .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()));
         // Deterministic across calls.
         assert_eq!(h, sha256_hex(b"mdatron"));
+    }
+
+    // #207: an untouched managed template whose recorded content is an OLDER
+    // version is refreshed to this version's content and re-hashed; an edited
+    // one is drift, refused, and left byte-for-byte alone.
+    #[test]
+    fn init_refreshes_an_untouched_stale_template_and_refuses_an_edited_one() {
+        let root = temp_root("refresh");
+        init(&root).unwrap();
+        let dir = root.join(".mdatron");
+        let (name, current) = TEMPLATE_FILES[0];
+        let old = "# an older version of this template\n";
+        // Simulate a tree initialized by an older version: the file and its
+        // manifest hash both carry the old content.
+        std::fs::write(dir.join(name), old).unwrap();
+        let mut manifest = read_manifest(&dir.join(MANIFEST_NAME)).unwrap();
+        manifest
+            .managed
+            .iter_mut()
+            .find(|e| e.path == name)
+            .unwrap()
+            .sha256 = sha256_hex(old.as_bytes());
+        write_manifest(&dir, &manifest).unwrap();
+
+        match init(&root).unwrap() {
+            InitOutcome::Deployed { created, refreshed } => {
+                assert!(created.is_empty(), "{created:?}");
+                assert_eq!(refreshed, vec![format!(".mdatron/{name}")]);
+            }
+            other => panic!("expected a refresh, got {other:?}"),
+        }
+        assert_eq!(std::fs::read_to_string(dir.join(name)).unwrap(), current);
+        // Re-hashed: the next run is a no-op, not drift.
+        assert_eq!(init(&root).unwrap(), InitOutcome::AlreadyInitialized);
+
+        // An EDITED template is drift: refused, and not overwritten.
+        let edited = format!("{current}# my note\n");
+        std::fs::write(dir.join(name), &edited).unwrap();
+        assert!(matches!(init(&root), Err(InitError::Drift(_))));
+        assert_eq!(std::fs::read_to_string(dir.join(name)).unwrap(), edited);
+        let _ = std::fs::remove_dir_all(&root);
     }
 }

@@ -57,6 +57,15 @@ apply the matching corrective pattern below.
   `.mdatron/patterns/*.yaml` file failed to parse. Validate the file
   out-of-band (`jq < schema.json`, `yq < pattern.yaml`) to surface the
   parse error.
+- **Schemas or patterns directory outside the project root.** The
+  `--schemas`/`--patterns` override (or a library caller's configured
+  directory) resolves outside the project root, through a symlink or `..`
+  included. These directories are governance data: they must live inside the
+  governed tree, where they are confined, pinnable, and a change to them forces
+  a whole-tree run. Move the directory under the project root (a submodule or
+  subtree for rules shared across repositories), or run with a project root
+  that contains it. (Refused from 0.7.0; through 0.6.0 such a directory was
+  read, and its paths printed as absolute host paths.)
 - **Permission denied on a file mdatron tried to read.** Check filesystem
   permissions on the project's `.mdatron/` tree and the markdown files it
   references.

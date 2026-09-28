@@ -59,8 +59,26 @@ pub(crate) struct RawRule {
     match_pattern: Option<String>,
     #[serde(default)]
     count: Option<String>,
+    /// What a count rule's `match` is tested against: the whole element
+    /// `line` (the default, and the only behavior through 0.6.0) or the
+    /// element's `name` — the heading text or the list item's bold name, the same text a
+    /// disjoint operand's `id_pattern` and a marker target's member lookup
+    /// see. Additive (#201 ruling): absent keeps every existing rule's meaning.
+    #[serde(default)]
+    match_on: Option<MatchOn>,
     #[serde(default)]
     disjoint: Option<Vec<RawOperand>>,
+}
+
+/// What a count rule's `match` regex is tested against (see [`RawRule`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum MatchOn {
+    /// The whole element line, marker included (`### REQ-1`).
+    #[default]
+    Line,
+    /// The element's name: the heading text or the list item's bold name (`REQ-1`).
+    Name,
 }
 
 #[derive(Debug, Deserialize)]
@@ -83,6 +101,7 @@ pub enum Rule {
         section: String,
         element: ElementClass,
         matcher: regex_lite::Regex,
+        on: MatchOn,
         pred: CountPred,
     },
     Disjoint {
@@ -188,10 +207,11 @@ pub(crate) fn compile_rule(r: RawRule) -> Result<Rule, Error> {
                 || r.element.is_some()
                 || r.match_pattern.is_some()
                 || r.count.is_some()
+                || r.match_on.is_some()
             {
                 return Err(Error::Config(
                     "a section-rule with `disjoint` must not also carry count-rule fields \
-                     (section/element/match/count)"
+                     (section/element/match/match_on/count)"
                         .into(),
                 ));
             }
@@ -236,6 +256,7 @@ pub(crate) fn compile_rule(r: RawRule) -> Result<Rule, Error> {
                 matcher: compile(&pattern)?,
                 section,
                 element,
+                on: r.match_on.unwrap_or_default(),
                 pred,
             })
         }
@@ -263,6 +284,7 @@ pub fn check_file(
                 section,
                 element,
                 matcher,
+                on,
                 pred,
             } => {
                 // GH #48 round 2: evaluate over ALL spans matching the spec, so
@@ -295,7 +317,7 @@ pub fn check_file(
                 } else {
                     let count: usize = spans
                         .iter()
-                        .map(|s| count_matching_elements(s, *element, matcher))
+                        .map(|s| count_matching_elements(s, *element, matcher, *on))
                         .sum();
                     if !pred.holds(count) {
                         findings.push(section_finding(
@@ -419,6 +441,7 @@ fn count_matching_elements(
     section: &str,
     element: ElementClass,
     matcher: &regex_lite::Regex,
+    on: MatchOn,
 ) -> usize {
     non_fenced_lines(section)
         .into_iter()
@@ -426,7 +449,11 @@ fn count_matching_elements(
         // the container, never one of the counted elements — the marker
         // family's `extract_members` skips it the same way.
         .filter(|(offset, _)| *offset != 0)
-        .filter(|(_, line)| element.name_in(line).is_some() && matcher.is_match(line))
+        .filter(|(_, line)| match (element.name_in(line), on) {
+            (None, _) => false,
+            (Some(_), MatchOn::Line) => matcher.is_match(line),
+            (Some(name), MatchOn::Name) => matcher.is_match(name),
+        })
         .count()
 }
 
@@ -555,19 +582,30 @@ mod tests {
         let span = section_span(body, "## A").unwrap();
         let any = rx(".");
         assert_eq!(
-            count_matching_elements(span, ElementClass::Heading, &any),
+            count_matching_elements(span, ElementClass::Heading, &any, MatchOn::Line),
             2,
             "`heading` counts every level inside the span, not the section's own heading"
         );
-        assert_eq!(count_matching_elements(span, ElementClass::H2, &any), 0);
-        assert_eq!(count_matching_elements(span, ElementClass::H4, &any), 1);
         assert_eq!(
-            count_matching_elements(span, ElementClass::ListItemBoldName, &any),
+            count_matching_elements(span, ElementClass::H2, &any, MatchOn::Line),
+            0
+        );
+        assert_eq!(
+            count_matching_elements(span, ElementClass::H4, &any, MatchOn::Line),
+            1
+        );
+        assert_eq!(
+            count_matching_elements(span, ElementClass::ListItemBoldName, &any, MatchOn::Line),
             2,
             "bold-lead bullets only, never the plain bullet"
         );
         assert_eq!(
-            count_matching_elements(span, ElementClass::ListItemBoldName, &rx("Item x")),
+            count_matching_elements(
+                span,
+                ElementClass::ListItemBoldName,
+                &rx("Item x"),
+                MatchOn::Line
+            ),
             1,
             "the regex runs over the element's line"
         );
@@ -606,7 +644,7 @@ mod tests {
         let span = section_span(body, "## Requirements").unwrap();
         let m = rx(r"^### Phase \d+: .*\((parallel|sequential)\)$");
         assert_eq!(
-            count_matching_elements(span, ElementClass::H3, &m),
+            count_matching_elements(span, ElementClass::H3, &m, MatchOn::Line),
             2,
             "only the two in-section H3s"
         );
@@ -651,6 +689,7 @@ mod tests {
             section: "## Open questions".into(),
             element: ElementClass::H3,
             matcher: rx(r"^### Q\d+"),
+            on: MatchOn::Line,
             pred: parse_count_pred("== 0").unwrap(),
         };
         let body = "# Doc\n\n## Open questions\n\nnone right now.\n\n## Other\n\nx\n\n\
@@ -702,6 +741,7 @@ mod tests {
     #[test]
     fn compile_rule_rejects_heading_marker_with_empty_text() {
         let raw = RawRule {
+            match_on: None,
             section: Some("##".into()),
             element: Some(ElementClass::H3),
             match_pattern: Some(r"^### .*$".into()),
@@ -724,6 +764,7 @@ mod tests {
     #[test]
     fn compile_rule_rejects_count_section_spec_without_heading_marker() {
         let raw = RawRule {
+            match_on: None,
             section: Some("Requirements".into()),
             element: Some(ElementClass::H3),
             match_pattern: Some(r"^### .*$".into()),
@@ -746,6 +787,7 @@ mod tests {
     #[test]
     fn compile_rule_rejects_disjoint_operand_spec_without_heading_marker() {
         let raw = RawRule {
+            match_on: None,
             section: None,
             element: None,
             match_pattern: None,
@@ -784,6 +826,7 @@ mod tests {
             section: "## Requirements".into(),
             element: ElementClass::H3,
             matcher: rx(r"^### .*$"),
+            on: MatchOn::Line,
             pred: parse_count_pred("== 0").unwrap(),
         };
         let body = "# Doc\n\n## Renamed Requirements\n\n### Phase 1: x\n";
@@ -814,6 +857,7 @@ mod tests {
             section: "## Requirements".into(),
             element: ElementClass::H3,
             matcher: rx(r"^### .*$"),
+            on: MatchOn::Line,
             pred: parse_count_pred(">= 1").unwrap(),
         };
         let body = "# Doc\n\nno such section here.\n";
@@ -909,5 +953,45 @@ mod tests {
             "shared ids quoted: {:?}",
             f.quoted
         );
+    }
+
+    // #201 ruling: `match_on` is additive. Absent keeps the whole-line meaning
+    // every 0.6.0 rule has; `name` tests the element's name (heading text or
+    // list item's bold name), the same text a disjoint `id_pattern` sees.
+    #[test]
+    fn match_on_selects_line_or_name_and_defaults_to_line() {
+        let rule =
+            |yaml: &str| compile_rule(serde_yaml_ng::from_str::<RawRule>(yaml).unwrap()).unwrap();
+        let body = "## Members\n### REQ-1\n- **REQ-2**: x\n### Other\n";
+        let count = |r: &Rule| match r {
+            Rule::Count {
+                section,
+                element,
+                matcher,
+                on,
+                ..
+            } => section_spans(body, section)
+                .iter()
+                .map(|s| count_matching_elements(s, *element, matcher, *on))
+                .sum::<usize>(),
+            Rule::Disjoint { .. } => panic!("a count rule was compiled"),
+        };
+        let base =
+            "section: '## Members'\nelement: heading\nmatch: '^REQ-[0-9]+$'\ncount: '>= 1'\n";
+        // Default (line): the anchored id regex never matches `### REQ-1`.
+        assert_eq!(count(&rule(base)), 0);
+        assert_eq!(count(&rule(&format!("{base}match_on: line\n"))), 0);
+        // By name: it does.
+        assert_eq!(count(&rule(&format!("{base}match_on: name\n"))), 1);
+        // Name for the bold-lead class too.
+        let lead = "section: '## Members'\nelement: list-item-bold-name\nmatch: '^REQ-[0-9]+$'\ncount: '>= 1'\nmatch_on: name\n";
+        assert_eq!(count(&rule(lead)), 1);
+        // A line regex keeps working under the default.
+        let line = "section: '## Members'\nelement: h3\nmatch: '^### REQ-'\ncount: '>= 1'\n";
+        assert_eq!(count(&rule(line)), 1);
+        // An unknown value and a disjoint rule carrying it are refused.
+        assert!(serde_yaml_ng::from_str::<RawRule>(&format!("{base}match_on: heading\n")).is_err());
+        let disjoint = "match_on: name\ndisjoint:\n  - {section: '## A', element: h3, id_pattern: '(x)'}\n  - {section: '## B', element: h3, id_pattern: '(x)'}\n";
+        assert!(compile_rule(serde_yaml_ng::from_str::<RawRule>(disjoint).unwrap()).is_err());
     }
 }
