@@ -41,3 +41,8 @@ target/
 # Any build directory, including a reviewer's own (target-review, target-review-win, ...):
 # never stageable, so `git add -A` cannot sweep artifacts into a commit (#204 round 2).
 /target-*/
+
+# proptest replay files: a failing case is promoted to a committed seed in the
+# harness (tests/parser_robustness.rs, src/robustness.rs), never replayed from
+# a machine-local file CI cannot see (#193).
+/proptest-regressions/

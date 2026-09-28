@@ -75,6 +75,13 @@ pub mod verify;
 #[doc(hidden)]
 pub mod vocab;
 
+// Never-panic properties over the crate-private body-text scanners (#193):
+// test-only, in-crate because the scanners are pub(crate); CI's
+// parser-robustness job runs `cargo test --lib robustness::` beside the
+// public-API harness in tests/parser_robustness.rs.
+#[cfg(test)]
+mod robustness;
+
 #[doc(hidden)]
 pub use diagnostic::{Finding, Location, Severity};
 #[doc(hidden)]
