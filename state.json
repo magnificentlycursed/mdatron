@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1172,
-        "tip_oid": "df715ab98a77af74916254e4aa45f8a7e9e4fd4a",
-        "prefix_sha256": "fd4a8f11e859cf050b47e35f2bd372352c827076727ef9c2f61b6d291ae1cb43"
+        "sequence": 1173,
+        "tip_oid": "0ac87181ae56a3ee149d918015f9e46fbce41870",
+        "prefix_sha256": "5ec6c304f1e1f04a398e35f9bca9942a40fa53cf40b644ffc49b81c0b15d66c5"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 205,
+  "next_display_id": 206,
   "next_comment_id": 592,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -85,6 +85,7 @@
     "48642aed-2145-4a65-b014-0df508ad37c5": 11,
     "49197eb8-d2b6-4462-9185-1e9065d2d847": 3,
     "4be4a713-0fe0-45e4-9e07-9a859da5e49a": 204,
+    "4c0eca8e-f25b-4887-9a3e-7bfd683e20dd": 205,
     "4ca77036-160b-443f-9480-bef7a625d82f": 170,
     "4dd99e1d-a2be-43b8-b748-53449ce44113": 152,
     "4ebc561b-c68f-472e-8fee-f763332bf311": 180,
@@ -2638,6 +2639,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA9PES/6TYeKLDPDRSvusmwF2PZzEGIgJTt7QMrOWBGifx3j7pFrCcNJA4F+dToRUrTCbuWsrQueNPU7RoZOijBA=="
         }
       }
+    },
+    "4c0eca8e-f25b-4887-9a3e-7bfd683e20dd": {
+      "uuid": "4c0eca8e-f25b-4887-9a3e-7bfd683e20dd",
+      "display_id": 205,
+      "title": "Section count rules: additive match_on (line | name) so match can test the element name like disjoint id_pattern does; document the three matcher semantics side by side (L4 observation, operator ruling 2026-09-28)",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-09-28T22:50:01.209642Z",
+      "updated_at": "2026-09-28T22:50:01.209642Z"
     },
     "4ca77036-160b-443f-9480-bef7a625d82f": {
       "uuid": "4ca77036-160b-443f-9480-bef7a625d82f",
