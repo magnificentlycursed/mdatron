@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1178,
-        "tip_oid": "9faa4290bd277413c3f753d757b6c825fbae062e",
-        "prefix_sha256": "5a599105a56fc3e74edfcb233ce56a8951952693a73b3e0aa8b4e972fab11806"
+        "sequence": 1179,
+        "tip_oid": "95c8e7da5ab68f9d4174dfc2013b6d4c4570f20f",
+        "prefix_sha256": "459f72aeac4b7d69bac8293ae244c0b2296d93f67280c760ebacfc7019d95e05"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 207,
+  "next_display_id": 208,
   "next_comment_id": 595,
   "display_id_map": {
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -135,6 +135,7 @@
     "89517494-f1f1-48d3-b610-9b0c288ffcb6": 161,
     "8a1968b7-de28-47b6-b2a1-b4d80b3104cc": 159,
     "8ac50e86-5777-4068-8ce0-3d628ff48d30": 15,
+    "8b3d828f-8728-40e5-8f3a-e1d310883ef0": 207,
     "8bbf0d1a-ce4a-4096-b3ad-ae3bc065a6e7": 69,
     "8c4eab12-ffd1-4077-9afa-29257925a0aa": 108,
     "8d5c2bfc-5f17-4577-bbab-0434c455005d": 66,
@@ -4559,6 +4560,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAlctjy1HyNBFuKXQOV1L4Vzsxfh+DQDheixIVRU/Yjjhzw+Nd3HFtWWMm4wEuGoIW/dI9mjLkk88L3F3eXFopCA=="
         }
       }
+    },
+    "8b3d828f-8728-40e5-8f3a-e1d310883ef0": {
+      "uuid": "8b3d828f-8728-40e5-8f3a-e1d310883ef0",
+      "display_id": 207,
+      "title": "mdatron init refreshes a managed *.example template that is unedited since recorded but whose shipped content changed (upgrade path; found while landing #206's template change)",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-09-28T23:09:13.929139Z",
+      "updated_at": "2026-09-28T23:09:13.929139Z"
     },
     "8bbf0d1a-ce4a-4096-b3ad-ae3bc065a6e7": {
       "uuid": "8bbf0d1a-ce4a-4096-b3ad-ae3bc065a6e7",
