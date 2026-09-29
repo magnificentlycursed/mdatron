@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1185,
-        "tip_oid": "dbe954e183d9628fd1c5034a7761e80cc9799135",
-        "prefix_sha256": "a05f37f9fb2574230944a3f7fcf0b7d30343d932551626112aa50df6e926e253"
+        "sequence": 1186,
+        "tip_oid": "84ab79c02e68069c7c43eb7f5b7ca8d751ba8e6a",
+        "prefix_sha256": "ce1250f565258e80056e2c35f83c5d703c84082a8b32dc004d7371ed17584985"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 211,
+  "next_display_id": 212,
   "next_comment_id": 597,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -82,6 +82,7 @@
     "3bf8a891-a8c6-44cc-9698-1b69f2a3b3c1": 62,
     "3c7fe1d8-b93c-42dd-aa1d-612342174488": 132,
     "3cc73526-d8d8-4eb3-9bd3-a7affee9ee90": 79,
+    "3e1b9fb3-5649-4501-9534-d4a76241a808": 211,
     "4237af12-ff53-4d2f-beac-cff1fe994e9a": 106,
     "44e04ea5-0edc-4919-bcf7-7c234a3c8954": 74,
     "48642aed-2145-4a65-b014-0df508ad37c5": 11,
@@ -2424,6 +2425,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAJpBZ4b1+xvqPDR+gylrPqSDMY4g73szBbEHXyNWBzZi0KnmXvdWJHYUAAUtmTMgC7Lh2c1YEVmE44qmeoAyqAw=="
         }
       }
+    },
+    "3e1b9fb3-5649-4501-9534-d4a76241a808": {
+      "uuid": "3e1b9fb3-5649-4501-9534-d4a76241a808",
+      "display_id": 211,
+      "title": "ROADMAP: mdatron as an LSP server (lsp-serve) — findings as editor diagnostics on change, explain pages as hover/code-action text; the 'fast where it is invoked' contract at the keystroke (post-0.7.0; operator ruling 2026-09-28)",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-09-29T00:25:16.263846Z",
+      "updated_at": "2026-09-29T00:25:16.263846Z"
     },
     "4237af12-ff53-4d2f-beac-cff1fe994e9a": {
       "uuid": "4237af12-ff53-4d2f-beac-cff1fe994e9a",
