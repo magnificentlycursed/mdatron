@@ -270,6 +270,8 @@ mod tests {
             link_root: false,
             marker_rules: Vec::new(),
             section_rules: Vec::new(),
+            schema: None,
+            name_equals_dir: None,
         }
     }
 

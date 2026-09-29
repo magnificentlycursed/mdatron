@@ -82,6 +82,22 @@ struct RawEntry {
     /// on the route that claims those files, so it cannot misfire corpus-wide.
     #[serde(default)]
     section_rules: Vec<crate::section::RawRule>,
+    /// Bind every claimed file to `.mdatron/schemas/<class>.json` (and to the
+    /// pattern rules whose `context` is `<class>`) WITHOUT the file carrying a
+    /// `schema_class` key (#208). For vendor-owned formats whose frontmatter
+    /// mdatron must not touch — a SKILL.md under its spec-strict profile
+    /// refuses any key beyond the spec's six. A claimed file's own
+    /// `schema_class`, if present, must agree (`E0033`); a class nothing
+    /// serves is `E0034`; a claimed file with no frontmatter is validated as an
+    /// empty mapping, so its required fields are reported rather than skipped.
+    #[serde(default)]
+    schema: Option<String>,
+    /// The frontmatter field whose value must equal the claimed file's parent
+    /// directory name (#209) — the Agent Skills rule `name` == skill directory,
+    /// which a filename grammar cannot express (the file is always SKILL.md).
+    /// A mismatch, an absent field, or a non-string value is `E0035`.
+    #[serde(default)]
+    name_equals_dir: Option<String>,
 }
 
 /// One marker-line reference rule as declared in `routes.yaml` (#147).
@@ -131,6 +147,10 @@ pub struct Route {
     pub link_root: bool,
     pub marker_rules: Vec<MarkerRule>,
     pub section_rules: Vec<crate::section::Rule>,
+    /// The schema class this route binds its claimed files to (#208).
+    pub schema: Option<String>,
+    /// The frontmatter field that must equal the parent directory name (#209).
+    pub name_equals_dir: Option<String>,
 }
 
 /// A compiled marker-line reference rule (#147).
@@ -369,6 +389,35 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
             section_rules.push(crate::section::compile_rule(rule)?);
         }
 
+        // #208: a schema class names a file under .mdatron/schemas/, so it is
+        // a bare name — no separator, no traversal, nothing a path could
+        // smuggle — refused at load, like a non-compiling pattern.
+        if let Some(class) = &entry.schema {
+            let ok = !class.is_empty()
+                && class
+                    .chars()
+                    .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.'))
+                && !class.starts_with('.');
+            if !ok {
+                return Err(Error::Config(format!(
+                    "route schema '{class}' is not a schema class name: use letters, digits, \
+                     '-', '_' or '.' (not leading), naming .mdatron/schemas/<class>.json"
+                )));
+            }
+        }
+        // #209: the field name must be non-empty to name anything.
+        if entry
+            .name_equals_dir
+            .as_deref()
+            .is_some_and(|f| f.trim().is_empty())
+        {
+            return Err(Error::Config(
+                "route name_equals_dir is empty; it names the frontmatter field whose \
+                 value must equal the claimed file's parent directory name (e.g. name)"
+                    .into(),
+            ));
+        }
+
         routes.push(Route {
             files,
             governed_by: entry.governed_by,
@@ -378,6 +427,8 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
             link_root: entry.link_root,
             marker_rules,
             section_rules,
+            schema: entry.schema,
+            name_equals_dir: entry.name_equals_dir,
         });
     }
     // #203 F2 (GH #56 finding 2): "supplied" means the file exists — even with
@@ -525,6 +576,24 @@ pub fn link_root_enabled(routes: &[Route], rel: &Path) -> bool {
     routes
         .iter()
         .any(|r| r.links && r.link_root && r.files.matches_path(rel))
+}
+
+/// The schema class a route claiming `rel` binds it to (#208). Two claiming
+/// routes are already an `E0032` conflict; the first binding route answers.
+pub fn schema_for<'a>(routes: &'a [Route], rel: &Path) -> Option<&'a str> {
+    routes
+        .iter()
+        .filter(|r| r.files.matches_path(rel))
+        .find_map(|r| r.schema.as_deref())
+}
+
+/// The frontmatter field a route claiming `rel` requires to equal its parent
+/// directory name (#209).
+pub fn name_equals_dir_for<'a>(routes: &'a [Route], rel: &Path) -> Option<&'a str> {
+    routes
+        .iter()
+        .filter(|r| r.files.matches_path(rel))
+        .find_map(|r| r.name_equals_dir.as_deref())
 }
 
 /// The marker-line reference rules active for `rel` — every rule on every route

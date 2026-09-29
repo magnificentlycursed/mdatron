@@ -16,7 +16,8 @@
 # CODES       E0030 E0031 E0032 W0041 W0053 W0054; per opt-in E0100 E0101
 #             W0048 E0081 (citations), E0110 E0111 W0048 E0081 (links),
 #             E0112 E0114 W0048 E0081 (markers), E0120 E0121 E0122 (section
-#             rules); E0010 E0011 E0012 on paths.
+#             rules), E0033 E0034 (schema), E0035 (name_equals_dir);
+#             E0010 E0011 E0012 on paths.
 # The body below is the minimal activating shape: one route claiming every
 # walked file, answering to a document that must exist (point governed_by at
 # yours). The optional additions each opt a family in — and section_rules
@@ -28,6 +29,8 @@
 # - files: "**/*.md"
 #   governed_by: README.md
 # (optional additions: uncomment what you need)
+#   schema: skill          # bind claimed files to .mdatron/schemas/skill.json
+#   name_equals_dir: name  # frontmatter `name` must equal the parent directory
 #   naming: "^[a-z0-9-]+\\.md$"
 #   citations: true
 #   links: true
