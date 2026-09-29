@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1197,
-        "tip_oid": "7775c365e278e9b5f4ca8733ee651c311aa4825f",
-        "prefix_sha256": "f5485b83a969df74cb8b9edfdeda6d03bb88983d2c590601f96c1dd0d5ba9eca"
+        "sequence": 1198,
+        "tip_oid": "bbe38b6b47dbcd9bfc9dee640684a03ea3063e11",
+        "prefix_sha256": "3493551b546d8675f6b3453275d2e70b1f6225472128e5090502b72aaabd97b3"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 213,
-  "next_comment_id": 598,
+  "next_comment_id": 599,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -443,7 +443,18 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-24T00:55:31.898873Z",
-      "updated_at": "2026-09-24T00:55:31.898873Z"
+      "updated_at": "2026-09-29T00:35:33.562423Z",
+      "comments": {
+        "6b11d287-0626-4b58-b870-05317c58acf5": {
+          "display_id": 598,
+          "author": "79Ig",
+          "content": "Blocked-probe note (2026-09-28): a read-only python probe of is_blocked_git() whose test strings contained blocked command text was refused by the hook itself (the matcher reads the literal text), so whether the quote-unaware splitter also weakens the blocked-git matcher is untested; verify with a fixture file in the #199 lane. Separately, the hook blocked a read-only 'git merge-tree' dry run because its text contains 'git merge' — another false positive of prefix matching.",
+          "created_at": "2026-09-29T00:35:33.504320Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAkz+2O7hLVuwS+lV7fbpVO+y+gG4JsZ4xDbzmV0obsufUCOqqsSGVUE5NCWPO+/yrubZmB+/pjgfOjTJ7F5DpBw=="
+        }
+      }
     },
     "0ce9e2f6-cb02-409d-aba5-6b1942abc74c": {
       "uuid": "0ce9e2f6-cb02-409d-aba5-6b1942abc74c",
