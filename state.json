@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1186,
-        "tip_oid": "84ab79c02e68069c7c43eb7f5b7ca8d751ba8e6a",
-        "prefix_sha256": "ce1250f565258e80056e2c35f83c5d703c84082a8b32dc004d7371ed17584985"
+        "sequence": 1187,
+        "tip_oid": "68743aa3383ed6d35f96433111eb561de635066f",
+        "prefix_sha256": "25a192fac685e5c646ca7ca5f1c6d676724a87d973377b9b53028ad894561bae"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 212,
-  "next_comment_id": 597,
+  "next_comment_id": 598,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -3278,7 +3278,18 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-09-29T00:24:17.127082Z",
-      "updated_at": "2026-09-29T00:24:17.127082Z"
+      "updated_at": "2026-09-29T00:26:01.469417Z",
+      "comments": {
+        "142334d6-1ff9-488f-add1-1607c12f98bf": {
+          "display_id": 597,
+          "author": "79Ig",
+          "content": "Context (2026-09-28): raised while scoping MCP/LSP for the standards pack. MCP and LSP CONFIGURATION files (.mcp.json, server manifests, LSP settings) are JSON, so governing them would reopen the #66 bare-carrier ruling; the markdown touchpoints (Claude Code subagent mcpServers frontmatter) are covered by the subagents recipe (#181). This issue is the other axis: mdatron exposing verify/explain over MCP. clap help already names a future mcp-serve subcommand. Design questions: tool surface (verify --files/--changed, explain, docs inputs), envelope as the tool result, quoted[] untrusted marking preserved end to end, concurrency bound (limits catalog), and whether the server holds a snapshot across calls (DESIGN index-persistence open question).",
+          "created_at": "2026-09-29T00:26:01.429159Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA8NdImnoaJVOqoL5JqBCQG/DEeZWczm0zl9WAVLMOVsR5JG6gMuQhrbbXwT2IITr4OFUKQoVw5DGtS4GUbjgbCg=="
+        }
+      }
     },
     "6135d3c6-44c0-43d1-8080-dd5fd5cda222": {
       "uuid": "6135d3c6-44c0-43d1-8080-dd5fd5cda222",
