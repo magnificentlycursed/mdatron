@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1191,
-        "tip_oid": "58b71f466ecc2bafc102a0d26d64bac43c8b97cb",
-        "prefix_sha256": "ef3b633362e4cd68c3c40531214ca42a3b4d4094d71679cf5769b1383ba8d621"
+        "sequence": 1192,
+        "tip_oid": "137df9aec01737cb77f5ec00c757f8d6db6ea21d",
+        "prefix_sha256": "fd87b5057b0e022e8ed486ce9f6d103947ca70748391154d1a0e361c5b373ce7"
       },
       "IMWa": {
         "sequence": 2,
@@ -7612,11 +7612,12 @@
       "uuid": "de7bc45b-bc77-4954-b74e-7c8b9b68c96e",
       "display_id": 206,
       "title": "Section count rules: additive match_on (line | name) so match can test the element name like disjoint id_pattern does; document the three matcher semantics side by side (L4 observation, operator ruling 2026-09-28)",
-      "status": "open",
+      "status": "closed",
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-28T22:52:22.482071Z",
-      "updated_at": "2026-09-28T22:55:34.241110Z",
+      "updated_at": "2026-09-29T00:30:20.227252Z",
+      "closed_at": "2026-09-29T00:30:20.197103Z",
       "comments": {
         "7f0f648d-d4a6-4922-a608-1d6e53a843f8": {
           "display_id": 593,
