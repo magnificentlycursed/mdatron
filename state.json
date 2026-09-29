@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1194,
-        "tip_oid": "dc8663b7d3ce848c08473bda950df40d50837ab2",
-        "prefix_sha256": "c30b6c7c8c8c5523925686fd3ef416acf8f3ba91e1f8c7aa58a6f2dfbe91d849"
+        "sequence": 1195,
+        "tip_oid": "164372ebe4a94c44e647595b917730fd03317e60",
+        "prefix_sha256": "43e9c8121fcebf897194ac2c1313135df563090ee3e5f34cdc64c46e6aecbfb4"
       },
       "IMWa": {
         "sequence": 2,
@@ -639,11 +639,12 @@
       "uuid": "1708ef12-cf35-4706-9dcb-fe672e8db813",
       "display_id": 208,
       "title": "Route-attached schema: a route's schema: <class> binds every claimed file to .mdatron/schemas/<class>.json without the file carrying schema_class (vendor-owned formats: SKILL.md strict profile forbids extra keys); file schema_class must agree; rule DSL context selects route-bound files (standards pack #181 blocker, operator ruling A 2026-09-28)",
-      "status": "open",
+      "status": "closed",
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-09-28T23:16:59.240142Z",
-      "updated_at": "2026-09-28T23:16:59.240142Z"
+      "updated_at": "2026-09-29T00:33:02.009688Z",
+      "closed_at": "2026-09-29T00:33:01.983203Z"
     },
     "18184292-e0ea-4575-b33b-ff82e1ed6c2d": {
       "uuid": "18184292-e0ea-4575-b33b-ff82e1ed6c2d",
