@@ -1,3 +1,4 @@
+<!-- # crosslink:custom — tracked mdatron policy rules; crosslink ships no bundled rules, so a rule mdatron keeps is custom by definition and `crosslink init --update` must not blank it (mdatron #212) -->
 ## Crosslink (Available)
 
 Crosslink issue tracking is available but not required. Use it when it helps.
