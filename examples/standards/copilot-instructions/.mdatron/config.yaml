@@ -1,0 +1,5 @@
+# The walked set: every Markdown file under .github/instructions. Walking all
+# of them, not only *.instructions.md, is what lets a file with the wrong
+# name be reported instead of silently never loading.
+file_globs:
+  - ".github/instructions/**/*.md"

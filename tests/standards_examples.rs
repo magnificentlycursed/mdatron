@@ -63,6 +63,11 @@ impl Scratch {
         fs::write(&p, edited).unwrap();
     }
 }
+impl Scratch {
+    fn rename(&self, from: &str, to: &str) {
+        fs::rename(self.0.join(from), self.0.join(to)).unwrap();
+    }
+}
 impl Drop for Scratch {
     fn drop(&mut self) {
         let _ = fs::remove_dir_all(&self.0);
@@ -204,7 +209,11 @@ fn skill_md_page_lists_the_example_configuration_verbatim() {
 /// each page's "Evaluated against" table lists exactly its example's sources.
 #[test]
 fn provenance_blocks_are_complete_and_match_the_pages() {
-    for (example, page_name) in [("skill-md", "skill-md.md"), ("subagents", "subagents.md")] {
+    for (example, page_name) in [
+        ("skill-md", "skill-md.md"),
+        ("subagents", "subagents.md"),
+        ("copilot-instructions", "copilot-instructions.md"),
+    ] {
         let dir = repo()
             .join("examples/standards")
             .join(example)
@@ -314,6 +323,66 @@ fn subagents_page_shows_the_real_output_of_each_case() {
 fn subagents_page_lists_the_example_configuration_verbatim() {
     let page = page("subagents.md");
     let root = repo().join("examples/standards/subagents");
+    for rel in [".mdatron/config.yaml", ".mdatron/routes.yaml"] {
+        let file = norm(&fs::read_to_string(root.join(rel)).unwrap());
+        assert_eq!(
+            block_after(&page, &format!("cookbook-file: {rel}")),
+            file,
+            "{rel}: the page's listing must equal the example file"
+        );
+    }
+}
+
+/// The seeded failures the Copilot instructions recipe shows, with the exit
+/// code each produces (a misnamed file is a warning: exit 0 unless the run
+/// uses --deny-warnings).
+fn copilot_case(case: &str) -> Scratch {
+    let s = Scratch::of("copilot-instructions", case);
+    let p = ".github/instructions/python.instructions.md";
+    let r = ".github/instructions/frontend/react.instructions.md";
+    match case {
+        "wrong-extension" => s.rename(p, ".github/instructions/python.instruction.md"),
+        "renamed-agent" => s.edit(r, |t| {
+            t.replace("excludeAgent: code-review", "excludeAgent: coding-agent")
+        }),
+        "no-apply-to" => s.edit(p, |t| {
+            t.replace(
+                "applyTo: \"**/*.py\"\n",
+                "description: Python conventions.\n",
+            )
+        }),
+        "misspelled-key" => s.edit(p, |t| t.replace("applyTo:", "applyto:")),
+        other => panic!("unknown case {other}"),
+    }
+    s
+}
+
+const COPILOT_CASES: &[(&str, i32)] = &[
+    ("wrong-extension", 0),
+    ("renamed-agent", 1),
+    ("no-apply-to", 1),
+    ("misspelled-key", 1),
+];
+
+#[test]
+fn copilot_page_shows_the_real_output_of_each_case() {
+    let page = page("copilot-instructions.md");
+    for (case, exit) in COPILOT_CASES {
+        let s = copilot_case(case);
+        let (code, _, stderr) = verify(&s.0, false);
+        assert_eq!(code, Some(*exit), "{case}: {stderr}");
+        assert_eq!(
+            norm(&stderr),
+            block_after(&page, &format!("cookbook-case: {case}")),
+            "{case}: the page's output block must be the real output"
+        );
+    }
+}
+
+#[test]
+fn copilot_page_lists_the_example_configuration_verbatim() {
+    let page = page("copilot-instructions.md");
+    let root = repo().join("examples/standards/copilot-instructions");
     for rel in [".mdatron/config.yaml", ".mdatron/routes.yaml"] {
         let file = norm(&fs::read_to_string(root.join(rel)).unwrap());
         assert_eq!(

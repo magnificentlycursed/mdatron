@@ -1,0 +1,8 @@
+mdatron_format_version: 1
+routes:
+# Path-specific instructions. GitHub.com: "The file name must end with
+# .instructions.md"; `*` crosses `/`, so subdirectories are covered.
+- files: ".github/instructions/*.md"
+  governed_by: AGENTS.md
+  schema: copilot-instructions
+  naming: "^[^/]+\\.instructions\\.md$"
