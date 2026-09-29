@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1201,
-        "tip_oid": "dda53ada53bcf80dcc4861b17afdcb4d7175d229",
-        "prefix_sha256": "3d8e77111fbe0f001ad2bec1a607c39f5a7cf8e1167ab600c7c1e6d78617ae5c"
+        "sequence": 1202,
+        "tip_oid": "8a8510adbf8b1a3e2ce8662b019fee5579c192aa",
+        "prefix_sha256": "063bc2dc4cf28c8846ecdb99929f003b6e879be0ed56a5d4de9ac706a58fc4f3"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 213,
-  "next_comment_id": 600,
+  "next_comment_id": 601,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -7936,7 +7936,7 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-09-29T00:34:33.015664Z",
-      "updated_at": "2026-09-29T00:52:10.840578Z",
+      "updated_at": "2026-09-29T01:49:19.407851Z",
       "comments": {
         "312e4f68-968d-48a3-b449-82382745fdc3": {
           "display_id": 599,
@@ -7949,6 +7949,15 @@
           "driver_key_fingerprint": "SHA256:/HhRo+IBEKhfgSJCbPvUcmHnZdeNIdxAH0CHW5Hpl4Y",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAg+pzLcG7tb31JWL2rbsqyVsNwoMH9D0Q2a4uGKXeG+XoiG5kxBAdN45y4USSwE4OWAmgVHp3VtJ60H/6Jlj+BA=="
+        },
+        "c1aba548-69d3-4967-aa00-0f45f936185c": {
+          "display_id": 600,
+          "author": "79Ig",
+          "content": "RESULT: merged as PR #64 (8094655c: rewire to .crosslink/integrations/hooks, fail-closed missing-payload guard, MCP servers under python3, safe-fetch retired, rules option A — ten kept rules marked crosslink:custom, twenty language rules empty) and PR #65 (661bf577: hook-config.json synced — the seam test caught agent_overrides.blocked_git_commands giving kickoff agents a weaker git block than the new defaults). Post-merge: session start established readiness on its own; .claude/hooks and .claude/mcp deleted; chassis seam test green against the deployed hook. Observed during the switch (for upstream crosslink): one stale-readiness window mid-session blocked even allowlisted read-only commands; session work timed out ('Lock confirmation timed out after 132s') yet exited 0; the work-check splitter refuses chains containing cd or cut (#199).",
+          "created_at": "2026-09-29T01:49:19.362463Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA44apfEj7ziJ7pRdFwbvej5rGQD8OHeqvLalZS/eDFP4U15FR6qM3MS+ssS4FfxgO1hvdJ1I6MWnkHduzIcZaAw=="
         }
       }
     },
