@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1206,
-        "tip_oid": "a2e9a0f245fa44216470eee5a582c30bd971d44b",
-        "prefix_sha256": "befc352a92e2545d0b23b3b8c9fa1f5717bb838327f87f8b40acdb830fbb82af"
+        "sequence": 1207,
+        "tip_oid": "347f4c60918df590b2829137eb5563e6eb48f6d5",
+        "prefix_sha256": "4ec4973d30378ba81d0bb37b54b9f633577f190f10d1895b88b4aef5d758ee13"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 213,
+  "next_display_id": 214,
   "next_comment_id": 602,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -121,6 +121,7 @@
     "73fb2a8c-e991-4bfe-b8d2-7c56f53ce417": 143,
     "74744f3a-fbb8-424a-897e-d4f2b2ed77ff": 40,
     "7515ecfd-31f2-4e53-bbb7-0e50c7cce064": 6,
+    "758d5f9a-ddab-4d92-a560-e184260622cc": 213,
     "7644da20-a049-4664-bd8e-38565ad23e9c": 169,
     "77a19061-d782-4ef5-9203-8010f6762888": 175,
     "77c6f57d-8b51-4b19-b179-8d083cb0e5a4": 158,
@@ -3920,6 +3921,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA01CPT4if6XGZ/6YD6r8Ko5aYUq0d7XiAqcP+dsgljHPg08g12LUmQL8c2LKCYbkLsAqBLI0MBRsDGojyoyx/Dg=="
         }
       }
+    },
+    "758d5f9a-ddab-4d92-a560-e184260622cc": {
+      "uuid": "758d5f9a-ddab-4d92-a560-e184260622cc",
+      "display_id": 213,
+      "title": "Section rules: assert that EVERY element of a class in a section matches a pattern (e.g. every llms.txt file-list item is - [name](url) with optional : notes), plus a list-item element class; today a count rule can only count matches (llms.txt recipe gap, #181)",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-09-29T02:19:03.315134Z",
+      "updated_at": "2026-09-29T02:19:03.315134Z"
     },
     "7644da20-a049-4664-bd8e-38565ad23e9c": {
       "uuid": "7644da20-a049-4664-bd8e-38565ad23e9c",
