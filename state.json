@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1192,
-        "tip_oid": "137df9aec01737cb77f5ec00c757f8d6db6ea21d",
-        "prefix_sha256": "fd87b5057b0e022e8ed486ce9f6d103947ca70748391154d1a0e361c5b373ce7"
+        "sequence": 1193,
+        "tip_oid": "57cd1dff55dd85e03cf9d7de5325928346f43ad0",
+        "prefix_sha256": "3f8e1982f05c867828a61addd8987764038da411a5b38199607b7c4fbe4def71"
       },
       "IMWa": {
         "sequence": 2,
@@ -4627,11 +4627,12 @@
       "uuid": "8b3d828f-8728-40e5-8f3a-e1d310883ef0",
       "display_id": 207,
       "title": "mdatron init refreshes a managed *.example template that is unedited since recorded but whose shipped content changed (upgrade path; found while landing #206's template change)",
-      "status": "open",
+      "status": "closed",
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-28T23:09:13.929139Z",
-      "updated_at": "2026-09-28T23:13:17.803098Z",
+      "updated_at": "2026-09-29T00:31:12.853317Z",
+      "closed_at": "2026-09-29T00:31:12.820268Z",
       "comments": {
         "cca7b78a-14b5-4455-961e-f0acb0dceac7": {
           "display_id": 596,
