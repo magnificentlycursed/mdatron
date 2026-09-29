@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1198,
-        "tip_oid": "bbe38b6b47dbcd9bfc9dee640684a03ea3063e11",
-        "prefix_sha256": "3493551b546d8675f6b3453275d2e70b1f6225472128e5090502b72aaabd97b3"
+        "sequence": 1199,
+        "tip_oid": "50ff64b53a64d66bef3370c57cd799ab3d5aa366",
+        "prefix_sha256": "14ca82c2d8ce3935092b6510c9cdd79b0deeef05e052d6fb98b764a22519aaf8"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 213,
-  "next_comment_id": 599,
+  "next_comment_id": 600,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -7928,7 +7928,21 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-09-29T00:34:33.015664Z",
-      "updated_at": "2026-09-29T00:34:33.015664Z"
+      "updated_at": "2026-09-29T00:52:10.840578Z",
+      "comments": {
+        "312e4f68-968d-48a3-b449-82382745fdc3": {
+          "display_id": 599,
+          "author": "79Ig",
+          "content": "Attempted: a command chain that included a stray 'git stash list'",
+          "created_at": "2026-09-29T00:52:10.798759Z",
+          "kind": "intervention",
+          "trigger_type": "tool_blocked",
+          "intervention_context": "Creating the hook-config sync branch; the stash call was a leftover with no purpose and nothing in the chain ran. Re-ran without it.",
+          "driver_key_fingerprint": "SHA256:/HhRo+IBEKhfgSJCbPvUcmHnZdeNIdxAH0CHW5Hpl4Y",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAg+pzLcG7tb31JWL2rbsqyVsNwoMH9D0Q2a4uGKXeG+XoiG5kxBAdN45y4USSwE4OWAmgVHp3VtJ60H/6Jlj+BA=="
+        }
+      }
     },
     "e8fa2d59-abe7-455a-a264-097fc431c1c3": {
       "uuid": "e8fa2d59-abe7-455a-a264-097fc431c1c3",
