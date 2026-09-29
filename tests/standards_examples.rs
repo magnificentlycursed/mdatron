@@ -55,7 +55,12 @@ impl Scratch {
     fn edit(&self, rel: &str, f: impl FnOnce(String) -> String) {
         let p = self.0.join(rel);
         let s = fs::read_to_string(&p).unwrap().replace("\r\n", "\n");
-        fs::write(&p, f(s)).unwrap();
+        let edited = f(s.clone());
+        assert_ne!(
+            edited, s,
+            "{rel}: the seeded edit changed nothing (fixture drift?)"
+        );
+        fs::write(&p, edited).unwrap();
     }
 }
 impl Drop for Scratch {
@@ -199,7 +204,7 @@ fn skill_md_page_lists_the_example_configuration_verbatim() {
 /// each page's "Evaluated against" table lists exactly its example's sources.
 #[test]
 fn provenance_blocks_are_complete_and_match_the_pages() {
-    for (example, page_name) in [("skill-md", "skill-md.md")] {
+    for (example, page_name) in [("skill-md", "skill-md.md"), ("subagents", "subagents.md")] {
         let dir = repo()
             .join("examples/standards")
             .join(example)
@@ -245,6 +250,76 @@ fn provenance_blocks_are_complete_and_match_the_pages() {
         assert_eq!(
             rows, sources,
             "{page_name}: the provenance table must match the schemas' x-source blocks"
+        );
+    }
+}
+
+/// The seeded silent skips the subagents recipe shows: one edit each.
+fn subagents_case(case: &str) -> Scratch {
+    let s = Scratch::of("subagents", case);
+    let p = ".claude/agents/code-reviewer.md";
+    let g = "plugin/agents/review/security.md";
+    match case {
+        "no-name" => s.edit(p, |t| t.replace("name: code-reviewer\n", "")),
+        "no-description" => s.edit(p, |t| {
+            t.replace(
+                "description: Reviews a diff for correctness, security and style. Use after a change is ready, before committing.\n",
+                "",
+            )
+        }),
+        "colon-name" => s.edit(p, |t| t.replace("name: code-reviewer", "name: team:code-reviewer")),
+        "blank-first-line" => s.edit(p, |t| format!("\n{t}")),
+        "unparseable-yaml" => s.edit(p, |t| t.replace("tools: Read, Grep, Glob, Bash", "tools: [Read, Grep")),
+        "top-level-cachettl" => s.edit(p, |t| t.replace("experimental:\n  cacheTtl: 1h\n", "cacheTtl: 1h\n")),
+        "snake-case-key" => s.edit(p, |t| t.replace("maxTurns: 20", "max_turns: 20")),
+        "plugin-permission-mode" => s.edit(g, |t| {
+            t.replace("effort: high\n", "effort: high\npermissionMode: acceptEdits\n")
+        }),
+        other => panic!("unknown case {other}"),
+    }
+    s
+}
+
+const SUBAGENTS_CASES: &[&str] = &[
+    "no-name",
+    "no-description",
+    "colon-name",
+    "unparseable-yaml",
+    "blank-first-line",
+    "top-level-cachettl",
+    "snake-case-key",
+    "plugin-permission-mode",
+];
+
+#[test]
+fn subagents_page_shows_the_real_output_of_each_case() {
+    let page = page("subagents.md");
+    for case in SUBAGENTS_CASES {
+        let s = subagents_case(case);
+        let (code, _, stderr) = verify(&s.0, false);
+        assert_eq!(
+            code,
+            Some(1),
+            "{case}: a seeded defect fails the run: {stderr}"
+        );
+        assert_eq!(
+            norm(&stderr),
+            block_after(&page, &format!("cookbook-case: {case}")),
+            "{case}: the page's output block must be the real output"
+        );
+    }
+}
+
+#[test]
+fn subagents_page_lists_the_example_configuration_verbatim() {
+    let page = page("subagents.md");
+    let root = repo().join("examples/standards/subagents");
+    for rel in [".mdatron/config.yaml", ".mdatron/routes.yaml"] {
+        let file = norm(&fs::read_to_string(root.join(rel)).unwrap());
+        assert_eq!(
+            block_after(&page, &format!("cookbook-file: {rel}")),
+            file,
+            "{rel}: the page's listing must equal the example file"
         );
     }
 }

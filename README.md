@@ -603,7 +603,7 @@ The adoption sequence — each step optional after the first, except that step
   standards, each with a runnable example project under `examples/standards/`, the
   sources and revisions it is evaluated against, what it cannot check, and the actual
   output of each silent failure it catches (all compared with the examples in CI);
-  first recipe: `SKILL.md` (Agent Skills, Claude Code, Codex)
+  recipes so far: `SKILL.md` (Agent Skills, Claude Code, Codex) and Claude Code subagents
 - [`docs/faq.md`](./docs/faq.md) (`mdatron docs faq`) — prior-art comparisons,
   influences, and frequently asked questions
 - [`docs/limits.md`](./docs/limits.md) (`mdatron docs limits`) — every declared input and enumeration

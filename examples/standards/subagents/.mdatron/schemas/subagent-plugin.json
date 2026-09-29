@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Claude Code subagent frontmatter (plugin agents)",
+  "description": "The plugin profile: 'For security reasons, plugin subagents don't support the hooks, mcpServers, or permissionMode frontmatter fields. These fields are ignored when loading agents from a plugin.' initialPrompt is also ignored for plugin subagents. Here those fields are findings instead of silent no-ops.",
+  "x-source": [
+    {
+      "standard": "Claude Code subagents reference",
+      "url": "https://code.claude.com/docs/en/sub-agents",
+      "revision": "unversioned documentation page; version gates stated through v2.1.281",
+      "revision_date": "unversioned",
+      "retrieved": "2026-09-29"
+    }
+  ],
+  "type": "object",
+  "required": [
+    "name",
+    "description"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^:-][^:]*$",
+      "description": "Required. Must not start with '-' or contain ':' (reserved for plugin-scoped identifiers); Claude Code skips such a file and logs the reason only to the debug log. The filename need not match."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Required: when Claude should delegate to this subagent. A file with a name but no description is skipped."
+    },
+    "tools": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ],
+      "description": "Comma-separated string or YAML list; inherits every subagent tool if omitted."
+    },
+    "disallowedTools": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ],
+      "description": "Same format as tools; applied first."
+    },
+    "model": {
+      "anyOf": [
+        {
+          "enum": [
+            "sonnet",
+            "opus",
+            "haiku",
+            "fable",
+            "inherit"
+          ]
+        },
+        {
+          "type": "string",
+          "pattern": "^claude-[a-z0-9.-]+$"
+        }
+      ],
+      "description": "An alias, `inherit`, or a full model ID such as claude-opus-5-5."
+    },
+    "maxTurns": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "The reference states no type; a positive integer is the only reading its behaviour supports."
+    },
+    "skills": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "memory": {
+      "enum": [
+        "user",
+        "project",
+        "local"
+      ]
+    },
+    "background": {
+      "type": "boolean"
+    },
+    "omitClaudeMd": {
+      "type": "boolean",
+      "description": "Requires Claude Code v2.1.271 or later."
+    },
+    "effort": {
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ]
+    },
+    "isolation": {
+      "const": "worktree"
+    },
+    "color": {
+      "enum": [
+        "red",
+        "blue",
+        "green",
+        "yellow",
+        "purple",
+        "orange",
+        "pink",
+        "cyan"
+      ]
+    },
+    "experimental": {
+      "type": "object",
+      "properties": {
+        "cacheTtl": {
+          "enum": [
+            "5m",
+            "1h"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "description": "Only cacheTtl is read (v2.1.248+); any other key is ignored."
+    }
+  },
+  "additionalProperties": false
+}
