@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1208,
-        "tip_oid": "7e3ad925bef0f30ee4b8ccf9bf8bd90cb7cd983e",
-        "prefix_sha256": "68eaf65e95975d3c711f5a2eadfd755d77dff1859eb267d27cb4dc60a435dad5"
+        "sequence": 1209,
+        "tip_oid": "1713b80733bd9493e7fe8d37c970836bea3a29a3",
+        "prefix_sha256": "2a22974481f7aa24342ed7e1662c231a3b8a08746ccfb729c959917c79c9883c"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 215,
+  "next_display_id": 216,
   "next_comment_id": 602,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -177,6 +177,7 @@
     "b5d10e39-0bfb-404b-9751-2bff8c71ecaa": 42,
     "b696933e-86e0-4ffa-8930-363e6dd16bfa": 113,
     "b8c80dd7-30d0-4776-93e3-5c45695b62c1": 1,
+    "b97459bd-63b2-4e44-9268-8b58abbb3000": 215,
     "b996b1ec-a892-47dc-9569-7b00b64bdeec": 118,
     "b99bb9e4-ae94-4219-9d15-490769f6b4d0": 147,
     "bb1578a3-5e79-4e29-a2fb-4c6e1c88eb7f": 72,
@@ -6281,6 +6282,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA4ps7BEPy6YJNFl4t1q9uejxAA299V4sHlkkaUT0l0RjeKrhx9pmoucPDaAMRSwEam3bHTWnhCR69KtxpLa1gAQ=="
         }
       }
+    },
+    "b97459bd-63b2-4e44-9268-8b58abbb3000": {
+      "uuid": "b97459bd-63b2-4e44-9268-8b58abbb3000",
+      "display_id": 215,
+      "title": "Link family: optional verification of absolute https:// link targets (llms.txt files mostly link out; today the family is tree-confined by design) — needs a network/cache/determinism design and an operator ruling (llms.txt recipe gap, #181)",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-09-29T02:20:48.033477Z",
+      "updated_at": "2026-09-29T02:20:48.033477Z"
     },
     "b996b1ec-a892-47dc-9569-7b00b64bdeec": {
       "uuid": "b996b1ec-a892-47dc-9569-7b00b64bdeec",
