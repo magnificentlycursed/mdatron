@@ -42,7 +42,18 @@
       "maxLength": 1536
     },
     "argument-hint": {
-      "type": "string"
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ],
+      "description": "Autocomplete hint. The reference gives examples ([issue-number]) but no type; written unquoted, [x] parses as a YAML list, so a list is accepted rather than reported (how Claude Code renders one is undocumented)."
     },
     "arguments": {
       "anyOf": [

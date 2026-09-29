@@ -152,6 +152,9 @@ pattern:
   checked.
 - Whether `allowed-tools` names real tools, whether `model` names an
   available model, and the shape of `hooks` are not checked.
+- `argument-hint` has no documented type. Written unquoted, `[issue-number]`
+  parses as a YAML list rather than a string; the profile accepts either, since
+  how Claude Code renders a list is not documented.
 - Duplicate skill names across locations, and precedence between enterprise,
   personal and project skills, involve files outside the repository.
 
