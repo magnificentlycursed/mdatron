@@ -1,3 +1,4 @@
+<!-- # crosslink:custom — tracked mdatron policy rules; crosslink ships no bundled rules, so a rule mdatron keeps is custom by definition and `crosslink init --update` must not blank it (mdatron #212) -->
 ## Knowledge Management
 
 The project has a shared knowledge repository for saving and retrieving research, codebase patterns, and reference material across agent sessions.

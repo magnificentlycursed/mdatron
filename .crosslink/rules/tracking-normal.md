@@ -1,3 +1,4 @@
+<!-- # crosslink:custom — tracked mdatron policy rules; crosslink ships no bundled rules, so a rule mdatron keeps is custom by definition and `crosslink init --update` must not blank it (mdatron #212) -->
 ## Crosslink Task Management
 
 Create issues before starting work to keep things organized and enable context handoff between sessions.

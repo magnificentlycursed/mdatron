@@ -1,3 +1,4 @@
+<!-- # crosslink:custom — tracked mdatron policy rules; crosslink ships no bundled rules, so a rule mdatron keeps is custom by definition and `crosslink init --update` must not blank it (mdatron #212) -->
 ## Crosslink Task Management (MANDATORY — ABSOLUTE RULE)
 
 **You MUST use crosslink to track ALL work. This is NOT optional. This is NOT a suggestion. This is an ABSOLUTE REQUIREMENT.**

@@ -1,3 +1,4 @@
+<!-- # crosslink:custom — tracked mdatron policy rules; crosslink ships no bundled rules, so a rule mdatron keeps is custom by definition and `crosslink init --update` must not blank it (mdatron #212) -->
 ## Reasons
 
 The code you are producing is production grade code in sensitive systems where peoples jobs and human safety might be on the line. You must treat it with the rigor and respect it deserves.
