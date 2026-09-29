@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1184,
-        "tip_oid": "22ac9e28c06f77a07f7c6fe350b9b025ad781908",
-        "prefix_sha256": "6f82d43dcf568580585a9786f5f8418a11be370b9708e4df72cf967845645a73"
+        "sequence": 1185,
+        "tip_oid": "dbe954e183d9628fd1c5034a7761e80cc9799135",
+        "prefix_sha256": "a05f37f9fb2574230944a3f7fcf0b7d30343d932551626112aa50df6e926e253"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 210,
+  "next_display_id": 211,
   "next_comment_id": 597,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -102,6 +102,7 @@
     "5da2ab05-31e7-4929-a268-a49e6fc77636": 160,
     "5eb9d32c-b382-4b47-8abf-7b7f75de5916": 34,
     "5ee2ea80-c483-44f0-815d-81d8fa6cd9f4": 88,
+    "609c0ef5-685b-4986-abaf-6c9979d169bc": 210,
     "6135d3c6-44c0-43d1-8080-dd5fd5cda222": 23,
     "62801e0e-b352-49b3-90f4-c6ef253fad34": 153,
     "6778c47f-8706-4a31-9cbe-2d60f8fdf19c": 50,
@@ -3257,6 +3258,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABANsj9m51uV3xHROt4Xq7/VB/n7pkKA6O7IBPucjN+6o4eg+b4iaDpHWh4WiOG757T6o8d7CuTdoSbLxQDz/D7BA=="
         }
       }
+    },
+    "609c0ef5-685b-4986-abaf-6c9979d169bc": {
+      "uuid": "609c0ef5-685b-4986-abaf-6c9979d169bc",
+      "display_id": 210,
+      "title": "ROADMAP: mdatron as an MCP server (mcp-serve) — verify/explain as agent tools returning the JSON envelope directly; the agent self-correction loop without a shell (post-0.7.0; operator ruling 2026-09-28)",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-09-29T00:24:17.127082Z",
+      "updated_at": "2026-09-29T00:24:17.127082Z"
     },
     "6135d3c6-44c0-43d1-8080-dd5fd5cda222": {
       "uuid": "6135d3c6-44c0-43d1-8080-dd5fd5cda222",
