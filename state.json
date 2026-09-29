@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1187,
-        "tip_oid": "68743aa3383ed6d35f96433111eb561de635066f",
-        "prefix_sha256": "25a192fac685e5c646ca7ca5f1c6d676724a87d973377b9b53028ad894561bae"
+        "sequence": 1188,
+        "tip_oid": "d49bd4f8adade6783a5241a3a21dd0116d4169ae",
+        "prefix_sha256": "cd18fcf130c6c3c42aed6721c44d0e173f8bf68333e87ebe9104672a54165fe4"
       },
       "IMWa": {
         "sequence": 2,
@@ -1459,11 +1459,12 @@
       "uuid": "28577049-08ee-4b38-8981-24144f74842d",
       "display_id": 193,
       "title": "Parser-robustness follow-up (lane-C review C3): never-panic properties over the FIRST-PARTY body-text scanners — marker/cite/link (percent-decode + slug)/section/vocab checkers driven with hostile markdown bodies (pure functions over content+config); the #48-era byte-slice class lived here, not upstream (post-cut)",
-      "status": "open",
+      "status": "closed",
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-20T01:30:54.698406Z",
-      "updated_at": "2026-09-28T23:12:27.989229Z",
+      "updated_at": "2026-09-29T00:27:13.810619Z",
+      "closed_at": "2026-09-29T00:27:13.781838Z",
       "comments": {
         "10ded119-8046-4c55-8c98-8d2ef3c5a5d2": {
           "display_id": 594,
