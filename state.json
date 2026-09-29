@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1189,
-        "tip_oid": "2ba1dea8f05b4a78525d6dd0bb157301c61678e4",
-        "prefix_sha256": "1791ef48b350a035df86d3d5c4ec745d50af881e79680f18037ce3133f644e10"
+        "sequence": 1190,
+        "tip_oid": "be884121e51ad008ce88eeab5cd4fa805498838d",
+        "prefix_sha256": "3c9b322e55a7f854fcf7549007b67d13773a49d423a77c92f64d074cc99d4969"
       },
       "IMWa": {
         "sequence": 2,
@@ -4371,11 +4371,12 @@
       "uuid": "86f68723-0d82-400a-a152-c6a5c8d5768d",
       "display_id": 201,
       "title": "Override paths (the schemas and patterns dir flags) render as passed, not root-derived: an absolute override outside the root prints the absolute host path in schema_load messages — pre-existing in 0.6.0, out of L1 scope (closure-review observation). Decide whether DEF4 covers adopter-supplied absolute override paths; if yes, relativize against the override's own canonical parent",
-      "status": "open",
+      "status": "closed",
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-09-24T03:04:01.518408Z",
-      "updated_at": "2026-09-28T22:54:47.754345Z",
+      "updated_at": "2026-09-29T00:28:44.931418Z",
+      "closed_at": "2026-09-29T00:28:44.899578Z",
       "comments": {
         "1a2c149e-2650-4b27-ade2-f30178ffd8b0": {
           "display_id": 592,
