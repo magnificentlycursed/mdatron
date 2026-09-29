@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1207,
-        "tip_oid": "347f4c60918df590b2829137eb5563e6eb48f6d5",
-        "prefix_sha256": "4ec4973d30378ba81d0bb37b54b9f633577f190f10d1895b88b4aef5d758ee13"
+        "sequence": 1208,
+        "tip_oid": "7e3ad925bef0f30ee4b8ccf9bf8bd90cb7cd983e",
+        "prefix_sha256": "68eaf65e95975d3c711f5a2eadfd755d77dff1859eb267d27cb4dc60a435dad5"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 214,
+  "next_display_id": 215,
   "next_comment_id": 602,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -85,6 +85,7 @@
     "3e1b9fb3-5649-4501-9534-d4a76241a808": 211,
     "4237af12-ff53-4d2f-beac-cff1fe994e9a": 106,
     "44e04ea5-0edc-4919-bcf7-7c234a3c8954": 74,
+    "46a2adcb-44f8-4977-b221-88b3f426e01e": 214,
     "48642aed-2145-4a65-b014-0df508ad37c5": 11,
     "49197eb8-d2b6-4462-9185-1e9065d2d847": 3,
     "4be4a713-0fe0-45e4-9e07-9a859da5e49a": 204,
@@ -2523,6 +2524,16 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAjfnYQtEXWiIwngvjKvOwwGU2tX7TBq/3TsxQv8HYtWAivDRot5ddplEmMjwqFYOdAvaugPrPYIEewKJsQznUDA=="
         }
       }
+    },
+    "46a2adcb-44f8-4977-b221-88b3f426e01e": {
+      "uuid": "46a2adcb-44f8-4977-b221-88b3f426e01e",
+      "display_id": 214,
+      "title": "Section rules: an ordering rule for a document's top-level parts (e.g. llms.txt: H1, then blockquote, then non-heading details, then H2 file lists; also AGENTS/README conventions) — no construct expresses order today (llms.txt recipe gap, #181)",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-09-29T02:19:51.634741Z",
+      "updated_at": "2026-09-29T02:19:51.634741Z"
     },
     "48642aed-2145-4a65-b014-0df508ad37c5": {
       "uuid": "48642aed-2145-4a65-b014-0df508ad37c5",
