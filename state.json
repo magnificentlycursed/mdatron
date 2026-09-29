@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1204,
-        "tip_oid": "b85b454aefc62b1ec96757c387865958c9085937",
-        "prefix_sha256": "a08cbd0723807ec327ef4b098bf4be7fccbadbbc3d40fe52c6ba83d598095f6e"
+        "sequence": 1205,
+        "tip_oid": "4be0da70a5ef44542d994520431306d857e534f9",
+        "prefix_sha256": "963688efe74607e358e7819a55ae4e5cdfb339fd2a7cb827333551b5a364a477"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 213,
-  "next_comment_id": 601,
+  "next_comment_id": 602,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -2717,7 +2717,18 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-09-28T22:50:01.209642Z",
-      "updated_at": "2026-09-28T22:50:01.209642Z"
+      "updated_at": "2026-09-29T01:56:32.798736Z",
+      "comments": {
+        "8d15f695-cddf-4ddb-8b93-fa417ef61b4c": {
+          "display_id": 601,
+          "author": "79Ig",
+          "content": "Duplicate of #206 (same change; shipped in PR #62). Closed per operator 2026-09-29.",
+          "created_at": "2026-09-29T01:56:32.703394Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA8f/7oDNcrdUWYrVuXG2AiKvlKm/YBbsLQMVysxkT4wU5YgNlzVb8lZTj6ymXNV+NLXTG6Gs6DNtPOMnHZPB9BQ=="
+        }
+      }
     },
     "4ca77036-160b-443f-9480-bef7a625d82f": {
       "uuid": "4ca77036-160b-443f-9480-bef7a625d82f",
