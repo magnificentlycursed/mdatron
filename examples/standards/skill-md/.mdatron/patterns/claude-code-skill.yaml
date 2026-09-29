@@ -1,0 +1,15 @@
+mdatron_dsl_version: 1
+pattern:
+  id: claude-code-skill
+  description: Claude Code skill fields that only apply together
+  rules:
+    - id: agent-needs-fork
+      context: skill-claude-code
+      assert: 'not defined($self.agent) or $self.context == "fork"'
+      code: SKILLS-E0001
+      message: "`agent` only applies with `context: fork` (Claude Code skills reference); without it the field does nothing"
+    - id: background-needs-fork
+      context: skill-claude-code
+      assert: 'not defined($self.background) or $self.context == "fork"'
+      code: SKILLS-E0002
+      message: "`background` only applies with `context: fork` (Claude Code skills reference); without it the field does nothing"

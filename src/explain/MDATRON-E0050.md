@@ -6,7 +6,8 @@
 
 ## What this means
 
-The file's frontmatter parsed cleanly and bound to a known `schema_class`, but
+The file's frontmatter parsed cleanly and bound to a known schema class (its
+own `schema_class`, or the class its route binds with `schema`), but
 its content violates one or more rules in the JSON Schema for that class. The
 violation message names the specific failing field and the schema rule that
 rejected it.

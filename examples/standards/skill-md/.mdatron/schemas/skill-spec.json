@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SKILL.md frontmatter, Agent Skills spec-strict profile",
+  "description": "The spec's six fields and nothing else: the profile claude.ai skill uploads, the Skills API and package_skill.py enforce (any other key fails with 'Unexpected key(s) in SKILL.md frontmatter'). Bind skills you upload, publish, or share with non-Claude-Code agents (Codex reads .agents/skills) to this class.",
+  "x-source": [
+    {
+      "standard": "Agent Skills specification",
+      "url": "https://agentskills.io/specification",
+      "revision": "agentskills/agentskills@217be548739f21d6008915c29aefe320ea1a90af docs/specification.mdx",
+      "revision_date": "2026-08-04",
+      "retrieved": "2026-09-28"
+    },
+    {
+      "standard": "Claude Code skills reference",
+      "url": "https://code.claude.com/docs/en/skills",
+      "revision": "unversioned documentation page; field table as retrieved",
+      "revision_date": "unversioned",
+      "retrieved": "2026-09-28",
+      "note": "source of the upload rule and its error text (section: Using skill frontmatter outside Claude Code)"
+    }
+  ],
+  "type": "object",
+  "required": [
+    "name",
+    "description"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "1-64 chars; a-z, 0-9 and hyphens; no leading, trailing or consecutive hyphen (spec: name)."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "description": "1-1024 chars (spec: description)."
+    },
+    "license": {
+      "type": "string",
+      "description": "License name or bundled license file (spec: license)."
+    },
+    "compatibility": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "description": "1-500 chars if present (spec: compatibility)."
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "String keys to string values (spec: metadata)."
+    },
+    "allowed-tools": {
+      "type": "string",
+      "description": "Space-separated tool list; experimental (spec: allowed-tools)."
+    }
+  },
+  "additionalProperties": false
+}

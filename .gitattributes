@@ -8,3 +8,6 @@ schema/code-catalog.json text eol=lf
 src/explain/*.md text eol=lf
 # docs/limits.md is rendered from src/limits.rs and regenerated as LF (#189).
 docs/limits.md text eol=lf
+# The standards-pack examples are compared byte for byte against the cookbook
+# pages, finding fingerprints included; LF on every checkout (#181).
+examples/** text eol=lf

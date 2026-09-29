@@ -1,0 +1,15 @@
+mdatron_format_version: 1
+routes:
+# Portable skills: the Agent Skills spec-strict profile. Codex reads
+# .agents/skills; the same files are what you upload to claude.ai or the
+# Skills API. The spec requires `name` to match the skill directory.
+- files: ".agents/skills/*/SKILL.md"
+  governed_by: AGENTS.md
+  schema: skill-spec
+  name_equals_dir: name
+# Claude Code project skills: the extended profile. Every documented field is
+# allowed, and anything else is a finding (Claude Code ignores unknown fields
+# silently). These are NOT upload-safe; bind uploaded skills to skill-spec.
+- files: ".claude/skills/*/SKILL.md"
+  governed_by: AGENTS.md
+  schema: skill-claude-code
