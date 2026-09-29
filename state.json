@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1195,
-        "tip_oid": "164372ebe4a94c44e647595b917730fd03317e60",
-        "prefix_sha256": "43e9c8121fcebf897194ac2c1313135df563090ee3e5f34cdc64c46e6aecbfb4"
+        "sequence": 1196,
+        "tip_oid": "ab3ab1d4135fc505d7c1f37dfe1412f3cbb64480",
+        "prefix_sha256": "5e23dd21f3a3c1a653866ebcd626a148069e5d6b1b87c9212f703afa76301159"
       },
       "IMWa": {
         "sequence": 2,
@@ -254,11 +254,12 @@
       "uuid": "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95",
       "display_id": 209,
       "title": "Route name_equals_dir: <field>: a claimed file's frontmatter field must equal its parent directory name (SKILL.md name == skill directory; #181 blocker, operator ruling A 2026-09-28)",
-      "status": "open",
+      "status": "closed",
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-09-28T23:17:35.582928Z",
-      "updated_at": "2026-09-28T23:17:35.582928Z"
+      "updated_at": "2026-09-29T00:33:51.494620Z",
+      "closed_at": "2026-09-29T00:33:51.465585Z"
     },
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": {
       "uuid": "028e84f4-cfd0-45aa-8aee-b43ec885d803",
