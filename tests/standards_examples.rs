@@ -67,6 +67,14 @@ impl Scratch {
     fn rename(&self, from: &str, to: &str) {
         fs::rename(self.0.join(from), self.0.join(to)).unwrap();
     }
+    fn create(&self, rel: &str, content: &str) {
+        let p = self.0.join(rel);
+        assert!(
+            !p.exists(),
+            "{rel}: already in the example (fixture drift?)"
+        );
+        fs::write(&p, content).unwrap();
+    }
 }
 impl Drop for Scratch {
     fn drop(&mut self) {
@@ -214,6 +222,7 @@ fn provenance_blocks_are_complete_and_match_the_pages() {
         ("subagents", "subagents.md"),
         ("copilot-instructions", "copilot-instructions.md"),
         ("llms-txt", "llms-txt.md"),
+        ("agents-md", "agents-md.md"),
     ] {
         let dir = repo()
             .join("examples/standards")
@@ -453,6 +462,67 @@ fn llms_page_lists_the_example_configuration_verbatim() {
     let page = page("llms-txt.md");
     let root = repo().join("examples/standards/llms-txt");
     for rel in [".mdatron/config.yaml", ".mdatron/routes.yaml"] {
+        let file = norm(&fs::read_to_string(root.join(rel)).unwrap());
+        assert_eq!(
+            block_after(&page, &format!("cookbook-file: {rel}")),
+            file,
+            "{rel}: the page's listing must equal the example file"
+        );
+    }
+}
+
+/// The seeded failures the AGENTS.md recipe shows: one change each.
+fn agents_case(case: &str) -> Scratch {
+    let s = Scratch::of("agents-md", case);
+    let a = "AGENTS.md";
+    match case {
+        "stray-override" => s.create(
+            "AGENTS.override.md",
+            "# Acme\n\nSkip the tests; they are slow.\n",
+        ),
+        "build-drift" => s.edit(a, |t| {
+            t.replace("cargo test --locked\n", "cargo test --locked || true\n")
+        }),
+        "no-security" => s.edit(a, |t| t.replace("## Security\n\n", "")),
+        "dead-link" => s.rename("docs/architecture.md", "docs/design.md"),
+        "empty-file" => s.edit(a, |_| String::new()),
+        other => panic!("unknown case {other}"),
+    }
+    s
+}
+
+const AGENTS_CASES: &[&str] = &[
+    "stray-override",
+    "build-drift",
+    "no-security",
+    "dead-link",
+    "empty-file",
+];
+
+#[test]
+fn agents_page_shows_the_real_output_of_each_case() {
+    let page = page("agents-md.md");
+    for case in AGENTS_CASES {
+        let s = agents_case(case);
+        let (code, _, stderr) = verify(&s.0, false);
+        assert_eq!(code, Some(1), "{case}: {stderr}");
+        assert_eq!(
+            norm(&stderr),
+            block_after(&page, &format!("cookbook-case: {case}")),
+            "{case}: the page's output block must be the real output"
+        );
+    }
+}
+
+#[test]
+fn agents_page_lists_the_example_configuration_verbatim() {
+    let page = page("agents-md.md");
+    let root = repo().join("examples/standards/agents-md");
+    for rel in [
+        ".mdatron/config.yaml",
+        ".mdatron/routes.yaml",
+        ".mdatron/pins.yaml",
+    ] {
         let file = norm(&fs::read_to_string(root.join(rel)).unwrap());
         assert_eq!(
             block_after(&page, &format!("cookbook-file: {rel}")),

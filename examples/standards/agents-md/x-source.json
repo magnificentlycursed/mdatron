@@ -1,0 +1,16 @@
+[
+  {
+    "standard": "AGENTS.md",
+    "url": "https://agents.md",
+    "revision": "agentsmd/agents.md@d1ac7f063d20e70015ed6732664049ae4ba9d74e components/",
+    "revision_date": "2026-03-12",
+    "retrieved": "2026-10-01"
+  },
+  {
+    "standard": "Codex AGENTS.md discovery",
+    "url": "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
+    "revision": "unversioned documentation page; openai/codex@bb72e151e50cfd4f6282ab86418188af3c83b5df docs/agents_md.md links to it",
+    "revision_date": "unversioned",
+    "retrieved": "2026-10-01"
+  }
+]
