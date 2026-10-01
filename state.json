@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1215,
-        "tip_oid": "701a2c055bec64494f2c9b130d7390aaeb3961ef",
-        "prefix_sha256": "4a7b12154a812c2e5596c07fc0c7cdc6620d3ec24e9d7eb0e2ce2b5a33928196"
+        "sequence": 1216,
+        "tip_oid": "e6394a4e8377c07423f35ff81a37f0616b401943",
+        "prefix_sha256": "100b340ff1bbb12a12bc93dadf42c06a3755d44290181f374abc97416848b57f"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 219,
+  "next_display_id": 220,
   "next_comment_id": 602,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -215,6 +215,7 @@
     "e055a0eb-e767-4ca7-8248-7c695b3c501a": 166,
     "e06b1201-7654-4266-ad6b-93d5c3daabf9": 12,
     "e26c0e8d-f45e-4f04-9cd9-8376a53f2b37": 195,
+    "e34cb36f-01d5-402e-a98d-041ac7b5dea4": 219,
     "e4347785-d8d9-445f-b83e-3986f4904b7c": 86,
     "e504525f-77cd-4dfc-94f1-ba221ebab2f2": 22,
     "e5469003-6d79-499a-9c31-6a24b24e594f": 33,
@@ -7930,6 +7931,17 @@
       "labels": [
         "docs"
       ]
+    },
+    "e34cb36f-01d5-402e-a98d-041ac7b5dea4": {
+      "uuid": "e34cb36f-01d5-402e-a98d-041ac7b5dea4",
+      "display_id": 219,
+      "title": "Name the failing rule's match pattern in E0120 findings",
+      "description": "Surfaced by the AGENTS.md recipe (#181). Two count rules anchored on the same section (# Acme, h2 ^Build and test$ and h2 ^Security$) produce indistinguishable E0120 findings: the finding names the section and element, not the match, so the reader cannot tell which required heading is missing.",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-10-01T21:25:25.397906Z",
+      "updated_at": "2026-10-01T21:25:25.397906Z"
     },
     "e4347785-d8d9-445f-b83e-3986f4904b7c": {
       "uuid": "e4347785-d8d9-445f-b83e-3986f4904b7c",
