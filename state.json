@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1211,
-        "tip_oid": "b5c6db4236d9e1794f298f8b4472fb316fce66c2",
-        "prefix_sha256": "b3334eb316539d1d3712cf77fc286a1109bba491b06ed78fc9d857e3f49777ef"
+        "sequence": 1212,
+        "tip_oid": "0635b1cffbb4705e9a2cab5c4811fafa74a92a74",
+        "prefix_sha256": "d3b323d64235eab6de0d06bb303e4319334e7dc16b54e4b43c6ab28f7fc4ae4f"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 217,
+  "next_display_id": 218,
   "next_comment_id": 602,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -48,6 +48,7 @@
     "1ba1bc71-1b50-4f6c-b672-1524a61a3096": 116,
     "1cafa0f3-dcdd-491b-b455-52af79c6c85d": 122,
     "1da67425-f44d-40d6-8ba1-2d2ed768de38": 97,
+    "1ea10de4-469c-46f7-95d6-001d6263913c": 217,
     "1f3bc3ea-d9a5-4d3f-b230-b2ca1b8f9697": 178,
     "1f89fa15-980c-4d2d-ac43-108f45c87c2e": 146,
     "1f95ee99-22a5-437e-9132-00d7744e0eef": 172,
@@ -983,6 +984,17 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAhz7vBxtSi4vYiC4LBR64ebNoHG6Oo4A1FYkicKqlD/jK9QJ0G6Tj7C0HOrCxz5XFYbg9vntlIi1omB3NfAknCA=="
         }
       }
+    },
+    "1ea10de4-469c-46f7-95d6-001d6263913c": {
+      "uuid": "1ea10de4-469c-46f7-95d6-001d6263913c",
+      "display_id": 217,
+      "title": "Add a must-not-be-empty rule for routed files",
+      "description": "Surfaced by the AGENTS.md recipe (#181). Codex skips empty AGENTS.md files. The root file is covered by a section rule anchored on its H1, but a nested file has no fixed H1 to anchor on, and no route option asserts a claimed file has content.",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-10-01T21:22:31.268732Z",
+      "updated_at": "2026-10-01T21:22:31.268732Z"
     },
     "1f3bc3ea-d9a5-4d3f-b230-b2ca1b8f9697": {
       "uuid": "1f3bc3ea-d9a5-4d3f-b230-b2ca1b8f9697",
