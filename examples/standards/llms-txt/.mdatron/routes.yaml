@@ -1,0 +1,16 @@
+mdatron_format_version: 1
+routes:
+- files: "llms.txt"
+  governed_by: AGENTS.md
+  naming: "^llms\\.txt$"
+  # Relative links and #anchors must resolve (absolute https:// URLs are
+  # outside the tree and not checked).
+  links: true
+  section_rules:
+  # The H1 with the project's name is the one required section. Anchoring on
+  # it reports a missing or renamed H1 (E0122); the span runs to the end of
+  # the file, so this also requires at least one H2 file list (E0120).
+  - section: "# Acme"
+    element: h2
+    match: ".+"
+    count: ">= 1"

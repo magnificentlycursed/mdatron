@@ -213,28 +213,50 @@ fn provenance_blocks_are_complete_and_match_the_pages() {
         ("skill-md", "skill-md.md"),
         ("subagents", "subagents.md"),
         ("copilot-instructions", "copilot-instructions.md"),
+        ("llms-txt", "llms-txt.md"),
     ] {
         let dir = repo()
             .join("examples/standards")
             .join(example)
             .join(".mdatron/schemas");
         let mut sources: BTreeSet<Vec<String>> = BTreeSet::new();
+        // Provenance carriers: every schema's `x-source` block, plus an
+        // `x-source.json` beside the example for a recipe with no schema.
+        let mut carriers: Vec<(PathBuf, serde_json::Value)> = Vec::new();
         for e in fs::read_dir(&dir).unwrap().flatten() {
+            if e.path().extension().and_then(|x| x.to_str()) != Some("json") {
+                continue;
+            }
             let schema: serde_json::Value =
                 serde_json::from_str(&fs::read_to_string(e.path()).unwrap()).unwrap();
-            let blocks = schema["x-source"]
+            carriers.push((e.path(), schema["x-source"].clone()));
+        }
+        let side = dir
+            .parent()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .join("x-source.json");
+        if side.exists() {
+            let v: serde_json::Value =
+                serde_json::from_str(&fs::read_to_string(&side).unwrap()).unwrap();
+            carriers.push((side, v));
+        }
+        assert!(!carriers.is_empty(), "{example}: no provenance carrier");
+        for (path, value) in carriers {
+            let blocks = value
                 .as_array()
-                .unwrap_or_else(|| panic!("{}: no x-source block", e.path().display()));
-            assert!(!blocks.is_empty(), "{}: empty x-source", e.path().display());
+                .unwrap_or_else(|| panic!("{}: no x-source block", path.display()));
+            assert!(!blocks.is_empty(), "{}: empty x-source", path.display());
             for b in blocks {
                 let row: Vec<String> =
                     ["standard", "url", "revision", "revision_date", "retrieved"]
                         .iter()
                         .map(|k| {
                             let v = b[k].as_str().unwrap_or_else(|| {
-                                panic!("{}: x-source lacks `{k}`", e.path().display())
+                                panic!("{}: x-source lacks `{k}`", path.display())
                             });
-                            assert!(!v.trim().is_empty(), "{}: empty `{k}`", e.path().display());
+                            assert!(!v.trim().is_empty(), "{}: empty `{k}`", path.display());
                             v.to_string()
                         })
                         .collect();
@@ -383,6 +405,53 @@ fn copilot_page_shows_the_real_output_of_each_case() {
 fn copilot_page_lists_the_example_configuration_verbatim() {
     let page = page("copilot-instructions.md");
     let root = repo().join("examples/standards/copilot-instructions");
+    for rel in [".mdatron/config.yaml", ".mdatron/routes.yaml"] {
+        let file = norm(&fs::read_to_string(root.join(rel)).unwrap());
+        assert_eq!(
+            block_after(&page, &format!("cookbook-file: {rel}")),
+            file,
+            "{rel}: the page's listing must equal the example file"
+        );
+    }
+}
+
+/// The seeded failures the llms.txt recipe shows: one edit each to llms.txt.
+fn llms_case(case: &str) -> Scratch {
+    let s = Scratch::of("llms-txt", case);
+    let l = "llms.txt";
+    match case {
+        "dead-link" => s.edit(l, |t| {
+            t.replace("docs/getting-started.md", "docs/getting-started.html")
+        }),
+        "dead-anchor" => s.edit(l, |t| t.replace("#the-config-file", "#config-file")),
+        "renamed-h1" => s.edit(l, |t| t.replace("# Acme\n", "# Acme CLI\n")),
+        "no-file-lists" => s.edit(l, |t| t[..t.find("## Docs").unwrap()].to_string()),
+        other => panic!("unknown case {other}"),
+    }
+    s
+}
+
+const LLMS_CASES: &[&str] = &["dead-link", "dead-anchor", "renamed-h1", "no-file-lists"];
+
+#[test]
+fn llms_page_shows_the_real_output_of_each_case() {
+    let page = page("llms-txt.md");
+    for case in LLMS_CASES {
+        let s = llms_case(case);
+        let (code, _, stderr) = verify(&s.0, false);
+        assert_eq!(code, Some(1), "{case}: {stderr}");
+        assert_eq!(
+            norm(&stderr),
+            block_after(&page, &format!("cookbook-case: {case}")),
+            "{case}: the page's output block must be the real output"
+        );
+    }
+}
+
+#[test]
+fn llms_page_lists_the_example_configuration_verbatim() {
+    let page = page("llms-txt.md");
+    let root = repo().join("examples/standards/llms-txt");
     for rel in [".mdatron/config.yaml", ".mdatron/routes.yaml"] {
         let file = norm(&fs::read_to_string(root.join(rel)).unwrap());
         assert_eq!(

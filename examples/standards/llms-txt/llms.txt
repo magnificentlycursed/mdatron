@@ -1,0 +1,15 @@
+# Acme
+
+> Acme is a command-line tool for syncing project metadata between a
+> repository and its issue tracker.
+
+Every page linked below is Markdown, written for agents to read directly.
+
+## Docs
+
+- [Getting started](docs/getting-started.md): install Acme and run a first sync
+- [Configuration](docs/configuration.md#the-config-file): every key in `acme.toml`
+
+## Optional
+
+- [Changelog](docs/changelog.md)
