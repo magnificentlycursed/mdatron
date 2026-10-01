@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1213,
-        "tip_oid": "a1f900edc90ec6b979026643492ab2e223d4448b",
-        "prefix_sha256": "29e37d6a2203f2edc424a60cf414ac8c5d9368eaca06ee9b1de848fa0fd91c24"
+        "sequence": 1214,
+        "tip_oid": "0444b86954e643a1af8b8c270d75c290f6232061",
+        "prefix_sha256": "9e56de7d7b0b5c06b58406898b6db9fc825dbffc0a14403ccb768171b9067e32"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 218,
+  "next_display_id": 219,
   "next_comment_id": 602,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -58,6 +58,7 @@
     "2456d20a-0560-437f-81a0-2d54a1b96d80": 65,
     "262c8f3f-bab5-4796-b735-b24d9bf01ac9": 123,
     "266badfe-b56b-409e-9f46-bdb0954f3adf": 203,
+    "272af72b-940d-48f4-ac72-61f5e1dd11ed": 218,
     "277a179b-fdda-44e7-a79b-f9e096e12789": 124,
     "27c148a2-87df-4d35-8f22-46b99666de3f": 130,
     "28577049-08ee-4b38-8981-24144f74842d": 193,
@@ -1423,6 +1424,17 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAqWMbrx5hvNM448er7Poxhsqo228czU+k/zxTm2JJhCE0wQLwMO8dF3JE5GEAyZqrLth9KdJ3zA+wZHRxCDlmBQ=="
         }
       }
+    },
+    "272af72b-940d-48f4-ac72-61f5e1dd11ed": {
+      "uuid": "272af72b-940d-48f4-ac72-61f5e1dd11ed",
+      "display_id": 218,
+      "title": "Add a rule that one file references or imports another",
+      "description": "Surfaced by the AGENTS.md recipe (#181). Claude Code reads CLAUDE.md, not AGENTS.md; a CLAUDE.md that does not import @AGENTS.md gives Claude different instructions from every other agent. mdatron cannot assert that file X contains a reference (link, @import) to file Y.",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-10-01T21:23:56.321185Z",
+      "updated_at": "2026-10-01T21:23:56.321185Z"
     },
     "277a179b-fdda-44e7-a79b-f9e096e12789": {
       "uuid": "277a179b-fdda-44e7-a79b-f9e096e12789",
