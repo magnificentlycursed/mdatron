@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1209,
-        "tip_oid": "1713b80733bd9493e7fe8d37c970836bea3a29a3",
-        "prefix_sha256": "2a22974481f7aa24342ed7e1662c231a3b8a08746ccfb729c959917c79c9883c"
+        "sequence": 1210,
+        "tip_oid": "c328effae44f584f4919f97e368c8108e007d036",
+        "prefix_sha256": "015feffae1d50b8c6566c62d6e3eb6340d5b1ee3da8274b8947b459e6454722c"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 216,
+  "next_display_id": 217,
   "next_comment_id": 602,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -95,6 +95,7 @@
     "4ebc561b-c68f-472e-8fee-f763332bf311": 180,
     "4fe1ca8e-6b24-4d43-86c1-7a29b108f3ac": 126,
     "5036a175-b563-417b-bc1a-aca16891ec5f": 186,
+    "50572fe8-b08e-4f6e-bb71-64440006c67e": 216,
     "52ecc683-68d9-47ce-934f-0d9b43c371f4": 70,
     "535ce770-991b-4b76-b2e5-f7107912a629": 198,
     "571fe228-1e58-4ec0-8edf-6ebced31ecd8": 155,
@@ -3004,6 +3005,17 @@
       "labels": [
         "docs"
       ]
+    },
+    "50572fe8-b08e-4f6e-bb71-64440006c67e": {
+      "uuid": "50572fe8-b08e-4f6e-bb71-64440006c67e",
+      "display_id": 216,
+      "title": "Add a byte bound per route and across a set of files",
+      "description": "Surfaced by the AGENTS.md recipe (#181). Codex stops reading AGENTS.md files once the files on the path total project_doc_max_bytes (32 KiB by default); instructions past it are dropped silently. mdatron has no byte-size rule per route, nor a combined bound across the files that concatenate along one directory path.",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-10-01T21:21:03.213394Z",
+      "updated_at": "2026-10-01T21:21:03.213394Z"
     },
     "52ecc683-68d9-47ce-934f-0d9b43c371f4": {
       "uuid": "52ecc683-68d9-47ce-934f-0d9b43c371f4",
