@@ -17,7 +17,10 @@ just before the next heading of the same or higher level, fence-aware) that
 match, and asserts the predicate. A rule with no `section` counts over the
 whole document body, which is how "this file is not empty" (`element: line`,
 `match: "."`, `count: ">= 1"`) and "this file contains this line" are
-written. The body excludes the frontmatter and fenced code blocks. The rule's `match` pattern is quoted beneath the diagnostic, so two
+written. The body starts after the frontmatter and a leading byte-order
+mark, and excludes fenced code blocks. A `match_on: name` region beneath the
+diagnostic means the pattern was tested against the element's name (a
+heading's text, a list item's text), not its whole line. The rule's `match` pattern is quoted beneath the diagnostic, so two
 rules on one section can be told apart. This is the body-content counterpart of
 the DSL's frontmatter arity rule (`count(filter(...)) == N`), delivered as a
 fixed-semantics check because body-content extraction is excluded from the rule
@@ -27,13 +30,13 @@ the count leaves the required range.
 
 ## How to fix
 
-- **Too few (e.g. `>= 1` with 0).** The section is empty or its headings no
-  longer match — add the expected heading(s), or retire/repurpose the section if
-  it is genuinely done.
-- **Too many (e.g. `== 1` with 2).** A duplicate or stray matching heading is
+- **Too few (e.g. `>= 1` with 0).** The section is empty or its elements no
+  longer match — add the expected heading, item or line, or retire/repurpose
+  the section if it is genuinely done.
+- **Too many (e.g. `== 1` with 2).** A duplicate or stray matching element is
   present; remove or move it.
-- **The headings changed shape.** If a rename made them stop matching `match`,
-  update the heading text or the rule's `match` pattern.
+- **The elements changed shape.** If a rename made them stop matching `match`,
+  update the element's text or the rule's `match` pattern.
 - **The file is empty or lost a required line.** For a rule with no section
   (the message says "the document has"), read the quoted `match`: a pattern
   of `.` means the file has no non-blank line outside its frontmatter and

@@ -61,8 +61,8 @@ routes:
   # outside the tree and not checked).
   links: true
   section_rules:
-  # One H1 in the whole file: the rules below cover that H1's span, which a
-  # second H1 would end.
+  # One H1 in the whole file: the rules anchored on "# Acme" cover that H1's
+  # span, which a second H1 would end.
   - element: h1
     match: "."
     count: "== 1"
@@ -78,11 +78,11 @@ routes:
   # bullet marker and indentation do not matter.
   - section: "## Docs"
     element: list-item
-    every: "^\\[[^\\]]+\\]\\(.+\\)(: .+)?$"
+    every: "^\\[.+\\]\\(\\S+\\)(:.*)?$"
     match_on: name
   - section: "## Optional"
     element: list-item
-    every: "^\\[[^\\]]+\\]\\(.+\\)(: .+)?$"
+    every: "^\\[.+\\]\\(\\S+\\)(:.*)?$"
     match_on: name
   # The blockquote summary comes before the H2 file lists (E0124).
   - section: "# Acme"
@@ -104,7 +104,7 @@ schemas or patterns directory to exist, and this recipe needs no schema.
 | File lists are sections delimited by H2 headers | a count of `h2` in that span, `>= 1` (`E0120`); requiring at least one list is policy, the specification allows zero |
 | Each item is "a required markdown hyperlink `[name](url)`, then optionally a `:` and notes" | an `every` rule over the `list-item` elements of each named file list (`E0123`, one per malformed item) |
 | The blockquote summary precedes the file lists | an `order` rule: `blockquote`, then `h2` (`E0124`) |
-| One H1 | a whole-document count of `h1`, `== 1` (`E0120`): the other rules cover the H1's span, which a second H1 would end |
+| One H1 (inferred: the specification describes a single H1 and never says "exactly one") | a whole-document count of `h1`, `== 1` (`E0120`): the rules anchored on the H1 cover its span, which a second H1 would end |
 | Links should point to agent-friendly Markdown pages | route `links: true`: every relative link and `#anchor` must resolve (`E0110`, `E0111`) |
 | The file is named `llms.txt` | route `naming` grammar (`W0041`) |
 
@@ -129,9 +129,21 @@ schemas or patterns directory to exist, and this recipe needs no schema.
   That is this recipe's policy, stricter than the specification.
 - **An empty file list.** `## Docs` with no items under it passes: the rules
   require the heading and check the items that exist.
-- **Anything before the H1.** The rules cover the H1's span; text above the
-  H1 is outside it. A leading byte-order mark, which the specification
-  allows, is ignored.
+- **A missing summary.** The order rule asserts sequence only, so a file with
+  no blockquote passes. The specification lists the summary without calling
+  it required.
+- **Other content.** A heading below H2 in the free-form part (the
+  specification allows sections "of any type except headings" there) and a
+  paragraph inside a file list both pass.
+- **The exact link syntax.** The item pattern asks for `[name](url)` with no
+  whitespace in the URL, then nothing or a `:` and notes. A link with a
+  title (`[name](url "title")`) is reported; text glued to the link with no
+  space (`[a](x)y(z)`) passes.
+- **Commented-out items.** A list item inside a multi-line HTML comment is
+  still a list item to mdatron, and is reported if malformed.
+- **Anything before the H1.** The rules anchored on the H1 cover its span;
+  text above the H1 is outside it. A leading byte-order mark, which the
+  specification allows, is ignored.
 
 Also out of scope: the recommended `rel="alternate"`/`rel="describedby"` link
 relations (HTTP and HTML, not the file), and "most specific file applies" when
@@ -215,7 +227,11 @@ error[MDATRON-E0122]: section-not-found
    = section:
            > ## Docs
    = every:
-           > ^\[[^\]]+\]\(.+\)(: .+)?$
+           > ^\[.+\]\(\S+\)(:.*)?$
+   = match_on:
+           > name
+   = element class:
+           > list-item
    = explain: mdatron explain MDATRON-E0122
 error[MDATRON-E0122]: section-not-found
   --> llms.txt:1
@@ -223,7 +239,11 @@ error[MDATRON-E0122]: section-not-found
    = section:
            > ## Optional
    = every:
-           > ^\[[^\]]+\]\(.+\)(: .+)?$
+           > ^\[.+\]\(\S+\)(:.*)?$
+   = match_on:
+           > name
+   = element class:
+           > list-item
    = explain: mdatron explain MDATRON-E0122
 mdatron verify: 3 error(s), 0 warning(s) across 3 finding(s)
 ```
@@ -239,7 +259,9 @@ error[MDATRON-E0123]: section-element-mismatch
    = section:
            > ## Optional
    = every:
-           > ^\[[^\]]+\]\(.+\)(: .+)?$
+           > ^\[.+\]\(\S+\)(:.*)?$
+   = match_on:
+           > name
    = element:
            > - Changelog: docs/changelog.md
    = explain: mdatron explain MDATRON-E0123
@@ -275,9 +297,9 @@ error[MDATRON-E0124]: section-order-violation
 mdatron verify: 2 error(s), 0 warning(s) across 2 finding(s)
 ```
 
-**A second H1.** An appendix was added under its own H1. It ends the span
-the other rules cover, so nothing below it is checked; the count of H1s is
-what reports it.
+**A second H1.** An appendix was added under its own H1. The rules anchored
+on `# Acme` stop there, so a plain list below it is not checked (a list under
+an H2 the rules name still would be); the count of H1s is what reports it.
 
 <!-- cookbook-case: second-h1 -->
 ```text

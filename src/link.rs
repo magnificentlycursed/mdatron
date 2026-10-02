@@ -574,10 +574,7 @@ fn is_markdown(path: &Path) -> bool {
 /// The markdown body of a file, with any leading frontmatter stripped so a
 /// YAML comment (`# ...`) in frontmatter is not mistaken for a heading.
 fn markdown_body(content: &str) -> &str {
-    match crate::frontmatter::parse(content) {
-        Ok(Some((_, body))) => body,
-        _ => content,
-    }
+    crate::frontmatter::body_of(content)
 }
 
 fn link_finding(

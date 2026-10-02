@@ -3027,19 +3027,32 @@ fn verify_file(
         // file missing its frontmatter must not pass as "nothing to check".
         None if binding.schema.is_some() || binding.name_equals_dir.is_some() => (
             serde_yaml_ng::Value::Mapping(serde_yaml_ng::Mapping::new()),
-            content.len(),
+            // The body starts after a leading byte-order mark.
+            frontmatter::strip_bom(content).len(),
         ),
         None => {
+            // No frontmatter: the body is the whole file, less a leading
+            // byte-order mark — left on line 1 it would make a first-line
+            // heading not a heading, for every family alike.
+            let body_offset = content.len() - frontmatter::strip_bom(content).len();
             // Opt-in loudness (#80 D2): inside a require_frontmatter glob,
             // "no frontmatter" must not be indistinguishable from "passed" —
             // the parse-ABSENCE half of #78's loud-failure/silent-absence
             // asymmetry. Matching is on the root-relative path.
             // Vocabulary scans prose-only files too (whole content as body).
             if let Some(v) = vocab {
-                crate::vocab::check_file(v, path, content, 0, None, vocab_coinage, findings);
+                crate::vocab::check_file(
+                    v,
+                    path,
+                    content,
+                    body_offset,
+                    None,
+                    vocab_coinage,
+                    findings,
+                );
             }
             if cite_enabled {
-                crate::cite::check_file(snapshot, path, content, 0, findings);
+                crate::cite::check_file(snapshot, path, content, body_offset, findings);
             }
             if link_enabled {
                 crate::link::check_file(
@@ -3047,15 +3060,23 @@ fn verify_file(
                     project_root,
                     path,
                     content,
-                    0,
+                    body_offset,
                     link_root,
                     memo,
                     findings,
                 );
             }
-            crate::marker::check_file(snapshot, path, content, 0, marker_rules, memo, findings);
-            crate::codecat::check_file(code_catalogs, path, content, 0, findings);
-            crate::section::check_file(section_rules, path, content, 0, findings);
+            crate::marker::check_file(
+                snapshot,
+                path,
+                content,
+                body_offset,
+                marker_rules,
+                memo,
+                findings,
+            );
+            crate::codecat::check_file(code_catalogs, path, content, body_offset, findings);
+            crate::section::check_file(section_rules, path, content, body_offset, findings);
             let rel = path.strip_prefix(project_root).unwrap_or(path);
             if require_frontmatter.matches_any(rel) {
                 findings.push(Finding {
@@ -11292,6 +11313,30 @@ pattern:
         );
         top.write(".claude/skills/a/SKILL.md", "# a\n");
         assert!(verify(&VerifyConfig::from_project(&top.0).unwrap()).is_ok());
+    }
+
+    // Cold review round 2 (R2E-1): a leading byte-order mark is skipped by
+    // EVERY family alike. Section rules skipped it while link anchors and
+    // section pins still read it as part of line 1, so one file's first-line
+    // heading existed for one family and not for the others.
+    #[test]
+    fn a_byte_order_mark_does_not_hide_a_first_line_heading_from_any_family() {
+        // Pinned without the mark, then written with it: the pinned span's
+        // bytes are the same either way.
+        let content = "# Acme\n\nBody. Back to [the top](#acme).\n";
+        let proj = section_pinned_project("bom-families", content, "# Acme");
+        proj.write("governed.md", &format!("\u{feff}{content}"));
+        proj.write(
+            ".mdatron/routes.yaml",
+            "routes:\n- files: \"governed.md\"\n  governed_by: GOVERNING.md\n  links: true\n  \
+             section_rules:\n  - section: \"# Acme\"\n    element: line\n    match: \"Body\"\n    \
+             count: \"== 1\"\n- files: \"GOVERNING.md\"\n  governed_by: GOVERNING.md\n",
+        );
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        assert!(
+            findings.is_empty(),
+            "link anchor, section pin and section rule all resolve `# Acme`: {findings:?}"
+        );
     }
 
     // #217/#218 end to end: a whole-document count rule (no `section`) on a

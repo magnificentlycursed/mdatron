@@ -8,6 +8,8 @@ routes:
   # Codex stops reading at 32 KiB across the files on one path. With one
   # AGENTS.md per package, a path is the root file plus one package's:
   # 24 KiB here and 8 KiB per package file keeps that inside the budget.
+  # (A route's `*` crosses `/`: a second AGENTS.md deeper in a package gets
+  # its own 8 KiB, and the split no longer holds.)
   max_bytes: 24576
   section_rules:
   # Project policy: the format itself is "just standard Markdown" with no
@@ -36,8 +38,10 @@ routes:
     match: "."
     count: ">= 1"
 # A CLAUDE.md switches AGENTS.md off for Claude Code unless it imports it, so
-# each one sits beside an AGENTS.md and holds the import. Any other CLAUDE.md
-# (.claude/CLAUDE.md, a deeper directory's) is unrouted (E0030).
+# each routed one holds the import. No route claims .claude/CLAUDE.md, a
+# CLAUDE.local.md, or a CLAUDE.md outside packages/: a committed one is
+# unrouted (E0030). A route's `*` crosses `/`, so the packages route also
+# claims a CLAUDE.md deeper inside a package.
 - files: "CLAUDE.md"
   governed_by: CONTRIBUTING.md
   section_rules:

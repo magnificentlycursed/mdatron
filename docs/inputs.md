@@ -72,14 +72,16 @@ Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `cit
   refused).
 - An `element` is one of `heading`, `h1`…`h6`, `list-item-bold-name`,
   `list-item`, `blockquote` or `line`. Elements are lines, recognised by the
-  line's own prefix, and a line inside a fenced code block is never an
-  element:
+  line's own prefix. A line inside a fenced code block is never an element —
+  where the fence is indented at most three spaces; a fence nested deeper
+  (inside a list item) is not recognised, and its lines are elements:
   - `list-item` — a line opening with `-`, `*`, `+` or an ordinal (`1.`,
     `1)`) followed by a space or a tab, after any indentation; named by its
     text after the marker. A nested item is an item, and so is an item-shaped
     line of indented code. A continuation line is not part of the element, a
-    bare marker with nothing after it is not an item, and a thematic break
-    (`* * *`, `- - -`) is not an item.
+    marker with no space or tab after it is not an item (a marker and a
+    space with nothing more is an item with empty text), and a thematic
+    break (`* * *`, `- - -`) is not an item.
   - `blockquote` — a line opening with `>` after at most three spaces; named
     by its text after the marker. A quote indented further (inside a list
     item, say) and a continuation line without `>` are not seen.
@@ -103,7 +105,10 @@ Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `cit
     `id_pattern`), `E0121`.
 
   On a count, every or order rule `section` is optional: given, the rule
-  covers that heading's span and an absent heading is `E0122`; absent, it
+  covers that heading's span — from the heading through just before the next
+  heading of the same or a higher level; the section's own heading line is
+  the container, never one of its elements — and an absent heading is
+  `E0122`; absent, it
   covers the whole document body, so "the file is not empty" is
   `element: line`, `match: "."`, `count: ">= 1"`. The body starts after the
   frontmatter (a frontmatter line is never an element, so a rule cannot
@@ -115,7 +120,11 @@ Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `cit
   In an order rule an element belongs to the FIRST item it matches, so an
   early item that matches broadly (`element: line`, `match: "."`) takes
   every element and the later items are never reached; a repeated item is
-  refused at load. When the section's heading occurs more than once, each
+  and an item with an empty `match` are refused at load, as are an empty
+  `every` pattern, a whole-document count of `>= 0` and any count of `< 0`
+  (rules that could never report, or never pass). A finding quotes the
+  rule's pattern, and a `match_on` region when the pattern was tested
+  against the name. When the section's heading occurs more than once, each
   occurrence is ordered on its own, an every rule checks the elements of all
   of them, and counts sum.
 - What each pattern is tested against — the three differ, so read this before

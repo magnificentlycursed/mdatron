@@ -9,7 +9,7 @@
 The route claiming this file sets `max_bytes`, and the file is larger. The
 bound exists for consumers that read only so much: Codex, for one, stops
 adding `AGENTS.md` files once they total 32 KiB, and whatever is past the
-budget is cut off without a warning. The file's size and the bound are in
+budget is cut off without telling the user. The file's size and the bound are in
 the diagnostic's message. The size is the file's whole content in bytes as
 checked out: frontmatter included, and CRLF line endings counted, so a
 Windows checkout of the same file can be larger. Keep bounded files on LF

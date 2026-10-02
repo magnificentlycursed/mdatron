@@ -500,12 +500,63 @@ fn llms_recipe_accepts_what_the_specification_allows() {
             "- [Changelog](docs/changelog.md)",
             "* [Changelog](docs/changelog.md) \n  - [Nested](docs/changelog.md): n\n\
              1. [Numbered](docs/changelog.md)\n-\t[Tab](docs/changelog.md)\n\
-             + [Wiki](https://en.wikipedia.org/wiki/Acme_(x)): parentheses\n\n* * *\n",
+             + [Wiki](https://en.wikipedia.org/wiki/Acme_(x)): parentheses\n\
+             - [Array[T] reference](docs/changelog.md):notes\n\n* * *\n",
         );
         format!("\u{feff}{t}")
     });
     let (code, _, stderr) = verify(&s.0, false);
     assert_eq!(code, Some(0), "{stderr}");
+}
+
+/// Cold review round 2 (R2D-2): the item pattern is not satisfied by a link
+/// with text trailing it, which the first pattern (`\\(.+\\)`, greedy to the
+/// last parenthesis) let through.
+#[test]
+fn llms_recipe_rejects_text_trailing_the_link() {
+    for junk in [
+        "- [Changelog](docs/changelog.md) and then junk (x)",
+        "- [Changelog](not a url) trailing (again)",
+        "- [Changelog]( )",
+    ] {
+        let s = Scratch::of("llms-txt", "trailing");
+        s.edit("llms.txt", |t| {
+            t.replace("- [Changelog](docs/changelog.md)", junk)
+        });
+        let (code, stdout, _) = verify(&s.0, true);
+        assert_eq!(code, Some(1), "{junk}");
+        let env: serde_json::Value = serde_json::from_str(&stdout).unwrap();
+        assert!(
+            env["findings"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|f| f["code"] == "MDATRON-E0123"),
+            "{junk}: {stdout}"
+        );
+    }
+}
+
+/// Cold review rounds 1 and 2: a CLAUDE.md the routes do not allow is
+/// unrouted wherever the walk reaches it outside `packages/` — in `.claude/`,
+/// as `CLAUDE.local.md`, in another directory.
+#[test]
+fn agents_recipe_reports_a_claude_md_outside_the_allowed_places() {
+    for stray in [".claude/CLAUDE.md", "CLAUDE.local.md", "src/CLAUDE.md"] {
+        let s = Scratch::of("agents-md", "stray");
+        fs::create_dir_all(s.0.join(stray).parent().unwrap()).unwrap();
+        s.create(stray, "@AGENTS.md\n");
+        let (code, stdout, _) = verify(&s.0, true);
+        assert_eq!(code, Some(1), "{stray}");
+        let env: serde_json::Value = serde_json::from_str(&stdout).unwrap();
+        let codes: Vec<&str> = env["findings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|f| f["code"].as_str().unwrap())
+            .collect();
+        assert_eq!(codes, vec!["MDATRON-E0030"], "{stray}");
+    }
 }
 
 #[test]

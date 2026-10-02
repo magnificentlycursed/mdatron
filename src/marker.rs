@@ -272,10 +272,7 @@ fn resolve_members(
 
     // Strip any frontmatter so a YAML `# comment` in the target is not read as a
     // heading, then extract the element names (optionally section-scoped).
-    let doc_body = match crate::frontmatter::parse(target) {
-        Ok(Some((_, b))) => b,
-        _ => target,
-    };
+    let doc_body = crate::frontmatter::body_of(target);
     match extract_members(doc_body, rule.element, rule.target_section.as_deref()) {
         Some(members) => MarkerMembers::Resolved(members),
         // GH #48 finding 3: the named target_section heading is never matched in

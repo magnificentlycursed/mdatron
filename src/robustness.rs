@@ -687,7 +687,7 @@ fn rule_case() -> impl Strategy<Value = (String, Yaml)> {
                 4 => count_rule,
                 3 => disjoint_rule,
                 2 => coherent_rule,
-                2 => every_rule,
+                3 => every_rule,
                 2 => order_rule,
                 2 => coherent_order,
                 1 => whole_document_count,
@@ -1247,7 +1247,13 @@ fn reach_strategy_section_rules_hit_the_count_and_disjoint_arms() {
     count_over_strategy(section_input(), 512, |((body, rule), off)| {
         if let Some(f) = drive_section_rule(&rule, &body, offset_in(&body, &off)) {
             compiled.set(compiled.get() + 1);
-            for c in codes(&f) {
+            // Tallied per CASE, not per finding: one every rule over one body
+            // can emit a dozen E0123, which would meet a floor on its own
+            // (cold review round 2).
+            for c in codes(&f)
+                .into_iter()
+                .collect::<std::collections::BTreeSet<_>>()
+            {
                 match c {
                     "MDATRON-E0120" => e0120.set(e0120.get() + 1),
                     "MDATRON-E0121" => e0121.set(e0121.get() + 1),

@@ -565,14 +565,15 @@ an integer (`>= 1`, `== 1`, `< 3`); a violation is `E0120`.
 any level), `h1`…`h6` (one level), `list-item-bold-name` (the `**bold**` lead
 of a `- ` list item), `list-item` (any bullet or numbered item), `blockquote`
 (a `>` line), or `line` (any non-blank line). Elements are lines, recognised
-by the line's own prefix, and a line inside a fenced code block is never one
-(`docs/inputs.md` has the exact rules). An **every** rule requires each
+by the line's own prefix, and a line inside a fenced code block is not one
+(`docs/inputs.md` has the exact rules and their limits). An **every** rule requires each
 element of the class to match its `every` pattern (`E0123` for each that does
 not). An **order** rule lists items of `element` and `match`; an element
 matching an earlier item must not follow one matching a later item (`E0124`);
 an element belongs to the first item it matches.
 On a count, every or order rule `section` is optional: without it the rule
-covers the whole document body (after the frontmatter). A `disjoint` rule extracts an id (the `id_pattern`'s first
+covers the whole document body (after the frontmatter and a leading
+byte-order mark, fenced code excluded). A `disjoint` rule extracts an id (the `id_pattern`'s first
 capture) from each section's declared element and asserts the two sets share
 none; an overlap is `E0121`. Ids come **only** from the declared element (an `h3`
 heading's text, or a `list-item-bold-name` bullet's bold name), never

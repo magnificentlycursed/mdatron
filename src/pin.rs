@@ -471,10 +471,7 @@ pub fn update(project_root: &Path, dry_run: bool) -> Result<Vec<(String, String,
 /// Both the check and `pin --update` hash through this ONE extraction, so they
 /// cannot diverge.
 fn pin_section_bytes(content: &str, section: &str) -> Option<Vec<u8>> {
-    let body = match crate::frontmatter::parse(content) {
-        Ok(Some((_, b))) => b,
-        _ => content,
-    };
+    let body = crate::frontmatter::body_of(content);
     let spans = crate::markup::section_spans(body, section);
     if spans.is_empty() {
         return None;

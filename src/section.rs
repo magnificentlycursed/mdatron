@@ -166,8 +166,12 @@ impl OrderItem {
 
     /// The item as a reader names it: its element class and its pattern.
     fn describe(&self) -> String {
+        let on = match self.on {
+            MatchOn::Line => "",
+            MatchOn::Name => " (on its name)",
+        };
         format!(
-            "{} matching {}",
+            "{} matching {}{on}",
             self.element.as_str(),
             self.matcher.as_str()
         )
@@ -227,6 +231,14 @@ impl CountPred {
             CmpOp::Gt => count > self.n,
             CmpOp::Ge => count >= self.n,
         }
+    }
+    /// No count is below zero.
+    fn never_holds(&self) -> bool {
+        matches!(self.op, CmpOp::Lt) && self.n == 0
+    }
+    /// Every count is at least zero.
+    fn always_holds(&self) -> bool {
+        matches!(self.op, CmpOp::Ge) && self.n == 0
     }
     fn describe(&self) -> String {
         let op = match self.op {
@@ -317,6 +329,18 @@ pub(crate) fn compile_rule(r: RawRule) -> Result<Rule, Error> {
         let items = items
             .into_iter()
             .map(|i| {
+                // The empty pattern matches every element of the class, so
+                // (first match wins) it shadows every later item the class
+                // covers: the trivially decidable dead step, refused like an
+                // empty `every`.
+                if i.match_pattern.is_empty() {
+                    return Err(Error::Config(
+                        "an `order` item has an empty `match`, which every element of its \
+                         class matches; use \".\" for \"any non-empty\" or a pattern that \
+                         names the elements this step is for"
+                            .into(),
+                    ));
+                }
                 Ok(OrderItem {
                     matcher: compile(&i.match_pattern)?,
                     element: i.element,
@@ -419,6 +443,16 @@ pub(crate) fn compile_rule(r: RawRule) -> Result<Rule, Error> {
                      >= <= == != > < and n an integer (e.g. \">= 1\")"
                 ))
             })?;
+            // A predicate that cannot fail, or cannot hold, makes a rule that
+            // reports never or always. `>= 0` on a SECTION still asserts the
+            // section exists (E0122); on the whole document it asserts nothing.
+            if pred.never_holds() || (r.section.is_none() && pred.always_holds()) {
+                return Err(Error::Config(format!(
+                    "section-rule count predicate '{count}' can never {}; the rule would \
+                     assert nothing",
+                    if pred.never_holds() { "hold" } else { "fail" }
+                )));
+            }
             Ok(Rule::Count {
                 matcher: compile(&pattern)?,
                 section: optional_section(r.section)?,
@@ -486,7 +520,7 @@ pub fn check_file(
                          its count assertion cannot be evaluated",
                         // #219: the rule's own pattern tells two rules on one
                         // section apart.
-                        with_section(section, vec![quoted("match", matcher.as_str())]),
+                        with_section(section, pattern_regions("match", matcher, *on)),
                     ));
                     continue;
                 };
@@ -524,7 +558,7 @@ pub fn check_file(
                         "MDATRON-E0120",
                         "section-count-violation",
                         &message,
-                        with_section(section, vec![quoted("match", matcher.as_str())]),
+                        with_section(section, pattern_regions("match", matcher, *on)),
                     ));
                 }
             }
@@ -544,7 +578,12 @@ pub fn check_file(
                         "no heading in this document matches the section rule's \
                          section spec (matching is exact on level and text), so \
                          its every-element assertion cannot be evaluated",
-                        with_section(section, vec![quoted("every", matcher.as_str())]),
+                        // The class tells two every rules with one pattern apart.
+                        with_section(section, {
+                            let mut regions = pattern_regions("every", matcher, *on);
+                            regions.push(quoted("element class", element.as_str()));
+                            regions
+                        }),
                     ));
                     continue;
                 };
@@ -573,10 +612,11 @@ pub fn check_file(
                                  rule requires of every such element in its scope",
                                 element.as_str()
                             ),
-                            with_section(
-                                section,
-                                vec![quoted("every", matcher.as_str()), quoted("element", line)],
-                            ),
+                            with_section(section, {
+                                let mut regions = pattern_regions("every", matcher, *on);
+                                regions.push(quoted("element", line));
+                                regions
+                            }),
                         ));
                     }
                 }
@@ -805,6 +845,18 @@ impl<'a> LineCursor<'a> {
         self.at = abs;
         self.line
     }
+}
+
+/// A rule's pattern as quoted regions: the pattern, and — when it is tested
+/// against the element's NAME — a `match_on` region saying so. Without it a
+/// reader sees a pattern anchored on the name beside a quoted element that
+/// opens with its marker, and concludes the pattern could never match.
+fn pattern_regions(label: &str, matcher: &regex_lite::Regex, on: MatchOn) -> Vec<QuotedRegion> {
+    let mut regions = vec![quoted(label, matcher.as_str())];
+    if on == MatchOn::Name {
+        regions.push(quoted("match_on", "name"));
+    }
+    regions
 }
 
 fn quoted(label: &str, content: &str) -> QuotedRegion {
@@ -1536,7 +1588,7 @@ mod tests {
         assert_eq!(absent[0].code, "MDATRON-E0122");
         assert_eq!(
             quote(&absent[0], "order"),
-            Some("h3 matching ^One$, then h3 matching ^Two$")
+            Some("h3 matching ^One$ (on its name), then h3 matching ^Two$ (on its name)")
         );
     }
 
@@ -1558,7 +1610,7 @@ mod tests {
         );
         assert!(f
             .iter()
-            .all(|f| quote(f, "must precede") == Some("h3 matching ^C$")));
+            .all(|f| quote(f, "must precede") == Some("h3 matching ^C$ (on its name)")));
         // A, C, B, C: only B is out of place.
         let f = run(&abc, "### A\n### C\n### B\n### C\n", 0);
         assert_eq!(f.len(), 1);
@@ -1589,6 +1641,52 @@ mod tests {
         assert_eq!(f[4999].location.line, 5004);
         assert_eq!(f[5000].location.line, 5008);
         assert_eq!(quote(&f[5000], "element"), Some("- bad again"));
+    }
+
+    // Cold review round 2 (R2E-4): the cursor itself. Ascending offsets count
+    // each newline once; an offset behind the cursor restarts, never
+    // underflows; an offset past the end clamps.
+    #[test]
+    fn line_cursor_counts_forward_and_restarts_on_a_backward_offset() {
+        let text = "a\nb\nc\n";
+        let mut cursor = LineCursor::new(text);
+        assert_eq!(cursor.line_of(0), 1);
+        assert_eq!(cursor.line_of(2), 2);
+        assert_eq!(cursor.line_of(2), 2);
+        assert_eq!(cursor.line_of(4), 3);
+        assert_eq!(cursor.line_of(0), 1, "a backward offset restarts the count");
+        assert_eq!(cursor.line_of(3), 2);
+        assert_eq!(
+            cursor.line_of(999),
+            4,
+            "past the end clamps to the last line"
+        );
+        // The cursor only ever advances by the gap: after locating the last
+        // line of a large text, locating it again scans nothing more.
+        let big = "x\n".repeat(100_000);
+        let mut cursor = LineCursor::new(&big);
+        assert_eq!(cursor.line_of(big.len()), 100_001);
+        assert_eq!(cursor.at, big.len());
+    }
+
+    // Cold review round 2 (R2D-7, R2E-6): a finding says how its pattern was
+    // tested, and an every rule's section-not-found names the class.
+    #[test]
+    fn findings_say_when_the_pattern_is_tested_on_the_name() {
+        let by_name =
+            compiled("section: '## L'\nelement: list-item\nevery: '^ok$'\nmatch_on: name\n");
+        let f = run(&by_name, "## L\n- bad\n", 0);
+        assert_eq!(quote(&f[0], "match_on"), Some("name"));
+        let absent = run(&by_name, "## Other\n", 0);
+        assert_eq!(quote(&absent[0], "element class"), Some("list-item"));
+        assert_eq!(quote(&absent[0], "match_on"), Some("name"));
+        let by_line = compiled("section: '## L'\nelement: list-item\nevery: '^- ok$'\n");
+        let f = run(&by_line, "## L\n- bad\n", 0);
+        assert_eq!(quote(&f[0], "match_on"), None);
+        let count =
+            compiled("section: '## L'\nelement: h3\nmatch: '^A$'\nmatch_on: name\ncount: '== 1'\n");
+        let f = run(&count, "## L\n", 0);
+        assert_eq!(quote(&f[0], "match_on"), Some("name"));
     }
 
     // Cold review round 1 (ADV-5): a leading byte-order mark is not content.
@@ -1648,6 +1746,20 @@ mod tests {
         ));
         assert!(refused(
             "section: \"# Acme\\n## Docs\"\nelement: line\nmatch: x\ncount: '>= 1'\n"
+        ));
+        // Cold review round 2 (R2E-2/R2E-3): a count that cannot fail on the
+        // whole document, one that cannot hold anywhere, and an order item
+        // whose empty pattern takes every element of its class.
+        assert!(refused("element: line\nmatch: x\ncount: '>= 0'\n"));
+        assert!(!refused(
+            "section: '## A'\nelement: line\nmatch: x\ncount: '>= 0'\n"
+        ));
+        assert!(refused(
+            "section: '## A'\nelement: line\nmatch: x\ncount: '< 0'\n"
+        ));
+        assert!(!refused("element: line\nmatch: ''\ncount: '== 3'\n"));
+        assert!(refused(
+            "order:\n  - {element: line, match: ''}\n  - {element: h2, match: x}\n"
         ));
     }
 

@@ -1,10 +1,11 @@
 # Recipe: AGENTS.md
 
 `AGENTS.md` is the file coding agents read before they touch a repository,
-and agents act on it: when it lists build and test commands, "the agent will
-attempt to execute relevant programmatic checks and fix failures before
-finishing the task." The format has no rules to break ("just standard
-Markdown. Use any headings you like"), so the failures are all quiet:
+and agents act on it. Do they run the build and test commands it lists?
+"Yes—if you list them. The agent will attempt to execute relevant
+programmatic checks and fix failures before finishing the task." The format
+has no rules to break ("just standard Markdown. Use any headings you like"),
+so the failures are all quiet:
 
 - An `AGENTS.override.md` that someone committed. Codex reads it *instead
   of* `AGENTS.md` in the same directory, so the file everyone reviewed
@@ -37,14 +38,16 @@ enforces it).
 |---|---|---|---|---|
 | AGENTS.md | https://agents.md | agentsmd/agents.md@d1ac7f063d20e70015ed6732664049ae4ba9d74e components/ | 2026-03-12 | 2026-10-01 |
 | Codex AGENTS.md discovery | https://learn.chatgpt.com/docs/agent-configuration/agents-md | unversioned documentation page; openai/codex@bb72e151e50cfd4f6282ab86418188af3c83b5df docs/agents_md.md links to it | unversioned | 2026-10-01 |
+| Codex AGENTS.md discovery (source) | https://github.com/openai/codex/blob/bb72e151e50cfd4f6282ab86418188af3c83b5df/codex-rs/core/src/agents_md.rs | openai/codex@bb72e151e50cfd4f6282ab86418188af3c83b5df codex-rs/core/src/agents_md.rs | 2026-06-18 | 2026-10-02 |
 | Claude Code project instructions (CLAUDE.md and AGENTS.md) | https://code.claude.com/docs/en/memory | unversioned documentation page; version gates stated through v2.1.283 | unversioned | 2026-10-02 |
 <!-- cookbook-provenance-end -->
 
 To check for drift, compare the pinned commit with the latest one under
 `components/`
 (`gh api 'repos/agentsmd/agents.md/commits?path=components&per_page=1' --jq '.[0].sha'`),
-and fetch the Codex and Claude Code pages again: neither has a published
-source to pin.
+do the same for `codex-rs/core/src/agents_md.rs` in openai/codex, and fetch
+the Codex and Claude Code documentation pages again: neither has a
+published source to pin.
 
 ## What the sources say
 
@@ -57,14 +60,20 @@ source to pin.
   in each directory Codex "checks for `AGENTS.override.md`, then
   `AGENTS.md`", and concatenates what it finds "from the root down". It
   "skips empty files and stops adding files once the combined size reaches
-  the limit", `project_doc_max_bytes`, "32 KiB by default".
+  the limit", `project_doc_max_bytes`, "32 KiB by default". The source shows
+  what "stops" means: a file that does not fit in what remains is truncated
+  to it, with a log line and nothing shown to the user.
 - **Claude Code.** From v2.1.277, by default "Claude reads `AGENTS.md` only
   when you have no `CLAUDE.md` in your working directory or above it". With
   both files present it reads "Your `CLAUDE.md` files only", and a `CLAUDE.md`
-  in `.claude/` or in a directory above counts too. The documented remedy is
-  "putting an `@AGENTS.md` import in a `CLAUDE.md` next to it"; a root import
-  does not bring in a package's `AGENTS.md`. "Import parsing skips Markdown
-  code spans and fenced code blocks."
+  in `.claude/`, a `CLAUDE.local.md`, or one in a directory above counts
+  too. The documented remedy is "putting an `@AGENTS.md` import in a
+  `CLAUDE.md` next to it". A subdirectory's `CLAUDE.md` is "included when
+  Claude reads files in those subdirectories". "Import parsing skips
+  Markdown code spans and fenced code blocks." Two things here are this
+  page's reading, not quotations: that a root import does not bring in a
+  package's `AGENTS.md`, and that an import in a package's `CLAUDE.md` is
+  expanded when that file loads.
 
 ## The configuration
 
@@ -72,12 +81,12 @@ source to pin.
 ```yaml
 # The walked set: every AGENTS*.md file, at any depth. Walking the prefix, not
 # only AGENTS.md, is what makes a committed AGENTS.override.md visible: it is
-# walked, no route claims it, and mdatron reports it. Every CLAUDE.md is
-# walked for the same reason: wherever one sits, Claude Code reads it instead
-# of the AGENTS.md beside or below it.
+# walked, no route claims it, and mdatron reports it. Every CLAUDE.md and
+# CLAUDE.local.md is walked for the same reason: wherever one sits, Claude
+# Code reads it instead of the AGENTS.md beside or below it.
 file_globs:
   - "**/AGENTS*.md"
-  - "**/CLAUDE.md"
+  - "**/CLAUDE*.md"
 ```
 
 <!-- cookbook-file: .mdatron/routes.yaml -->
@@ -92,6 +101,8 @@ routes:
   # Codex stops reading at 32 KiB across the files on one path. With one
   # AGENTS.md per package, a path is the root file plus one package's:
   # 24 KiB here and 8 KiB per package file keeps that inside the budget.
+  # (A route's `*` crosses `/`: a second AGENTS.md deeper in a package gets
+  # its own 8 KiB, and the split no longer holds.)
   max_bytes: 24576
   section_rules:
   # Project policy: the format itself is "just standard Markdown" with no
@@ -120,8 +131,10 @@ routes:
     match: "."
     count: ">= 1"
 # A CLAUDE.md switches AGENTS.md off for Claude Code unless it imports it, so
-# each one sits beside an AGENTS.md and holds the import. Any other CLAUDE.md
-# (.claude/CLAUDE.md, a deeper directory's) is unrouted (E0030).
+# each routed one holds the import. No route claims .claude/CLAUDE.md, a
+# CLAUDE.local.md, or a CLAUDE.md outside packages/: a committed one is
+# unrouted (E0030). A route's `*` crosses `/`, so the packages route also
+# claims a CLAUDE.md deeper inside a package.
 - files: "CLAUDE.md"
   governed_by: CONTRIBUTING.md
   section_rules:
@@ -166,20 +179,29 @@ schemas or patterns directory to exist, and this recipe needs no schema.
 | The file points agents at other docs | route `links: true` on every `AGENTS.md` (`E0110`, `E0111`) |
 | Codex skips an empty file | root: the H1 anchor and the section pin; packages: a whole-document count of `line` elements, `>= 1` (`E0120`) |
 | Codex stops reading at 32 KiB combined | route `max_bytes`, split so the root file plus one package file fits (`E0036`) |
-| Claude Code reads a `CLAUDE.md` in place of `AGENTS.md` | each routed `CLAUDE.md` holds a line with the `@AGENTS.md` import (a whole-document count, `E0120`); walking `**/CLAUDE.md` makes any other one unrouted (`E0030`) |
+| Claude Code reads a `CLAUDE.md` in place of `AGENTS.md` | each routed `CLAUDE.md` holds a line with the `@AGENTS.md` import (a whole-document count, `E0120`); walking `**/CLAUDE*.md` makes one the routes do not claim unrouted (`E0030`) |
 
 ## What this does not check
 
 - **A `CLAUDE.md` beside every `AGENTS.md`.** The recipe checks each
   `CLAUDE.md` it finds. It cannot require one to exist: with a root
   `CLAUDE.md` present, a new package's `AGENTS.md` is invisible to Claude
-  Code until someone adds a `CLAUDE.md` next to it, and mdatron has no rule
-  that one file must have a sibling.
+  Code until someone adds a `CLAUDE.md` next to it. Nor can it check that
+  the `AGENTS.md` an import names exists beside the importing file. mdatron
+  has no rule that one file must have a sibling (mdatron #221).
+- **Stray files inside a package.** A route's `*` crosses `/`, so
+  `packages/*/CLAUDE.md` also claims `packages/api/sub/CLAUDE.md` and
+  `packages/api/.claude/CLAUDE.md`. Such a file is held to the import rule
+  instead of being reported as unrouted, and an `@AGENTS.md` in it passes
+  though it points at no file and still hides the package's `AGENTS.md`
+  from Claude Code. Only strays outside `packages/` are caught. mdatron has
+  no route glob whose `*` stops at a directory (mdatron #220).
 - **Whether the import is live.** The rule looks for `@AGENTS.md` or
   `@./AGENTS.md`, with whitespace or a line end on both sides, on a line
   outside fenced code. A tight code span (`` `@AGENTS.md` ``) is rightly not
-  counted, but the same text inside an HTML comment, an indented code block
-  or a code span padded with spaces is counted though nothing is imported.
+  counted, but the same text inside an HTML comment, an indented code block,
+  a fence nested in a list item (indented four spaces or more) or a code
+  span padded with spaces is counted though nothing is imported.
   An import followed directly by punctuation (`@AGENTS.md.`) is not counted.
 - **What "empty" means.** The package rule counts non-blank lines in the
   body: frontmatter and fenced code blocks are not lines. A file holding
@@ -187,18 +209,20 @@ schemas or patterns directory to exist, and this recipe needs no schema.
   and a file holding only an invisible character passes.
 - **Deeper files and the budget.** A route's `*` crosses `/`, so
   `packages/*/AGENTS.md` also claims `packages/api/sub/AGENTS.md`, with its
-  own 8 KiB. The split is sound only while each package has one `AGENTS.md`.
+  own 8 KiB. The split is sound only while each package has one `AGENTS.md`
+  (mdatron #220).
   `max_bytes` bounds each file; mdatron does not add up the files along a
   path. The count is the file's bytes as checked out, so keep bounded files
   on LF line endings (`eol=lf` in `.gitattributes`).
 - **A symlinked `CLAUDE.md`.** `ln -s AGENTS.md CLAUDE.md` is a setup the
   Claude Code documentation offers. mdatron refuses symlinks in the governed
   tree (`E0012`), so this recipe needs the import form.
-- **Local files.** A developer's uncommitted `CLAUDE.local.md` also stops
-  Claude Code reading `AGENTS.md`; mdatron sees only the tree it is run on.
+- **Local files.** A committed `CLAUDE.local.md` is walked and reported as
+  unrouted. A developer's uncommitted one also stops Claude Code reading
+  `AGENTS.md`, and mdatron sees only the tree it is run on.
 
-Also out of scope: Codex's `project_doc_fallback_filenames` (configured per
-user in `config.toml`, not in the repository), the global
+Also out of scope: Codex's `project_doc_fallback_filenames` (set in Codex's
+`config.toml`, which this recipe does not read), the global
 `~/.codex/AGENTS.md`, and Claude Code's **Project instructions** setting.
 
 ## The silent failures, and what mdatron says
@@ -255,6 +279,8 @@ error[MDATRON-E0120]: section-count-violation
            > # Acme
    = match:
            > ^Security$
+   = match_on:
+           > name
    = explain: mdatron explain MDATRON-E0120
 mdatron verify: 1 error(s), 0 warning(s) across 1 finding(s)
 ```
@@ -304,6 +330,8 @@ error[MDATRON-E0122]: section-not-found
            > # Acme
    = match:
            > ^Build and test$
+   = match_on:
+           > name
    = explain: mdatron explain MDATRON-E0122
 error[MDATRON-E0122]: section-not-found
   --> AGENTS.md:1
@@ -312,6 +340,8 @@ error[MDATRON-E0122]: section-not-found
            > # Acme
    = match:
            > ^Security$
+   = match_on:
+           > name
    = explain: mdatron explain MDATRON-E0122
 mdatron verify: 3 error(s), 0 warning(s) across 3 finding(s)
 ```
@@ -332,7 +362,7 @@ mdatron verify: 1 error(s), 0 warning(s) across 1 finding(s)
 
 **A root file past its share of the budget.** Five hundred style reminders
 were appended. At 27,134 bytes the root file leaves 5,634 of Codex's 32,768
-for a package's file, which Codex would cut off mid-file past that point.
+for a package's file, which Codex would truncate past that point.
 
 <!-- cookbook-case: over-budget -->
 ```text
@@ -382,8 +412,12 @@ mdatron verify: 1 error(s), 0 warning(s) across 1 finding(s)
 - **Pin what agents execute.** Pin each section that lists commands,
   including a package's own `## Build and test`.
 - **No `CLAUDE.md`.** If your repository has none, drop the two `CLAUDE.md`
-  routes and keep the `**/CLAUDE.md` glob: Claude Code (v2.1.277 or later)
-  then reads `AGENTS.md` directly, and a `CLAUDE.md` added later is reported
-  as unrouted instead of silently taking over.
+  routes and keep the `**/CLAUDE*.md` glob, so that a `CLAUDE.md` added later
+  is reported as unrouted instead of silently taking over. Until one exists
+  the glob matches nothing and every run prints warning `W0046`, which fails
+  a run under `--deny-warnings`; drop the glob too if you cannot have that.
+  Claude Code then reads `AGENTS.md` directly, from v2.1.277, with the
+  exceptions its documentation lists (some sessions before v2.1.281, a
+  disabled `agents-md` plugin, the first session after an upgrade).
 - **Codex fallback names.** If your team sets `project_doc_fallback_filenames`,
   add those names to `file_globs` and route them like `AGENTS.md`.

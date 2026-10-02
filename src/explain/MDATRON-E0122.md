@@ -15,8 +15,8 @@ an order rule's items, are quoted, so two rules on one section can be told
 apart), and a
 **disjoint** rule where either operand's
 `section` matches nothing (one finding per unmatched operand). A rule that
-names no `section` evaluates over the whole document and never reports this
-code. Matching is
+names no `section` evaluates over the whole document body and never reports
+this code. Matching is
 **exact on level and text** (`"## Requirements"` matches a `##` heading whose
 text is exactly `Requirements` — a near-miss like `Requirements.` does not
 match), and a `#` inside a fenced code block is not a heading. This fires when
