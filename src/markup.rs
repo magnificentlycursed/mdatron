@@ -46,6 +46,14 @@ use serde::Deserialize;
 /// - `h1` … `h6` — an ATX heading of exactly that level.
 /// - `list-item-bold-name` — the leading `**bold**` name of a `- ` list item
 ///   (vsdd's live shape: `- **Slice 1 — …** …`, referenced by that name).
+/// - `list-item` — any list item (`- `, `* `, `+ `, or an ordinal `1. `/`1) `),
+///   named by its text after the marker (#213).
+/// - `blockquote` — a `>` line, named by its text after the marker (#214).
+/// - `line` — any non-blank line, named by the whole line (#217/#218).
+///
+/// All classes are LINE-based: an element is the line that opens it (a list
+/// item's continuation lines are not part of the element), and a line inside
+/// a fenced code block is never an element.
 ///
 /// The retired spellings `h3-heading` and `bullet-lead` (the 0.6.0
 /// section-disjoint `id_from` values) are accepted as aliases per
@@ -64,18 +72,25 @@ pub enum ElementClass {
     H6,
     #[serde(alias = "bullet-lead")]
     ListItemBoldName,
+    ListItem,
+    Blockquote,
+    Line,
 }
 
 impl ElementClass {
     /// The element name `line` carries for this class, or `None` when the line
     /// is not an element of the class: the heading text for the heading
     /// classes (any level for `heading`, the exact level for `h1`…`h6`), the
-    /// bold lead for `list-item-bold-name`. Fence discipline is the caller's
-    /// (feed it [`non_fenced_lines`]).
+    /// bold lead for `list-item-bold-name`, the item text for `list-item`, the
+    /// quoted text for `blockquote`, the whole line for `line` (never a blank
+    /// one). Fence discipline is the caller's (feed it [`non_fenced_lines`]).
     pub(crate) fn name_in(self, line: &str) -> Option<&str> {
         match self {
             Self::Heading => atx_heading(line).map(|(_, t)| t),
             Self::ListItemBoldName => list_item_bold_name(line),
+            Self::ListItem => list_item_text(line),
+            Self::Blockquote => blockquote_text(line),
+            Self::Line => (!line.trim().is_empty()).then_some(line),
             exact => atx_heading(line)
                 .filter(|(l, _)| Some(*l) == exact.heading_level())
                 .map(|(_, t)| t),
@@ -92,7 +107,11 @@ impl ElementClass {
             Self::H4 => Some(4),
             Self::H5 => Some(5),
             Self::H6 => Some(6),
-            Self::Heading | Self::ListItemBoldName => None,
+            Self::Heading
+            | Self::ListItemBoldName
+            | Self::ListItem
+            | Self::Blockquote
+            | Self::Line => None,
         }
     }
 
@@ -107,6 +126,9 @@ impl ElementClass {
             Self::H5 => "h5",
             Self::H6 => "h6",
             Self::ListItemBoldName => "list-item-bold-name",
+            Self::ListItem => "list-item",
+            Self::Blockquote => "blockquote",
+            Self::Line => "line",
         }
     }
 }
@@ -391,6 +413,61 @@ pub(crate) fn list_item_bold_name(line: &str) -> Option<&str> {
     let after_open = rest.strip_prefix("**")?;
     let end = after_open.find("**")?;
     Some(&after_open[..end])
+}
+
+/// The text of a list item after its marker — `-`, `*`, `+`, or an ordinal
+/// (`1.` / `1)`, up to nine digits as CommonMark allows), followed by a space
+/// or a tab — or `None` when the line does not open a list item (#213).
+///
+/// Recognised by the line's prefix alone, so three things differ from a
+/// CommonMark parse and are stated in `docs/inputs.md`: any indentation of
+/// spaces or tabs is accepted (a nested item is an item, and so is an
+/// item-shaped line of indented code); a marker with nothing after it is not
+/// an item; a thematic break written with spaces (`* * *`, `- - -`) is NOT an
+/// item, though it opens with a marker.
+pub(crate) fn list_item_text(line: &str) -> Option<&str> {
+    // Spaces and tabs only: `trim_start` would also strip a no-break space,
+    // which is text, not indentation.
+    let t = line.trim_start_matches([' ', '\t']);
+    if is_thematic_break(t) {
+        return None;
+    }
+    let after_marker = match t.as_bytes().first()? {
+        b'-' | b'*' | b'+' => &t[1..],
+        _ => {
+            let digits = t.bytes().take_while(u8::is_ascii_digit).count();
+            if digits == 0 || digits > 9 {
+                return None;
+            }
+            t[digits..]
+                .strip_prefix('.')
+                .or_else(|| t[digits..].strip_prefix(')'))?
+        }
+    };
+    after_marker
+        .strip_prefix([' ', '\t'])
+        .map(|rest| rest.trim())
+}
+
+/// A CommonMark thematic break: three or more of one of `-`, `*`, `_`, with
+/// only spaces or tabs between and around them.
+fn is_thematic_break(line: &str) -> bool {
+    let mut marks = line.chars().filter(|c| !matches!(c, ' ' | '\t'));
+    let Some(first) = marks.next() else {
+        return false;
+    };
+    matches!(first, '-' | '*' | '_') && marks.clone().all(|c| c == first) && marks.count() >= 2
+}
+
+/// The text of a blockquote line after its `>` marker, or `None`. The marker
+/// may be indented by up to three spaces (CommonMark's 0–3 rule); four or more,
+/// or a tab, make the line indented code (#214).
+pub(crate) fn blockquote_text(line: &str) -> Option<&str> {
+    let indent = line.bytes().take_while(|b| *b == b' ').count();
+    if indent > 3 {
+        return None;
+    }
+    line[indent..].strip_prefix('>').map(str::trim)
 }
 
 /// The heading-delimited span of `content` named by `heading_spec` (e.g.

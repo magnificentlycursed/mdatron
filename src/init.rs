@@ -75,12 +75,14 @@ const ROUTES_TEMPLATE: &str = r####"# routes.yaml.example — the route family. 
 #             on a route.
 # KEYS        per route — required: files, governed_by
 #                         optional: naming, citations, links, link_root,
-#                                   marker_rules, section_rules
+#                                   marker_rules, section_rules, schema,
+#                                   name_equals_dir, max_bytes
 #             file-level  — optional: mdatron_format_version (absent = 1)
 # CODES       E0030 E0031 E0032 W0041 W0053 W0054; per opt-in E0100 E0101
 #             W0048 E0081 (citations), E0110 E0111 W0048 E0081 (links),
-#             E0112 E0114 W0048 E0081 (markers), E0120 E0121 E0122 (section
-#             rules), E0033 E0034 (schema), E0035 (name_equals_dir);
+#             E0112 E0114 W0048 E0081 (markers), E0120 E0121 E0122 E0123
+#             E0124 (section rules), E0033 E0034 (schema), E0035
+#             (name_equals_dir), E0036 (max_bytes);
 #             E0010 E0011 E0012 on paths.
 # The body below is the minimal activating shape: one route claiming every
 # walked file, answering to a document that must exist (point governed_by at
@@ -95,6 +97,7 @@ const ROUTES_TEMPLATE: &str = r####"# routes.yaml.example — the route family. 
 # (optional additions: uncomment what you need)
 #   schema: skill          # bind claimed files to .mdatron/schemas/skill.json
 #   name_equals_dir: name  # frontmatter `name` must equal the parent directory
+#   max_bytes: 32768       # the most bytes a claimed file may hold
 #   naming: "^[a-z0-9-]+\\.md$"
 #   citations: true
 #   links: true
@@ -114,6 +117,18 @@ const ROUTES_TEMPLATE: &str = r####"# routes.yaml.example — the route family. 
 #     match: "^Slice [0-9]+"
 #     match_on: name   # test the heading TEXT, not the line (default: line)
 #     count: ">= 1"
+#   - element: line    # no `section`: the whole document (here: not empty)
+#     match: "."
+#     count: ">= 1"
+#   - section: "## Links"
+#     element: list-item
+#     every: "^- \\[[^\\]]+\\]\\([^)]+\\)"   # every item is a link
+#   - section: "## Requirements"
+#     order:           # elements matching an earlier item come first
+#     - element: blockquote
+#       match: "."
+#     - element: h3
+#       match: "."
 #   - disjoint:
 #     - section: "## Requirements"
 #       element: h3

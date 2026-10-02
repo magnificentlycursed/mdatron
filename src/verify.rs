@@ -1243,6 +1243,12 @@ fn run_inner(
             // Symlinked: refused at capture, its E0012 already recorded.
             Some(crate::snapshot::Captured::SymlinkRefused { .. }) | None => continue,
         };
+        if let Some(max) = routes
+            .as_deref()
+            .and_then(|routes| crate::route::max_bytes_for(routes, rel))
+        {
+            byte_budget_check(path, content.len(), max, &mut findings);
+        }
         let verdict = verify_file(
             path,
             content,
@@ -2925,6 +2931,28 @@ fn name_equals_dir_check(
     });
 }
 
+/// `E0036` (#216): the claiming route's `max_bytes` bounds the file's size —
+/// a consumer with a read budget drops what is past it without a word.
+fn byte_budget_check(path: &Path, bytes: usize, max: u64, findings: &mut Vec<Finding>) {
+    if u64::try_from(bytes).unwrap_or(u64::MAX) <= max {
+        return;
+    }
+    findings.push(Finding {
+        code: "MDATRON-E0036".into(),
+        severity: Severity::Error,
+        summary: "file-over-byte-budget".into(),
+        message: format!("this file is {bytes} bytes; its route allows at most {max} (max_bytes)"),
+        help: Some(
+            "shorten the file or move detail into a document it links to; raise the \
+             route's max_bytes only if the consumer's budget really is larger"
+                .into(),
+        ),
+        location: Location::whole_file(path),
+        explain_ref: Some("MDATRON-E0036".into()),
+        quoted: Vec::new(),
+    });
+}
+
 #[allow(clippy::too_many_arguments)]
 fn verify_file(
     path: &Path,
@@ -2999,19 +3027,32 @@ fn verify_file(
         // file missing its frontmatter must not pass as "nothing to check".
         None if binding.schema.is_some() || binding.name_equals_dir.is_some() => (
             serde_yaml_ng::Value::Mapping(serde_yaml_ng::Mapping::new()),
-            content.len(),
+            // The body starts after a leading byte-order mark.
+            frontmatter::strip_bom(content).len(),
         ),
         None => {
+            // No frontmatter: the body is the whole file, less a leading
+            // byte-order mark — left on line 1 it would make a first-line
+            // heading not a heading, for every family alike.
+            let body_offset = content.len() - frontmatter::strip_bom(content).len();
             // Opt-in loudness (#80 D2): inside a require_frontmatter glob,
             // "no frontmatter" must not be indistinguishable from "passed" —
             // the parse-ABSENCE half of #78's loud-failure/silent-absence
             // asymmetry. Matching is on the root-relative path.
             // Vocabulary scans prose-only files too (whole content as body).
             if let Some(v) = vocab {
-                crate::vocab::check_file(v, path, content, 0, None, vocab_coinage, findings);
+                crate::vocab::check_file(
+                    v,
+                    path,
+                    content,
+                    body_offset,
+                    None,
+                    vocab_coinage,
+                    findings,
+                );
             }
             if cite_enabled {
-                crate::cite::check_file(snapshot, path, content, 0, findings);
+                crate::cite::check_file(snapshot, path, content, body_offset, findings);
             }
             if link_enabled {
                 crate::link::check_file(
@@ -3019,15 +3060,23 @@ fn verify_file(
                     project_root,
                     path,
                     content,
-                    0,
+                    body_offset,
                     link_root,
                     memo,
                     findings,
                 );
             }
-            crate::marker::check_file(snapshot, path, content, 0, marker_rules, memo, findings);
-            crate::codecat::check_file(code_catalogs, path, content, 0, findings);
-            crate::section::check_file(section_rules, path, content, 0, findings);
+            crate::marker::check_file(
+                snapshot,
+                path,
+                content,
+                body_offset,
+                marker_rules,
+                memo,
+                findings,
+            );
+            crate::codecat::check_file(code_catalogs, path, content, body_offset, findings);
+            crate::section::check_file(section_rules, path, content, body_offset, findings);
             let rel = path.strip_prefix(project_root).unwrap_or(path);
             if require_frontmatter.matches_any(rel) {
                 findings.push(Finding {
@@ -11224,5 +11273,131 @@ pattern:
             let err = verify(&VerifyConfig::from_project(&proj.0).unwrap());
             assert!(err.is_err(), "{bad:?} must be refused at load");
         }
+    }
+
+    // RED GATE (#216): a route's max_bytes bounds each claimed file — at the
+    // bound is clean, one byte over is E0036 — and a zero bound is refused.
+    #[test]
+    fn route_max_bytes_bounds_each_claimed_file() {
+        let proj = skills_project("max-bytes", "  max_bytes: 40\n");
+        let base = "---\nname: a\n---\n\n# A\n";
+        let exactly_40 = format!("{base}{}", "y".repeat(40 - base.len()));
+        assert_eq!(exactly_40.len(), 40);
+        proj.write(".claude/skills/a/SKILL.md", &exactly_40);
+        assert!(route_codes(&proj).is_empty(), "{:?}", route_codes(&proj));
+
+        proj.write(".claude/skills/a/SKILL.md", &format!("{exactly_40}x"));
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        assert_eq!(findings[0].code, "MDATRON-E0036");
+        assert!(
+            findings[0].message.contains("41 bytes") && findings[0].message.contains("most 40"),
+            "{}",
+            findings[0].message
+        );
+
+        let zero = skills_project("max-bytes-zero", "  max_bytes: 0\n");
+        zero.write(".claude/skills/a/SKILL.md", "# a\n");
+        assert!(verify(&VerifyConfig::from_project(&zero.0).unwrap()).is_err());
+
+        // A bound at or above the engine's per-file input limit can never
+        // report a file either: refused (cold review round 1, ARCH-7).
+        for dead in [MAX_FILE_BYTES, MAX_FILE_BYTES + 1] {
+            let proj = skills_project("max-bytes-dead", &format!("  max_bytes: {dead}\n"));
+            proj.write(".claude/skills/a/SKILL.md", "# a\n");
+            assert!(verify(&VerifyConfig::from_project(&proj.0).unwrap()).is_err());
+        }
+        let top = skills_project(
+            "max-bytes-top",
+            &format!("  max_bytes: {}\n", MAX_FILE_BYTES - 1),
+        );
+        top.write(".claude/skills/a/SKILL.md", "# a\n");
+        assert!(verify(&VerifyConfig::from_project(&top.0).unwrap()).is_ok());
+    }
+
+    // Cold review round 2 (R2E-1): a leading byte-order mark is skipped by
+    // EVERY family alike. Section rules skipped it while link anchors and
+    // section pins still read it as part of line 1, so one file's first-line
+    // heading existed for one family and not for the others.
+    #[test]
+    fn a_byte_order_mark_does_not_hide_a_first_line_heading_from_any_family() {
+        // Pinned without the mark, then written with it: the pinned span's
+        // bytes are the same either way.
+        let content = "# Acme\n\nBody. Back to [the top](#acme).\n";
+        let proj = section_pinned_project("bom-families", content, "# Acme");
+        proj.write("governed.md", &format!("\u{feff}{content}"));
+        proj.write(
+            ".mdatron/routes.yaml",
+            "routes:\n- files: \"governed.md\"\n  governed_by: GOVERNING.md\n  links: true\n  \
+             section_rules:\n  - section: \"# Acme\"\n    element: line\n    match: \"Body\"\n    \
+             count: \"== 1\"\n- files: \"GOVERNING.md\"\n  governed_by: GOVERNING.md\n",
+        );
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        assert!(
+            findings.is_empty(),
+            "link anchor, section pin and section rule all resolve `# Acme`: {findings:?}"
+        );
+    }
+
+    // Cold review round 3 (R3-1): the OTHER body-definition sites, each of
+    // which a mutation run reverted with the suite still green — a link into
+    // another file's first-line heading, a marker rule targeting it, and a
+    // route-bound-schema file with no frontmatter (its own code path).
+    #[test]
+    fn a_byte_order_mark_is_skipped_in_target_files_and_schema_bound_files() {
+        let proj = TempProject::new("bom-targets");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(".mdatron/config.yaml", "file_globs:\n  - \"**/*.md\"\n");
+        proj.write("GOVERNING.md", "# governing doc\n");
+        proj.write("target.md", "\u{feff}# Top\n\ntext\n");
+        proj.write("a.md", "# A\n\nSee [the top](target.md#top).\nRef: Top\n");
+        proj.write(
+            "bound.md",
+            "\u{feff}# Bound\n\nBack to [the top](#bound).\n",
+        );
+        proj.write(
+            ".mdatron/routes.yaml",
+            "routes:\n- files: \"a.md\"\n  governed_by: GOVERNING.md\n  links: true\n  \
+             marker_rules:\n  - pattern: \"^Ref: (.+)$\"\n    element: h1\n    \
+             target_doc: target.md\n- files: \"bound.md\"\n  governed_by: GOVERNING.md\n  \
+             links: true\n  schema: phase-primer\n- files: \"target.md\"\n  \
+             governed_by: GOVERNING.md\n- files: \"GOVERNING.md\"\n  governed_by: GOVERNING.md\n",
+        );
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        let reference_codes: Vec<&str> = findings
+            .iter()
+            .map(|f| f.code.as_str())
+            .filter(|c| matches!(*c, "MDATRON-E0110" | "MDATRON-E0111" | "MDATRON-E0112"))
+            .collect();
+        assert!(
+            reference_codes.is_empty(),
+            "the cross-file anchor, the marker target and the schema-bound file's own \
+             anchor all resolve: {findings:?}"
+        );
+        // The schema-bound file IS validated (its required fields are missing).
+        assert!(
+            findings.iter().any(|f| f.code == "MDATRON-E0050"),
+            "{findings:?}"
+        );
+    }
+
+    // #217/#218 end to end: a whole-document count rule (no `section`) on a
+    // route reports an empty file and a file missing a required line.
+    #[test]
+    fn whole_document_count_rules_run_from_a_route() {
+        let proj = skills_project(
+            "whole-doc",
+            "  section_rules:\n  - element: line\n    match: \".\"\n    count: \">= 1\"\n  \
+             - element: line\n    match: \"^@AGENTS\\\\.md$\"\n    count: \">= 1\"\n",
+        );
+        proj.write(".claude/skills/a/SKILL.md", "@AGENTS.md\n");
+        assert!(route_codes(&proj).is_empty(), "{:?}", route_codes(&proj));
+        proj.write(".claude/skills/a/SKILL.md", "See AGENTS.md.\n");
+        assert_eq!(route_codes(&proj), vec!["MDATRON-E0120"]);
+        proj.write(".claude/skills/a/SKILL.md", "");
+        assert_eq!(route_codes(&proj), vec!["MDATRON-E0120", "MDATRON-E0120"]);
     }
 }

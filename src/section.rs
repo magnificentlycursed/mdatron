@@ -28,6 +28,19 @@
 //!   overlap is `MDATRON-E0121`. (`id_from`, `h3-heading`, and `bullet-lead` are
 //!   the retired 0.6.0 spellings, accepted as aliases.)
 //!
+//! - **Every** `{ section, element, every }` (#213) — every element of the
+//!   class in the section must match the `every` pattern; each one that does
+//!   not is `MDATRON-E0123`, located at its own line.
+//! - **Order** `{ section, order: [item, item, …] }`, `item = { element, match }`
+//!   (#214) — an element matching an earlier item must not appear after one
+//!   matching a later item; each one that does is `MDATRON-E0124`. Order
+//!   asserts sequence only: an item nothing matches is not a violation
+//!   (presence is a count rule's job).
+//!
+//! On a count, every or order rule `section` is optional (#217/#218): absent,
+//! the rule evaluates over the whole document body — so "the file is not
+//! empty" is a count of `line` elements, with no heading to anchor on.
+//!
 //! The **id extraction is deliberately element-scoped, not a full-span text
 //! scan** (vsdd-cli#29's load-bearing trap): a body line under an
 //! open phase (`Provenance: Slice 3 …`) would else collide with a completed
@@ -66,8 +79,26 @@ pub(crate) struct RawRule {
     /// see. Additive (#201 ruling): absent keeps every existing rule's meaning.
     #[serde(default)]
     match_on: Option<MatchOn>,
+    /// The pattern EVERY element of the class in the section must match (#213);
+    /// tested per `match_on`, like a count rule's `match`.
+    #[serde(default)]
+    every: Option<String>,
+    /// The sequence the section's elements must keep (#214).
+    #[serde(default)]
+    order: Option<Vec<RawOrderItem>>,
     #[serde(default)]
     disjoint: Option<Vec<RawOperand>>,
+}
+
+/// One step of an `order` rule: the elements of `element` matching `match`.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct RawOrderItem {
+    element: ElementClass,
+    #[serde(rename = "match")]
+    match_pattern: String,
+    #[serde(default)]
+    match_on: Option<MatchOn>,
 }
 
 /// What a count rule's `match` regex is tested against (see [`RawRule`]).
@@ -95,19 +126,77 @@ pub(crate) struct RawOperand {
     id_pattern: String,
 }
 
-/// A compiled section-structural rule.
+/// A compiled section-structural rule. `section: None` on a count, every or
+/// order rule means the whole document body.
 pub enum Rule {
     Count {
-        section: String,
+        section: Option<String>,
         element: ElementClass,
         matcher: regex_lite::Regex,
         on: MatchOn,
         pred: CountPred,
     },
+    Every {
+        section: Option<String>,
+        element: ElementClass,
+        matcher: regex_lite::Regex,
+        on: MatchOn,
+    },
+    Order {
+        section: Option<String>,
+        items: Vec<OrderItem>,
+    },
     Disjoint {
         a: Operand,
         b: Operand,
     },
+}
+
+/// One compiled step of an order rule.
+pub struct OrderItem {
+    element: ElementClass,
+    matcher: regex_lite::Regex,
+    on: MatchOn,
+}
+
+impl OrderItem {
+    fn matches(&self, line: &str) -> bool {
+        element_matches(self.element, &self.matcher, self.on, line)
+    }
+
+    /// The item as a reader names it: its element class and its pattern.
+    fn describe(&self) -> String {
+        let on = match self.on {
+            MatchOn::Line => "",
+            MatchOn::Name => " (on its name)",
+        };
+        format!(
+            "{} matching {}{on}",
+            self.element.as_str(),
+            self.matcher.as_str()
+        )
+    }
+
+    fn same_as(&self, other: &Self) -> bool {
+        self.element == other.element
+            && self.on == other.on
+            && self.matcher.as_str() == other.matcher.as_str()
+    }
+}
+
+/// Whether `line` is an element of `element` that `matcher` accepts, tested
+/// against the whole line or the element's name per `on`.
+fn element_matches(
+    element: ElementClass,
+    matcher: &regex_lite::Regex,
+    on: MatchOn,
+    line: &str,
+) -> bool {
+    match (element.name_in(line), on) {
+        (None, _) => false,
+        (Some(_), MatchOn::Line) => matcher.is_match(line),
+        (Some(name), MatchOn::Name) => matcher.is_match(name),
+    }
 }
 
 pub struct Operand {
@@ -142,6 +231,14 @@ impl CountPred {
             CmpOp::Gt => count > self.n,
             CmpOp::Ge => count >= self.n,
         }
+    }
+    /// No count is below zero.
+    fn never_holds(&self) -> bool {
+        matches!(self.op, CmpOp::Lt) && self.n == 0
+    }
+    /// Every count is at least zero.
+    fn always_holds(&self) -> bool {
+        matches!(self.op, CmpOp::Ge) && self.n == 0
     }
     fn describe(&self) -> String {
         let op = match self.op {
@@ -194,13 +291,108 @@ pub(crate) fn compile_rule(r: RawRule) -> Result<Rule, Error> {
     // rule would be a silent no-op — refused at load, the same hard posture as
     // a non-compiling pattern.
     let heading_spec = |s: &str| match atx_heading(s) {
-        Some((_, text)) if !text.is_empty() => Ok(()),
+        // A spec holding a line break can never equal a heading line.
+        Some((_, text)) if !text.is_empty() && !s.contains(['\n', '\r']) => Ok(()),
         _ => Err(Error::Config(format!(
             "section-rules section spec '{s}' is not a heading; a section \
              spec must be the full ATX heading line with non-empty heading \
              text (e.g. '## Requirements')"
         ))),
     };
+    // The whole-document form: `section` is optional on count, every and order
+    // rules, but a section that IS given must be a real heading spec.
+    let optional_section = |s: Option<String>| -> Result<Option<String>, Error> {
+        if let Some(spec) = &s {
+            heading_spec(spec)?;
+        }
+        Ok(s)
+    };
+    if let Some(items) = r.order {
+        if r.element.is_some()
+            || r.match_pattern.is_some()
+            || r.count.is_some()
+            || r.match_on.is_some()
+            || r.every.is_some()
+            || r.disjoint.is_some()
+        {
+            return Err(Error::Config(
+                "a section-rule with `order` takes only `section` beside it; each order item \
+                 carries its own element/match/match_on"
+                    .into(),
+            ));
+        }
+        if items.len() < 2 {
+            return Err(Error::Config(
+                "an `order` rule takes at least two items; one item orders nothing".into(),
+            ));
+        }
+        let items = items
+            .into_iter()
+            .map(|i| {
+                // The empty pattern matches every element of the class, so
+                // (first match wins) it shadows every later item the class
+                // covers: the trivially decidable dead step, refused like an
+                // empty `every`.
+                if i.match_pattern.is_empty() {
+                    return Err(Error::Config(
+                        "an `order` item has an empty `match`, which every element of its \
+                         class matches; use \".\" for \"any non-empty\" or a pattern that \
+                         names the elements this step is for"
+                            .into(),
+                    ));
+                }
+                Ok(OrderItem {
+                    matcher: compile(&i.match_pattern)?,
+                    element: i.element,
+                    on: i.match_on.unwrap_or_default(),
+                })
+            })
+            .collect::<Result<Vec<_>, Error>>()?;
+        // An element belongs to the first item it matches, so a repeated item
+        // can never be reached: a dead step, refused like any dead knob.
+        for (i, item) in items.iter().enumerate() {
+            if items[..i].iter().any(|earlier| earlier.same_as(item)) {
+                return Err(Error::Config(format!(
+                    "an `order` rule repeats the item `{}`; an element belongs to the first \
+                     item it matches, so the repeat can never be reached",
+                    item.describe()
+                )));
+            }
+        }
+        return Ok(Rule::Order {
+            section: optional_section(r.section)?,
+            items,
+        });
+    }
+    if let Some(pattern) = r.every {
+        if r.match_pattern.is_some() || r.count.is_some() || r.disjoint.is_some() {
+            return Err(Error::Config(
+                "a section-rule with `every` must not also carry match, count or disjoint; \
+                 `every` is the pattern each element must match"
+                    .into(),
+            ));
+        }
+        let Some(element) = r.element else {
+            return Err(Error::Config(
+                "an `every` section-rule requires element (the class whose every member \
+                 must match)"
+                    .into(),
+            ));
+        };
+        if pattern.is_empty() {
+            return Err(Error::Config(
+                "an `every` section-rule has an empty pattern, which every element matches; \
+                 the rule could never report anything"
+                    .into(),
+            ));
+        }
+        return Ok(Rule::Every {
+            matcher: compile(&pattern)?,
+            section: optional_section(r.section)?,
+            element,
+            on: r.match_on.unwrap_or_default(),
+        });
+    }
     match r.disjoint {
         Some(ops) => {
             if r.section.is_some()
@@ -234,27 +426,42 @@ pub(crate) fn compile_rule(r: RawRule) -> Result<Rule, Error> {
             })
         }
         None => {
-            let (section, element, pattern, count) =
-                match (r.section, r.element, r.match_pattern, r.count) {
-                    (Some(s), Some(e), Some(m), Some(c)) => (s, e, m, c),
-                    _ => {
-                        return Err(Error::Config(
-                            "a count section-rule requires section, element, match, and count \
-                         (or use `disjoint` for a disjointness rule)"
-                                .into(),
-                        ))
-                    }
-                };
+            let (element, pattern, count) = match (r.element, r.match_pattern, r.count) {
+                (Some(e), Some(m), Some(c)) => (e, m, c),
+                _ => {
+                    return Err(Error::Config(
+                        "a count section-rule requires element, match, and count (section is \
+                         optional: absent means the whole document); or use `every`, `order` \
+                         or `disjoint` for the other rule shapes"
+                            .into(),
+                    ))
+                }
+            };
             let pred = parse_count_pred(&count).ok_or_else(|| {
                 Error::Config(format!(
                     "section-rule count predicate '{count}' is not `<op> <n>`: op is one of \
                      >= <= == != > < and n an integer (e.g. \">= 1\")"
                 ))
             })?;
-            heading_spec(&section)?;
+            // A predicate that cannot fail, or cannot hold, makes a rule that
+            // reports never or always. `>= 0` on a SECTION still asserts the
+            // section exists (E0122); on the whole document it asserts nothing.
+            if pred.never_holds() {
+                return Err(Error::Config(format!(
+                    "section-rule count predicate '{count}' can never hold (no count is \
+                     below zero); the rule would report every file"
+                )));
+            }
+            if r.section.is_none() && pred.always_holds() {
+                return Err(Error::Config(format!(
+                    "section-rule count predicate '{count}' can never fail, and with no \
+                     `section` there is no heading for the rule to require; it would \
+                     assert nothing"
+                )));
+            }
             Ok(Rule::Count {
                 matcher: compile(&pattern)?,
-                section,
+                section: optional_section(r.section)?,
                 element,
                 on: r.match_on.unwrap_or_default(),
                 pred,
@@ -277,8 +484,18 @@ pub fn check_file(
     if rules.is_empty() {
         return;
     }
+    // A leading byte-order mark is not content: left in place it glues itself
+    // to the first line, so a heading or a required line there never matches.
+    let body_offset = if body_offset == 0 && content.starts_with('\u{feff}') {
+        '\u{feff}'.len_utf8()
+    } else {
+        body_offset
+    };
     let body = &content[body_offset..];
     for &rule in rules {
+        // Per-rule: a rule's findings are located in document order, so the
+        // cursor counts each newline once, not once per finding.
+        let mut lines = LineCursor::new(content);
         match rule {
             Rule::Count {
                 section,
@@ -291,8 +508,7 @@ pub fn check_file(
                 // content under a DUPLICATE same-level/same-text heading cannot
                 // evade the gate (the marker family already merges same-name
                 // spans; this keeps the families aligned).
-                let spans = section_spans(body, section);
-                if spans.is_empty() {
+                let Some(spans) = rule_spans(body, section.as_deref()) else {
                     // GH #48 finding 1 (fail-open): an ABSENT section used to
                     // count as 0, so a predicate satisfied by 0 passed silently
                     // after a heading rename. Loud absence instead (the pin
@@ -300,7 +516,7 @@ pub fn check_file(
                     findings.push(section_finding(
                         path,
                         content,
-                        section_line(content, body_offset, section),
+                        1,
                         "MDATRON-E0122",
                         "section-not-found",
                         // #165: the section name is adopter-derived — it rides in
@@ -308,42 +524,164 @@ pub fn check_file(
                         "no heading in this document matches the section rule's \
                          section spec (matching is exact on level and text), so \
                          its count assertion cannot be evaluated",
-                        vec![QuotedRegion {
-                            platform_variant: false,
-                            label: "section".into(),
-                            content: section.clone(),
-                        }],
+                        // #219: the rule's own pattern tells two rules on one
+                        // section apart.
+                        with_section(section, pattern_regions("match", matcher, *on)),
                     ));
-                } else {
-                    let count: usize = spans
-                        .iter()
-                        .map(|s| count_matching_elements(s, *element, matcher, *on))
-                        .sum();
-                    if !pred.holds(count) {
+                    continue;
+                };
+                let sectioned = section.is_some();
+                let count: usize = spans
+                    .iter()
+                    .map(|s| count_matching_elements(s, sectioned, *element, matcher, *on))
+                    .sum();
+                if !pred.holds(count) {
+                    // #165: the section name is adopter-derived — it rides in
+                    // the quoted region, not inline in the message.
+                    // Round 3 wording: the count sums over EVERY span of the
+                    // named section (a duplicated heading has several), so the
+                    // message must not imply a single region.
+                    let message = if sectioned {
+                        format!(
+                            "the named section has {count} matching {} \
+                             element(s) across its matching span(s); the rule \
+                             requires the count {}",
+                            element.as_str(),
+                            pred.describe()
+                        )
+                    } else {
+                        format!(
+                            "the document has {count} matching {} element(s); \
+                             the rule requires the count {}",
+                            element.as_str(),
+                            pred.describe()
+                        )
+                    };
+                    findings.push(section_finding(
+                        path,
+                        content,
+                        section_line(content, body_offset, section.as_deref()),
+                        "MDATRON-E0120",
+                        "section-count-violation",
+                        &message,
+                        with_section(section, pattern_regions("match", matcher, *on)),
+                    ));
+                }
+            }
+            Rule::Every {
+                section,
+                element,
+                matcher,
+                on,
+            } => {
+                let Some(spans) = rule_spans(body, section.as_deref()) else {
+                    findings.push(section_finding(
+                        path,
+                        content,
+                        1,
+                        "MDATRON-E0122",
+                        "section-not-found",
+                        "no heading in this document matches the section rule's \
+                         section spec (matching is exact on level and text), so \
+                         its every-element assertion cannot be evaluated",
+                        // The class tells two every rules with one pattern apart.
+                        with_section(section, {
+                            let mut regions = pattern_regions("every", matcher, *on);
+                            regions.push(quoted("element class", element.as_str()));
+                            regions
+                        }),
+                    ));
+                    continue;
+                };
+                for span in spans {
+                    for (offset, line) in element_lines(span, section.is_some()) {
+                        let Some(name) = element.name_in(line) else {
+                            continue;
+                        };
+                        let subject = match on {
+                            MatchOn::Line => line,
+                            MatchOn::Name => name,
+                        };
+                        if matcher.is_match(subject) {
+                            continue;
+                        }
                         findings.push(section_finding(
                             path,
                             content,
-                            section_line(content, body_offset, section),
-                            "MDATRON-E0120",
-                            "section-count-violation",
-                            // #165: the section name is adopter-derived — it rides in
-                            // the quoted region, not inline in the message.
-                            // Round 3 wording: the count sums over EVERY span of
-                            // the named section (a duplicated heading has several),
-                            // so the message must not imply a single region.
+                            lines.line_of(abs_offset(body_offset, body, span, offset)),
+                            "MDATRON-E0123",
+                            "section-element-mismatch",
+                            // #165: the element's text is governed content and
+                            // the pattern adopter data; both ride quoted.
                             &format!(
-                                "the named section has {count} matching {} \
-                                 element(s) across its matching span(s); the rule \
-                                 requires the count {}",
-                                element.as_str(),
-                                pred.describe()
+                                "this {} element does not match the pattern the \
+                                 rule requires of every such element in its scope",
+                                element.as_str()
                             ),
-                            vec![QuotedRegion {
-                                platform_variant: false,
-                                label: "section".into(),
-                                content: section.clone(),
-                            }],
+                            with_section(section, {
+                                let mut regions = pattern_regions("every", matcher, *on);
+                                regions.push(quoted("element", line));
+                                regions
+                            }),
                         ));
+                    }
+                }
+            }
+            Rule::Order { section, items } => {
+                let Some(spans) = rule_spans(body, section.as_deref()) else {
+                    findings.push(section_finding(
+                        path,
+                        content,
+                        1,
+                        "MDATRON-E0122",
+                        "section-not-found",
+                        "no heading in this document matches the section rule's \
+                         section spec (matching is exact on level and text), so \
+                         its order assertion cannot be evaluated",
+                        // The items tell two order rules on one section apart.
+                        with_section(
+                            section,
+                            vec![quoted(
+                                "order",
+                                &items
+                                    .iter()
+                                    .map(OrderItem::describe)
+                                    .collect::<Vec<_>>()
+                                    .join(", then "),
+                            )],
+                        ),
+                    ));
+                    continue;
+                };
+                // Each span is ordered on its own: a duplicated heading opens a
+                // new sequence.
+                for span in spans {
+                    // The latest order step seen so far in this span.
+                    let mut reached: Option<usize> = None;
+                    for (offset, line) in element_lines(span, section.is_some()) {
+                        // An element belongs to the FIRST item it matches.
+                        let Some(step) = items.iter().position(|i| i.matches(line)) else {
+                            continue;
+                        };
+                        match reached {
+                            Some(later) if step < later => findings.push(section_finding(
+                                path,
+                                content,
+                                lines.line_of(abs_offset(body_offset, body, span, offset)),
+                                "MDATRON-E0124",
+                                "section-order-violation",
+                                "this element appears after an element the rule's \
+                                 order places later",
+                                with_section(
+                                    section,
+                                    vec![
+                                        quoted("element", line),
+                                        quoted("must precede", &items[later].describe()),
+                                    ],
+                                ),
+                            )),
+                            _ => reached = Some(step),
+                        }
                     }
                 }
             }
@@ -362,7 +700,7 @@ pub fn check_file(
                         findings.push(section_finding(
                             path,
                             content,
-                            section_line(content, body_offset, &op.section),
+                            section_line(content, body_offset, Some(&op.section)),
                             "MDATRON-E0122",
                             "section-not-found",
                             // #165: the section name is adopter-derived — it rides
@@ -402,7 +740,7 @@ pub fn check_file(
                     findings.push(section_finding(
                         path,
                         content,
-                        section_line(content, body_offset, &a.section),
+                        section_line(content, body_offset, Some(&a.section)),
                         "MDATRON-E0121",
                         "section-ids-not-disjoint",
                         // #165: the two section names are adopter-derived and the
@@ -438,23 +776,109 @@ pub fn check_file(
 /// heading, any `heading`, a `list-item-bold-name` bullet, …) AND match
 /// `matcher` — the regex is matched against the whole element line.
 fn count_matching_elements(
-    section: &str,
+    span: &str,
+    sectioned: bool,
     element: ElementClass,
     matcher: &regex_lite::Regex,
     on: MatchOn,
 ) -> usize {
-    non_fenced_lines(section)
-        .into_iter()
-        // A span opens with the section's own heading line (offset 0); it is
-        // the container, never one of the counted elements — the marker
-        // family's `extract_members` skips it the same way.
-        .filter(|(offset, _)| *offset != 0)
-        .filter(|(_, line)| match (element.name_in(line), on) {
-            (None, _) => false,
-            (Some(_), MatchOn::Line) => matcher.is_match(line),
-            (Some(name), MatchOn::Name) => matcher.is_match(name),
-        })
+    element_lines(span, sectioned)
+        .filter(|(_, line)| element_matches(element, matcher, on, line))
         .count()
+}
+
+/// The spans a count, every or order rule evaluates over: every span of the
+/// named section, or the whole body when the rule names none. `None` when a
+/// named section matches no heading (the caller reports `E0122`).
+fn rule_spans<'a>(body: &'a str, section: Option<&str>) -> Option<Vec<&'a str>> {
+    match section {
+        None => Some(vec![body]),
+        Some(spec) => {
+            let spans = section_spans(body, spec);
+            (!spans.is_empty()).then_some(spans)
+        }
+    }
+}
+
+/// The candidate element lines of one span, with their byte offsets in it. A
+/// SECTION span opens with the section's own heading line (offset 0): it is
+/// the container, never one of its elements — the marker family's
+/// `extract_members` skips it the same way. A whole-document span has no
+/// container line.
+fn element_lines(span: &str, sectioned: bool) -> impl Iterator<Item = (usize, &str)> {
+    non_fenced_lines(span)
+        .into_iter()
+        .filter(move |(offset, _)| !sectioned || *offset != 0)
+}
+
+/// The byte offset in the file of `offset` in `span`, a subslice of `body`,
+/// which starts at `body_offset`.
+fn abs_offset(body_offset: usize, body: &str, span: &str, offset: usize) -> usize {
+    let span_start = (span.as_ptr() as usize).saturating_sub(body.as_ptr() as usize);
+    body_offset + span_start + offset
+}
+
+/// 1-based line numbers for ascending byte offsets, counting each newline of
+/// the file once. Recounting from the top for every finding made a file with
+/// many findings quadratic (cold review round 1: 80,000 failing list items
+/// took 30 s). An offset behind the cursor restarts the count.
+struct LineCursor<'a> {
+    bytes: &'a [u8],
+    at: usize,
+    line: u32,
+}
+
+impl<'a> LineCursor<'a> {
+    fn new(content: &'a str) -> Self {
+        Self {
+            bytes: content.as_bytes(),
+            at: 0,
+            line: 1,
+        }
+    }
+
+    fn line_of(&mut self, abs: usize) -> u32 {
+        let abs = abs.min(self.bytes.len());
+        if abs < self.at {
+            self.at = 0;
+            self.line = 1;
+        }
+        let newlines = self.bytes[self.at..abs]
+            .iter()
+            .filter(|b| **b == b'\n')
+            .count();
+        self.line += newlines as u32;
+        self.at = abs;
+        self.line
+    }
+}
+
+/// A rule's pattern as quoted regions: the pattern, and — when it is tested
+/// against the element's NAME — a `match_on` region saying so. Without it a
+/// reader sees a pattern anchored on the name beside a quoted element that
+/// opens with its marker, and concludes the pattern could never match.
+fn pattern_regions(label: &str, matcher: &regex_lite::Regex, on: MatchOn) -> Vec<QuotedRegion> {
+    let mut regions = vec![quoted(label, matcher.as_str())];
+    if on == MatchOn::Name {
+        regions.push(quoted("match_on", "name"));
+    }
+    regions
+}
+
+fn quoted(label: &str, content: &str) -> QuotedRegion {
+    QuotedRegion {
+        platform_variant: false,
+        label: label.into(),
+        content: content.into(),
+    }
+}
+
+/// A finding's quoted regions: the rule's section (when it names one) first,
+/// then `rest`.
+fn with_section(section: &Option<String>, rest: Vec<QuotedRegion>) -> Vec<QuotedRegion> {
+    let mut out: Vec<QuotedRegion> = section.iter().map(|s| quoted("section", s)).collect();
+    out.extend(rest);
+    out
 }
 
 /// Extract the id set for one disjoint operand from its RESOLVED section span —
@@ -480,9 +904,9 @@ fn extract_ids(section: &str, op: &Operand) -> HashSet<String> {
 }
 
 /// The 1-based file line of a section's heading (for the finding location), or 1
-/// if the section is absent.
-fn section_line(content: &str, body_offset: usize, section: &str) -> u32 {
-    if let Some((want_level, want_text)) = atx_heading(section) {
+/// if the section is absent or the rule names none.
+fn section_line(content: &str, body_offset: usize, section: Option<&str>) -> u32 {
+    if let Some((want_level, want_text)) = section.and_then(atx_heading) {
         let body = &content[body_offset..];
         for (offset, line) in non_fenced_lines(body) {
             if let Some((l, t)) = atx_heading(line) {
@@ -582,26 +1006,33 @@ mod tests {
         let span = section_span(body, "## A").unwrap();
         let any = rx(".");
         assert_eq!(
-            count_matching_elements(span, ElementClass::Heading, &any, MatchOn::Line),
+            count_matching_elements(span, true, ElementClass::Heading, &any, MatchOn::Line),
             2,
             "`heading` counts every level inside the span, not the section's own heading"
         );
         assert_eq!(
-            count_matching_elements(span, ElementClass::H2, &any, MatchOn::Line),
+            count_matching_elements(span, true, ElementClass::H2, &any, MatchOn::Line),
             0
         );
         assert_eq!(
-            count_matching_elements(span, ElementClass::H4, &any, MatchOn::Line),
+            count_matching_elements(span, true, ElementClass::H4, &any, MatchOn::Line),
             1
         );
         assert_eq!(
-            count_matching_elements(span, ElementClass::ListItemBoldName, &any, MatchOn::Line),
+            count_matching_elements(
+                span,
+                true,
+                ElementClass::ListItemBoldName,
+                &any,
+                MatchOn::Line
+            ),
             2,
             "bold-lead bullets only, never the plain bullet"
         );
         assert_eq!(
             count_matching_elements(
                 span,
+                true,
                 ElementClass::ListItemBoldName,
                 &rx("Item x"),
                 MatchOn::Line
@@ -644,7 +1075,7 @@ mod tests {
         let span = section_span(body, "## Requirements").unwrap();
         let m = rx(r"^### Phase \d+: .*\((parallel|sequential)\)$");
         assert_eq!(
-            count_matching_elements(span, ElementClass::H3, &m, MatchOn::Line),
+            count_matching_elements(span, true, ElementClass::H3, &m, MatchOn::Line),
             2,
             "only the two in-section H3s"
         );
@@ -686,7 +1117,7 @@ mod tests {
     #[test]
     fn duplicate_heading_content_counts_toward_the_predicate() {
         let rule = Rule::Count {
-            section: "## Open questions".into(),
+            section: Some("## Open questions".into()),
             element: ElementClass::H3,
             matcher: rx(r"^### Q\d+"),
             on: MatchOn::Line,
@@ -742,6 +1173,10 @@ mod tests {
     fn compile_rule_rejects_heading_marker_with_empty_text() {
         let raw = RawRule {
             match_on: None,
+
+            every: None,
+
+            order: None,
             section: Some("##".into()),
             element: Some(ElementClass::H3),
             match_pattern: Some(r"^### .*$".into()),
@@ -765,6 +1200,10 @@ mod tests {
     fn compile_rule_rejects_count_section_spec_without_heading_marker() {
         let raw = RawRule {
             match_on: None,
+
+            every: None,
+
+            order: None,
             section: Some("Requirements".into()),
             element: Some(ElementClass::H3),
             match_pattern: Some(r"^### .*$".into()),
@@ -788,6 +1227,10 @@ mod tests {
     fn compile_rule_rejects_disjoint_operand_spec_without_heading_marker() {
         let raw = RawRule {
             match_on: None,
+
+            every: None,
+
+            order: None,
             section: None,
             element: None,
             match_pattern: None,
@@ -823,7 +1266,7 @@ mod tests {
     #[test]
     fn absent_section_with_zero_satisfiable_predicate_is_e0122_not_silent() {
         let rule = Rule::Count {
-            section: "## Requirements".into(),
+            section: Some("## Requirements".into()),
             element: ElementClass::H3,
             matcher: rx(r"^### .*$"),
             on: MatchOn::Line,
@@ -854,7 +1297,7 @@ mod tests {
     #[test]
     fn absent_section_is_e0122_not_e0120_with_count_zero() {
         let rule = Rule::Count {
-            section: "## Requirements".into(),
+            section: Some("## Requirements".into()),
             element: ElementClass::H3,
             matcher: rx(r"^### .*$"),
             on: MatchOn::Line,
@@ -970,11 +1413,12 @@ mod tests {
                 matcher,
                 on,
                 ..
-            } => section_spans(body, section)
+            } => rule_spans(body, section.as_deref())
+                .unwrap()
                 .iter()
-                .map(|s| count_matching_elements(s, *element, matcher, *on))
+                .map(|s| count_matching_elements(s, true, *element, matcher, *on))
                 .sum::<usize>(),
-            Rule::Disjoint { .. } => panic!("a count rule was compiled"),
+            _ => panic!("a count rule was compiled"),
         };
         let base =
             "section: '## Members'\nelement: heading\nmatch: '^REQ-[0-9]+$'\ncount: '>= 1'\n";
@@ -993,5 +1437,369 @@ mod tests {
         assert!(serde_yaml_ng::from_str::<RawRule>(&format!("{base}match_on: heading\n")).is_err());
         let disjoint = "match_on: name\ndisjoint:\n  - {section: '## A', element: h3, id_pattern: '(x)'}\n  - {section: '## B', element: h3, id_pattern: '(x)'}\n";
         assert!(compile_rule(serde_yaml_ng::from_str::<RawRule>(disjoint).unwrap()).is_err());
+    }
+
+    fn compiled(yaml: &str) -> Rule {
+        compile_rule(serde_yaml_ng::from_str::<RawRule>(yaml).unwrap()).unwrap()
+    }
+
+    fn refused(yaml: &str) -> bool {
+        serde_yaml_ng::from_str::<RawRule>(yaml)
+            .map_err(|e| e.to_string())
+            .and_then(|r| compile_rule(r).map(|_| ()).map_err(|e| e.to_string()))
+            .is_err()
+    }
+
+    fn run(rule: &Rule, content: &str, body_offset: usize) -> Vec<Finding> {
+        let mut findings = Vec::new();
+        check_file(
+            &[rule],
+            Path::new("d.md"),
+            content,
+            body_offset,
+            &mut findings,
+        );
+        findings
+    }
+
+    fn quote<'a>(f: &'a Finding, label: &str) -> Option<&'a str> {
+        f.quoted
+            .iter()
+            .find(|q| q.label == label)
+            .map(|q| q.content.as_str())
+    }
+
+    // #219: two count rules on one section used to produce indistinguishable
+    // findings; each now quotes its own `match`, on E0120 and on E0122.
+    #[test]
+    fn count_findings_quote_the_rules_match_pattern() {
+        let build = compiled(
+            "section: '# Acme'\nelement: h2\nmatch: '^Build$'\nmatch_on: name\ncount: '== 1'\n",
+        );
+        let security = compiled(
+            "section: '# Acme'\nelement: h2\nmatch: '^Security$'\nmatch_on: name\ncount: '== 1'\n",
+        );
+        let mut findings = Vec::new();
+        check_file(
+            &[&build, &security],
+            Path::new("d.md"),
+            "# Acme\n\n## Build\n",
+            0,
+            &mut findings,
+        );
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        assert_eq!(findings[0].code, "MDATRON-E0120");
+        assert_eq!(quote(&findings[0], "section"), Some("# Acme"));
+        assert_eq!(quote(&findings[0], "match"), Some("^Security$"));
+        let absent = run(&security, "# Other\n", 0);
+        assert_eq!(absent[0].code, "MDATRON-E0122");
+        assert_eq!(quote(&absent[0], "match"), Some("^Security$"));
+    }
+
+    // #217/#218: `section` is optional on a count rule. Absent, the rule runs
+    // over the whole body — line 1 included, since there is no container
+    // heading to skip — and never reports E0122.
+    #[test]
+    fn a_count_rule_without_a_section_covers_the_whole_document() {
+        let not_empty = compiled("element: line\nmatch: '.'\ncount: '>= 1'\n");
+        for empty in ["", "\n\n  \n", "```\nonly code\n```\n"] {
+            let f = run(&not_empty, empty, 0);
+            assert_eq!(f.len(), 1, "{empty:?}: {f:?}");
+            assert_eq!(f[0].code, "MDATRON-E0120");
+            assert!(f[0].message.starts_with("the document has 0 matching line"));
+            assert_eq!(quote(&f[0], "section"), None);
+            assert_eq!(f[0].location.line, 1);
+        }
+        assert!(run(&not_empty, "one line, no heading", 0).is_empty());
+        // The body starts after the frontmatter: frontmatter lines are not content.
+        let fm = "---\nname: x\n---\n";
+        assert_eq!(run(&not_empty, fm, fm.len()).len(), 1);
+        let imports = compiled("element: line\nmatch: '^@AGENTS\\.md$'\ncount: '>= 1'\n");
+        assert!(run(&imports, "@AGENTS.md\n\nMore.\n", 0).is_empty());
+        assert_eq!(run(&imports, "See AGENTS.md.\n", 0).len(), 1);
+        // A reference inside a code fence is an example, not an import.
+        assert_eq!(run(&imports, "```\n@AGENTS.md\n```\n", 0).len(), 1);
+    }
+
+    // #213: every element of the class in scope must match; each one that does
+    // not is its own E0123 at its own line.
+    #[test]
+    fn every_rule_reports_each_element_that_does_not_match() {
+        let rule = compiled(
+            "section: '## Docs'\nelement: list-item\nevery: '^\\[[^\\]]+\\]\\([^)]+\\)(: .+)?$'\nmatch_on: name\n",
+        );
+        let body = "# Acme\n\n## Docs\n\n- [Start](a.md): first steps\n- plain text\n* [Ref](b.md)\n1. see c.md\n\n## Other\n\n- not checked\n";
+        let f = run(&rule, body, 0);
+        assert_eq!(
+            f.iter()
+                .map(|f| (f.code.as_str(), f.location.line))
+                .collect::<Vec<_>>(),
+            vec![("MDATRON-E0123", 6), ("MDATRON-E0123", 8)],
+            "{f:?}"
+        );
+        assert_eq!(quote(&f[0], "element"), Some("- plain text"));
+        assert_eq!(quote(&f[0], "section"), Some("## Docs"));
+        assert!(quote(&f[0], "every").is_some());
+        assert!(
+            !f[0].message.contains("plain"),
+            "governed text rides quoted, not in the message"
+        );
+        // Vacuous truth: a section with no element of the class is clean
+        // (presence is a count rule's job); an absent section is E0122.
+        assert!(run(&rule, "## Docs\n\nprose only\n", 0).is_empty());
+        assert_eq!(run(&rule, "## Other\n", 0)[0].code, "MDATRON-E0122");
+        // Lines are located in the file, not the body.
+        let fm = "---\na: 1\n---\n";
+        let f = run(&rule, &format!("{fm}## Docs\n- bad\n"), fm.len());
+        assert_eq!(f[0].location.line, 5);
+        // Whole-document form.
+        let all = compiled("element: blockquote\nevery: '^Note: '\nmatch_on: name\n");
+        let f = run(&all, "> Note: fine\n\n> stray\n", 0);
+        assert_eq!(f.len(), 1);
+        assert_eq!(f[0].location.line, 3);
+    }
+
+    // #214: an element matching an earlier order item must not follow one
+    // matching a later item. Order is sequence only: a missing step is fine.
+    #[test]
+    fn order_rule_reports_an_element_after_a_later_step() {
+        let rule = compiled(
+            "section: '# Acme'\norder:\n  - {element: blockquote, match: '.'}\n  - {element: h2, match: '.'}\n",
+        );
+        assert!(run(
+            &rule,
+            "# Acme\n\n> Summary.\n\nDetails.\n\n## Docs\n\n- item\n\n## More\n",
+            0
+        )
+        .is_empty());
+        // A missing step is not a violation.
+        assert!(run(&rule, "# Acme\n\n## Docs\n", 0).is_empty());
+        // The summary after the first file list.
+        let f = run(&rule, "# Acme\n\n## Docs\n\n> Summary.\n", 0);
+        assert_eq!(f.len(), 1, "{f:?}");
+        assert_eq!(f[0].code, "MDATRON-E0124");
+        assert_eq!(f[0].location.line, 5);
+        assert_eq!(quote(&f[0], "element"), Some("> Summary."));
+        // The later item is named by class and pattern: a bare `.` says nothing.
+        assert_eq!(quote(&f[0], "must precede"), Some("h2 matching ."));
+        // Each span of a duplicated heading is its own sequence.
+        let h2 = compiled(
+            "section: '## A'\norder:\n  - {element: h3, match: '^One$', match_on: name}\n  - {element: h3, match: '^Two$', match_on: name}\n",
+        );
+        assert!(run(&h2, "## A\n### One\n### Two\n## A\n### One\n", 0).is_empty());
+        assert_eq!(run(&h2, "## A\n### Two\n### One\n", 0).len(), 1);
+        // An absent section: the items tell two order rules on it apart (#219's
+        // defect, not repeated for the new shape).
+        let absent = run(&h2, "## B\n", 0);
+        assert_eq!(absent[0].code, "MDATRON-E0122");
+        assert_eq!(
+            quote(&absent[0], "order"),
+            Some("h3 matching ^One$ (on its name), then h3 matching ^Two$ (on its name)")
+        );
+    }
+
+    // The order state machine, pinned: the latest step reached does NOT move
+    // back on a violation, so every element behind it is reported; and an
+    // element belongs to the FIRST item it matches.
+    #[test]
+    fn order_rule_keeps_the_latest_step_and_assigns_first_match() {
+        let abc = compiled(
+            "order:\n  - {element: h3, match: '^A$', match_on: name}\n  - {element: h3, match: '^B$', match_on: name}\n  - {element: h3, match: '^C$', match_on: name}\n",
+        );
+        // C, A, B: both A and B sit behind C. A mutant that lowered the
+        // reached step to A on the first violation would miss B.
+        let f = run(&abc, "### C\n### A\n### B\n", 0);
+        assert_eq!(
+            f.iter().map(|f| f.location.line).collect::<Vec<_>>(),
+            vec![2, 3],
+            "{f:?}"
+        );
+        assert!(f
+            .iter()
+            .all(|f| quote(f, "must precede") == Some("h3 matching ^C$ (on its name)")));
+        // A, C, B, C: only B is out of place.
+        let f = run(&abc, "### A\n### C\n### B\n### C\n", 0);
+        assert_eq!(f.len(), 1);
+        assert_eq!(f[0].location.line, 3);
+        // First match: `### Docs` matches both items and belongs to the first,
+        // so it is never the later step and nothing is out of order.
+        let overlap = compiled(
+            "order:\n  - {element: heading, match: '.'}\n  - {element: h3, match: 'Docs'}\n",
+        );
+        assert!(run(&overlap, "### Docs\n# Title\n", 0).is_empty());
+    }
+
+    // Cold review round 1 (IMPL-1/ADV-1): line numbers come from one pass over
+    // the file per rule. Every finding of a long run is located correctly —
+    // the first, one in the middle, the last — including in a second span.
+    #[test]
+    fn many_findings_are_each_located_on_their_own_line() {
+        let rule = compiled("section: '## L'\nelement: list-item\nevery: '^- ok$'\n");
+        let mut body = String::from("---\na: 1\n---\n## L\n");
+        for i in 0..5000 {
+            body.push_str(&format!("- bad {i}\n"));
+        }
+        body.push_str("## Other\n- not checked\n## L\n- bad again\n");
+        let f = run(&rule, &body, "---\na: 1\n---\n".len());
+        assert_eq!(f.len(), 5001);
+        assert_eq!(f[0].location.line, 5);
+        assert_eq!(f[2500].location.line, 2505);
+        assert_eq!(f[4999].location.line, 5004);
+        assert_eq!(f[5000].location.line, 5008);
+        assert_eq!(quote(&f[5000], "element"), Some("- bad again"));
+    }
+
+    // Cold review round 2 (R2E-4): the cursor itself. Ascending offsets count
+    // each newline once; an offset behind the cursor restarts, never
+    // underflows; an offset past the end clamps.
+    #[test]
+    fn line_cursor_counts_forward_and_restarts_on_a_backward_offset() {
+        let text = "a\nb\nc\n";
+        let mut cursor = LineCursor::new(text);
+        assert_eq!(cursor.line_of(0), 1);
+        assert_eq!(cursor.line_of(2), 2);
+        assert_eq!(cursor.line_of(2), 2);
+        assert_eq!(cursor.line_of(4), 3);
+        assert_eq!(cursor.line_of(0), 1, "a backward offset restarts the count");
+        assert_eq!(cursor.line_of(3), 2);
+        assert_eq!(
+            cursor.line_of(999),
+            4,
+            "past the end clamps to the last line"
+        );
+        // The cursor only ever advances by the gap: after locating the last
+        // line of a large text, locating it again scans nothing more.
+        let big = "x\n".repeat(100_000);
+        let mut cursor = LineCursor::new(&big);
+        assert_eq!(cursor.line_of(big.len()), 100_001);
+        assert_eq!(cursor.at, big.len());
+    }
+
+    // Cold review round 2 (R2D-7, R2E-6): a finding says how its pattern was
+    // tested, and an every rule's section-not-found names the class.
+    #[test]
+    fn findings_say_when_the_pattern_is_tested_on_the_name() {
+        let by_name =
+            compiled("section: '## L'\nelement: list-item\nevery: '^ok$'\nmatch_on: name\n");
+        let f = run(&by_name, "## L\n- bad\n", 0);
+        assert_eq!(quote(&f[0], "match_on"), Some("name"));
+        let absent = run(&by_name, "## Other\n", 0);
+        assert_eq!(quote(&absent[0], "element class"), Some("list-item"));
+        assert_eq!(quote(&absent[0], "match_on"), Some("name"));
+        let by_line = compiled("section: '## L'\nelement: list-item\nevery: '^- ok$'\n");
+        let f = run(&by_line, "## L\n- bad\n", 0);
+        assert_eq!(quote(&f[0], "match_on"), None);
+        let count =
+            compiled("section: '## L'\nelement: h3\nmatch: '^A$'\nmatch_on: name\ncount: '== 1'\n");
+        let f = run(&count, "## L\n", 0);
+        assert_eq!(quote(&f[0], "match_on"), Some("name"));
+    }
+
+    // Cold review round 1 (ADV-5): a leading byte-order mark is not content.
+    // With it glued to line 1, `# Acme` matched no section spec and a required
+    // first line never matched.
+    #[test]
+    fn a_leading_byte_order_mark_is_not_part_of_the_first_line() {
+        let h1 = compiled("section: '# Acme'\nelement: h2\nmatch: '.'\ncount: '>= 1'\n");
+        assert!(run(&h1, "\u{feff}# Acme\n## Docs\n", 0).is_empty());
+        let import = compiled("element: line\nmatch: '^@AGENTS\\.md$'\ncount: '>= 1'\n");
+        assert!(run(&import, "\u{feff}@AGENTS.md\n", 0).is_empty());
+        // A file holding only the mark is empty.
+        let not_empty = compiled("element: line\nmatch: '.'\ncount: '>= 1'\n");
+        assert_eq!(run(&not_empty, "\u{feff}", 0).len(), 1);
+        // Line numbers are unchanged by the mark.
+        let every = compiled("element: list-item\nevery: '^- ok$'\n");
+        assert_eq!(run(&every, "\u{feff}- ok\n- bad\n", 0)[0].location.line, 2);
+    }
+
+    // The new shapes are refused when malformed, never loaded as a no-op.
+    #[test]
+    fn malformed_every_and_order_rules_are_refused_at_load() {
+        // every: needs element; excludes match/count.
+        assert!(refused("section: '## A'\nevery: x\n"));
+        assert!(refused(
+            "section: '## A'\nelement: h3\nevery: x\nmatch: y\n"
+        ));
+        assert!(refused(
+            "section: '## A'\nelement: h3\nevery: x\ncount: '>= 1'\n"
+        ));
+        assert!(refused("section: '## A'\nelement: h3\nevery: '('\n"));
+        // order: at least two items; nothing but section beside it.
+        assert!(refused("order:\n  - {element: h2, match: x}\n"));
+        assert!(refused(
+            "element: h2\norder:\n  - {element: h2, match: x}\n  - {element: h2, match: y}\n"
+        ));
+        assert!(refused(
+            "order:\n  - {element: h2, match: '('}\n  - {element: h2, match: y}\n"
+        ));
+        // A given section must still be a heading spec; a count rule still
+        // needs element, match and count.
+        assert!(refused(
+            "section: Docs\nelement: line\nmatch: x\ncount: '>= 1'\n"
+        ));
+        assert!(refused("section: Docs\nelement: line\nevery: x\n"));
+        assert!(refused("element: line\ncount: '>= 1'\n"));
+        // Cold review round 1 (IMPL-4/ADV-13): rules that could never report.
+        // An empty `every` pattern matches everything; a repeated order item
+        // is unreachable under first-match; a multi-line section spec equals
+        // no heading line.
+        assert!(refused("element: line\nevery: ''\n"));
+        assert!(refused(
+            "order:\n  - {element: h2, match: x}\n  - {element: h2, match: x}\n"
+        ));
+        assert!(!refused(
+            "order:\n  - {element: h2, match: x}\n  - {element: h2, match: x, match_on: name}\n"
+        ));
+        assert!(refused(
+            "section: \"# Acme\\n## Docs\"\nelement: line\nmatch: x\ncount: '>= 1'\n"
+        ));
+        // Cold review round 2 (R2E-2/R2E-3): a count that cannot fail on the
+        // whole document, one that cannot hold anywhere, and an order item
+        // whose empty pattern takes every element of its class.
+        assert!(refused("element: line\nmatch: x\ncount: '>= 0'\n"));
+        assert!(!refused(
+            "section: '## A'\nelement: line\nmatch: x\ncount: '>= 0'\n"
+        ));
+        assert!(refused(
+            "section: '## A'\nelement: line\nmatch: x\ncount: '< 0'\n"
+        ));
+        assert!(!refused("element: line\nmatch: ''\ncount: '== 3'\n"));
+        assert!(refused(
+            "order:\n  - {element: line, match: ''}\n  - {element: h2, match: x}\n"
+        ));
+    }
+
+    // The three line-based classes added for #213/#214/#217.
+    #[test]
+    fn list_item_blockquote_and_line_classes_name_their_elements() {
+        use ElementClass::{Blockquote, Line, ListItem};
+        assert_eq!(ListItem.name_in("- [a](b)"), Some("[a](b)"));
+        assert_eq!(ListItem.name_in("  * nested"), Some("nested"));
+        assert_eq!(ListItem.name_in("12. twelve"), Some("twelve"));
+        assert_eq!(ListItem.name_in("3) three"), Some("three"));
+        assert_eq!(ListItem.name_in("-no space"), None);
+        assert_eq!(ListItem.name_in("**bold** text"), None);
+        assert_eq!(ListItem.name_in("1234567890. too long"), None);
+        // Cold review round 1 (IMPL-2/ADV-2/ADV-3). A tab after the marker
+        // opens an item — unrecognised, a tab-separated item escaped every
+        // `every` rule. A thematic break opens with a marker and is not one.
+        assert_eq!(ListItem.name_in("-\t[b](x)"), Some("[b](x)"));
+        assert_eq!(ListItem.name_in("1.\tone"), Some("one"));
+        assert_eq!(ListItem.name_in("\t- tabbed in"), Some("tabbed in"));
+        for rule in ["* * *", "- - -", "***", "---", "  * * * *", "-\t-\t-"] {
+            assert_eq!(ListItem.name_in(rule), None, "{rule:?}");
+        }
+        assert_eq!(ListItem.name_in("- - two"), Some("- two"));
+        assert_eq!(ListItem.name_in("+ + +"), Some("+ +"));
+        // A bare marker and a no-break-space "indent" are not items.
+        assert_eq!(ListItem.name_in("-"), None);
+        assert_eq!(ListItem.name_in("\u{a0}- nbsp"), None);
+        assert_eq!(ListItem.name_in("-é"), None);
+        assert_eq!(Blockquote.name_in("> quoted"), Some("quoted"));
+        assert_eq!(Blockquote.name_in("   >tight"), Some("tight"));
+        assert_eq!(Blockquote.name_in("    > code"), None);
+        assert_eq!(Line.name_in("anything"), Some("anything"));
+        assert_eq!(Line.name_in("   "), None);
+        assert_eq!(Line.name_in(""), None);
     }
 }

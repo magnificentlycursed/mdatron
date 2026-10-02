@@ -449,6 +449,26 @@ fn element_pick() -> impl Strategy<Value = &'static str> {
     )
 }
 
+/// The classes an every or order rule (and a whole-document count rule) draws
+/// from: the line-based classes added for #213/#214/#217 beside the headings
+/// and list items the prefixes carry.
+fn shape_element_pick() -> impl Strategy<Value = &'static str> {
+    prop::sample::select(
+        &[
+            "h3",
+            "h3",
+            "heading",
+            "list-item",
+            "list-item",
+            "list-item-bold-name",
+            "blockquote",
+            "line",
+            "line",
+            "bogus",
+        ][..],
+    )
+}
+
 /// Disjoint operands lean on the classes whose ids the prefixes carry in both
 /// sections (`h3`, `heading`), so the overlap arm is reached, not only the
 /// clean and not-found arms.
@@ -612,9 +632,66 @@ fn rule_case() -> impl Strategy<Value = (String, Yaml)> {
             ("## Members".to_string(), "h3", "^(REQ-[0-9]+)$"),
             ("## Others".to_string(), "h3", "^(REQ-[0-9]+)$"),
         ));
+        // The every, order and whole-document shapes (#213/#214/#217): the
+        // section is the prefix's own three times in four and absent (the
+        // whole document) otherwise.
+        let optional_section = || {
+            prop_oneof![
+                3 => section_pick(headings_of(prefix)).prop_map(Some),
+                1 => Just(None),
+            ]
+        };
+        let with_section = |section: Option<String>, mut pairs: Vec<(&'static str, Yaml)>| {
+            if let Some(s) = section {
+                pairs.insert(0, ("section", ystr(s)));
+            }
+            yaml_map(pairs)
+        };
+        let every_rule =
+            (optional_section(), shape_element_pick(), match_pick()).prop_map(move |(s, e, m)| {
+                with_section(s, vec![("element", ystr(e)), ("every", ystr(m))])
+            });
+        let order_item = || {
+            (shape_element_pick(), match_pick())
+                .prop_map(|(e, m)| yaml_map(vec![("element", ystr(e)), ("match", ystr(m))]))
+        };
+        let order_rule = (
+            optional_section(),
+            prop::collection::vec(order_item(), 1..5),
+        )
+            .prop_map(move |(s, items)| with_section(s, vec![("order", Yaml::Sequence(items))]));
+        // A COHERENT order rule, for the reason the coherent disjoint pair
+        // exists: two of the five prefixes put `### Bold` after `### REQ-1` in
+        // `## Members`, which this order forbids.
+        let coherent_order = Just(yaml_map(vec![
+            ("section", ystr("## Members")),
+            (
+                "order",
+                Yaml::Sequence(vec![
+                    yaml_map(vec![("element", ystr("h3")), ("match", ystr("Bold"))]),
+                    yaml_map(vec![("element", ystr("h3")), ("match", ystr("REQ"))]),
+                ]),
+            ),
+        ]));
+        let whole_document_count =
+            (shape_element_pick(), match_pick(), count_pick()).prop_map(|(e, m, c)| {
+                yaml_map(vec![
+                    ("element", ystr(e)),
+                    ("match", ystr(m)),
+                    ("count", ystr(c)),
+                ])
+            });
         (
             body,
-            prop_oneof![3 => count_rule, 2 => disjoint_rule, 1 => coherent_rule],
+            prop_oneof![
+                4 => count_rule,
+                3 => disjoint_rule,
+                2 => coherent_rule,
+                3 => every_rule,
+                2 => order_rule,
+                2 => coherent_order,
+                1 => whole_document_count,
+            ],
         )
     })
 }
@@ -703,7 +780,7 @@ fn char_boundary(content: &str, pick: usize) -> usize {
     boundaries[pick % boundaries.len()]
 }
 
-const ALL_ELEMENTS: [ElementClass; 8] = [
+const ALL_ELEMENTS: [ElementClass; 11] = [
     ElementClass::Heading,
     ElementClass::H1,
     ElementClass::H2,
@@ -712,6 +789,9 @@ const ALL_ELEMENTS: [ElementClass; 8] = [
     ElementClass::H5,
     ElementClass::H6,
     ElementClass::ListItemBoldName,
+    ElementClass::ListItem,
+    ElementClass::Blockquote,
+    ElementClass::Line,
 ];
 
 // ── Drivers (shared by seeds, reach checks and properties) ───────────────────
@@ -969,6 +1049,21 @@ fn seed_hostile_classes_never_panic_the_body_scanners() {
             ]),
         ]),
     )]);
+    // The line-based shapes (#213/#214/#217): every hostile line is an element
+    // of `line`, so these slice and locate around every seed's content.
+    let every_rule = yaml_map(vec![
+        ("element", ystr("line")),
+        ("every", ystr("^[a-z]")),
+        ("match_on", ystr("name")),
+    ]);
+    let order_rule = yaml_map(vec![(
+        "order",
+        Yaml::Sequence(vec![
+            yaml_map(vec![("element", ystr("blockquote")), ("match", ystr("."))]),
+            yaml_map(vec![("element", ystr("list-item")), ("match", ystr("."))]),
+            yaml_map(vec![("element", ystr("line")), ("match", ystr("."))]),
+        ]),
+    )]);
     let fm: Yaml = serde_yaml_ng::from_str("latency_ms: 12").unwrap();
     for body in SEEDS {
         for with_prefix in [false, true] {
@@ -990,6 +1085,8 @@ fn seed_hostile_classes_never_panic_the_body_scanners() {
                 drive_code_catalog_scan(&body, offset);
                 drive_section_rule(&count_rule, &body, offset);
                 drive_section_rule(&disjoint_rule, &body, offset);
+                drive_section_rule(&every_rule, &body, offset);
+                drive_section_rule(&order_rule, &body, offset);
             }
             for target in [body.as_str(), SEED_TARGET] {
                 drive_snapshot_backed_scanners(&body, target, false, 0);
@@ -1045,6 +1142,35 @@ fn reach_section_rules_count_and_disjoint_arms() {
     )]);
     let f = drive_section_rule(&disjoint, SECTION_PREFIXES[4], 0).unwrap();
     assert!(codes(&f).contains(&"MDATRON-E0121"), "{f:?}");
+    // Every (#213): the one h3 in `## Members` that is not a REQ id.
+    let every = yaml_map(vec![
+        ("section", ystr("## Members")),
+        ("element", ystr("h3")),
+        ("every", ystr("REQ-[0-9]+")),
+    ]);
+    let f = drive_section_rule(&every, SECTION_PREFIXES[4], 0).unwrap();
+    assert_eq!(codes(&f), vec!["MDATRON-E0123"], "{f:?}");
+    // Order (#214): `### Bold` after `### REQ-1`, which the order forbids.
+    let order = yaml_map(vec![
+        ("section", ystr("## Members")),
+        (
+            "order",
+            Yaml::Sequence(vec![
+                yaml_map(vec![("element", ystr("h3")), ("match", ystr("Bold"))]),
+                yaml_map(vec![("element", ystr("h3")), ("match", ystr("REQ"))]),
+            ]),
+        ),
+    ]);
+    let f = drive_section_rule(&order, SECTION_PREFIXES[4], 0).unwrap();
+    assert_eq!(codes(&f), vec!["MDATRON-E0124"], "{f:?}");
+    // Whole document (#217): no section, so an empty body is a count of 0.
+    let not_empty = yaml_map(vec![
+        ("element", ystr("line")),
+        ("match", ystr(".")),
+        ("count", ystr(">= 1")),
+    ]);
+    let f = drive_section_rule(&not_empty, "\n \n", 0).unwrap();
+    assert_eq!(codes(&f), vec!["MDATRON-E0120"], "{f:?}");
     // A hostile section name survives to the compiler as a VALUE (MINOR-2).
     let hostile = yaml_map(vec![
         ("section", ystr("## \u{FEFF}\u{202E}Members\u{301}")),
@@ -1117,21 +1243,32 @@ fn count_over_strategy<S: Strategy>(strategy: S, cases: u32, tally: impl Fn(S::V
 fn reach_strategy_section_rules_hit_the_count_and_disjoint_arms() {
     use std::cell::Cell;
     let (compiled, e0120, e0121, e0122) = (Cell::new(0), Cell::new(0), Cell::new(0), Cell::new(0));
+    let (e0123, e0124) = (Cell::new(0), Cell::new(0));
     count_over_strategy(section_input(), 512, |((body, rule), off)| {
         if let Some(f) = drive_section_rule(&rule, &body, offset_in(&body, &off)) {
             compiled.set(compiled.get() + 1);
-            for c in codes(&f) {
+            // Tallied per CASE, not per finding: one every rule over one body
+            // can emit a dozen E0123, which would meet a floor on its own
+            // (cold review round 2).
+            for c in codes(&f)
+                .into_iter()
+                .collect::<std::collections::BTreeSet<_>>()
+            {
                 match c {
                     "MDATRON-E0120" => e0120.set(e0120.get() + 1),
                     "MDATRON-E0121" => e0121.set(e0121.get() + 1),
                     "MDATRON-E0122" => e0122.set(e0122.get() + 1),
+                    "MDATRON-E0123" => e0123.set(e0123.get() + 1),
+                    "MDATRON-E0124" => e0124.set(e0124.get() + 1),
                     _ => {}
                 }
             }
         }
     });
     let (compiled, e0120, e0121, e0122) = (compiled.get(), e0120.get(), e0121.get(), e0122.get());
+    let (e0123, e0124) = (e0123.get(), e0124.get());
     eprintln!("section rules over 512 cases: compiled {compiled}, E0120 {e0120}, E0121 {e0121}, E0122 {e0122}");
+    eprintln!("section rules over 512 cases: E0123 {e0123}, E0124 {e0124}");
     assert!(
         compiled >= 256,
         "most generated rules must compile (got {compiled}/512)"
@@ -1147,6 +1284,14 @@ fn reach_strategy_section_rules_hit_the_count_and_disjoint_arms() {
     assert!(
         e0122 >= 10,
         "the section-not-found arm must run too (E0122 {e0122})"
+    );
+    assert!(
+        e0123 >= 15,
+        "the every arm must find mismatched elements sometimes (E0123 {e0123})"
+    );
+    assert!(
+        e0124 >= 8,
+        "the order arm must find out-of-order elements sometimes (E0124 {e0124})"
     );
 }
 

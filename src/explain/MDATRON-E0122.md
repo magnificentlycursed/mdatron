@@ -9,9 +9,15 @@
 A section-structural rule (a `section_rules:` entry on a route) names a
 `section`, but no heading in the governed document matches the rule's section
 spec — so the span the rule asserts over cannot be located, and the assertion
-cannot be evaluated. This covers both rule shapes: a **count** rule whose
-`section` matches nothing, and a **disjoint** rule where either operand's
-`section` matches nothing (one finding per unmatched operand). Matching is
+cannot be evaluated. This covers every rule shape: a **count**, **every** or
+**order** rule whose `section` matches nothing (the rule's own pattern, or
+an order rule's items, are quoted, so two rules on one section can be told
+apart; an every rule also quotes its `element class`, and a `match_on` region
+appears when the pattern is tested against the element's name), and a
+**disjoint** rule where either operand's
+`section` matches nothing (one finding per unmatched operand). A rule that
+names no `section` evaluates over the whole document body and never reports
+this code. Matching is
 **exact on level and text** (`"## Requirements"` matches a `##` heading whose
 text is exactly `Requirements` — a near-miss like `Requirements.` does not
 match), and a `#` inside a fenced code block is not a heading. This fires when

@@ -61,13 +61,36 @@ routes:
   # outside the tree and not checked).
   links: true
   section_rules:
+  # One H1 in the whole file: the rules anchored on "# Acme" cover that H1's
+  # span, which a second H1 would end.
+  - element: h1
+    match: "."
+    count: "== 1"
   # The H1 with the project's name is the one required section. Anchoring on
-  # it reports a missing or renamed H1 (E0122); the span runs to the end of
-  # the file, so this also requires at least one H2 file list (E0120).
+  # it reports a missing or renamed H1 (E0122), and its span must hold at
+  # least one H2 file list (E0120).
   - section: "# Acme"
     element: h2
     match: ".+"
     count: ">= 1"
+  # In each file list, every item is "[name](url)", then optionally ": notes"
+  # (E0123). One rule per list; `match_on: name` tests the item's text, so the
+  # bullet marker and indentation do not matter.
+  - section: "## Docs"
+    element: list-item
+    every: "^\\[([^\\[\\]]|\\[[^\\[\\]]*\\])+\\]\\(\\S+\\)(:.*)?$"
+    match_on: name
+  - section: "## Optional"
+    element: list-item
+    every: "^\\[([^\\[\\]]|\\[[^\\[\\]]*\\])+\\]\\(\\S+\\)(:.*)?$"
+    match_on: name
+  # The blockquote summary comes before the H2 file lists (E0124).
+  - section: "# Acme"
+    order:
+    - element: blockquote
+      match: "."
+    - element: h2
+      match: "."
 ```
 
 The example's `.mdatron/schemas/` holds only a `.gitkeep`: mdatron requires a
@@ -79,23 +102,51 @@ schemas or patterns directory to exist, and this recipe needs no schema.
 |---|---|
 | An H1 with the project's name is the one required section | section rule anchored on `# Acme` (`E0122` when missing or renamed) |
 | File lists are sections delimited by H2 headers | a count of `h2` in that span, `>= 1` (`E0120`); requiring at least one list is policy, the specification allows zero |
+| Each item is "a required markdown hyperlink `[name](url)`, then optionally a `:` and notes" | an `every` rule over the `list-item` elements of each named file list (`E0123`, one per malformed item) |
+| The blockquote summary precedes the file lists | an `order` rule: `blockquote`, then `h2` (`E0124`) |
+| One H1 (inferred: the specification describes a single H1 and never says "exactly one") | a whole-document count of `h1`, `== 1` (`E0120`): the rules anchored on the H1 cover its span, which a second H1 would end |
 | Links should point to agent-friendly Markdown pages | route `links: true`: every relative link and `#anchor` must resolve (`E0110`, `E0111`) |
 | The file is named `llms.txt` | route `naming` grammar (`W0041`) |
 
 ## What this does not check
 
-These are gaps in mdatron, not in the specification, and each is tracked as
-an engine issue:
-
-- **The shape of every file-list item.** mdatron's section rules count
-  elements that match a pattern; they cannot assert that *every* list item
-  in a section is `- [name](url)` with optional `: notes`, and they have no
-  plain list-item element class (mdatron #213).
-- **The order of the parts.** H1, then the blockquote, then non-heading
-  details, then the H2 file lists: mdatron has no ordering rule (mdatron #214).
 - **Absolute URLs.** The link family resolves links inside the repository;
   `https://` links, which most published `llms.txt` files use, are not
-  fetched or checked (mdatron #215).
+  fetched or checked. This is a gap in mdatron, tracked as mdatron #215.
+- **File lists the rules do not name.** An `every` rule names one section,
+  so each file list needs its own rule: a new `## Guides` list is unchecked
+  until you add one, and removing `## Optional`, which the specification
+  allows, reports the rule's section as missing (`E0122`). Lists above the
+  first H2 are free-form, as the specification has them, and are not checked.
+- **What a line cannot show.** Section rules read one line at a time, and
+  only ATX (`#`) headings. An item whose link is wrapped onto a second line
+  is reported as malformed, and a wrapped item's continuation lines are not
+  read. A setext heading (text underlined with `---`), an HTML `<ul>` or
+  `<blockquote>`, and a blockquote indented four spaces or more are not seen
+  as a heading, items or a quote.
+- **Blockquotes inside a file list.** The order rule places every blockquote
+  before the first H2, so a quoted note inside a list section is reported.
+  That is this recipe's policy, stricter than the specification.
+- **An empty file list.** `## Docs` with no items under it passes: the rules
+  require the heading and check the items that exist.
+- **A missing summary.** The order rule asserts sequence only, so a file with
+  no blockquote passes. The specification lists the summary without calling
+  it required.
+- **Other content.** A heading below H2 in the free-form part (the
+  specification allows sections "of any type except headings" there) and a
+  paragraph inside a file list both pass.
+- **The exact link syntax.** The item pattern asks for `[name](url)` with no
+  whitespace in the URL, then nothing or a `:` and notes; the name may hold
+  one level of brackets (`[Array[T] reference]`). A link with a title
+  (`[name](url "title")`) is reported, and so is a task item (`- [x] [name](url)`);
+  a name with an escaped or unpaired bracket (`[a\]b]`), or brackets nested
+  two deep, is reported too. Text glued to the link with no space
+  (`[a](x)y(z)`) passes.
+- **Commented-out items.** A list item inside a multi-line HTML comment is
+  still a list item to mdatron, and is reported if malformed.
+- **Anything before the H1.** The rules anchored on the H1 cover its span;
+  text above the H1 is outside it. A leading byte-order mark, which the
+  specification allows, is ignored.
 
 Also out of scope: the recommended `rel="alternate"`/`rel="describedby"` link
 relations (HTTP and HTML, not the file), and "most specific file applies" when
@@ -136,7 +187,7 @@ mdatron verify: 1 error(s), 0 warning(s) across 1 finding(s)
 ```
 
 **The H1 changed.** The one required section no longer names the project
-the rule expects.
+the rules expect. Each rule anchored on it reports that it could not run.
 
 <!-- cookbook-case: renamed-h1 -->
 ```text
@@ -145,12 +196,23 @@ error[MDATRON-E0122]: section-not-found
    = note: no heading in this document matches the section rule's section spec (matching is exact on level and text), so its count assertion cannot be evaluated
    = section:
            > # Acme
+   = match:
+           > .+
    = explain: mdatron explain MDATRON-E0122
-mdatron verify: 1 error(s), 0 warning(s) across 1 finding(s)
+error[MDATRON-E0122]: section-not-found
+  --> llms.txt:1
+   = note: no heading in this document matches the section rule's section spec (matching is exact on level and text), so its order assertion cannot be evaluated
+   = section:
+           > # Acme
+   = order:
+           > blockquote matching ., then h2 matching .
+   = explain: mdatron explain MDATRON-E0122
+mdatron verify: 2 error(s), 0 warning(s) across 2 finding(s)
 ```
 
 **No file lists left.** An edit removed every H2 section: the file still
-parses, but it no longer points anywhere.
+parses, but it no longer points anywhere. The count rule reports it, and so
+does each list's own rule.
 
 <!-- cookbook-case: no-file-lists -->
 ```text
@@ -159,13 +221,105 @@ error[MDATRON-E0120]: section-count-violation
    = note: the named section has 0 matching h2 element(s) across its matching span(s); the rule requires the count >= 1
    = section:
            > # Acme
+   = match:
+           > .+
+   = explain: mdatron explain MDATRON-E0120
+error[MDATRON-E0122]: section-not-found
+  --> llms.txt:1
+   = note: no heading in this document matches the section rule's section spec (matching is exact on level and text), so its every-element assertion cannot be evaluated
+   = section:
+           > ## Docs
+   = every:
+           > ^\[([^\[\]]|\[[^\[\]]*\])+\]\(\S+\)(:.*)?$
+   = match_on:
+           > name
+   = element class:
+           > list-item
+   = explain: mdatron explain MDATRON-E0122
+error[MDATRON-E0122]: section-not-found
+  --> llms.txt:1
+   = note: no heading in this document matches the section rule's section spec (matching is exact on level and text), so its every-element assertion cannot be evaluated
+   = section:
+           > ## Optional
+   = every:
+           > ^\[([^\[\]]|\[[^\[\]]*\])+\]\(\S+\)(:.*)?$
+   = match_on:
+           > name
+   = element class:
+           > list-item
+   = explain: mdatron explain MDATRON-E0122
+mdatron verify: 3 error(s), 0 warning(s) across 3 finding(s)
+```
+
+**An item that is not a link.** Someone wrote the path as text. A tool that
+expands the file's links skips the item.
+
+<!-- cookbook-case: item-not-a-link -->
+```text
+error[MDATRON-E0123]: section-element-mismatch
+  --> llms.txt:15
+   = note: this list-item element does not match the pattern the rule requires of every such element in its scope
+   = section:
+           > ## Optional
+   = every:
+           > ^\[([^\[\]]|\[[^\[\]]*\])+\]\(\S+\)(:.*)?$
+   = match_on:
+           > name
+   = element:
+           > - Changelog: docs/changelog.md
+   = explain: mdatron explain MDATRON-E0123
+mdatron verify: 1 error(s), 0 warning(s) across 1 finding(s)
+```
+
+**The summary moved below the file lists.** The blockquote is still there,
+but it now reads as part of the last H2 section. Each of its two lines is
+reported.
+
+<!-- cookbook-case: summary-after-lists -->
+```text
+error[MDATRON-E0124]: section-order-violation
+  --> llms.txt:14
+   = note: this element appears after an element the rule's order places later
+   = section:
+           > # Acme
+   = element:
+           > > Acme is a command-line tool for syncing project metadata between a
+   = must precede:
+           > h2 matching .
+   = explain: mdatron explain MDATRON-E0124
+error[MDATRON-E0124]: section-order-violation
+  --> llms.txt:15
+   = note: this element appears after an element the rule's order places later
+   = section:
+           > # Acme
+   = element:
+           > > repository and its issue tracker.
+   = must precede:
+           > h2 matching .
+   = explain: mdatron explain MDATRON-E0124
+mdatron verify: 2 error(s), 0 warning(s) across 2 finding(s)
+```
+
+**A second H1.** An appendix was added under its own H1. The rules anchored
+on `# Acme` stop there, so a plain list below it is not checked (a list under
+an H2 the rules name still would be); the count of H1s is what reports it.
+
+<!-- cookbook-case: second-h1 -->
+```text
+error[MDATRON-E0120]: section-count-violation
+  --> llms.txt:1
+   = note: the document has 2 matching h1 element(s); the rule requires the count == 1
+   = match:
+           > .
    = explain: mdatron explain MDATRON-E0120
 mdatron verify: 1 error(s), 0 warning(s) across 1 finding(s)
 ```
 
 ## Make it yours
 
-- **Your project's name.** Change `# Acme` in the section rule to your H1.
+- **Your project's name.** Change `# Acme` in the section rules to your H1.
+- **Your file lists.** Keep one `every` rule per H2 list, named for your
+  headings; drop the `## Optional` rule if you have no such section.
 - **One `llms.txt` per subtree.** The specification lets a file at
   `/docs/llms.txt` cover the pages under it. Add a `file_globs` entry and a
   route per file, each anchored on its own H1.

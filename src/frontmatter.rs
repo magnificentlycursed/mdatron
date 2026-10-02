@@ -45,8 +45,22 @@ pub fn parse(content: &str) -> Result<Option<(Value, &str)>, Error> {
 /// BOM'd governed file must not read as no-frontmatter, because parse ABSENCE
 /// is indistinguishable from not-governed and the file would silently pass the
 /// walk (#78, consumer raise).
-fn strip_bom(content: &str) -> &str {
+pub(crate) fn strip_bom(content: &str) -> &str {
     content.strip_prefix('\u{FEFF}').unwrap_or(content)
+}
+
+/// The prose body of a document for the body-scanning families: the text
+/// after its frontmatter, or — with no (parseable) frontmatter — the whole
+/// text without a leading byte-order mark. ONE definition for every family:
+/// left on line 1, the mark makes a first-line heading not a heading, and
+/// the families must not disagree about that (cold review round 2, R2E-1:
+/// section rules skipped the mark while link anchors, marker targets and
+/// section pins did not).
+pub(crate) fn body_of(content: &str) -> &str {
+    match parse(content) {
+        Ok(Some((_, body))) => body,
+        _ => strip_bom(content),
+    }
 }
 
 /// A fence line is `---` alone on its line, tolerating one trailing CR so CRLF

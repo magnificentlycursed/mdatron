@@ -439,12 +439,34 @@ fn llms_case(case: &str) -> Scratch {
         "dead-anchor" => s.edit(l, |t| t.replace("#the-config-file", "#config-file")),
         "renamed-h1" => s.edit(l, |t| t.replace("# Acme\n", "# Acme CLI\n")),
         "no-file-lists" => s.edit(l, |t| t[..t.find("## Docs").unwrap()].to_string()),
+        "item-not-a-link" => s.edit(l, |t| {
+            t.replace(
+                "- [Changelog](docs/changelog.md)",
+                "- Changelog: docs/changelog.md",
+            )
+        }),
+        "summary-after-lists" => s.edit(l, |t| {
+            let summary = "> Acme is a command-line tool for syncing project metadata between a\n\
+                           > repository and its issue tracker.\n";
+            format!("{}\n{summary}", t.replace(&format!("{summary}\n"), ""))
+        }),
+        "second-h1" => s.edit(l, |t| {
+            format!("{t}\n# Appendix\n\n- notes kept out of every rule\n")
+        }),
         other => panic!("unknown case {other}"),
     }
     s
 }
 
-const LLMS_CASES: &[&str] = &["dead-link", "dead-anchor", "renamed-h1", "no-file-lists"];
+const LLMS_CASES: &[&str] = &[
+    "dead-link",
+    "dead-anchor",
+    "renamed-h1",
+    "no-file-lists",
+    "item-not-a-link",
+    "summary-after-lists",
+    "second-h1",
+];
 
 #[test]
 fn llms_page_shows_the_real_output_of_each_case() {
@@ -459,6 +481,93 @@ fn llms_page_shows_the_real_output_of_each_case() {
             "{case}: the page's output block must be the real output"
         );
     }
+}
+
+/// Cold review round 1 (DOCS-3/ADV-7/ADV-5): the recipe must not fail what the
+/// specification allows — a plain list in the free-form area above the file
+/// lists (the specification's own example has one), other bullet markers, a
+/// nested or numbered item, a trailing space, a tab after the marker, a
+/// thematic break, a URL with parentheses, and a leading byte-order mark.
+#[test]
+fn llms_recipe_accepts_what_the_specification_allows() {
+    let s = Scratch::of("llms-txt", "spec-allowed");
+    s.edit("llms.txt", |t| {
+        let t = t.replace(
+            "## Docs\n",
+            "Important notes:\n\n- Acme is not a changelog generator\n- It needs git 2.40\n\n## Docs\n",
+        );
+        let t = t.replace(
+            "- [Changelog](docs/changelog.md)",
+            "* [Changelog](docs/changelog.md) \n  - [Nested](docs/changelog.md): n\n\
+             1. [Numbered](docs/changelog.md)\n-\t[Tab](docs/changelog.md)\n\
+             + [Wiki](https://en.wikipedia.org/wiki/Acme_(x)): parentheses\n\
+             - [Array[T] reference](docs/changelog.md):notes\n\n* * *\n",
+        );
+        format!("\u{feff}{t}")
+    });
+    let (code, _, stderr) = verify(&s.0, false);
+    assert_eq!(code, Some(0), "{stderr}");
+}
+
+/// Cold review round 2 (R2D-2): the item pattern is not satisfied by a link
+/// with text trailing it, which the first pattern (`\\(.+\\)`, greedy to the
+/// last parenthesis) let through.
+#[test]
+fn llms_recipe_rejects_text_trailing_the_link() {
+    for junk in [
+        "- [Changelog](docs/changelog.md) and then junk (x)",
+        "- [Changelog](not a url) trailing (again)",
+        "- [Changelog]( )",
+        // Round 3 (R3-3): text BEFORE the link, where the item opens with `[`.
+        "- [x] [Changelog](docs/changelog.md)",
+        "- [TODO] see [Changelog](docs/changelog.md)",
+    ] {
+        let s = Scratch::of("llms-txt", "trailing");
+        s.edit("llms.txt", |t| {
+            t.replace("- [Changelog](docs/changelog.md)", junk)
+        });
+        let (code, stdout, _) = verify(&s.0, true);
+        assert_eq!(code, Some(1), "{junk}");
+        let env: serde_json::Value = serde_json::from_str(&stdout).unwrap();
+        assert!(
+            env["findings"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|f| f["code"] == "MDATRON-E0123"),
+            "{junk}: {stdout}"
+        );
+    }
+}
+
+/// Cold review rounds 1 and 2: a CLAUDE.md the routes do not allow is
+/// unrouted wherever the walk reaches it outside `packages/` — in `.claude/`,
+/// as `CLAUDE.local.md`, in another directory.
+#[test]
+fn agents_recipe_reports_a_claude_md_outside_the_allowed_places() {
+    for stray in [".claude/CLAUDE.md", "CLAUDE.local.md", "src/CLAUDE.md"] {
+        let s = Scratch::of("agents-md", "stray");
+        fs::create_dir_all(s.0.join(stray).parent().unwrap()).unwrap();
+        s.create(stray, "@AGENTS.md\n");
+        let (code, stdout, _) = verify(&s.0, true);
+        assert_eq!(code, Some(1), "{stray}");
+        let env: serde_json::Value = serde_json::from_str(&stdout).unwrap();
+        let codes: Vec<&str> = env["findings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|f| f["code"].as_str().unwrap())
+            .collect();
+        assert_eq!(codes, vec!["MDATRON-E0030"], "{stray}");
+    }
+    // Round 3 (R3-2): the glob walks the CLAUDE prefix, so another file that
+    // starts with it is reported too. The page says so; this pins it.
+    let s = Scratch::of("agents-md", "prefix");
+    fs::create_dir_all(s.0.join("docs")).unwrap();
+    s.create("docs/CLAUDE_CODE_SETUP.md", "# Setup notes\n");
+    let (code, _, stderr) = verify(&s.0, false);
+    assert_eq!(code, Some(1), "{stderr}");
+    assert!(norm(&stderr).contains("--> docs/CLAUDE_CODE_SETUP.md:1"));
 }
 
 #[test]
@@ -490,6 +599,22 @@ fn agents_case(case: &str) -> Scratch {
         "no-security" => s.edit(a, |t| t.replace("## Security\n\n", "")),
         "dead-link" => s.rename("docs/architecture.md", "docs/design.md"),
         "empty-file" => s.edit(a, |_| String::new()),
+        "over-budget" => s.edit(a, |mut t| {
+            for i in 1..=500 {
+                t.push_str(&format!(
+                    "- Remember rule {i} of the style guide when editing.\n"
+                ));
+            }
+            t
+        }),
+        "empty-nested" => s.edit("packages/api/AGENTS.md", |_| String::new()),
+        "claude-without-import" => s.edit("CLAUDE.md", |t| {
+            t.replace("@AGENTS.md\n", "See AGENTS.md for the build commands.\n")
+        }),
+        "stray-claude" => {
+            fs::create_dir(s.0.join(".claude")).unwrap();
+            s.create(".claude/CLAUDE.md", "Prefer small commits.\n");
+        }
         other => panic!("unknown case {other}"),
     }
     s
@@ -501,6 +626,10 @@ const AGENTS_CASES: &[&str] = &[
     "no-security",
     "dead-link",
     "empty-file",
+    "over-budget",
+    "empty-nested",
+    "claude-without-import",
+    "stray-claude",
 ];
 
 #[test]

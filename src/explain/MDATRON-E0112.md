@@ -15,8 +15,9 @@ Marker rules are the name-anchor sibling of `citations` (which covers
 `- **Slice 1 — …the guardrail.**` resolves from `Provenance: Slice 1 — …the
 guardrail`. The name is matched against the target document's elements of the
 rule's `element` class — a markdown `heading` of any level, `h1`…`h6` for one
-level, or the leading `**bold**` name of a `- ` list item
-(`list-item-bold-name`) — optionally scoped to a
+level, the leading `**bold**` name of a `- ` list item
+(`list-item-bold-name`), or one of the line-based classes `list-item`,
+`blockquote` and `line` — optionally scoped to a
 `target_section` (that heading's span). The target document is named in the rule
 config, project-root-relative and held to the confinement contract. Marker
 checking is per-route opt-in.
@@ -46,7 +47,7 @@ you, check the target's permissions as well as its existence.
 - **Wrong section.** If the rule sets `target_section`, the name must live inside
   that section's span — widen the section, or move the target element into it.
 - **Wrong element class or target doc.** Confirm the rule's `element`
-  (`heading` vs `list-item-bold-name`) and `target_doc` name the right place.
+  (`heading`, `list-item-bold-name`, …) and `target_doc` name the right place.
 - **The capture group captured nothing.** If the finding says the pattern
   matched but captured no name, the pattern has an optional capture group —
   make it mandatory (`^Provenance: (.+)$`), or fix the line so the group

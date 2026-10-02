@@ -5,6 +5,12 @@ routes:
 - files: "AGENTS.md"
   governed_by: CONTRIBUTING.md
   links: true
+  # Codex stops reading at 32 KiB across the files on one path. With one
+  # AGENTS.md per package, a path is the root file plus one package's:
+  # 24 KiB here and 8 KiB per package file keeps that inside the budget.
+  # (A route's `*` crosses `/`: a second AGENTS.md deeper in a package gets
+  # its own 8 KiB, and the split no longer holds.)
+  max_bytes: 24576
   section_rules:
   # Project policy: the format itself is "just standard Markdown" with no
   # required sections. Anchoring on the H1 also reports a missing or renamed
@@ -19,8 +25,32 @@ routes:
     match: "^Security$"
     match_on: name
     count: "== 1"
-# One AGENTS.md per package: the closest file to an edited path wins. No route
+# A package's AGENTS.md: the closest file to an edited path wins. No route
 # claims AGENTS.override.md, so a committed one is unrouted (E0030).
 - files: "packages/*/AGENTS.md"
   governed_by: CONTRIBUTING.md
   links: true
+  max_bytes: 8192
+  section_rules:
+  # No section: the whole document body. Codex skips an empty file without a
+  # word.
+  - element: line
+    match: "."
+    count: ">= 1"
+# A CLAUDE.md switches AGENTS.md off for Claude Code unless it imports it, so
+# each routed one holds the import. No route claims .claude/CLAUDE.md, a
+# CLAUDE.local.md, or a CLAUDE.md outside packages/: a committed one is
+# unrouted (E0030). A route's `*` crosses `/`, so the packages route also
+# claims a CLAUDE.md deeper inside a package.
+- files: "CLAUDE.md"
+  governed_by: CONTRIBUTING.md
+  section_rules:
+  - element: line
+    match: "(^|\\s)@(\\./)?AGENTS\\.md(\\s|$)"
+    count: ">= 1"
+- files: "packages/*/CLAUDE.md"
+  governed_by: CONTRIBUTING.md
+  section_rules:
+  - element: line
+    match: "(^|\\s)@(\\./)?AGENTS\\.md(\\s|$)"
+    count: ">= 1"

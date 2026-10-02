@@ -98,6 +98,12 @@ struct RawEntry {
     /// A mismatch, an absent field, or a non-string value is `E0035`.
     #[serde(default)]
     name_equals_dir: Option<String>,
+    /// The most bytes a claimed file may hold (#216) — for a consumer with a
+    /// read budget (Codex stops reading AGENTS.md files at 32 KiB combined).
+    /// A larger file is `E0036`. Per file: a budget shared by several files
+    /// is split across their routes.
+    #[serde(default)]
+    max_bytes: Option<u64>,
 }
 
 /// One marker-line reference rule as declared in `routes.yaml` (#147).
@@ -120,8 +126,9 @@ struct RawMarkerRule {
 }
 
 /// The element class a marker reference resolves against — the shared
-/// [`crate::markup::ElementClass`] (`heading`, `h1`…`h6`, `list-item-bold-name`;
-/// unified across the marker and section families in 0.7.0, #204).
+/// [`crate::markup::ElementClass`] (`heading`, `h1`…`h6`, `list-item-bold-name`,
+/// and the line-based `list-item`, `blockquote`, `line`; unified across the
+/// marker and section families in 0.7.0, #204).
 pub use crate::markup::ElementClass;
 
 /// The loaded route table: the active entries plus the per-entry findings
@@ -151,6 +158,8 @@ pub struct Route {
     pub schema: Option<String>,
     /// The frontmatter field that must equal the parent directory name (#209).
     pub name_equals_dir: Option<String>,
+    /// The per-file byte bound (#216).
+    pub max_bytes: Option<u64>,
 }
 
 /// A compiled marker-line reference rule (#147).
@@ -418,6 +427,26 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
             ));
         }
 
+        // #216: a zero bound would fail every file, the empty ones included —
+        // a rule that can only fire is a config mistake, refused at load.
+        if entry.max_bytes == Some(0) {
+            return Err(Error::Config(
+                "route max_bytes is 0; it is the most bytes a claimed file may hold and must \
+                 be at least 1"
+                    .into(),
+            ));
+        }
+        // The mirror image: a file past the engine's own per-file input limit
+        // never reaches this check (the run refuses it), so a bound at or
+        // above that limit can never fire — a dead knob, likely a typo.
+        let input_limit = crate::verify::MAX_FILE_BYTES as u64;
+        if entry.max_bytes.is_some_and(|max| max >= input_limit) {
+            return Err(Error::Config(format!(
+                "route max_bytes is at or above mdatron's per-file input limit ({input_limit} \
+                 bytes), so it could never report a file; set a bound below the limit"
+            )));
+        }
+
         routes.push(Route {
             files,
             governed_by: entry.governed_by,
@@ -429,6 +458,7 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
             section_rules,
             schema: entry.schema,
             name_equals_dir: entry.name_equals_dir,
+            max_bytes: entry.max_bytes,
         });
     }
     // #203 F2 (GH #56 finding 2): "supplied" means the file exists — even with
@@ -594,6 +624,14 @@ pub fn name_equals_dir_for<'a>(routes: &'a [Route], rel: &Path) -> Option<&'a st
         .iter()
         .filter(|r| r.files.matches_path(rel))
         .find_map(|r| r.name_equals_dir.as_deref())
+}
+
+/// The per-file byte bound a route claiming `rel` sets (#216).
+pub fn max_bytes_for(routes: &[Route], rel: &Path) -> Option<u64> {
+    routes
+        .iter()
+        .filter(|r| r.files.matches_path(rel))
+        .find_map(|r| r.max_bytes)
 }
 
 /// The marker-line reference rules active for `rel` — every rule on every route
