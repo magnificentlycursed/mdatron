@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1219,
-        "tip_oid": "ae72124593cb976e3801a853e1a145572093db49",
-        "prefix_sha256": "5c8a18882439016c543dd65415f2ea25719d9ed0b1a99844a43edfeb06484a87"
+        "sequence": 1220,
+        "tip_oid": "b3944ecce8cc4d3b86ed68cf0271e6036c82cb50",
+        "prefix_sha256": "526b89d7c2d1698ec5422bb8e27fafea19b6c1d7560a11a3f38246523d2002cb"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 220,
+  "next_display_id": 221,
   "next_comment_id": 603,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -78,6 +78,7 @@
     "329e1fd4-c61b-4f95-af0e-6273ee883994": 85,
     "3584e906-268f-45e3-96ef-9d107e4ade52": 64,
     "3600e19c-f724-4b0f-afa7-171c3d436a4d": 135,
+    "367960d5-a3f0-4368-90aa-1b7e0b817139": 220,
     "383a5b82-13fb-44f2-bb14-9b2cf0bf8fbb": 183,
     "39fb91bc-ed4a-4358-a8f9-75a737bd1e3b": 8,
     "3ba648b0-e6bb-40d1-ae8e-00548d4dc219": 151,
@@ -2255,6 +2256,17 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAuQXmW0EdUGQ4s53UynCbb8yQtIc8QfhG8lSQ3qBxqCixlztP17P19GkCHYom7jTqy33dN85TDzvYgfLQRQK9Cw=="
         }
       }
+    },
+    "367960d5-a3f0-4368-90aa-1b7e0b817139": {
+      "uuid": "367960d5-a3f0-4368-90aa-1b7e0b817139",
+      "display_id": 220,
+      "title": "Add a route glob form whose * does not cross /",
+      "description": "Surfaced by the AGENTS.md recipe's cold review (round 2, R2D-1; also round 1 DOCS-4). A route's files glob is matched with * crossing /, so packages/*/CLAUDE.md also claims packages/api/.claude/CLAUDE.md and packages/api/sub/AGENTS.md. A recipe cannot say 'exactly one directory level', so (a) a stray CLAUDE.md below a package is claimed and checked as if it were the allowed one instead of being unrouted (E0030), and (b) a per-file byte budget split across depth levels cannot be enforced. Needs a route-level opt-in (or a glob dialect) where * stops at a separator.",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-10-02T20:28:52.195173Z",
+      "updated_at": "2026-10-02T20:28:52.195173Z"
     },
     "383a5b82-13fb-44f2-bb14-9b2cf0bf8fbb": {
       "uuid": "383a5b82-13fb-44f2-bb14-9b2cf0bf8fbb",
