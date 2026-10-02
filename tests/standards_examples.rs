@@ -23,10 +23,14 @@ fn bin() -> PathBuf {
     PathBuf::from(env!("CARGO_BIN_EXE_mdatron"))
 }
 
-/// Normalize a checkout artifact away: CRLF (a Windows autocrlf checkout)
-/// and the OS path separator in rendered locations.
+/// Normalize a platform artifact away: CRLF (a Windows autocrlf checkout),
+/// the OS path separator in rendered locations, and Windows' wording of the
+/// not-found OS error, which the pages show in its Unix form.
 fn norm(s: &str) -> String {
-    s.replace("\r\n", "\n").replace('\\', "/")
+    s.replace("\r\n", "\n").replace('\\', "/").replace(
+        "The system cannot find the file specified. (os error 2)",
+        "No such file or directory (os error 2)",
+    )
 }
 
 fn copy_dir(from: &Path, to: &Path) {
