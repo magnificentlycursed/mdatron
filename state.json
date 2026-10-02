@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1238,
-        "tip_oid": "922e79b54e22619308ae3d428033caf13af1d2cd",
-        "prefix_sha256": "17199fa3b3f75d406b0660e6d154818ace5708224354622d9dc420040ff355e2"
+        "sequence": 1239,
+        "tip_oid": "6d7acd61fff113035ab2832e6bc5c217a44fe7b2",
+        "prefix_sha256": "cdc9f76ae9ce643b4c4b2a93aebb5fcdc9a6070c35515b4a098c98640e2c76c1"
       },
       "IMWa": {
         "sequence": 2,
@@ -1008,11 +1008,12 @@
       "display_id": 217,
       "title": "Add a must-not-be-empty rule for routed files",
       "description": "Surfaced by the AGENTS.md recipe (#181). Codex skips empty AGENTS.md files. The root file is covered by a section rule anchored on its H1, but a nested file has no fixed H1 to anchor on, and no route option asserts a claimed file has content.",
-      "status": "open",
+      "status": "closed",
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-10-01T21:22:31.268732Z",
-      "updated_at": "2026-10-01T21:23:11.304066Z",
+      "updated_at": "2026-10-02T21:51:57.824800Z",
+      "closed_at": "2026-10-02T21:51:57.794606Z",
       "labels": [
         "enhancement"
       ]
