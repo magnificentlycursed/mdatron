@@ -502,7 +502,7 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
 pub fn check_file(routes: &[Route], rel: &Path, abs: &Path, findings: &mut Vec<Finding>) {
     let claims: Vec<&Route> = routes
         .iter()
-        .filter(|r| r.files.matches_path(rel))
+        .filter(|r| crate::globs::matches_path(&r.files, rel))
         .collect();
     match claims.len() {
         0 => findings.push(Finding {
@@ -591,12 +591,14 @@ pub fn check_file(routes: &[Route], rel: &Path, abs: &Path, findings: &mut Vec<F
 pub fn citations_enabled(routes: &[Route], rel: &Path) -> bool {
     routes
         .iter()
-        .any(|r| r.citations && r.files.matches_path(rel))
+        .any(|r| r.citations && crate::globs::matches_path(&r.files, rel))
 }
 
 /// True when any route claiming `rel` opts it into body-link verification (#145).
 pub fn links_enabled(routes: &[Route], rel: &Path) -> bool {
-    routes.iter().any(|r| r.links && r.files.matches_path(rel))
+    routes
+        .iter()
+        .any(|r| r.links && crate::globs::matches_path(&r.files, rel))
 }
 
 /// True when a link-checked route claiming `rel` also enables root-relative
@@ -605,7 +607,7 @@ pub fn links_enabled(routes: &[Route], rel: &Path) -> bool {
 pub fn link_root_enabled(routes: &[Route], rel: &Path) -> bool {
     routes
         .iter()
-        .any(|r| r.links && r.link_root && r.files.matches_path(rel))
+        .any(|r| r.links && r.link_root && crate::globs::matches_path(&r.files, rel))
 }
 
 /// The schema class a route claiming `rel` binds it to (#208). Two claiming
@@ -613,7 +615,7 @@ pub fn link_root_enabled(routes: &[Route], rel: &Path) -> bool {
 pub fn schema_for<'a>(routes: &'a [Route], rel: &Path) -> Option<&'a str> {
     routes
         .iter()
-        .filter(|r| r.files.matches_path(rel))
+        .filter(|r| crate::globs::matches_path(&r.files, rel))
         .find_map(|r| r.schema.as_deref())
 }
 
@@ -622,7 +624,7 @@ pub fn schema_for<'a>(routes: &'a [Route], rel: &Path) -> Option<&'a str> {
 pub fn name_equals_dir_for<'a>(routes: &'a [Route], rel: &Path) -> Option<&'a str> {
     routes
         .iter()
-        .filter(|r| r.files.matches_path(rel))
+        .filter(|r| crate::globs::matches_path(&r.files, rel))
         .find_map(|r| r.name_equals_dir.as_deref())
 }
 
@@ -630,7 +632,7 @@ pub fn name_equals_dir_for<'a>(routes: &'a [Route], rel: &Path) -> Option<&'a st
 pub fn max_bytes_for(routes: &[Route], rel: &Path) -> Option<u64> {
     routes
         .iter()
-        .filter(|r| r.files.matches_path(rel))
+        .filter(|r| crate::globs::matches_path(&r.files, rel))
         .find_map(|r| r.max_bytes)
 }
 
@@ -639,7 +641,7 @@ pub fn max_bytes_for(routes: &[Route], rel: &Path) -> Option<u64> {
 pub fn marker_rules_for<'a>(routes: &'a [Route], rel: &Path) -> Vec<&'a MarkerRule> {
     routes
         .iter()
-        .filter(|r| r.files.matches_path(rel))
+        .filter(|r| crate::globs::matches_path(&r.files, rel))
         .flat_map(|r| r.marker_rules.iter())
         .collect()
 }
@@ -650,7 +652,7 @@ pub fn marker_rules_for<'a>(routes: &'a [Route], rel: &Path) -> Vec<&'a MarkerRu
 pub fn section_rules_for<'a>(routes: &'a [Route], rel: &Path) -> Vec<&'a crate::section::Rule> {
     routes
         .iter()
-        .filter(|r| r.files.matches_path(rel))
+        .filter(|r| crate::globs::matches_path(&r.files, rel))
         .flat_map(|r| r.section_rules.iter())
         .collect()
 }

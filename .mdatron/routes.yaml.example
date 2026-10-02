@@ -6,7 +6,8 @@
 #             twice, W0053 empty table, W0054 a route claiming nothing).
 #             Delete the file to deactivate.
 # SCOPE       every walked file (config.yaml file_globs); a route's `files`
-#             glob is root-relative and `*` crosses `/`.
+#             glob is root-relative; `*` stays within one path segment,
+#             `**` crosses any depth.
 # GATEWAY     citations, links, marker_rules, and section_rules exist only
 #             on a route.
 # KEYS        per route — required: files, governed_by

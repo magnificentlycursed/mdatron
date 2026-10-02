@@ -759,7 +759,7 @@ fn run_inner(
     let mut dead_globs: Vec<String> = Vec::new();
     for glob_pattern in &config.file_globs {
         let absolute = project_root.join(glob_pattern);
-        let paths = glob::glob(&absolute.to_string_lossy())
+        let paths = crate::globs::walk(&absolute.to_string_lossy())
             .map_err(|e| VerifyError::Glob(format!("'{glob_pattern}': {e}")))?;
         let mut matched = false;
         for entry in paths {
@@ -1141,7 +1141,7 @@ fn run_inner(
     for (_, rel) in &governed {
         if let Some(routes) = &routes {
             for (i, r) in routes.iter().enumerate() {
-                if r.files.matches_path(rel) {
+                if crate::globs::matches_path(&r.files, rel) {
                     route_cov[i] += 1;
                 }
             }
@@ -1337,7 +1337,10 @@ fn run_inner(
         // dead require-scope loud. Whole-tree only (`scope.is_none()`), like W0046:
         // an incremental walk legitimately sees a subset of the tree.
         for pat in require.iter() {
-            if governed.iter().any(|(_, rel)| pat.matches_path(rel)) {
+            if governed
+                .iter()
+                .any(|(_, rel)| crate::globs::matches_path(pat, rel))
+            {
                 continue;
             }
             findings.push(Finding {
@@ -1857,7 +1860,7 @@ struct FileScope(Vec<glob::Pattern>);
 impl FileScope {
     /// True if any glob in the scope matches the root-relative `path`.
     fn matches_any(&self, path: &Path) -> bool {
-        self.0.iter().any(|p| p.matches_path(path))
+        self.0.iter().any(|p| crate::globs::matches_path(p, path))
     }
 
     fn is_empty(&self) -> bool {
@@ -3483,7 +3486,7 @@ pub(crate) fn context_matches(
 /// edge yet never actually run.)
 fn glob_matches(pattern: &str, path: &Path) -> bool {
     match glob::Pattern::new(pattern) {
-        Ok(p) => p.matches_path(path),
+        Ok(p) => crate::globs::matches_path(&p, path),
         Err(_) => false,
     }
 }
@@ -11273,6 +11276,58 @@ pattern:
             let err = verify(&VerifyConfig::from_project(&proj.0).unwrap());
             assert!(err.is_err(), "{bad:?} must be refused at load");
         }
+    }
+
+    // RED GATE (#220): one glob dialect everywhere — `*` stays within a path
+    // segment, `**` crosses — for the walk, a route's files, a scope glob and
+    // a rule's path context. Through 0.6.0 `*` crossed `/`.
+    #[test]
+    fn star_matches_one_segment_in_every_glob_site() {
+        let proj = TempProject::new("glob-dialect");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write("GOVERNING.md", "# gov\n");
+        proj.write("packages/api/AGENTS.md", "# api\n");
+        proj.write("packages/api/sub/AGENTS.md", "# deep\n");
+        proj.write("docs/a.md", "# a\n");
+        proj.write("docs/x/b.md", "# b\n");
+        // The walk: `docs/*.md` must not reach docs/x/b.md; `**` must.
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"packages/**/AGENTS.md\"\n  - \"docs/*.md\"\nrequire_frontmatter:\n  - \"docs/*.md\"\n",
+        );
+        proj.write(
+            ".mdatron/routes.yaml",
+            "routes:\n- files: \"packages/*/AGENTS.md\"\n  governed_by: GOVERNING.md\n- files: \"docs/**/*.md\"\n  governed_by: GOVERNING.md\n",
+        );
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        let unrouted: Vec<String> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0030")
+            .map(|f| f.location.file.to_string_lossy().replace('\\', "/"))
+            .collect();
+        assert_eq!(unrouted.len(), 1, "{findings:?}");
+        assert!(
+            unrouted[0].ends_with("packages/api/sub/AGENTS.md"),
+            "the deeper file is walked by `**` but not claimed by `*`: {findings:?}"
+        );
+        // The scope glob `docs/*.md` reaches docs/a.md only (W0040 once), and
+        // docs/x/b.md was not walked at all (no finding names it).
+        let w0040: Vec<String> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-W0040")
+            .map(|f| f.location.file.to_string_lossy().replace('\\', "/"))
+            .collect();
+        assert_eq!(w0040.len(), 1, "{findings:?}");
+        assert!(w0040[0].ends_with("docs/a.md"), "{findings:?}");
+        assert!(
+            findings
+                .iter()
+                .all(|f| !f.location.file.ends_with("x/b.md")),
+            "docs/x/b.md is outside the walk: {findings:?}"
+        );
     }
 
     // RED GATE (#216): a route's max_bytes bounds each claimed file — at the

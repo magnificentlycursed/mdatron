@@ -5,18 +5,18 @@ routes:
 # The LIVING docs corpus (#187 part 2): route-only governance with the link
 # family on — dead links and dead anchors in the shipped documentation block
 # from day one. No frontmatter requirement (phase 1; the link family needs
-# none). Route `*` crosses `/`, and a route glob has no exclusion form, so the
-# corpus is carved by character class: `docs/[!dm]*.md` claims every docs path
-# whose first letter is neither `d` nor `m`, and `docs/d[!e]*.md` takes the
-# `d` paths back except `docs/de…` — leaving `docs/dependencies/**` to the
-# typed dependency-record route below (#190) and `docs/methodology*` to the
-# standing methodology route (two routes claiming one file is an error by
-# contract). A future docs path starting `de` or `m` lands unrouted (E0030) —
-# loud and fail-closed, a deliberate routing decision.
-- files: "docs/[!dm]*.md"
+# none). `*` stays within one directory (#220), so the top level of docs/ and
+# each subdirectory is its own route; `docs/methodology*` has the standing
+# methodology route below, so the top-level route excludes names starting
+# `m` (two routes claiming one file is an error by contract). A new docs
+# subdirectory lands unrouted (E0030) — loud and fail-closed, a deliberate
+# routing decision.
+- files: "docs/[!m]*.md"
   governed_by: DESIGN.md
   links: true
-- files: "docs/d[!e]*.md"
+# The standards-pack cookbook (#181): recipe pages, held to their example
+# projects by tests/standards_examples.rs.
+- files: "docs/cookbook/*.md"
   governed_by: DESIGN.md
   links: true
 # Dependency records (#190): one typed record per Cargo dependency. The

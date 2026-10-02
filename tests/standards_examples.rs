@@ -545,7 +545,17 @@ fn llms_recipe_rejects_text_trailing_the_link() {
 /// as `CLAUDE.local.md`, in another directory.
 #[test]
 fn agents_recipe_reports_a_claude_md_outside_the_allowed_places() {
-    for stray in [".claude/CLAUDE.md", "CLAUDE.local.md", "src/CLAUDE.md"] {
+    // #220: `*` is one directory level, so a stray below a package — the case
+    // that would switch that package's AGENTS.md off for Claude Code — is
+    // unrouted too, as is a second AGENTS.md deeper in a package.
+    for stray in [
+        ".claude/CLAUDE.md",
+        "CLAUDE.local.md",
+        "src/CLAUDE.md",
+        "packages/api/.claude/CLAUDE.md",
+        "packages/api/sub/CLAUDE.md",
+        "packages/api/sub/AGENTS.md",
+    ] {
         let s = Scratch::of("agents-md", "stray");
         fs::create_dir_all(s.0.join(stray).parent().unwrap()).unwrap();
         s.create(stray, "@AGENTS.md\n");
