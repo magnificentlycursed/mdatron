@@ -22,7 +22,8 @@
 ///   field-reference validation (undeclared `$self` field under a closed
 ///   schema, hard-gated at load, #156)
 /// - `MDATRON-E0030` — `E0039` Route family (was delegate protocol, retired);
-///   route-bound schema `E0033`/`E0034` (#208), `name_equals_dir` `E0035` (#209)
+///   route-bound schema `E0033`/`E0034` (#208), `name_equals_dir` `E0035` (#209),
+///   `max_bytes` `E0036` (#216)
 /// - `MDATRON-E0040` — `E0049` Schema load failures
 /// - `MDATRON-E0050` — `E0059` Frontmatter schema validation failures (v0.1.x)
 /// - `MDATRON-E0060` — `E0069` Pin family (content-hash pins + managed-manifest
@@ -37,7 +38,8 @@
 ///   marker-line references (marker, `E0112`, #147); adopter code-catalog
 ///   integrity (code_catalog, `E0113`, #148)
 /// - `MDATRON-E0120` — `E0129` Section-structural family (count/disjointness over
-///   body sections: `E0120` section-count-violation, `E0121` section-ids-not-disjoint, #157)
+///   body sections: `E0120` section-count-violation, `E0121` section-ids-not-disjoint, #157;
+///   `E0123` section-element-mismatch, #213; `E0124` section-order-violation, #214)
 /// - `MDATRON-W0040` — `W0099` Configuration, governance, and family warnings
 /// - `MDATRON-L0001` — `L0099` Engine-level lints
 ///

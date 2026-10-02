@@ -12,5 +12,12 @@
     "revision": "unversioned documentation page; openai/codex@bb72e151e50cfd4f6282ab86418188af3c83b5df docs/agents_md.md links to it",
     "revision_date": "unversioned",
     "retrieved": "2026-10-01"
+  },
+  {
+    "standard": "Claude Code project instructions (CLAUDE.md and AGENTS.md)",
+    "url": "https://code.claude.com/docs/en/memory",
+    "revision": "unversioned documentation page; version gates stated through v2.1.283",
+    "revision_date": "unversioned",
+    "retrieved": "2026-10-02"
   }
 ]

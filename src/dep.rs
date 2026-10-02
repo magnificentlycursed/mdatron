@@ -272,6 +272,7 @@ mod tests {
             section_rules: Vec::new(),
             schema: None,
             name_equals_dir: None,
+            max_bytes: None,
         }
     }
 

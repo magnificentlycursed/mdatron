@@ -511,7 +511,7 @@ legitimately live outside the catalog.
 
 **Section rules** (a `section_rules:` block on a route in `routes.yaml`, the
 sibling of `marker_rules` — route-attached, so writing that route puts every
-walked file under the closed world; see **Routes**) — declarative **count** and **disjointness**
+walked file under the closed world; see **Routes**) — declarative **count**, **every**, **order** and **disjointness**
 assertions over markdown body sections (the body-content counterpart of the
 DSL's frontmatter arity rules), **scoped by the route's `files` glob** so a
 file-specific structural invariant lives on the route that claims those files
@@ -523,12 +523,27 @@ routes:
   - files: "plan/**/*.md"
     governed_by: ROADMAP.md
     section_rules:
-      # a count rule: section, element, match, count — all four required
+      # a count rule: element, match, count
       # (at least one open-phase H3 in ## Requirements)
       - section: "## Requirements"
         element: h3
         match: '^### Phase \d+: .*\((parallel|sequential)\)$'
         count: ">= 1"                # one of >= <= == != > < and an integer
+      # no section: the whole document (here: the file is not empty)
+      - element: line
+        match: "."
+        count: ">= 1"
+      # an every rule: each list item in the section is a link
+      - section: "## References"
+        element: list-item
+        every: '^- \[[^\]]+\]\([^)]+\)'
+      # an order rule: the summary blockquote comes before any phase heading
+      - section: "## Requirements"
+        order:
+          - element: blockquote
+            match: "."
+          - element: h3
+            match: "."
       # a slice is open XOR complete — ids extracted per element, never a full-span scan
       - disjoint:
           - section: "## Requirements"
@@ -547,8 +562,15 @@ same text a `disjoint` operand's `id_pattern` sees),
 and asserts the `count` predicate — one of `>=`, `<=`, `==`, `!=`, `>`, `<` and
 an integer (`>= 1`, `== 1`, `< 3`); a violation is `E0120`.
 `element` is the one vocabulary marker rules use too: `heading` (a heading of
-any level), `h1`…`h6` (one level), or `list-item-bold-name` (the `**bold**` lead
-of a `- ` list item). A `disjoint` rule extracts an id (the `id_pattern`'s first
+any level), `h1`…`h6` (one level), `list-item-bold-name` (the `**bold**` lead
+of a `- ` list item), `list-item` (any bullet or numbered item), `blockquote`
+(a `>` line), or `line` (any non-blank line). Elements are lines, and a line
+inside a fenced code block is never one. An **every** rule requires each
+element of the class to match its `every` pattern (`E0123` for each that does
+not). An **order** rule lists items of `element` and `match`; an element
+matching an earlier item must not follow one matching a later item (`E0124`).
+On a count, every or order rule `section` is optional: without it the rule
+covers the whole document. A `disjoint` rule extracts an id (the `id_pattern`'s first
 capture) from each section's declared element and asserts the two sets share
 none; an overlap is `E0121`. Ids come **only** from the declared element (an `h3`
 heading's text, or a `list-item-bold-name` bullet's bold name), never

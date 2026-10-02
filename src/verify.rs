@@ -1243,6 +1243,12 @@ fn run_inner(
             // Symlinked: refused at capture, its E0012 already recorded.
             Some(crate::snapshot::Captured::SymlinkRefused { .. }) | None => continue,
         };
+        if let Some(max) = routes
+            .as_deref()
+            .and_then(|routes| crate::route::max_bytes_for(routes, rel))
+        {
+            byte_budget_check(path, content.len(), max, &mut findings);
+        }
         let verdict = verify_file(
             path,
             content,
@@ -2922,6 +2928,28 @@ fn name_equals_dir_check(
         },
         explain_ref: Some("MDATRON-E0035".into()),
         quoted,
+    });
+}
+
+/// `E0036` (#216): the claiming route's `max_bytes` bounds the file's size —
+/// a consumer with a read budget drops what is past it without a word.
+fn byte_budget_check(path: &Path, bytes: usize, max: u64, findings: &mut Vec<Finding>) {
+    if u64::try_from(bytes).unwrap_or(u64::MAX) <= max {
+        return;
+    }
+    findings.push(Finding {
+        code: "MDATRON-E0036".into(),
+        severity: Severity::Error,
+        summary: "file-over-byte-budget".into(),
+        message: format!("this file is {bytes} bytes; its route allows at most {max} (max_bytes)"),
+        help: Some(
+            "shorten the file or move detail into a document it links to; raise the \
+             route's max_bytes only if the consumer's budget really is larger"
+                .into(),
+        ),
+        location: Location::whole_file(path),
+        explain_ref: Some("MDATRON-E0036".into()),
+        quoted: Vec::new(),
     });
 }
 
@@ -11224,5 +11252,48 @@ pattern:
             let err = verify(&VerifyConfig::from_project(&proj.0).unwrap());
             assert!(err.is_err(), "{bad:?} must be refused at load");
         }
+    }
+
+    // RED GATE (#216): a route's max_bytes bounds each claimed file — at the
+    // bound is clean, one byte over is E0036 — and a zero bound is refused.
+    #[test]
+    fn route_max_bytes_bounds_each_claimed_file() {
+        let proj = skills_project("max-bytes", "  max_bytes: 40\n");
+        let base = "---\nname: a\n---\n\n# A\n";
+        let exactly_40 = format!("{base}{}", "y".repeat(40 - base.len()));
+        assert_eq!(exactly_40.len(), 40);
+        proj.write(".claude/skills/a/SKILL.md", &exactly_40);
+        assert!(route_codes(&proj).is_empty(), "{:?}", route_codes(&proj));
+
+        proj.write(".claude/skills/a/SKILL.md", &format!("{exactly_40}x"));
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        assert_eq!(findings[0].code, "MDATRON-E0036");
+        assert!(
+            findings[0].message.contains("41 bytes") && findings[0].message.contains("most 40"),
+            "{}",
+            findings[0].message
+        );
+
+        let zero = skills_project("max-bytes-zero", "  max_bytes: 0\n");
+        zero.write(".claude/skills/a/SKILL.md", "# a\n");
+        assert!(verify(&VerifyConfig::from_project(&zero.0).unwrap()).is_err());
+    }
+
+    // #217/#218 end to end: a whole-document count rule (no `section`) on a
+    // route reports an empty file and a file missing a required line.
+    #[test]
+    fn whole_document_count_rules_run_from_a_route() {
+        let proj = skills_project(
+            "whole-doc",
+            "  section_rules:\n  - element: line\n    match: \".\"\n    count: \">= 1\"\n  \
+             - element: line\n    match: \"^@AGENTS\\\\.md$\"\n    count: \">= 1\"\n",
+        );
+        proj.write(".claude/skills/a/SKILL.md", "@AGENTS.md\n");
+        assert!(route_codes(&proj).is_empty(), "{:?}", route_codes(&proj));
+        proj.write(".claude/skills/a/SKILL.md", "See AGENTS.md.\n");
+        assert_eq!(route_codes(&proj), vec!["MDATRON-E0120"]);
+        proj.write(".claude/skills/a/SKILL.md", "");
+        assert_eq!(route_codes(&proj), vec!["MDATRON-E0120", "MDATRON-E0120"]);
     }
 }

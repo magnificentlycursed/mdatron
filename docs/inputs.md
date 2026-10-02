@@ -52,7 +52,7 @@ Activation: `verify` refuses without it. Codes: `W0040`, `W0043`, `W0046`,
 The route family — the closed-world allowlist over the walked files, and the
 gateway to the citation, link, marker, and section families.
 
-Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `citations`, `links`, `link_root`, `marker_rules`, `pattern`, `element`, `target_doc`, `target_section`, `section_rules`, `section`, `match`, `match_on`, `count`, `disjoint`, `id_pattern`, `schema`, `name_equals_dir`.
+Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `citations`, `links`, `link_root`, `marker_rules`, `pattern`, `element`, `target_doc`, `target_section`, `section_rules`, `section`, `match`, `match_on`, `count`, `disjoint`, `id_pattern`, `schema`, `name_equals_dir`, `max_bytes`, `every`, `order`.
 
 - Per route — required: `files` (root-relative glob; `*` crosses `/`),
   `governed_by` (a document that must open inside the governed tree, `E0031`).
@@ -64,31 +64,53 @@ Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `cit
   do not own; a disagreeing `schema_class` is `E0033`, a class nothing serves
   `E0034`, and a claimed file with no frontmatter is validated as an empty
   mapping), `name_equals_dir` (a frontmatter field that must equal the file's
-  parent directory name, `E0035`).
+  parent directory name, `E0035`), `max_bytes` (the most bytes a claimed file
+  may hold, `E0036`; per file, so a budget shared by several files is split
+  across their routes).
+- An `element` is one of `heading`, `h1`…`h6`, `list-item-bold-name`,
+  `list-item` (any bullet or numbered item, named by its text), `blockquote`
+  (a `>` line) or `line` (any non-blank line). Elements are lines: a list
+  item is the line that opens it, and a line inside a fenced code block is
+  never an element.
 - A marker rule — required: `pattern` (a regex whose first capture is the
-  referenced name), `element` (`heading`, `h1`…`h6`, or `list-item-bold-name`),
-  `target_doc`. Optional: `target_section` (a full ATX heading line).
-- A section rule — a count rule (`section`, `element`, `match`, `count` with
-  one of `>=`, `<=`, `==`, `!=`, `>`, `<` and an integer; optional `match_on`:
-  `line`, the default, or `name`) or a `disjoint` rule (exactly two operands
-  of `section`, `element`, `id_pattern`).
+  referenced name), `element`, `target_doc`. Optional: `target_section` (a
+  full ATX heading line).
+- A section rule is one of four shapes:
+  - a count rule (`element`, `match`, `count` with one of `>=`, `<=`, `==`,
+    `!=`, `>`, `<` and an integer; optional `match_on`: `line`, the default,
+    or `name`): how many elements match, `E0120`;
+  - an every rule (`element`, `every`; optional `match_on`): each element of
+    the class must match the `every` pattern, `E0123` per element that does
+    not;
+  - an order rule (`order`: two or more items of `element`, `match`, optional
+    `match_on`): an element matching an earlier item must not follow one
+    matching a later item, `E0124`; an item nothing matches is not a
+    violation;
+  - a `disjoint` rule (exactly two operands of `section`, `element`,
+    `id_pattern`), `E0121`.
+
+  On a count, every or order rule `section` is optional: given, the rule
+  covers that heading's span and an absent heading is `E0122`; absent, it
+  covers the whole document, so "the file is not empty" is `element: line`,
+  `match: "."`, `count: ">= 1"`.
 - What each pattern is tested against — the three differ, so read this before
   writing one:
   - a marker rule's `pattern` runs against the whole LINE, and its first
     capture group is the referenced name;
-  - a count rule's `match` runs against the whole LINE by default (`### REQ-1`,
+  - a count rule's `match`, an every rule's `every` and an order item's
+    `match` run against the whole LINE by default (`### REQ-1`,
     so `'^REQ-[0-9]+$'` never matches) or against the element's NAME with
-    `match_on: name` (the heading text or the list item's bold name: `REQ-1`); it needs no
-    capture group;
+    `match_on: name` (the heading text, the list item's bold name or its
+    text, the quoted text: `REQ-1`); they need no capture group;
   - a disjoint operand's `id_pattern` runs against the element's NAME, and its
     first capture group is the id.
 
 Activation: the file exists — even `routes: []` (announced as `W0053`); from
 then on every walked file must be claimed by exactly one route. Scope: every
-walked file. Codes: `E0030`, `E0031`, `E0032`, `W0041`, `W0053`, `W0054`; per
+walked file. Codes: `E0030`, `E0031`, `E0032`, `E0036`, `W0041`, `W0053`, `W0054`; per
 opt-in `E0100`/`E0101`/`W0048`/`E0081` (citations), `E0110`/`E0111`/`W0048`/
 `E0081` (links), `E0112`/`E0114`/`W0048`/`E0081` (markers),
-`E0120`/`E0121`/`E0122` (section rules).
+`E0120`/`E0121`/`E0122`/`E0123`/`E0124` (section rules).
 
 ## pins.yaml
 

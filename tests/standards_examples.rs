@@ -439,12 +439,30 @@ fn llms_case(case: &str) -> Scratch {
         "dead-anchor" => s.edit(l, |t| t.replace("#the-config-file", "#config-file")),
         "renamed-h1" => s.edit(l, |t| t.replace("# Acme\n", "# Acme CLI\n")),
         "no-file-lists" => s.edit(l, |t| t[..t.find("## Docs").unwrap()].to_string()),
+        "item-not-a-link" => s.edit(l, |t| {
+            t.replace(
+                "- [Changelog](docs/changelog.md)",
+                "- Changelog: docs/changelog.md",
+            )
+        }),
+        "summary-after-lists" => s.edit(l, |t| {
+            let summary = "> Acme is a command-line tool for syncing project metadata between a\n\
+                           > repository and its issue tracker.\n";
+            format!("{}\n{summary}", t.replace(&format!("{summary}\n"), ""))
+        }),
         other => panic!("unknown case {other}"),
     }
     s
 }
 
-const LLMS_CASES: &[&str] = &["dead-link", "dead-anchor", "renamed-h1", "no-file-lists"];
+const LLMS_CASES: &[&str] = &[
+    "dead-link",
+    "dead-anchor",
+    "renamed-h1",
+    "no-file-lists",
+    "item-not-a-link",
+    "summary-after-lists",
+];
 
 #[test]
 fn llms_page_shows_the_real_output_of_each_case() {
@@ -490,6 +508,18 @@ fn agents_case(case: &str) -> Scratch {
         "no-security" => s.edit(a, |t| t.replace("## Security\n\n", "")),
         "dead-link" => s.rename("docs/architecture.md", "docs/design.md"),
         "empty-file" => s.edit(a, |_| String::new()),
+        "over-budget" => s.edit(a, |mut t| {
+            for i in 1..=500 {
+                t.push_str(&format!(
+                    "- Remember rule {i} of the style guide when editing.\n"
+                ));
+            }
+            t
+        }),
+        "empty-nested" => s.edit("packages/api/AGENTS.md", |_| String::new()),
+        "claude-without-import" => s.edit("CLAUDE.md", |t| {
+            t.replace("@AGENTS.md\n", "See AGENTS.md for the build commands.\n")
+        }),
         other => panic!("unknown case {other}"),
     }
     s
@@ -501,6 +531,9 @@ const AGENTS_CASES: &[&str] = &[
     "no-security",
     "dead-link",
     "empty-file",
+    "over-budget",
+    "empty-nested",
+    "claude-without-import",
 ];
 
 #[test]

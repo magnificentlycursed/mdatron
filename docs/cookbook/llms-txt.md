@@ -68,6 +68,17 @@ routes:
     element: h2
     match: ".+"
     count: ">= 1"
+  # Every file-list item is "[name](url)", then optionally ": notes" (E0123).
+  - section: "# Acme"
+    element: list-item
+    every: "^- \\[[^\\]]+\\]\\([^)]+\\)(: .+)?$"
+  # The blockquote summary comes before the H2 file lists (E0124).
+  - section: "# Acme"
+    order:
+    - element: blockquote
+      match: "."
+    - element: h2
+      match: "."
 ```
 
 The example's `.mdatron/schemas/` holds only a `.gitkeep`: mdatron requires a
@@ -79,23 +90,21 @@ schemas or patterns directory to exist, and this recipe needs no schema.
 |---|---|
 | An H1 with the project's name is the one required section | section rule anchored on `# Acme` (`E0122` when missing or renamed) |
 | File lists are sections delimited by H2 headers | a count of `h2` in that span, `>= 1` (`E0120`); requiring at least one list is policy, the specification allows zero |
+| Each item is "a required markdown hyperlink `[name](url)`, then optionally a `:` and notes" | an `every` rule over `list-item` elements (`E0123`, one per malformed item) |
+| The blockquote summary precedes the file lists | an `order` rule: `blockquote`, then `h2` (`E0124`) |
 | Links should point to agent-friendly Markdown pages | route `links: true`: every relative link and `#anchor` must resolve (`E0110`, `E0111`) |
 | The file is named `llms.txt` | route `naming` grammar (`W0041`) |
 
 ## What this does not check
 
-These are gaps in mdatron, not in the specification, and each is tracked as
-an engine issue:
-
-- **The shape of every file-list item.** mdatron's section rules count
-  elements that match a pattern; they cannot assert that *every* list item
-  in a section is `- [name](url)` with optional `: notes`, and they have no
-  plain list-item element class (mdatron #213).
-- **The order of the parts.** H1, then the blockquote, then non-heading
-  details, then the H2 file lists: mdatron has no ordering rule (mdatron #214).
 - **Absolute URLs.** The link family resolves links inside the repository;
   `https://` links, which most published `llms.txt` files use, are not
-  fetched or checked (mdatron #215).
+  fetched or checked. This is a gap in mdatron, tracked as mdatron #215.
+- **Items that span lines.** Section rules read elements a line at a time: a
+  list item is the line that opens it, so an item whose link is wrapped onto
+  a second line is reported as malformed.
+- **Anything before the H1.** The rules cover the H1's span; text above the
+  H1 is outside it.
 
 Also out of scope: the recommended `rel="alternate"`/`rel="describedby"` link
 relations (HTTP and HTML, not the file), and "most specific file applies" when
@@ -136,7 +145,8 @@ mdatron verify: 1 error(s), 0 warning(s) across 1 finding(s)
 ```
 
 **The H1 changed.** The one required section no longer names the project
-the rule expects.
+the rules expect. Each of the three rules anchored on it reports that it
+could not run.
 
 <!-- cookbook-case: renamed-h1 -->
 ```text
@@ -145,8 +155,24 @@ error[MDATRON-E0122]: section-not-found
    = note: no heading in this document matches the section rule's section spec (matching is exact on level and text), so its count assertion cannot be evaluated
    = section:
            > # Acme
+   = match:
+           > .+
    = explain: mdatron explain MDATRON-E0122
-mdatron verify: 1 error(s), 0 warning(s) across 1 finding(s)
+error[MDATRON-E0122]: section-not-found
+  --> llms.txt:1
+   = note: no heading in this document matches the section rule's section spec (matching is exact on level and text), so its every-element assertion cannot be evaluated
+   = section:
+           > # Acme
+   = every:
+           > ^- \[[^\]]+\]\([^)]+\)(: .+)?$
+   = explain: mdatron explain MDATRON-E0122
+error[MDATRON-E0122]: section-not-found
+  --> llms.txt:1
+   = note: no heading in this document matches the section rule's section spec (matching is exact on level and text), so its order assertion cannot be evaluated
+   = section:
+           > # Acme
+   = explain: mdatron explain MDATRON-E0122
+mdatron verify: 3 error(s), 0 warning(s) across 3 finding(s)
 ```
 
 **No file lists left.** An edit removed every H2 section: the file still
@@ -159,8 +185,57 @@ error[MDATRON-E0120]: section-count-violation
    = note: the named section has 0 matching h2 element(s) across its matching span(s); the rule requires the count >= 1
    = section:
            > # Acme
+   = match:
+           > .+
    = explain: mdatron explain MDATRON-E0120
 mdatron verify: 1 error(s), 0 warning(s) across 1 finding(s)
+```
+
+**An item that is not a link.** Someone wrote the path as text. A tool that
+expands the file's links skips the item.
+
+<!-- cookbook-case: item-not-a-link -->
+```text
+error[MDATRON-E0123]: section-element-mismatch
+  --> llms.txt:15
+   = note: this list-item element does not match the pattern the rule requires of every such element in its scope
+   = section:
+           > # Acme
+   = every:
+           > ^- \[[^\]]+\]\([^)]+\)(: .+)?$
+   = element:
+           > - Changelog: docs/changelog.md
+   = explain: mdatron explain MDATRON-E0123
+mdatron verify: 1 error(s), 0 warning(s) across 1 finding(s)
+```
+
+**The summary moved below the file lists.** The blockquote is still there,
+but it now reads as part of the last H2 section. Each of its two lines is
+reported.
+
+<!-- cookbook-case: summary-after-lists -->
+```text
+error[MDATRON-E0124]: section-order-violation
+  --> llms.txt:14
+   = note: this element appears after an element the rule's order places later
+   = section:
+           > # Acme
+   = element:
+           > > Acme is a command-line tool for syncing project metadata between a
+   = must precede:
+           > .
+   = explain: mdatron explain MDATRON-E0124
+error[MDATRON-E0124]: section-order-violation
+  --> llms.txt:15
+   = note: this element appears after an element the rule's order places later
+   = section:
+           > # Acme
+   = element:
+           > > repository and its issue tracker.
+   = must precede:
+           > .
+   = explain: mdatron explain MDATRON-E0124
+mdatron verify: 2 error(s), 0 warning(s) across 2 finding(s)
 ```
 
 ## Make it yours

@@ -5,6 +5,10 @@ routes:
 - files: "AGENTS.md"
   governed_by: CONTRIBUTING.md
   links: true
+  # Codex stops reading at 32 KiB across the files on one path: the root file
+  # plus one package's. 24 KiB here and 8 KiB per package keeps every path
+  # inside it.
+  max_bytes: 24576
   section_rules:
   # Project policy: the format itself is "just standard Markdown" with no
   # required sections. Anchoring on the H1 also reports a missing or renamed
@@ -24,3 +28,17 @@ routes:
 - files: "packages/*/AGENTS.md"
   governed_by: CONTRIBUTING.md
   links: true
+  max_bytes: 8192
+  section_rules:
+  # No section: the whole document. Codex skips an empty file without a word.
+  - element: line
+    match: "."
+    count: ">= 1"
+# Where a CLAUDE.md exists, Claude Code reads it and not AGENTS.md, unless it
+# imports AGENTS.md.
+- files: "CLAUDE.md"
+  governed_by: CONTRIBUTING.md
+  section_rules:
+  - element: line
+    match: "(^|\\s)@AGENTS\\.md(\\s|$)"
+    count: ">= 1"

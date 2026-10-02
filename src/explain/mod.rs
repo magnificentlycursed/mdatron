@@ -42,6 +42,7 @@ const E0032: &str = include_str!("MDATRON-E0032.md");
 const E0033: &str = include_str!("MDATRON-E0033.md");
 const E0034: &str = include_str!("MDATRON-E0034.md");
 const E0035: &str = include_str!("MDATRON-E0035.md");
+const E0036: &str = include_str!("MDATRON-E0036.md");
 const W0041: &str = include_str!("MDATRON-W0041.md");
 const E0061: &str = include_str!("MDATRON-E0061.md");
 const E0062: &str = include_str!("MDATRON-E0062.md");
@@ -73,6 +74,8 @@ const W0050: &str = include_str!("MDATRON-W0050.md");
 const E0120: &str = include_str!("MDATRON-E0120.md");
 const E0121: &str = include_str!("MDATRON-E0121.md");
 const E0122: &str = include_str!("MDATRON-E0122.md");
+const E0123: &str = include_str!("MDATRON-E0123.md");
+const E0124: &str = include_str!("MDATRON-E0124.md");
 const W0051: &str = include_str!("MDATRON-W0051.md");
 const W0052: &str = include_str!("MDATRON-W0052.md");
 const W0053: &str = include_str!("MDATRON-W0053.md");
@@ -120,6 +123,7 @@ pub fn lookup(code: &str) -> Option<&'static str> {
         "MDATRON-E0033" => Some(E0033),
         "MDATRON-E0034" => Some(E0034),
         "MDATRON-E0035" => Some(E0035),
+        "MDATRON-E0036" => Some(E0036),
         "MDATRON-W0041" => Some(W0041),
         "MDATRON-E0061" => Some(E0061),
         "MDATRON-E0062" => Some(E0062),
@@ -151,6 +155,8 @@ pub fn lookup(code: &str) -> Option<&'static str> {
         "MDATRON-E0120" => Some(E0120),
         "MDATRON-E0121" => Some(E0121),
         "MDATRON-E0122" => Some(E0122),
+        "MDATRON-E0123" => Some(E0123),
+        "MDATRON-E0124" => Some(E0124),
         "MDATRON-W0051" => Some(W0051),
         "MDATRON-W0052" => Some(W0052),
         "MDATRON-W0053" => Some(W0053),
@@ -494,6 +500,22 @@ pub const MIGRATION_NOTES: &[(&str, &str)] = &[
          way; the old key is still accepted). The finding's meaning is \
          unchanged; because quoted labels are fingerprint inputs, every \
          E0093 fingerprint turned over ONCE at 0.7.0.",
+    ),
+    (
+        "MDATRON-E0120",
+        "0.7.0 added a quoted region, `match`, carrying the count rule's own \
+         pattern: through 0.6.0 two count rules on one section produced \
+         findings nothing told apart. The finding's meaning is unchanged; \
+         because quoted regions are fingerprint inputs, every E0120 \
+         fingerprint turned over ONCE at 0.7.0.",
+    ),
+    (
+        "MDATRON-E0122",
+        "0.7.0 added a quoted region, `match`, to the section-not-found \
+         finding of a COUNT rule (a disjoint operand's is unchanged), so two \
+         count rules on one absent section are told apart. The finding's \
+         meaning is unchanged; a count rule's E0122 fingerprint turned over \
+         ONCE at 0.7.0.",
     ),
 ];
 

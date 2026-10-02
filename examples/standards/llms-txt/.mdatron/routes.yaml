@@ -14,3 +14,14 @@ routes:
     element: h2
     match: ".+"
     count: ">= 1"
+  # Every file-list item is "[name](url)", then optionally ": notes" (E0123).
+  - section: "# Acme"
+    element: list-item
+    every: "^- \\[[^\\]]+\\]\\([^)]+\\)(: .+)?$"
+  # The blockquote summary comes before the H2 file lists (E0124).
+  - section: "# Acme"
+    order:
+    - element: blockquote
+      match: "."
+    - element: h2
+      match: "."

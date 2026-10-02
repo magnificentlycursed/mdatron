@@ -13,7 +13,11 @@ Markdown. Use any headings you like"), so the failures are all quiet:
   agent's machine, and in review it looks like any other edit to prose.
 - A section that was dropped, or a link to a doc that was renamed. The agent
   works without what was there.
-- An empty file. Codex skips empty files.
+- An empty file, which Codex skips, or one grown past the 32 KiB at which
+  Codex stops reading.
+- A `CLAUDE.md` beside it. Where one exists, Claude Code reads it and not
+  `AGENTS.md`, so Claude follows different instructions from every other
+  agent unless the `CLAUDE.md` imports `AGENTS.md`.
 
 This recipe uses the route, section, link and pin families. The complete,
 runnable project is
@@ -32,12 +36,14 @@ enforces it).
 |---|---|---|---|---|
 | AGENTS.md | https://agents.md | agentsmd/agents.md@d1ac7f063d20e70015ed6732664049ae4ba9d74e components/ | 2026-03-12 | 2026-10-01 |
 | Codex AGENTS.md discovery | https://learn.chatgpt.com/docs/agent-configuration/agents-md | unversioned documentation page; openai/codex@bb72e151e50cfd4f6282ab86418188af3c83b5df docs/agents_md.md links to it | unversioned | 2026-10-01 |
+| Claude Code project instructions (CLAUDE.md and AGENTS.md) | https://code.claude.com/docs/en/memory | unversioned documentation page; version gates stated through v2.1.283 | unversioned | 2026-10-02 |
 <!-- cookbook-provenance-end -->
 
 To check for drift, compare the pinned commit with the latest one under
 `components/`
 (`gh api 'repos/agentsmd/agents.md/commits?path=components&per_page=1' --jq '.[0].sha'`),
-and fetch the Codex page again: it has no published source to pin.
+and fetch the Codex and Claude Code pages again: neither has a published
+source to pin.
 
 ## What the sources say
 
@@ -51,6 +57,11 @@ and fetch the Codex page again: it has no published source to pin.
   `AGENTS.md`", and concatenates what it finds "from the root down". It
   "skips empty files and stops adding files once the combined size reaches
   the limit", `project_doc_max_bytes`, "32 KiB by default".
+- **Claude Code.** From v2.1.277, by default "Claude reads `AGENTS.md` only
+  when you have no `CLAUDE.md` in your working directory or above it". With
+  both files present it reads "your `CLAUDE.md` files only", unless the
+  `CLAUDE.md` holds an `@AGENTS.md` import. "Import parsing skips Markdown
+  code spans and fenced code blocks."
 
 ## The configuration
 
@@ -58,9 +69,11 @@ and fetch the Codex page again: it has no published source to pin.
 ```yaml
 # The walked set: every AGENTS*.md file, at any depth. Walking the prefix, not
 # only AGENTS.md, is what makes a committed AGENTS.override.md visible: it is
-# walked, no route claims it, and mdatron reports it.
+# walked, no route claims it, and mdatron reports it. CLAUDE.md is walked
+# because, where one exists, Claude Code reads it instead of AGENTS.md.
 file_globs:
   - "**/AGENTS*.md"
+  - "CLAUDE.md"
 ```
 
 <!-- cookbook-file: .mdatron/routes.yaml -->
@@ -72,6 +85,10 @@ routes:
 - files: "AGENTS.md"
   governed_by: CONTRIBUTING.md
   links: true
+  # Codex stops reading at 32 KiB across the files on one path: the root file
+  # plus one package's. 24 KiB here and 8 KiB per package keeps every path
+  # inside it.
+  max_bytes: 24576
   section_rules:
   # Project policy: the format itself is "just standard Markdown" with no
   # required sections. Anchoring on the H1 also reports a missing or renamed
@@ -91,6 +108,20 @@ routes:
 - files: "packages/*/AGENTS.md"
   governed_by: CONTRIBUTING.md
   links: true
+  max_bytes: 8192
+  section_rules:
+  # No section: the whole document. Codex skips an empty file without a word.
+  - element: line
+    match: "."
+    count: ">= 1"
+# Where a CLAUDE.md exists, Claude Code reads it and not AGENTS.md, unless it
+# imports AGENTS.md.
+- files: "CLAUDE.md"
+  governed_by: CONTRIBUTING.md
+  section_rules:
+  - element: line
+    match: "(^|\\s)@AGENTS\\.md(\\s|$)"
+    count: ">= 1"
 ```
 
 The pin record is written by `mdatron pin --update`, which computes the hash
@@ -121,31 +152,24 @@ schemas or patterns directory to exist, and this recipe needs no schema.
 | Agents execute the commands the file lists | section pin on `## Build and test` (`E0061` when it changes, `E0063` when the heading is gone) |
 | Required sections (policy; the format has none) | count rules on the H1's span, one per heading, `== 1` (`E0120`; `E0122` when the H1 is missing) |
 | The file points agents at other docs | route `links: true` on every `AGENTS.md` (`E0110`, `E0111`) |
-| Codex skips an empty file | the H1 anchor and the section pin both report an empty root file |
+| Codex skips an empty file | root: the H1 anchor and the section pin; packages: a whole-document count of `line` elements, `>= 1` (`E0120`) |
+| Codex stops reading at 32 KiB combined | route `max_bytes`, split so the root file plus any one package file fits (`E0036`) |
+| Claude Code reads `CLAUDE.md` in place of `AGENTS.md` | a whole-document count on `CLAUDE.md`: a line holding the `@AGENTS.md` import, `>= 1` (`E0120`) |
 
 ## What this does not check
 
-These are gaps in mdatron, not in the sources, and each is tracked as an
-engine issue:
-
-- **The 32 KiB budget.** Codex stops reading once the files on the path
-  total `project_doc_max_bytes`; instructions past it are dropped. mdatron
-  has no byte bound per route or across a set of files (mdatron #216).
-- **An empty nested file.** The root file is covered by its H1 anchor; a
-  package's `AGENTS.md` has no fixed H1 to anchor on, and mdatron has no
-  "must not be empty" rule (mdatron #217).
-- **`CLAUDE.md` drifting from `AGENTS.md`.** Claude Code reads `CLAUDE.md`,
-  not `AGENTS.md`. A `CLAUDE.md` that does not import `@AGENTS.md` can give
-  Claude different instructions from every other agent, and mdatron cannot
-  assert that one file references another (mdatron #218).
-- **Which section rule failed.** Both count rules anchor on `# Acme`, and an
-  `E0120` names the section and the element, not the rule's `match`, so the
-  finding does not say whether `Build and test` or `Security` is the one
-  missing (mdatron #219).
+- **The combined budget itself.** `max_bytes` bounds each file. The split
+  above is sound for a tree one package deep; mdatron does not add up the
+  files along a path, so a deeper tree needs its budget split by hand.
+- **Whether the import is live.** The `CLAUDE.md` rule looks for
+  `@AGENTS.md` on a line outside fenced code. It does not parse Markdown
+  code spans beyond requiring whitespace before the `@`.
+- **Local files.** A developer's uncommitted `CLAUDE.local.md` also stops
+  Claude Code reading `AGENTS.md`; mdatron sees only the tree it is run on.
 
 Also out of scope: Codex's `project_doc_fallback_filenames` (configured per
-user in `config.toml`, not in the repository) and the global
-`~/.codex/AGENTS.md`.
+user in `config.toml`, not in the repository), the global
+`~/.codex/AGENTS.md`, and Claude Code's **Project instructions** setting.
 
 ## The silent failures, and what mdatron says
 
@@ -189,7 +213,8 @@ mdatron verify: 1 error(s), 0 warning(s) across 1 finding(s)
 ```
 
 **The Security heading is gone.** Its bullets now read as part of "Code
-style", and the section the project requires is missing.
+style", and the section the project requires is missing. The finding quotes
+the rule's `match`, so it says which required heading it is.
 
 <!-- cookbook-case: no-security -->
 ```text
@@ -198,6 +223,8 @@ error[MDATRON-E0120]: section-count-violation
    = note: the named section has 0 matching h2 element(s) across its matching span(s); the rule requires the count == 1
    = section:
            > # Acme
+   = match:
+           > ^Security$
    = explain: mdatron explain MDATRON-E0120
 mdatron verify: 1 error(s), 0 warning(s) across 1 finding(s)
 ```
@@ -226,7 +253,7 @@ error[MDATRON-E0110]: dead-link-target
 mdatron verify: 2 error(s), 0 warning(s) across 2 finding(s)
 ```
 
-**An empty `AGENTS.md`.** Codex skips it without a word. Every rule that
+**An empty root `AGENTS.md`.** Codex skips it without a word. Every rule that
 needed its content reports instead.
 
 <!-- cookbook-case: empty-file -->
@@ -245,14 +272,60 @@ error[MDATRON-E0122]: section-not-found
    = note: no heading in this document matches the section rule's section spec (matching is exact on level and text), so its count assertion cannot be evaluated
    = section:
            > # Acme
+   = match:
+           > ^Build and test$
    = explain: mdatron explain MDATRON-E0122
 error[MDATRON-E0122]: section-not-found
   --> AGENTS.md:1
    = note: no heading in this document matches the section rule's section spec (matching is exact on level and text), so its count assertion cannot be evaluated
    = section:
            > # Acme
+   = match:
+           > ^Security$
    = explain: mdatron explain MDATRON-E0122
 mdatron verify: 3 error(s), 0 warning(s) across 3 finding(s)
+```
+
+**An empty package `AGENTS.md`.** It has no fixed heading to anchor on, so
+the rule counts lines over the whole document.
+
+<!-- cookbook-case: empty-nested -->
+```text
+error[MDATRON-E0120]: section-count-violation
+  --> packages/api/AGENTS.md:1
+   = note: the document has 0 matching line element(s); the rule requires the count >= 1
+   = match:
+           > .
+   = explain: mdatron explain MDATRON-E0120
+mdatron verify: 1 error(s), 0 warning(s) across 1 finding(s)
+```
+
+**A root file past its budget.** Five hundred style reminders were appended.
+Codex would stop reading before it reached any package's file.
+
+<!-- cookbook-case: over-budget -->
+```text
+error[MDATRON-E0036]: file-over-byte-budget
+  --> AGENTS.md:1
+   = note: this file is 27134 bytes; its route allows at most 24576 (max_bytes)
+   = help: shorten the file or move detail into a document it links to; raise the route's max_bytes only if the consumer's budget really is larger
+   = explain: mdatron explain MDATRON-E0036
+mdatron verify: 1 error(s), 0 warning(s) across 1 finding(s)
+```
+
+**A `CLAUDE.md` that mentions `AGENTS.md` in words.** The import was replaced
+by a sentence. Claude Code now reads `CLAUDE.md` alone: it "sees `AGENTS.md`
+only if it decides to open the file".
+
+<!-- cookbook-case: claude-without-import -->
+```text
+error[MDATRON-E0120]: section-count-violation
+  --> CLAUDE.md:1
+   = note: the document has 0 matching line element(s); the rule requires the count >= 1
+   = match:
+           > (^|\s)@AGENTS\.md(\s|$)
+   = explain: mdatron explain MDATRON-E0120
+mdatron verify: 1 error(s), 0 warning(s) across 1 finding(s)
 ```
 
 ## Make it yours
@@ -263,5 +336,7 @@ mdatron verify: 3 error(s), 0 warning(s) across 3 finding(s)
   it a route of its own so it is checked, rather than leaving it unrouted.
 - **Pin what agents execute.** Pin each section that lists commands,
   including a package's own `## Build and test`.
+- **No `CLAUDE.md`.** If your repository has none, drop its glob and route:
+  Claude Code then reads `AGENTS.md` directly.
 - **Codex fallback names.** If your team sets `project_doc_fallback_filenames`,
   add those names to `file_globs` and route them like `AGENTS.md`.
