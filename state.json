@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1221,
-        "tip_oid": "78d5b8275559c56f4eb82fa2747fb117a967d3b0",
-        "prefix_sha256": "ec5187b52bab3496820d013c8e8f7d23b7102a4085f1c5216e899000f6e1c1f9"
+        "sequence": 1222,
+        "tip_oid": "b27346ef2de0a13c32361af95d1757aaf3c87626",
+        "prefix_sha256": "49ca9139d76c2d8be4ce02f76fdf2e6f235c3414b3239aa894d635041a1bbdd9"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 221,
+  "next_display_id": 222,
   "next_comment_id": 603,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -114,6 +114,7 @@
     "6778c47f-8706-4a31-9cbe-2d60f8fdf19c": 50,
     "67a3e712-80ac-4942-b424-751fe00183d5": 190,
     "67c6fa14-5eb9-4657-abd6-904507360757": 99,
+    "6810436f-0c90-43d2-9254-92ce7e066aea": 221,
     "685a5139-6347-4bf4-abd8-ce9c7ac48024": 117,
     "688e0ef3-333c-422b-96dc-d0295a1ff25c": 184,
     "69b33517-946c-45ba-9287-c1231028d5ec": 47,
@@ -3589,6 +3590,17 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA6gIjKZGcGkd4VnJ5a+OD1j3zHkxitGJldZqnqBUjB0lAlSiT3hDeCIeaI7EI+iB86yVtpw5BSHcmwv8yCc2KBw=="
         }
       }
+    },
+    "6810436f-0c90-43d2-9254-92ce7e066aea": {
+      "uuid": "6810436f-0c90-43d2-9254-92ce7e066aea",
+      "display_id": 221,
+      "title": "Add a rule that a file has a sibling or that an import target exists",
+      "description": "Surfaced by the AGENTS.md recipe's cold review. With a root CLAUDE.md present, Claude Code reads a package's AGENTS.md only through a CLAUDE.md beside it; mdatron can check each CLAUDE.md it finds but cannot require that every AGENTS.md has a sibling CLAUDE.md, nor that the AGENTS.md an @AGENTS.md import names exists beside the importing file.",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-10-02T20:30:23.543259Z",
+      "updated_at": "2026-10-02T20:30:23.543259Z"
     },
     "685a5139-6347-4bf4-abd8-ce9c7ac48024": {
       "uuid": "685a5139-6347-4bf4-abd8-ce9c7ac48024",
