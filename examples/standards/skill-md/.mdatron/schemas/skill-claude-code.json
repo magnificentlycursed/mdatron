@@ -1,0 +1,204 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SKILL.md frontmatter, Claude Code extended profile",
+  "description": "Every field Claude Code documents for a skill, and nothing else. Claude Code itself ignores a field it does not recognize without reporting an error, so a misspelled key (when-to-use, argument_hint) silently does nothing; this profile makes it a finding. All fields are optional in Claude Code. A skill bound here is NOT upload-safe: the extension fields fail claude.ai upload and the Skills API; bind skills you upload to the spec-strict profile instead. Project policy on top of the vendor rules: `description` is required (Claude Code only recommends it, and falls back to the body's first line) \u2014 which also makes a skill whose opening --- is not on line 1, and whose frontmatter Claude Code therefore ignores, a finding instead of a silent pass.",
+  "x-source": [
+    {
+      "standard": "Claude Code skills reference",
+      "url": "https://code.claude.com/docs/en/skills",
+      "revision": "unversioned documentation page; field table as retrieved",
+      "revision_date": "unversioned",
+      "retrieved": "2026-09-28"
+    },
+    {
+      "standard": "Agent Skills specification",
+      "url": "https://agentskills.io/specification",
+      "revision": "agentskills/agentskills@217be548739f21d6008915c29aefe320ea1a90af docs/specification.mdx",
+      "revision_date": "2026-08-04",
+      "retrieved": "2026-09-28",
+      "note": "the six shared fields keep the spec's constraints"
+    }
+  ],
+  "type": "object",
+  "required": [
+    "description"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "Command name; defaults to the directory name (Claude Code). Spec constraints kept."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1536,
+      "description": "Claude Code truncates description + when_to_use at 1,536 chars combined in the skill listing; this bound covers description alone (the combined sum is on the recipe's can't-check list)."
+    },
+    "when_to_use": {
+      "type": "string",
+      "maxLength": 1536
+    },
+    "argument-hint": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ],
+      "description": "Autocomplete hint. The reference gives examples ([issue-number]) but no type; written unquoted, [x] parses as a YAML list, so a list is accepted rather than reported (how Claude Code renders one is undocumented)."
+    },
+    "arguments": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "disable-model-invocation": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "string",
+          "pattern": "^(?i)(true|false|yes|no|on|off|1|0)$"
+        },
+        {
+          "enum": [
+            0,
+            1
+          ]
+        }
+      ],
+      "description": "Claude Code accepts true/false and, from v2.1.218, yes/no/on/off/1/0 in any case."
+    },
+    "user-invocable": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "string",
+          "pattern": "^(?i)(true|false|yes|no|on|off|1|0)$"
+        },
+        {
+          "enum": [
+            0,
+            1
+          ]
+        }
+      ],
+      "description": "Claude Code accepts true/false and, from v2.1.218, yes/no/on/off/1/0 in any case."
+    },
+    "allowed-tools": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "disallowed-tools": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "model": {
+      "type": "string"
+    },
+    "effort": {
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ]
+    },
+    "context": {
+      "const": "fork"
+    },
+    "agent": {
+      "type": "string"
+    },
+    "background": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "string",
+          "pattern": "^(?i)(true|false|yes|no|on|off|1|0)$"
+        },
+        {
+          "enum": [
+            0,
+            1
+          ]
+        }
+      ],
+      "description": "Claude Code accepts true/false and, from v2.1.218, yes/no/on/off/1/0 in any case."
+    },
+    "hooks": {
+      "type": "object"
+    },
+    "paths": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "shell": {
+      "enum": [
+        "bash",
+        "powershell"
+      ]
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "license": {
+      "type": "string"
+    },
+    "compatibility": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    }
+  },
+  "additionalProperties": false
+}

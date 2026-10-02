@@ -599,6 +599,12 @@ The adoption sequence — each step optional after the first, except that step
 - [`docs/inputs.md`](./docs/inputs.md) (`mdatron docs inputs`) — every
   `.mdatron/` input file in one place: shape, required and optional keys,
   activation, scope, codes
+- [`docs/cookbook/`](./docs/cookbook/skill-md.md) — recipes for real agent-configuration
+  standards, each with a runnable example project under `examples/standards/`, the
+  sources and revisions it is evaluated against, what it cannot check, and the actual
+  output of each silent failure it catches (all compared with the examples in CI);
+  recipes so far: `SKILL.md` (Agent Skills, Claude Code, Codex), Claude Code subagents, GitHub
+  Copilot `.instructions.md`, and `llms.txt`
 - [`docs/faq.md`](./docs/faq.md) (`mdatron docs faq`) — prior-art comparisons,
   influences, and frequently asked questions
 - [`docs/limits.md`](./docs/limits.md) (`mdatron docs limits`) — every declared input and enumeration

@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Copilot path-specific instructions frontmatter (*.instructions.md)",
+  "description": "The keys the two sources document, and nothing else: applyTo and excludeAgent (GitHub.com: Copilot cloud agent and code review) and name and description (VS Code). Neither source says what happens to an unknown key or a malformed one, so nothing reports it; this profile does. Project policy on top of the vendor rules: applyTo is required. GitHub.com selects path-specific files by applyTo and has no manual or description-based activation, and VS Code applies a file without applyTo only by task relevance or when attached by hand.",
+  "x-source": [
+    {
+      "standard": "GitHub Copilot repository custom instructions (GitHub.com)",
+      "url": "https://docs.github.com/en/copilot/how-tos/custom-instructions/adding-repository-custom-instructions-for-github-copilot",
+      "revision": "github/docs@a31ee09ca842e9177e5be8b053dee2f4e8b29f8f data/reusables/copilot/custom-instructions-path.md",
+      "revision_date": "2026-04-07",
+      "retrieved": "2026-09-28"
+    },
+    {
+      "standard": "VS Code custom instructions",
+      "url": "https://code.visualstudio.com/docs/agent-customization/custom-instructions",
+      "revision": "microsoft/vscode-docs@4f4413d9a9d3f7e59284da7cdbb21bc3b9f65c48 docs/agent-customization/custom-instructions.md",
+      "revision_date": "2026-09-23",
+      "retrieved": "2026-09-28"
+    }
+  ],
+  "type": "object",
+  "required": [
+    "applyTo"
+  ],
+  "properties": {
+    "applyTo": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Glob(s), comma-separated for several (GitHub.com); relative to the workspace root (VS Code)."
+    },
+    "excludeAgent": {
+      "enum": [
+        "code-review",
+        "cloud-agent"
+      ],
+      "description": "GitHub.com only. The coding agent was renamed the cloud agent (github/docs, 2026-04-07); 'coding-agent' is not a documented value."
+    },
+    "name": {
+      "type": "string",
+      "description": "VS Code only: display name; defaults to the file name."
+    },
+    "description": {
+      "type": "string",
+      "description": "VS Code only: the tasks the file is relevant for."
+    }
+  },
+  "additionalProperties": false
+}

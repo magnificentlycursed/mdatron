@@ -1,0 +1,4 @@
+# The walked set: the llms.txt file (Markdown content, .txt name). The docs it
+# links to are link targets, captured when checked, not walked themselves.
+file_globs:
+  - "llms.txt"

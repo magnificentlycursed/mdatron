@@ -1,0 +1,26 @@
+mdatron_format_version: 1
+routes:
+# The root file, the one every agent reads. Relative links and #anchors must
+# resolve.
+- files: "AGENTS.md"
+  governed_by: CONTRIBUTING.md
+  links: true
+  section_rules:
+  # Project policy: the format itself is "just standard Markdown" with no
+  # required sections. Anchoring on the H1 also reports a missing or renamed
+  # H1 (E0122), which is what an empty file has.
+  - section: "# Acme"
+    element: h2
+    match: "^Build and test$"
+    match_on: name
+    count: "== 1"
+  - section: "# Acme"
+    element: h2
+    match: "^Security$"
+    match_on: name
+    count: "== 1"
+# One AGENTS.md per package: the closest file to an edited path wins. No route
+# claims AGENTS.override.md, so a committed one is unrouted (E0030).
+- files: "packages/*/AGENTS.md"
+  governed_by: CONTRIBUTING.md
+  links: true

@@ -1,0 +1,6 @@
+# The walked set: exactly the SKILL.md files. A skill's other files
+# (references/, scripts/, assets/) are not frontmatter-bearing and are not
+# walked, so the closed-world route check does not demand a route for them.
+file_globs:
+  - ".agents/skills/*/SKILL.md"
+  - ".claude/skills/*/SKILL.md"

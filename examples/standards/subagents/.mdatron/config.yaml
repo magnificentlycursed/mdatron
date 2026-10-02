@@ -1,0 +1,5 @@
+# The walked set: the subagent definition files. Claude Code scans agents
+# directories recursively and a subagent's identity is its `name`, not its path.
+file_globs:
+  - ".claude/agents/**/*.md"
+  - "plugin/agents/**/*.md"
