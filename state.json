@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1237,
-        "tip_oid": "6c0be12b1c23eba508c80c8ff449484b267aa17e",
-        "prefix_sha256": "c3650a31545091172803219135187fad8f08a42955b6230b93455f40c411e3b5"
+        "sequence": 1238,
+        "tip_oid": "922e79b54e22619308ae3d428033caf13af1d2cd",
+        "prefix_sha256": "17199fa3b3f75d406b0660e6d154818ace5708224354622d9dc420040ff355e2"
       },
       "IMWa": {
         "sequence": 2,
@@ -3087,11 +3087,12 @@
       "display_id": 216,
       "title": "Add a byte bound per route and across a set of files",
       "description": "Surfaced by the AGENTS.md recipe (#181). Codex stops reading AGENTS.md files once the files on the path total project_doc_max_bytes (32 KiB by default); instructions past it are dropped silently. mdatron has no byte-size rule per route, nor a combined bound across the files that concatenate along one directory path.",
-      "status": "open",
+      "status": "closed",
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-10-01T21:21:03.213394Z",
-      "updated_at": "2026-10-01T21:21:42.561261Z",
+      "updated_at": "2026-10-02T21:50:58.244603Z",
+      "closed_at": "2026-10-02T21:50:58.215413Z",
       "labels": [
         "enhancement"
       ]
