@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1242,
-        "tip_oid": "b8c974f52b7625c56b80e0db3f51392afde658de",
-        "prefix_sha256": "288aaccc392d975fd714f1fcdfb8255a477a29b20313d35951133b56925c5a15"
+        "sequence": 1243,
+        "tip_oid": "c4bc2f920d9fad313aac49cac47d71da2be0b672",
+        "prefix_sha256": "0edc072d69b391e20e97e6793e334fc2649a521fbf133849ee2be8d9311fc972"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 226,
-  "next_comment_id": 604,
+  "next_comment_id": 605,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -3642,10 +3642,21 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-10-02T20:30:23.543259Z",
-      "updated_at": "2026-10-02T22:11:36.098195Z",
+      "updated_at": "2026-10-02T22:12:39.672858Z",
       "labels": [
         "enhancement"
-      ]
+      ],
+      "comments": {
+        "41d42689-0a8b-4524-8fe0-b86ea7c124e4": {
+          "display_id": 604,
+          "author": "79Ig",
+          "content": "Split (operator 2026-10-02): this issue keeps the SIBLING check — a route key naming a file that must exist beside each claimed file (the AGENTS.md recipe: every packages/*/AGENTS.md needs a CLAUDE.md beside it, or Claude Code never reads it once a root CLAUDE.md exists). The @import-target half moves to its own issue as a LINK-family extension: an import is a reference to a file and belongs with the dead-link check, not with an existence rule.",
+          "created_at": "2026-10-02T22:12:39.630926Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA8q8ilJIfHc5Nhex7ua5WCexh2jYluwt6WV7w4yQvRv171GT9suBseOsGZWDBFwNrp2GZvYtdZLbg2xzA4pzfAg=="
+        }
+      }
     },
     "685a5139-6347-4bf4-abd8-ce9c7ac48024": {
       "uuid": "685a5139-6347-4bf4-abd8-ce9c7ac48024",
