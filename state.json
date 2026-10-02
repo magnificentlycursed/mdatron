@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1246,
-        "tip_oid": "f8724e80230aceb5872780f59f7db656a56ef679",
-        "prefix_sha256": "a2d90ff4d9b1244e9c0df3e5df4f5ee7146fe9636d48da1b1cfb91ccc1960b9d"
+        "sequence": 1247,
+        "tip_oid": "6fbb8ded5b94df6d9880807818dcf3650e914f15",
+        "prefix_sha256": "d67c036d62fd53c516a42452bbc2f6ee05945d4ad31cfaf4711ff8964f91858d"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 227,
-  "next_comment_id": 605,
+  "next_comment_id": 606,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -6446,7 +6446,18 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-09-29T02:20:48.033477Z",
-      "updated_at": "2026-10-02T23:24:46.366428Z"
+      "updated_at": "2026-10-02T23:25:48.342737Z",
+      "comments": {
+        "8a1bf484-d1e6-4c46-9e14-84a34c4417a1": {
+          "display_id": 605,
+          "author": "79Ig",
+          "content": "RULING (operator 2026-10-02, 'Agree'): mdatron will NOT fetch URLs — not in verify, not behind a flag. Findings are a function of the tree (offline, no clock); liveness is a property of the world at a moment and belongs to lychee-class tools. Record the boundary in DESIGN.md. Re-scoped to four OFFLINE pieces, post-0.7.0: (1) an external-link REGISTER — .mdatron/links.yaml listing the URLs the corpus may point at; an outbound link not in it is a finding (the code-catalog family's declared-set shape; the register is the one file a liveness tool checks on a schedule). First, since the llms.txt recipe needs it. (2) well-formed URL: scheme, host, no spaces, balanced brackets — dead everywhere forever, checkable offline. (3) link POLICY per route: https only, allowed hosts, no tracking parameters. (4) EXPORT: mdatron links --external --json, every outbound URL with file and line, for whatever liveness tool runs it.",
+          "created_at": "2026-10-02T23:25:48.300655Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAXGnMjK491DBMuFDtL4sxLQwmHg8AGXuwLk86L2ON0Irj6Btb4RH6HzgLHovolLm9R73Jq4Q+1u8PGZAuV2rnAQ=="
+        }
+      }
     },
     "b996b1ec-a892-47dc-9569-7b00b64bdeec": {
       "uuid": "b996b1ec-a892-47dc-9569-7b00b64bdeec",
