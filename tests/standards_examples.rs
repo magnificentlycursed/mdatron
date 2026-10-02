@@ -450,6 +450,9 @@ fn llms_case(case: &str) -> Scratch {
                            > repository and its issue tracker.\n";
             format!("{}\n{summary}", t.replace(&format!("{summary}\n"), ""))
         }),
+        "second-h1" => s.edit(l, |t| {
+            format!("{t}\n# Appendix\n\n- notes kept out of every rule\n")
+        }),
         other => panic!("unknown case {other}"),
     }
     s
@@ -462,6 +465,7 @@ const LLMS_CASES: &[&str] = &[
     "no-file-lists",
     "item-not-a-link",
     "summary-after-lists",
+    "second-h1",
 ];
 
 #[test]
@@ -477,6 +481,31 @@ fn llms_page_shows_the_real_output_of_each_case() {
             "{case}: the page's output block must be the real output"
         );
     }
+}
+
+/// Cold review round 1 (DOCS-3/ADV-7/ADV-5): the recipe must not fail what the
+/// specification allows — a plain list in the free-form area above the file
+/// lists (the specification's own example has one), other bullet markers, a
+/// nested or numbered item, a trailing space, a tab after the marker, a
+/// thematic break, a URL with parentheses, and a leading byte-order mark.
+#[test]
+fn llms_recipe_accepts_what_the_specification_allows() {
+    let s = Scratch::of("llms-txt", "spec-allowed");
+    s.edit("llms.txt", |t| {
+        let t = t.replace(
+            "## Docs\n",
+            "Important notes:\n\n- Acme is not a changelog generator\n- It needs git 2.40\n\n## Docs\n",
+        );
+        let t = t.replace(
+            "- [Changelog](docs/changelog.md)",
+            "* [Changelog](docs/changelog.md) \n  - [Nested](docs/changelog.md): n\n\
+             1. [Numbered](docs/changelog.md)\n-\t[Tab](docs/changelog.md)\n\
+             + [Wiki](https://en.wikipedia.org/wiki/Acme_(x)): parentheses\n\n* * *\n",
+        );
+        format!("\u{feff}{t}")
+    });
+    let (code, _, stderr) = verify(&s.0, false);
+    assert_eq!(code, Some(0), "{stderr}");
 }
 
 #[test]
@@ -520,6 +549,10 @@ fn agents_case(case: &str) -> Scratch {
         "claude-without-import" => s.edit("CLAUDE.md", |t| {
             t.replace("@AGENTS.md\n", "See AGENTS.md for the build commands.\n")
         }),
+        "stray-claude" => {
+            fs::create_dir(s.0.join(".claude")).unwrap();
+            s.create(".claude/CLAUDE.md", "Prefer small commits.\n");
+        }
         other => panic!("unknown case {other}"),
     }
     s
@@ -534,6 +567,7 @@ const AGENTS_CASES: &[&str] = &[
     "over-budget",
     "empty-nested",
     "claude-without-import",
+    "stray-claude",
 ];
 
 #[test]

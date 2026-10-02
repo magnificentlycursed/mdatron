@@ -7,17 +7,29 @@ routes:
   # outside the tree and not checked).
   links: true
   section_rules:
+  # One H1 in the whole file: the rules below cover that H1's span, which a
+  # second H1 would end.
+  - element: h1
+    match: "."
+    count: "== 1"
   # The H1 with the project's name is the one required section. Anchoring on
-  # it reports a missing or renamed H1 (E0122); the span runs to the end of
-  # the file, so this also requires at least one H2 file list (E0120).
+  # it reports a missing or renamed H1 (E0122), and its span must hold at
+  # least one H2 file list (E0120).
   - section: "# Acme"
     element: h2
     match: ".+"
     count: ">= 1"
-  # Every file-list item is "[name](url)", then optionally ": notes" (E0123).
-  - section: "# Acme"
+  # In each file list, every item is "[name](url)", then optionally ": notes"
+  # (E0123). One rule per list; `match_on: name` tests the item's text, so the
+  # bullet marker and indentation do not matter.
+  - section: "## Docs"
     element: list-item
-    every: "^- \\[[^\\]]+\\]\\([^)]+\\)(: .+)?$"
+    every: "^\\[[^\\]]+\\]\\(.+\\)(: .+)?$"
+    match_on: name
+  - section: "## Optional"
+    element: list-item
+    every: "^\\[[^\\]]+\\]\\(.+\\)(: .+)?$"
+    match_on: name
   # The blockquote summary comes before the H2 file lists (E0124).
   - section: "# Acme"
     order:

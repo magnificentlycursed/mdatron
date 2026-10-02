@@ -415,27 +415,48 @@ pub(crate) fn list_item_bold_name(line: &str) -> Option<&str> {
     Some(&after_open[..end])
 }
 
-/// The text of a list item after its marker — `- `, `* `, `+ `, or an ordinal
-/// (`1. ` / `1) `, up to nine digits as CommonMark allows) — or `None` when the
-/// line does not open a list item. Any indentation is accepted, so a nested
-/// item is an item (#213).
+/// The text of a list item after its marker — `-`, `*`, `+`, or an ordinal
+/// (`1.` / `1)`, up to nine digits as CommonMark allows), followed by a space
+/// or a tab — or `None` when the line does not open a list item (#213).
+///
+/// Recognised by the line's prefix alone, so three things differ from a
+/// CommonMark parse and are stated in `docs/inputs.md`: any indentation of
+/// spaces or tabs is accepted (a nested item is an item, and so is an
+/// item-shaped line of indented code); a marker with nothing after it is not
+/// an item; a thematic break written with spaces (`* * *`, `- - -`) is NOT an
+/// item, though it opens with a marker.
 pub(crate) fn list_item_text(line: &str) -> Option<&str> {
-    let t = line.trim_start();
-    if let Some(rest) = t
-        .strip_prefix("- ")
-        .or_else(|| t.strip_prefix("* "))
-        .or_else(|| t.strip_prefix("+ "))
-    {
-        return Some(rest.trim());
-    }
-    let digits = t.bytes().take_while(u8::is_ascii_digit).count();
-    if digits == 0 || digits > 9 {
+    // Spaces and tabs only: `trim_start` would also strip a no-break space,
+    // which is text, not indentation.
+    let t = line.trim_start_matches([' ', '\t']);
+    if is_thematic_break(t) {
         return None;
     }
-    let rest = t[digits..]
-        .strip_prefix(". ")
-        .or_else(|| t[digits..].strip_prefix(") "))?;
-    Some(rest.trim())
+    let after_marker = match t.as_bytes().first()? {
+        b'-' | b'*' | b'+' => &t[1..],
+        _ => {
+            let digits = t.bytes().take_while(u8::is_ascii_digit).count();
+            if digits == 0 || digits > 9 {
+                return None;
+            }
+            t[digits..]
+                .strip_prefix('.')
+                .or_else(|| t[digits..].strip_prefix(')'))?
+        }
+    };
+    after_marker
+        .strip_prefix([' ', '\t'])
+        .map(|rest| rest.trim())
+}
+
+/// A CommonMark thematic break: three or more of one of `-`, `*`, `_`, with
+/// only spaces or tabs between and around them.
+fn is_thematic_break(line: &str) -> bool {
+    let mut marks = line.chars().filter(|c| !matches!(c, ' ' | '\t'));
+    let Some(first) = marks.next() else {
+        return false;
+    };
+    matches!(first, '-' | '*' | '_') && marks.clone().all(|c| c == first) && marks.count() >= 2
 }
 
 /// The text of a blockquote line after its `>` marker, or `None`. The marker

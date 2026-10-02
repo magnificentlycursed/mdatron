@@ -11278,6 +11278,20 @@ pattern:
         let zero = skills_project("max-bytes-zero", "  max_bytes: 0\n");
         zero.write(".claude/skills/a/SKILL.md", "# a\n");
         assert!(verify(&VerifyConfig::from_project(&zero.0).unwrap()).is_err());
+
+        // A bound at or above the engine's per-file input limit can never
+        // report a file either: refused (cold review round 1, ARCH-7).
+        for dead in [MAX_FILE_BYTES, MAX_FILE_BYTES + 1] {
+            let proj = skills_project("max-bytes-dead", &format!("  max_bytes: {dead}\n"));
+            proj.write(".claude/skills/a/SKILL.md", "# a\n");
+            assert!(verify(&VerifyConfig::from_project(&proj.0).unwrap()).is_err());
+        }
+        let top = skills_project(
+            "max-bytes-top",
+            &format!("  max_bytes: {}\n", MAX_FILE_BYTES - 1),
+        );
+        top.write(".claude/skills/a/SKILL.md", "# a\n");
+        assert!(verify(&VerifyConfig::from_project(&top.0).unwrap()).is_ok());
     }
 
     // #217/#218 end to end: a whole-document count rule (no `section`) on a

@@ -15,9 +15,9 @@ integer (`>= 1`, `== 1`, `< 3`); the engine counts the
 elements of that class inside that section's span (from its heading through
 just before the next heading of the same or higher level, fence-aware) that
 match, and asserts the predicate. A rule with no `section` counts over the
-whole document, which is how "this file is not empty" (`element: line`,
+whole document body, which is how "this file is not empty" (`element: line`,
 `match: "."`, `count: ">= 1"`) and "this file contains this line" are
-written. The rule's `match` pattern is quoted beneath the diagnostic, so two
+written. The body excludes the frontmatter and fenced code blocks. The rule's `match` pattern is quoted beneath the diagnostic, so two
 rules on one section can be told apart. This is the body-content counterpart of
 the DSL's frontmatter arity rule (`count(filter(...)) == N`), delivered as a
 fixed-semantics check because body-content extraction is excluded from the rule
@@ -34,5 +34,8 @@ the count leaves the required range.
   present; remove or move it.
 - **The headings changed shape.** If a rename made them stop matching `match`,
   update the heading text or the rule's `match` pattern.
-- **The file is empty or lost a required line.** For a whole-document rule,
-  restore the content the quoted `match` pattern looks for.
+- **The file is empty or lost a required line.** For a rule with no section
+  (the message says "the document has"), read the quoted `match`: a pattern
+  of `.` means the file has no non-blank line outside its frontmatter and
+  fenced code, so add content; any other pattern names a line the file must
+  hold, so restore that line.

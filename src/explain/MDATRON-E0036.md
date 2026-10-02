@@ -9,9 +9,11 @@
 The route claiming this file sets `max_bytes`, and the file is larger. The
 bound exists for consumers that read only so much: Codex, for one, stops
 adding `AGENTS.md` files once they total 32 KiB, and whatever is past the
-budget is dropped without a warning. The file's size and the bound are in
-the diagnostic's message. The size is the file's whole content in bytes,
-frontmatter included.
+budget is cut off without a warning. The file's size and the bound are in
+the diagnostic's message. The size is the file's whole content in bytes as
+checked out: frontmatter included, and CRLF line endings counted, so a
+Windows checkout of the same file can be larger. Keep bounded files on LF
+line endings (`eol=lf` in `.gitattributes`).
 
 The bound is per file. Where a consumer's budget covers several files read
 together, split it across their routes so that the largest combination still

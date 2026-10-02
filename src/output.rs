@@ -144,8 +144,8 @@ pub struct Families {
     /// member of the forward-extensible `families` (a MINOR, folded into the
     /// unpublished 3.0.0 alongside the other reference families).
     pub code_catalog: FamilyActivity,
-    /// The section-structural family (#157, vsdd GH#20 P5): count/disjointness
-    /// assertions over markdown body sections. Additive member of the
+    /// The section-structural family (#157, vsdd GH#20 P5): count, every, order
+    /// and disjointness assertions over markdown body sections. Additive member of the
     /// forward-extensible `families` (folded into the unpublished 3.0.0).
     pub section: FamilyActivity,
     /// The rule-DSL lane (#204 R6, envelope 3.1.0): not a check family (DESIGN

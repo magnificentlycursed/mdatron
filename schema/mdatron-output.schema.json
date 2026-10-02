@@ -97,7 +97,7 @@
         "link": { "$ref": "#/$defs/activity", "description": "Body markdown link and #anchor resolution." },
         "marker": { "$ref": "#/$defs/activity", "description": "Marker-line references: declared-pattern lines resolving by name into a target document." },
         "code_catalog": { "$ref": "#/$defs/activity", "description": "Adopter code-token resolution against declared code catalogs." },
-        "section": { "$ref": "#/$defs/activity", "description": "Section-structural count/disjointness assertions over body sections." },
+        "section": { "$ref": "#/$defs/activity", "description": "Section-structural count, every, order and disjointness assertions over body sections." },
         "rule_dsl": { "$ref": "#/$defs/activity", "description": "The rule-DSL lane (3.1.0): pattern rules over frontmatter. Not a check family, reported here so the envelope can say whether any rule ran — inactive = no pattern file; inert = patterns supplied but no rule context matched a walked file; active = rules ran." }
       }
     },

@@ -163,6 +163,21 @@ impl OrderItem {
     fn matches(&self, line: &str) -> bool {
         element_matches(self.element, &self.matcher, self.on, line)
     }
+
+    /// The item as a reader names it: its element class and its pattern.
+    fn describe(&self) -> String {
+        format!(
+            "{} matching {}",
+            self.element.as_str(),
+            self.matcher.as_str()
+        )
+    }
+
+    fn same_as(&self, other: &Self) -> bool {
+        self.element == other.element
+            && self.on == other.on
+            && self.matcher.as_str() == other.matcher.as_str()
+    }
 }
 
 /// Whether `line` is an element of `element` that `matcher` accepts, tested
@@ -264,7 +279,8 @@ pub(crate) fn compile_rule(r: RawRule) -> Result<Rule, Error> {
     // rule would be a silent no-op — refused at load, the same hard posture as
     // a non-compiling pattern.
     let heading_spec = |s: &str| match atx_heading(s) {
-        Some((_, text)) if !text.is_empty() => Ok(()),
+        // A spec holding a line break can never equal a heading line.
+        Some((_, text)) if !text.is_empty() && !s.contains(['\n', '\r']) => Ok(()),
         _ => Err(Error::Config(format!(
             "section-rules section spec '{s}' is not a heading; a section \
              spec must be the full ATX heading line with non-empty heading \
@@ -308,6 +324,17 @@ pub(crate) fn compile_rule(r: RawRule) -> Result<Rule, Error> {
                 })
             })
             .collect::<Result<Vec<_>, Error>>()?;
+        // An element belongs to the first item it matches, so a repeated item
+        // can never be reached: a dead step, refused like any dead knob.
+        for (i, item) in items.iter().enumerate() {
+            if items[..i].iter().any(|earlier| earlier.same_as(item)) {
+                return Err(Error::Config(format!(
+                    "an `order` rule repeats the item `{}`; an element belongs to the first \
+                     item it matches, so the repeat can never be reached",
+                    item.describe()
+                )));
+            }
+        }
         return Ok(Rule::Order {
             section: optional_section(r.section)?,
             items,
@@ -328,6 +355,13 @@ pub(crate) fn compile_rule(r: RawRule) -> Result<Rule, Error> {
                     .into(),
             ));
         };
+        if pattern.is_empty() {
+            return Err(Error::Config(
+                "an `every` section-rule has an empty pattern, which every element matches; \
+                 the rule could never report anything"
+                    .into(),
+            ));
+        }
         return Ok(Rule::Every {
             matcher: compile(&pattern)?,
             section: optional_section(r.section)?,
@@ -410,8 +444,18 @@ pub fn check_file(
     if rules.is_empty() {
         return;
     }
+    // A leading byte-order mark is not content: left in place it glues itself
+    // to the first line, so a heading or a required line there never matches.
+    let body_offset = if body_offset == 0 && content.starts_with('\u{feff}') {
+        '\u{feff}'.len_utf8()
+    } else {
+        body_offset
+    };
     let body = &content[body_offset..];
     for &rule in rules {
+        // Per-rule: a rule's findings are located in document order, so the
+        // cursor counts each newline once, not once per finding.
+        let mut lines = LineCursor::new(content);
         match rule {
             Rule::Count {
                 section,
@@ -506,15 +550,20 @@ pub fn check_file(
                 };
                 for span in spans {
                     for (offset, line) in element_lines(span, section.is_some()) {
-                        if element.name_in(line).is_none()
-                            || element_matches(*element, matcher, *on, line)
-                        {
+                        let Some(name) = element.name_in(line) else {
+                            continue;
+                        };
+                        let subject = match on {
+                            MatchOn::Line => line,
+                            MatchOn::Name => name,
+                        };
+                        if matcher.is_match(subject) {
                             continue;
                         }
                         findings.push(section_finding(
                             path,
                             content,
-                            line_at(content, body_offset, body, span, offset),
+                            lines.line_of(abs_offset(body_offset, body, span, offset)),
                             "MDATRON-E0123",
                             "section-element-mismatch",
                             // #165: the element's text is governed content and
@@ -543,7 +592,18 @@ pub fn check_file(
                         "no heading in this document matches the section rule's \
                          section spec (matching is exact on level and text), so \
                          its order assertion cannot be evaluated",
-                        with_section(section, Vec::new()),
+                        // The items tell two order rules on one section apart.
+                        with_section(
+                            section,
+                            vec![quoted(
+                                "order",
+                                &items
+                                    .iter()
+                                    .map(OrderItem::describe)
+                                    .collect::<Vec<_>>()
+                                    .join(", then "),
+                            )],
+                        ),
                     ));
                     continue;
                 };
@@ -561,7 +621,7 @@ pub fn check_file(
                             Some(later) if step < later => findings.push(section_finding(
                                 path,
                                 content,
-                                line_at(content, body_offset, body, span, offset),
+                                lines.line_of(abs_offset(body_offset, body, span, offset)),
                                 "MDATRON-E0124",
                                 "section-order-violation",
                                 "this element appears after an element the rule's \
@@ -570,7 +630,7 @@ pub fn check_file(
                                     section,
                                     vec![
                                         quoted("element", line),
-                                        quoted("must precede", items[later].matcher.as_str()),
+                                        quoted("must precede", &items[later].describe()),
                                     ],
                                 ),
                             )),
@@ -705,15 +765,46 @@ fn element_lines(span: &str, sectioned: bool) -> impl Iterator<Item = (usize, &s
         .filter(move |(offset, _)| !sectioned || *offset != 0)
 }
 
-/// The 1-based file line of the element at `offset` in `span`, a subslice of
-/// `body`, which starts at `body_offset` in `content`.
-fn line_at(content: &str, body_offset: usize, body: &str, span: &str, offset: usize) -> u32 {
+/// The byte offset in the file of `offset` in `span`, a subslice of `body`,
+/// which starts at `body_offset`.
+fn abs_offset(body_offset: usize, body: &str, span: &str, offset: usize) -> usize {
     let span_start = (span.as_ptr() as usize).saturating_sub(body.as_ptr() as usize);
-    let abs = (body_offset + span_start + offset).min(content.len());
-    1 + content.as_bytes()[..abs]
-        .iter()
-        .filter(|b| **b == b'\n')
-        .count() as u32
+    body_offset + span_start + offset
+}
+
+/// 1-based line numbers for ascending byte offsets, counting each newline of
+/// the file once. Recounting from the top for every finding made a file with
+/// many findings quadratic (cold review round 1: 80,000 failing list items
+/// took 30 s). An offset behind the cursor restarts the count.
+struct LineCursor<'a> {
+    bytes: &'a [u8],
+    at: usize,
+    line: u32,
+}
+
+impl<'a> LineCursor<'a> {
+    fn new(content: &'a str) -> Self {
+        Self {
+            bytes: content.as_bytes(),
+            at: 0,
+            line: 1,
+        }
+    }
+
+    fn line_of(&mut self, abs: usize) -> u32 {
+        let abs = abs.min(self.bytes.len());
+        if abs < self.at {
+            self.at = 0;
+            self.line = 1;
+        }
+        let newlines = self.bytes[self.at..abs]
+            .iter()
+            .filter(|b| **b == b'\n')
+            .count();
+        self.line += newlines as u32;
+        self.at = abs;
+        self.line
+    }
 }
 
 fn quoted(label: &str, content: &str) -> QuotedRegion {
@@ -1415,11 +1506,11 @@ mod tests {
     #[test]
     fn order_rule_reports_an_element_after_a_later_step() {
         let rule = compiled(
-            "section: '# Acme'\norder:\n  - {element: blockquote, match: '.'}\n  - {element: line, match: '^[^#>]'}\n  - {element: h2, match: '.'}\n",
+            "section: '# Acme'\norder:\n  - {element: blockquote, match: '.'}\n  - {element: h2, match: '.'}\n",
         );
         assert!(run(
             &rule,
-            "# Acme\n\n> Summary.\n\nDetails.\n\n## Docs\n\n## More\n",
+            "# Acme\n\n> Summary.\n\nDetails.\n\n## Docs\n\n- item\n\n## More\n",
             0
         )
         .is_empty());
@@ -1431,14 +1522,90 @@ mod tests {
         assert_eq!(f[0].code, "MDATRON-E0124");
         assert_eq!(f[0].location.line, 5);
         assert_eq!(quote(&f[0], "element"), Some("> Summary."));
-        assert_eq!(quote(&f[0], "must precede"), Some("."));
+        // The later item is named by class and pattern: a bare `.` says nothing.
+        assert_eq!(quote(&f[0], "must precede"), Some("h2 matching ."));
         // Each span of a duplicated heading is its own sequence.
         let h2 = compiled(
             "section: '## A'\norder:\n  - {element: h3, match: '^One$', match_on: name}\n  - {element: h3, match: '^Two$', match_on: name}\n",
         );
         assert!(run(&h2, "## A\n### One\n### Two\n## A\n### One\n", 0).is_empty());
         assert_eq!(run(&h2, "## A\n### Two\n### One\n", 0).len(), 1);
-        assert_eq!(run(&h2, "## B\n", 0)[0].code, "MDATRON-E0122");
+        // An absent section: the items tell two order rules on it apart (#219's
+        // defect, not repeated for the new shape).
+        let absent = run(&h2, "## B\n", 0);
+        assert_eq!(absent[0].code, "MDATRON-E0122");
+        assert_eq!(
+            quote(&absent[0], "order"),
+            Some("h3 matching ^One$, then h3 matching ^Two$")
+        );
+    }
+
+    // The order state machine, pinned: the latest step reached does NOT move
+    // back on a violation, so every element behind it is reported; and an
+    // element belongs to the FIRST item it matches.
+    #[test]
+    fn order_rule_keeps_the_latest_step_and_assigns_first_match() {
+        let abc = compiled(
+            "order:\n  - {element: h3, match: '^A$', match_on: name}\n  - {element: h3, match: '^B$', match_on: name}\n  - {element: h3, match: '^C$', match_on: name}\n",
+        );
+        // C, A, B: both A and B sit behind C. A mutant that lowered the
+        // reached step to A on the first violation would miss B.
+        let f = run(&abc, "### C\n### A\n### B\n", 0);
+        assert_eq!(
+            f.iter().map(|f| f.location.line).collect::<Vec<_>>(),
+            vec![2, 3],
+            "{f:?}"
+        );
+        assert!(f
+            .iter()
+            .all(|f| quote(f, "must precede") == Some("h3 matching ^C$")));
+        // A, C, B, C: only B is out of place.
+        let f = run(&abc, "### A\n### C\n### B\n### C\n", 0);
+        assert_eq!(f.len(), 1);
+        assert_eq!(f[0].location.line, 3);
+        // First match: `### Docs` matches both items and belongs to the first,
+        // so it is never the later step and nothing is out of order.
+        let overlap = compiled(
+            "order:\n  - {element: heading, match: '.'}\n  - {element: h3, match: 'Docs'}\n",
+        );
+        assert!(run(&overlap, "### Docs\n# Title\n", 0).is_empty());
+    }
+
+    // Cold review round 1 (IMPL-1/ADV-1): line numbers come from one pass over
+    // the file per rule. Every finding of a long run is located correctly —
+    // the first, one in the middle, the last — including in a second span.
+    #[test]
+    fn many_findings_are_each_located_on_their_own_line() {
+        let rule = compiled("section: '## L'\nelement: list-item\nevery: '^- ok$'\n");
+        let mut body = String::from("---\na: 1\n---\n## L\n");
+        for i in 0..5000 {
+            body.push_str(&format!("- bad {i}\n"));
+        }
+        body.push_str("## Other\n- not checked\n## L\n- bad again\n");
+        let f = run(&rule, &body, "---\na: 1\n---\n".len());
+        assert_eq!(f.len(), 5001);
+        assert_eq!(f[0].location.line, 5);
+        assert_eq!(f[2500].location.line, 2505);
+        assert_eq!(f[4999].location.line, 5004);
+        assert_eq!(f[5000].location.line, 5008);
+        assert_eq!(quote(&f[5000], "element"), Some("- bad again"));
+    }
+
+    // Cold review round 1 (ADV-5): a leading byte-order mark is not content.
+    // With it glued to line 1, `# Acme` matched no section spec and a required
+    // first line never matched.
+    #[test]
+    fn a_leading_byte_order_mark_is_not_part_of_the_first_line() {
+        let h1 = compiled("section: '# Acme'\nelement: h2\nmatch: '.'\ncount: '>= 1'\n");
+        assert!(run(&h1, "\u{feff}# Acme\n## Docs\n", 0).is_empty());
+        let import = compiled("element: line\nmatch: '^@AGENTS\\.md$'\ncount: '>= 1'\n");
+        assert!(run(&import, "\u{feff}@AGENTS.md\n", 0).is_empty());
+        // A file holding only the mark is empty.
+        let not_empty = compiled("element: line\nmatch: '.'\ncount: '>= 1'\n");
+        assert_eq!(run(&not_empty, "\u{feff}", 0).len(), 1);
+        // Line numbers are unchanged by the mark.
+        let every = compiled("element: list-item\nevery: '^- ok$'\n");
+        assert_eq!(run(&every, "\u{feff}- ok\n- bad\n", 0)[0].location.line, 2);
     }
 
     // The new shapes are refused when malformed, never loaded as a no-op.
@@ -1468,6 +1635,20 @@ mod tests {
         ));
         assert!(refused("section: Docs\nelement: line\nevery: x\n"));
         assert!(refused("element: line\ncount: '>= 1'\n"));
+        // Cold review round 1 (IMPL-4/ADV-13): rules that could never report.
+        // An empty `every` pattern matches everything; a repeated order item
+        // is unreachable under first-match; a multi-line section spec equals
+        // no heading line.
+        assert!(refused("element: line\nevery: ''\n"));
+        assert!(refused(
+            "order:\n  - {element: h2, match: x}\n  - {element: h2, match: x}\n"
+        ));
+        assert!(!refused(
+            "order:\n  - {element: h2, match: x}\n  - {element: h2, match: x, match_on: name}\n"
+        ));
+        assert!(refused(
+            "section: \"# Acme\\n## Docs\"\nelement: line\nmatch: x\ncount: '>= 1'\n"
+        ));
     }
 
     // The three line-based classes added for #213/#214/#217.
@@ -1481,6 +1662,21 @@ mod tests {
         assert_eq!(ListItem.name_in("-no space"), None);
         assert_eq!(ListItem.name_in("**bold** text"), None);
         assert_eq!(ListItem.name_in("1234567890. too long"), None);
+        // Cold review round 1 (IMPL-2/ADV-2/ADV-3). A tab after the marker
+        // opens an item — unrecognised, a tab-separated item escaped every
+        // `every` rule. A thematic break opens with a marker and is not one.
+        assert_eq!(ListItem.name_in("-\t[b](x)"), Some("[b](x)"));
+        assert_eq!(ListItem.name_in("1.\tone"), Some("one"));
+        assert_eq!(ListItem.name_in("\t- tabbed in"), Some("tabbed in"));
+        for rule in ["* * *", "- - -", "***", "---", "  * * * *", "-\t-\t-"] {
+            assert_eq!(ListItem.name_in(rule), None, "{rule:?}");
+        }
+        assert_eq!(ListItem.name_in("- - two"), Some("- two"));
+        assert_eq!(ListItem.name_in("+ + +"), Some("+ +"));
+        // A bare marker and a no-break-space "indent" are not items.
+        assert_eq!(ListItem.name_in("-"), None);
+        assert_eq!(ListItem.name_in("\u{a0}- nbsp"), None);
+        assert_eq!(ListItem.name_in("-é"), None);
         assert_eq!(Blockquote.name_in("> quoted"), Some("quoted"));
         assert_eq!(Blockquote.name_in("   >tight"), Some("tight"));
         assert_eq!(Blockquote.name_in("    > code"), None);

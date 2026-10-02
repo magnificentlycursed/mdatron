@@ -657,7 +657,7 @@ fn rule_case() -> impl Strategy<Value = (String, Yaml)> {
         };
         let order_rule = (
             optional_section(),
-            prop::collection::vec(order_item(), 1..4),
+            prop::collection::vec(order_item(), 1..5),
         )
             .prop_map(move |(s, items)| with_section(s, vec![("order", Yaml::Sequence(items))]));
         // A COHERENT order rule, for the reason the coherent disjoint pair

@@ -15,9 +15,10 @@ Markdown. Use any headings you like"), so the failures are all quiet:
   works without what was there.
 - An empty file, which Codex skips, or one grown past the 32 KiB at which
   Codex stops reading.
-- A `CLAUDE.md` beside it. Where one exists, Claude Code reads it and not
-  `AGENTS.md`, so Claude follows different instructions from every other
-  agent unless the `CLAUDE.md` imports `AGENTS.md`.
+- A `CLAUDE.md` beside or above it. Where one exists, Claude Code reads it
+  and not `AGENTS.md`, so Claude follows different instructions from every
+  other agent. The remedy is a `CLAUDE.md` next to each `AGENTS.md` that
+  imports it.
 
 This recipe uses the route, section, link and pin families. The complete,
 runnable project is
@@ -59,8 +60,10 @@ source to pin.
   the limit", `project_doc_max_bytes`, "32 KiB by default".
 - **Claude Code.** From v2.1.277, by default "Claude reads `AGENTS.md` only
   when you have no `CLAUDE.md` in your working directory or above it". With
-  both files present it reads "your `CLAUDE.md` files only", unless the
-  `CLAUDE.md` holds an `@AGENTS.md` import. "Import parsing skips Markdown
+  both files present it reads "Your `CLAUDE.md` files only", and a `CLAUDE.md`
+  in `.claude/` or in a directory above counts too. The documented remedy is
+  "putting an `@AGENTS.md` import in a `CLAUDE.md` next to it"; a root import
+  does not bring in a package's `AGENTS.md`. "Import parsing skips Markdown
   code spans and fenced code blocks."
 
 ## The configuration
@@ -69,11 +72,12 @@ source to pin.
 ```yaml
 # The walked set: every AGENTS*.md file, at any depth. Walking the prefix, not
 # only AGENTS.md, is what makes a committed AGENTS.override.md visible: it is
-# walked, no route claims it, and mdatron reports it. CLAUDE.md is walked
-# because, where one exists, Claude Code reads it instead of AGENTS.md.
+# walked, no route claims it, and mdatron reports it. Every CLAUDE.md is
+# walked for the same reason: wherever one sits, Claude Code reads it instead
+# of the AGENTS.md beside or below it.
 file_globs:
   - "**/AGENTS*.md"
-  - "CLAUDE.md"
+  - "**/CLAUDE.md"
 ```
 
 <!-- cookbook-file: .mdatron/routes.yaml -->
@@ -85,9 +89,9 @@ routes:
 - files: "AGENTS.md"
   governed_by: CONTRIBUTING.md
   links: true
-  # Codex stops reading at 32 KiB across the files on one path: the root file
-  # plus one package's. 24 KiB here and 8 KiB per package keeps every path
-  # inside it.
+  # Codex stops reading at 32 KiB across the files on one path. With one
+  # AGENTS.md per package, a path is the root file plus one package's:
+  # 24 KiB here and 8 KiB per package file keeps that inside the budget.
   max_bytes: 24576
   section_rules:
   # Project policy: the format itself is "just standard Markdown" with no
@@ -103,24 +107,32 @@ routes:
     match: "^Security$"
     match_on: name
     count: "== 1"
-# One AGENTS.md per package: the closest file to an edited path wins. No route
+# A package's AGENTS.md: the closest file to an edited path wins. No route
 # claims AGENTS.override.md, so a committed one is unrouted (E0030).
 - files: "packages/*/AGENTS.md"
   governed_by: CONTRIBUTING.md
   links: true
   max_bytes: 8192
   section_rules:
-  # No section: the whole document. Codex skips an empty file without a word.
+  # No section: the whole document body. Codex skips an empty file without a
+  # word.
   - element: line
     match: "."
     count: ">= 1"
-# Where a CLAUDE.md exists, Claude Code reads it and not AGENTS.md, unless it
-# imports AGENTS.md.
+# A CLAUDE.md switches AGENTS.md off for Claude Code unless it imports it, so
+# each one sits beside an AGENTS.md and holds the import. Any other CLAUDE.md
+# (.claude/CLAUDE.md, a deeper directory's) is unrouted (E0030).
 - files: "CLAUDE.md"
   governed_by: CONTRIBUTING.md
   section_rules:
   - element: line
-    match: "(^|\\s)@AGENTS\\.md(\\s|$)"
+    match: "(^|\\s)@(\\./)?AGENTS\\.md(\\s|$)"
+    count: ">= 1"
+- files: "packages/*/CLAUDE.md"
+  governed_by: CONTRIBUTING.md
+  section_rules:
+  - element: line
+    match: "(^|\\s)@(\\./)?AGENTS\\.md(\\s|$)"
     count: ">= 1"
 ```
 
@@ -153,17 +165,35 @@ schemas or patterns directory to exist, and this recipe needs no schema.
 | Required sections (policy; the format has none) | count rules on the H1's span, one per heading, `== 1` (`E0120`; `E0122` when the H1 is missing) |
 | The file points agents at other docs | route `links: true` on every `AGENTS.md` (`E0110`, `E0111`) |
 | Codex skips an empty file | root: the H1 anchor and the section pin; packages: a whole-document count of `line` elements, `>= 1` (`E0120`) |
-| Codex stops reading at 32 KiB combined | route `max_bytes`, split so the root file plus any one package file fits (`E0036`) |
-| Claude Code reads `CLAUDE.md` in place of `AGENTS.md` | a whole-document count on `CLAUDE.md`: a line holding the `@AGENTS.md` import, `>= 1` (`E0120`) |
+| Codex stops reading at 32 KiB combined | route `max_bytes`, split so the root file plus one package file fits (`E0036`) |
+| Claude Code reads a `CLAUDE.md` in place of `AGENTS.md` | each routed `CLAUDE.md` holds a line with the `@AGENTS.md` import (a whole-document count, `E0120`); walking `**/CLAUDE.md` makes any other one unrouted (`E0030`) |
 
 ## What this does not check
 
-- **The combined budget itself.** `max_bytes` bounds each file. The split
-  above is sound for a tree one package deep; mdatron does not add up the
-  files along a path, so a deeper tree needs its budget split by hand.
-- **Whether the import is live.** The `CLAUDE.md` rule looks for
-  `@AGENTS.md` on a line outside fenced code. It does not parse Markdown
-  code spans beyond requiring whitespace before the `@`.
+- **A `CLAUDE.md` beside every `AGENTS.md`.** The recipe checks each
+  `CLAUDE.md` it finds. It cannot require one to exist: with a root
+  `CLAUDE.md` present, a new package's `AGENTS.md` is invisible to Claude
+  Code until someone adds a `CLAUDE.md` next to it, and mdatron has no rule
+  that one file must have a sibling.
+- **Whether the import is live.** The rule looks for `@AGENTS.md` or
+  `@./AGENTS.md`, with whitespace or a line end on both sides, on a line
+  outside fenced code. A tight code span (`` `@AGENTS.md` ``) is rightly not
+  counted, but the same text inside an HTML comment, an indented code block
+  or a code span padded with spaces is counted though nothing is imported.
+  An import followed directly by punctuation (`@AGENTS.md.`) is not counted.
+- **What "empty" means.** The package rule counts non-blank lines in the
+  body: frontmatter and fenced code blocks are not lines. A file holding
+  only a fenced block of commands is reported though Codex would read it,
+  and a file holding only an invisible character passes.
+- **Deeper files and the budget.** A route's `*` crosses `/`, so
+  `packages/*/AGENTS.md` also claims `packages/api/sub/AGENTS.md`, with its
+  own 8 KiB. The split is sound only while each package has one `AGENTS.md`.
+  `max_bytes` bounds each file; mdatron does not add up the files along a
+  path. The count is the file's bytes as checked out, so keep bounded files
+  on LF line endings (`eol=lf` in `.gitattributes`).
+- **A symlinked `CLAUDE.md`.** `ln -s AGENTS.md CLAUDE.md` is a setup the
+  Claude Code documentation offers. mdatron refuses symlinks in the governed
+  tree (`E0012`), so this recipe needs the import form.
 - **Local files.** A developer's uncommitted `CLAUDE.local.md` also stops
   Claude Code reading `AGENTS.md`; mdatron sees only the tree it is run on.
 
@@ -300,8 +330,9 @@ error[MDATRON-E0120]: section-count-violation
 mdatron verify: 1 error(s), 0 warning(s) across 1 finding(s)
 ```
 
-**A root file past its budget.** Five hundred style reminders were appended.
-Codex would stop reading before it reached any package's file.
+**A root file past its share of the budget.** Five hundred style reminders
+were appended. At 27,134 bytes the root file leaves 5,634 of Codex's 32,768
+for a package's file, which Codex would cut off mid-file past that point.
 
 <!-- cookbook-case: over-budget -->
 ```text
@@ -323,8 +354,22 @@ error[MDATRON-E0120]: section-count-violation
   --> CLAUDE.md:1
    = note: the document has 0 matching line element(s); the rule requires the count >= 1
    = match:
-           > (^|\s)@AGENTS\.md(\s|$)
+           > (^|\s)@(\./)?AGENTS\.md(\s|$)
    = explain: mdatron explain MDATRON-E0120
+mdatron verify: 1 error(s), 0 warning(s) across 1 finding(s)
+```
+
+**A `.claude/CLAUDE.md` appears.** It counts as a `CLAUDE.md` above every
+file in the repository, and it imports nothing. No route allows it, so it is
+reported the way a stray override is.
+
+<!-- cookbook-case: stray-claude -->
+```text
+error[MDATRON-E0030]: unrouted-file
+  --> .claude/CLAUDE.md:1
+   = note: this file is inside the walked jurisdiction but no route claims it; the route table is a closed-world allowlist
+   = help: add a route whose files glob claims it, or narrow file_globs if it should not be walked at all
+   = explain: mdatron explain MDATRON-E0030
 mdatron verify: 1 error(s), 0 warning(s) across 1 finding(s)
 ```
 
@@ -336,7 +381,9 @@ mdatron verify: 1 error(s), 0 warning(s) across 1 finding(s)
   it a route of its own so it is checked, rather than leaving it unrouted.
 - **Pin what agents execute.** Pin each section that lists commands,
   including a package's own `## Build and test`.
-- **No `CLAUDE.md`.** If your repository has none, drop its glob and route:
-  Claude Code then reads `AGENTS.md` directly.
+- **No `CLAUDE.md`.** If your repository has none, drop the two `CLAUDE.md`
+  routes and keep the `**/CLAUDE.md` glob: Claude Code (v2.1.277 or later)
+  then reads `AGENTS.md` directly, and a `CLAUDE.md` added later is reported
+  as unrouted instead of silently taking over.
 - **Codex fallback names.** If your team sets `project_doc_fallback_filenames`,
   add those names to `file_globs` and route them like `AGENTS.md`.

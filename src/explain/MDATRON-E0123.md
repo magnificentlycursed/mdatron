@@ -9,8 +9,8 @@
 A section-structural **every** rule failed for this element. An every rule in
 a route's `section_rules:` block names an `element` class and an `every`
 pattern, and optionally a `section`; each element of that class in the
-section's span (or in the whole document, when the rule names no section)
-must match the pattern. This one does not. The pattern is tested against the
+section's span (or in the whole document body, after the frontmatter, when
+the rule names no section) must match the pattern. This one does not. The pattern is tested against the
 whole element line by default, or against the element's name (a list item's
 text after its marker, a heading's text) with `match_on: name`. There is one
 finding per element that fails, located at that element's line; the rule's
@@ -19,8 +19,8 @@ pattern and the element are quoted beneath the diagnostic.
 A count rule can only say how many elements match. An every rule says none
 may differ — the shape of "every item in this list is a link".
 
-Elements are lines: a list item is the line that opens it, and a line inside
-a fenced code block is never an element. A section with no element of the
+Elements are lines: a list item is the line that opens it (a continuation
+line is not read), and a line inside a fenced code block is never an element. A section with no element of the
 class passes; use a count rule to require that some exist.
 
 ## How to fix

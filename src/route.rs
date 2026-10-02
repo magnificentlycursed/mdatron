@@ -126,8 +126,9 @@ struct RawMarkerRule {
 }
 
 /// The element class a marker reference resolves against — the shared
-/// [`crate::markup::ElementClass`] (`heading`, `h1`…`h6`, `list-item-bold-name`;
-/// unified across the marker and section families in 0.7.0, #204).
+/// [`crate::markup::ElementClass`] (`heading`, `h1`…`h6`, `list-item-bold-name`,
+/// and the line-based `list-item`, `blockquote`, `line`; unified across the
+/// marker and section families in 0.7.0, #204).
 pub use crate::markup::ElementClass;
 
 /// The loaded route table: the active entries plus the per-entry findings
@@ -434,6 +435,16 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
                  be at least 1"
                     .into(),
             ));
+        }
+        // The mirror image: a file past the engine's own per-file input limit
+        // never reaches this check (the run refuses it), so a bound at or
+        // above that limit can never fire — a dead knob, likely a typo.
+        let input_limit = crate::verify::MAX_FILE_BYTES as u64;
+        if entry.max_bytes.is_some_and(|max| max >= input_limit) {
+            return Err(Error::Config(format!(
+                "route max_bytes is at or above mdatron's per-file input limit ({input_limit} \
+                 bytes), so it could never report a file; set a bound below the limit"
+            )));
         }
 
         routes.push(Route {

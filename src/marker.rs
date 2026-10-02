@@ -11,9 +11,10 @@
 //!   the referenced `<name>`.
 //! - `element` — the class the name resolves against (the one
 //!   [`ElementClass`] vocabulary shared with section rules): a markdown
-//!   `heading` of any level, `h1`…`h6` for one level, or a
+//!   `heading` of any level, `h1`…`h6` for one level, a
 //!   `list-item-bold-name` (the leading `**bold**` of a `- ` list item — vsdd's
-//!   live shape: `- **Slice 1 — …** …`, referenced by that leading name).
+//!   live shape: `- **Slice 1 — …** …`, referenced by that leading name), or
+//!   one of the line-based classes `list-item`, `blockquote`, `line` (#213).
 //! - `target_doc` — the document the reference resolves INTO, named in the rule
 //!   config (not derived from `governed_by`, not carried per line — vsdd GH#22
 //!   Q1). Held to the confinement contract like a citation path: project-root-

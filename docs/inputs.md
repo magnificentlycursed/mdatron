@@ -66,12 +66,25 @@ Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `cit
   mapping), `name_equals_dir` (a frontmatter field that must equal the file's
   parent directory name, `E0035`), `max_bytes` (the most bytes a claimed file
   may hold, `E0036`; per file, so a budget shared by several files is split
-  across their routes).
+  across their routes; the count is the file's bytes as checked out,
+  frontmatter and any CRLF line endings included, so keep bounded files on
+  LF; a bound of 0, or one at or above mdatron's own per-file input limit, is
+  refused).
 - An `element` is one of `heading`, `h1`…`h6`, `list-item-bold-name`,
-  `list-item` (any bullet or numbered item, named by its text), `blockquote`
-  (a `>` line) or `line` (any non-blank line). Elements are lines: a list
-  item is the line that opens it, and a line inside a fenced code block is
-  never an element.
+  `list-item`, `blockquote` or `line`. Elements are lines, recognised by the
+  line's own prefix, and a line inside a fenced code block is never an
+  element:
+  - `list-item` — a line opening with `-`, `*`, `+` or an ordinal (`1.`,
+    `1)`) followed by a space or a tab, after any indentation; named by its
+    text after the marker. A nested item is an item, and so is an item-shaped
+    line of indented code. A continuation line is not part of the element, a
+    bare marker with nothing after it is not an item, and a thematic break
+    (`* * *`, `- - -`) is not an item.
+  - `blockquote` — a line opening with `>` after at most three spaces; named
+    by its text after the marker. A quote indented further (inside a list
+    item, say) and a continuation line without `>` are not seen.
+  - `line` — any non-blank line, named by the whole line; a heading is a
+    `line` too, named with its `#` marker.
 - A marker rule — required: `pattern` (a regex whose first capture is the
   referenced name), `element`, `target_doc`. Optional: `target_section` (a
   full ATX heading line).
@@ -91,8 +104,20 @@ Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `cit
 
   On a count, every or order rule `section` is optional: given, the rule
   covers that heading's span and an absent heading is `E0122`; absent, it
-  covers the whole document, so "the file is not empty" is `element: line`,
-  `match: "."`, `count: ">= 1"`.
+  covers the whole document body, so "the file is not empty" is
+  `element: line`, `match: "."`, `count: ">= 1"`. The body starts after the
+  frontmatter (a frontmatter line is never an element, so a rule cannot
+  require one) and after a leading byte-order mark; with fenced code
+  excluded too, a file holding only frontmatter or only a fenced block
+  counts as having no lines. In the whole-document form the document's own
+  H1 is an element like any other heading.
+
+  In an order rule an element belongs to the FIRST item it matches, so an
+  early item that matches broadly (`element: line`, `match: "."`) takes
+  every element and the later items are never reached; a repeated item is
+  refused at load. When the section's heading occurs more than once, each
+  occurrence is ordered on its own, an every rule checks the elements of all
+  of them, and counts sum.
 - What each pattern is tested against — the three differ, so read this before
   writing one:
   - a marker rule's `pattern` runs against the whole LINE, and its first

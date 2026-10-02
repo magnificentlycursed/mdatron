@@ -450,7 +450,7 @@ routes:
   governed_by: contract.md
   marker_rules:
     - pattern: "^Provenance: (.+)$"       # required: first capture = the referenced name
-      element: list-item-bold-name        # required: heading | h1..h6 | list-item-bold-name
+      element: list-item-bold-name        # required: an element class (see Section rules)
       target_doc: contract.md             # required: root-relative, confined
       target_section: "## Decomposition"  # optional: scope to this heading's span
 ```
@@ -557,20 +557,22 @@ routes:
 
 A count rule counts the elements of the `element` class in the `section`'s span
 (until the next heading of the same or higher level) whose line matches `match`
-(or whose name does, with `match_on: name` — the heading text or the list item's bold name, the
-same text a `disjoint` operand's `id_pattern` sees),
+(or whose name does, with `match_on: name` — the heading text, the list item's bold name or its
+text, the quoted text; the same text a `disjoint` operand's `id_pattern` sees),
 and asserts the `count` predicate — one of `>=`, `<=`, `==`, `!=`, `>`, `<` and
 an integer (`>= 1`, `== 1`, `< 3`); a violation is `E0120`.
 `element` is the one vocabulary marker rules use too: `heading` (a heading of
 any level), `h1`…`h6` (one level), `list-item-bold-name` (the `**bold**` lead
 of a `- ` list item), `list-item` (any bullet or numbered item), `blockquote`
-(a `>` line), or `line` (any non-blank line). Elements are lines, and a line
-inside a fenced code block is never one. An **every** rule requires each
+(a `>` line), or `line` (any non-blank line). Elements are lines, recognised
+by the line's own prefix, and a line inside a fenced code block is never one
+(`docs/inputs.md` has the exact rules). An **every** rule requires each
 element of the class to match its `every` pattern (`E0123` for each that does
 not). An **order** rule lists items of `element` and `match`; an element
-matching an earlier item must not follow one matching a later item (`E0124`).
+matching an earlier item must not follow one matching a later item (`E0124`);
+an element belongs to the first item it matches.
 On a count, every or order rule `section` is optional: without it the rule
-covers the whole document. A `disjoint` rule extracts an id (the `id_pattern`'s first
+covers the whole document body (after the frontmatter). A `disjoint` rule extracts an id (the `id_pattern`'s first
 capture) from each section's declared element and asserts the two sets share
 none; an overlap is `E0121`. Ids come **only** from the declared element (an `h3`
 heading's text, or a `list-item-bold-name` bullet's bold name), never
@@ -579,8 +581,9 @@ of an id doesn't cause a false overlap. A `section` spec that matches no heading
 document blocks (`E0122`, section-not-found; matching is exact on level and
 text) instead of silently passing, and the assertion is not evaluated; when a
 heading occurs more than once, the rule evaluates over **all** matching spans
-(counts sum, ids union), so content under a duplicate heading can't evade the
-gate. A spec that is not a full ATX heading line with non-empty text is
+(counts sum, ids union, an every rule checks each span's elements, an order
+rule orders each span on its own), so content under a duplicate heading can't
+evade the gate. A spec that is not a full ATX heading line with non-empty text is
 refused at load.
 
 Every family code has an explain page: `mdatron explain MDATRON-E0061`.

@@ -9,10 +9,11 @@
 A section-structural **order** rule failed for this element. An order rule in
 a route's `section_rules:` block lists two or more items, each an `element`
 class with a `match` pattern, and optionally a `section`. Reading the
-section's span (or the whole document, when the rule names no section) from
-top to bottom, an element matching an earlier item must not appear after an
-element matching a later item. This element does: it is quoted beneath the
-diagnostic, with the pattern of the later item that had already appeared.
+section's span (or the whole document body, when the rule names no section)
+from top to bottom, an element matching an earlier item must not appear after
+an element matching a later item. This element does. It is quoted beneath the
+diagnostic as `element`; `must precede` names the later item that had already
+appeared, as its element class and pattern (`h2 matching .` is "any H2").
 
 An element belongs to the first item it matches. An item that nothing
 matches is not a violation: an order rule asserts sequence, and a count rule
