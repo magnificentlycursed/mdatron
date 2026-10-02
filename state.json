@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1239,
-        "tip_oid": "6d7acd61fff113035ab2832e6bc5c217a44fe7b2",
-        "prefix_sha256": "cdc9f76ae9ce643b4c4b2a93aebb5fcdc9a6070c35515b4a098c98640e2c76c1"
+        "sequence": 1240,
+        "tip_oid": "ef518e818d21a00527685e1c206c5e165cde9408",
+        "prefix_sha256": "879c87b5f542e79ddfea8124390a9a723865911bd0a787355b86831a6db1fa05"
       },
       "IMWa": {
         "sequence": 2,
@@ -1448,11 +1448,12 @@
       "display_id": 218,
       "title": "Add a rule that one file references or imports another",
       "description": "Surfaced by the AGENTS.md recipe (#181). Claude Code reads CLAUDE.md, not AGENTS.md; a CLAUDE.md that does not import @AGENTS.md gives Claude different instructions from every other agent. mdatron cannot assert that file X contains a reference (link, @import) to file Y.",
-      "status": "open",
+      "status": "closed",
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-10-01T21:23:56.321185Z",
-      "updated_at": "2026-10-01T21:24:36.470900Z",
+      "updated_at": "2026-10-02T21:52:59.094382Z",
+      "closed_at": "2026-10-02T21:52:59.065903Z",
       "labels": [
         "enhancement"
       ]
