@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1232,
-        "tip_oid": "ae19ef0b9d2416dfa15824a33041ead623498276",
-        "prefix_sha256": "7bb040792902cb4ebdd5fa0bdfede91a23034aea2fccb7c5e074a5f2e789d68f"
+        "sequence": 1233,
+        "tip_oid": "6069227d43a3b8165ba0d3371388e877fb4f3705",
+        "prefix_sha256": "00372ebdaac4113ca362d63c7c44d99da1d9deeda00c18b2cac07e1a505df2a0"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 225,
+  "next_display_id": 226,
   "next_comment_id": 604,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -91,6 +91,7 @@
     "44e04ea5-0edc-4919-bcf7-7c234a3c8954": 74,
     "46a2adcb-44f8-4977-b221-88b3f426e01e": 214,
     "48642aed-2145-4a65-b014-0df508ad37c5": 11,
+    "48ff2863-5b28-471b-88b6-022000925b26": 225,
     "49197eb8-d2b6-4462-9185-1e9065d2d847": 3,
     "4be4a713-0fe0-45e4-9e07-9a859da5e49a": 204,
     "4c0eca8e-f25b-4887-9a3e-7bfd683e20dd": 205,
@@ -2628,6 +2629,17 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA8qdew9Xwa9PAwb8VCHCwQamPYACjffy44igK2YdF2Dw+3OGXPE1Nb3Y0eMlf7Z6owDl5BDGQW2zSuFfvh3+CAg=="
         }
       }
+    },
+    "48ff2863-5b28-471b-88b6-022000925b26": {
+      "uuid": "48ff2863-5b28-471b-88b6-022000925b26",
+      "display_id": 225,
+      "title": "Record the evidence basis for every silent-failure claim in the standards pack",
+      "description": "Operator question 2026-10-02: 'are we assuming silent failure, or is it documented / provable?' Audit result: SKILL.md (Claude Code), subagents, rules and output styles (#222) are DOCUMENTED with verbatim quotes; the spec-profile upload hard error is documented; AGENTS.md is documented for Claude Code and documented + source-verified (codex-rs/core/src/agents_md.rs) for Codex, with 'the agent works without what was there' an inference; llms.txt documents only that v2 names no validator; the Copilot .instructions.md page ASSUMED it ('neither tool reports it' — corrected on the #68 branch); the Copilot agents/prompts (#223) and the new targets (#224) are unknown. NOTHING has been observed against a running tool.\n\nWork: (1) add a basis column to every page's 'What each rule becomes' table — documented (quote), source-verified (commit+path), observed (tool, version, date), inferred — and have tests/standards_examples.rs require one per row; (2) say on each page, where the basis is inferred or assumed, that the check is defensive, not a reproduction; (3) observe where it matters: seed a malformed .instructions.md / .agent.md / .prompt.md and record what Copilot in VS Code and on GitHub.com actually do (needs a Copilot seat — operator), likewise one run each for the #224 candidates before any becomes a recipe; (4) consider recording the basis in x-source entries so the provenance test carries it.",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-10-02T21:31:14.494996Z",
+      "updated_at": "2026-10-02T21:31:14.494996Z"
     },
     "49197eb8-d2b6-4462-9185-1e9065d2d847": {
       "uuid": "49197eb8-d2b6-4462-9185-1e9065d2d847",
