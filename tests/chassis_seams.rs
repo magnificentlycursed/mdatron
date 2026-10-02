@@ -5,8 +5,9 @@
 //! Chassis seams (#200): the TRACKED crosslink policy, `.crosslink/hook-config.json`,
 //! against the hook that consumes it.
 //!
-//! The behavioral-guard hook (`.claude/hooks/work-check.py`, deployed into the
-//! checkout by `crosslink init` and gitignored) carries default lists
+//! The behavioral-guard hook (`.crosslink/integrations/hooks/work-check.py`, deployed into the
+//! checkout by `crosslink init --update --agent-integration claude` under the
+//! readiness-era layout, #212, and gitignored) carries default lists
 //! (`DEFAULT_ALLOWED_BASH`, `DEFAULT_BLOCKED_GIT`, `DEFAULT_GATED_GIT`,
 //! `DEFAULT_AGENT_BLOCKED_GIT`), and a config key that is PRESENT replaces the
 //! matching default list wholesale. The tracked config is therefore a frozen
@@ -172,7 +173,7 @@ const SEAMS: [(&str, &[&str]); 4] = [
 
 #[test]
 fn tracked_hook_config_carries_every_hook_default() {
-    let hook_path = repo().join(".claude/hooks/work-check.py");
+    let hook_path = repo().join(".crosslink/integrations/hooks/work-check.py");
     let hook = match fs::read_to_string(&hook_path) {
         Ok(hook) => hook,
         Err(_) if std::env::var_os("MDATRON_NO_CHASSIS").is_some() => {
