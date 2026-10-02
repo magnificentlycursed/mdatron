@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1226,
-        "tip_oid": "a8ace13465e20e5b856f2d3ca367b91a95b2f5c2",
-        "prefix_sha256": "a78233f8a8b5d9d10eaa7b66b9578d5b3ec9fda720098a7bb5e725b86d47678f"
+        "sequence": 1227,
+        "tip_oid": "46685127003b177326aa649b674e9f1652f1204e",
+        "prefix_sha256": "f7b6f35196419e549171bb7ab8ffe73b64355adab32d459d78027ea981d77dc3"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 222,
+  "next_display_id": 223,
   "next_comment_id": 604,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -38,6 +38,7 @@
     "1197e92a-56c6-4b95-9d5a-a6e376ec37e9": 176,
     "1198bf2d-1428-40e0-8e18-cbf40d2df45d": 9,
     "12afc5cc-5cb5-4494-8835-3d16d53616f6": 93,
+    "1570a18e-ccd5-42cd-8c78-abf96986d9e9": 222,
     "15d7981a-008d-4805-8a69-f3e4f414caf0": 75,
     "1708ef12-cf35-4706-9dcb-fe672e8db813": 208,
     "18184292-e0ea-4575-b33b-ff82e1ed6c2d": 128,
@@ -620,6 +621,17 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAvqB8JJllAA6E/KDjzxL3gF9p1yNLg8CgjmmffrS7CYo55PzR+W008QgEgGlYun1BNMjmlPRpWcrpvtCYAOPNAw=="
         }
       }
+    },
+    "1570a18e-ccd5-42cd-8c78-abf96986d9e9": {
+      "uuid": "1570a18e-ccd5-42cd-8c78-abf96986d9e9",
+      "display_id": 222,
+      "title": "Add standards-pack recipes for the remaining Claude Code markdown surfaces: rules, output styles, commands, CLAUDE.md, auto memory",
+      "description": "Backlog (operator 2026-10-02: 'all 5 are interesting'). Five Claude Code surfaces the pack (#181) does not cover, each with the silent-failure shape the pack is built around. Facts checked against code.claude.com docs on 2026-10-02.\n\n1. .claude/rules/*.md — frontmatter has ONE field, paths (YAML list or comma-separated globs). Docs: 'any other field is ignored without an error'; unparseable YAML loads the rule 'as if it had no paths'. So path:/globs: typos and YAML errors silently turn a scoped rule into an always-loaded one. Also: a paths glob matching nothing in the repo; the brace-expansion budget (1,000 patterns / 4 MiB). Strict one-field schema bound by route.\n\n2. .claude/output-styles/*.md — fields name, description, keep-coding-instructions, force-for-plugin. 'A misspelled field is ignored without an error'; unparseable YAML loads the style under its file name with no fields. keep_coding_instructions (underscores) silently drops Claude Code's engineering instructions for the session.\n\n3. .claude/commands/*.md — deprecated ('merged into skills'), same frontmatter as skills minus name and paths, still loaded. Reuse the SKILL.md schema; plus a policy check that the directory is empty (migrated).\n\n4. CLAUDE.md as its own recipe — no frontmatter; checks: size guidance (under 200 lines; max_bytes), @import targets exist (needs #221), nested CLAUDE.md files, the AGENTS.md import (already in the AGENTS.md recipe).\n\n5. Auto-memory files (MEMORY.md index + one file per memory with name/description/type frontmatter) — agent-WRITTEN files; a conformance check on what Claude writes. Operator to rule on scope.\n\nSuggested order: rules, output styles, commands as one lane (three small schemas); CLAUDE.md after #221; memory last. Pin each to the Claude Code docs as the subagents recipe does (unversioned page, retrieval date, highest version gate). Out of scope: hooks, settings.json, .mcp.json, plugin manifests (JSON).",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-10-02T21:18:54.055167Z",
+      "updated_at": "2026-10-02T21:18:54.055167Z"
     },
     "15d7981a-008d-4805-8a69-f3e4f414caf0": {
       "uuid": "15d7981a-008d-4805-8a69-f3e4f414caf0",
