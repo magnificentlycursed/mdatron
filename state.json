@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1236,
-        "tip_oid": "2c6eb79001125d1f63f5434141c28942ea6a33a2",
-        "prefix_sha256": "2d62cdc85657315d40d2aa52acd6f7dcd95931592814194d4e3f49fb90b39a5a"
+        "sequence": 1237,
+        "tip_oid": "6c0be12b1c23eba508c80c8ff449484b267aa17e",
+        "prefix_sha256": "c3650a31545091172803219135187fad8f08a42955b6230b93455f40c411e3b5"
       },
       "IMWa": {
         "sequence": 2,
@@ -2592,11 +2592,12 @@
       "uuid": "46a2adcb-44f8-4977-b221-88b3f426e01e",
       "display_id": 214,
       "title": "Section rules: an ordering rule for a document's top-level parts (e.g. llms.txt: H1, then blockquote, then non-heading details, then H2 file lists; also AGENTS/README conventions) — no construct expresses order today (llms.txt recipe gap, #181)",
-      "status": "open",
+      "status": "closed",
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-09-29T02:19:51.634741Z",
-      "updated_at": "2026-09-29T02:19:51.634741Z"
+      "updated_at": "2026-10-02T21:49:54.243080Z",
+      "closed_at": "2026-10-02T21:49:54.201111Z"
     },
     "48642aed-2145-4a65-b014-0df508ad37c5": {
       "uuid": "48642aed-2145-4a65-b014-0df508ad37c5",
