@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1230,
-        "tip_oid": "219c06935ac600c7acd557ce8d562bfc431fe621",
-        "prefix_sha256": "a42191bd18254ca0fa748334ef101916c70feebc3fce10d40b86a8789c7ba402"
+        "sequence": 1231,
+        "tip_oid": "7a816959bbbf43a15b0efca5ee0123b04956157b",
+        "prefix_sha256": "acc6da38413f845310c8c2d1ba63e9097575496c29dc60df208d313bcd0ac347"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 224,
+  "next_display_id": 225,
   "next_comment_id": 604,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -106,6 +106,7 @@
     "57311af8-98a9-4083-9f80-586f713d0089": 142,
     "588a808f-de8c-4824-8347-2ed0a5891594": 44,
     "59693794-3a00-4af8-a42f-477ed3766f24": 105,
+    "5b01d1ab-6def-480b-b16b-40716197d92f": 224,
     "5da2ab05-31e7-4929-a268-a49e6fc77636": 160,
     "5eb9d32c-b382-4b47-8abf-7b7f75de5916": 34,
     "5ee2ea80-c483-44f0-815d-81d8fa6cd9f4": 88,
@@ -3280,6 +3281,17 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAv7B6p7jMXqKlwxp/sTwnWh2bNAaHqo1FBLjcu6U/YGfOyZ8okg5p6Xd8Bnh+3OhVCzZSb83RtPvQzUVTK/fJAw=="
         }
       }
+    },
+    "5b01d1ab-6def-480b-b16b-40716197d92f": {
+      "uuid": "5b01d1ab-6def-480b-b16b-40716197d92f",
+      "display_id": 224,
+      "title": "Evaluate further agent-configuration formats as standards-pack targets: Cursor, Windsurf, Cline, Devin, Gemini CLI, Amazon Q",
+      "description": "Backlog (operator 2026-10-02). Candidate NEW targets beyond the pack's current vendors (#181), each a markdown-with-frontmatter instruction file with the silent-failure shape the pack is built around. NOT yet checked against their docs — the first step is to pin each format's source and record how it treats unknown fields and malformed frontmatter.\n\n- Cursor: .cursor/rules/*.mdc (description, globs, alwaysApply) and the legacy .cursorrules\n- Windsurf: .windsurf/rules/*.md (and .windsurfrules)\n- Cline: .clinerules\n- Devin: .devin/rules/\n- Gemini CLI: GEMINI.md\n- Amazon Q: .amazonq/rules/*.md\n\nClaude Code's /init can import the Cursor, Windsurf, Cline and Devin formats (code.claude.com/docs/en/memory, 2026-10-02), so they are already part of the ecosystem the pack describes. Operator to rule on which, if any, become recipes; the standards-pack positioning memo (agent-config governance as the lead pitch) is the frame.",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-10-02T21:27:41.558413Z",
+      "updated_at": "2026-10-02T21:27:41.558413Z"
     },
     "5da2ab05-31e7-4929-a268-a49e6fc77636": {
       "uuid": "5da2ab05-31e7-4929-a268-a49e6fc77636",
