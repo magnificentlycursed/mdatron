@@ -5,9 +5,12 @@ block, and every way to get one wrong is quiet. A file whose name does not end
 in `.instructions.md` is simply not one. A key value from before GitHub renamed
 the coding agent to the cloud agent matches nothing. A misspelled `applyTo`
 leaves the file with no pattern at all. Neither GitHub's documentation nor VS
-Code's says what happens to an unknown or malformed key, and neither tool
-reports it. The instructions you wrote are just not applied, and the change you
-see is a model that behaves slightly differently, or not at all.
+Code's says what happens to an unknown or malformed key. This recipe has not
+observed either tool's behaviour; it assumes the quiet outcome, that the
+instructions you wrote are not applied and the change you see is a model that
+behaves slightly differently, or not at all, and checks defensively against
+it. Where a page in this pack quotes a vendor saying a failure is silent, the
+quote is given; this one cannot.
 
 The complete, runnable project is
 [`examples/standards/copilot-instructions/`](../../examples/standards/copilot-instructions/AGENTS.md);
