@@ -446,11 +446,17 @@ pub(crate) fn compile_rule(r: RawRule) -> Result<Rule, Error> {
             // A predicate that cannot fail, or cannot hold, makes a rule that
             // reports never or always. `>= 0` on a SECTION still asserts the
             // section exists (E0122); on the whole document it asserts nothing.
-            if pred.never_holds() || (r.section.is_none() && pred.always_holds()) {
+            if pred.never_holds() {
                 return Err(Error::Config(format!(
-                    "section-rule count predicate '{count}' can never {}; the rule would \
-                     assert nothing",
-                    if pred.never_holds() { "hold" } else { "fail" }
+                    "section-rule count predicate '{count}' can never hold (no count is \
+                     below zero); the rule would report every file"
+                )));
+            }
+            if r.section.is_none() && pred.always_holds() {
+                return Err(Error::Config(format!(
+                    "section-rule count predicate '{count}' can never fail, and with no \
+                     `section` there is no heading for the rule to require; it would \
+                     assert nothing"
                 )));
             }
             Ok(Rule::Count {

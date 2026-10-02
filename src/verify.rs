@@ -11339,6 +11339,51 @@ pattern:
         );
     }
 
+    // Cold review round 3 (R3-1): the OTHER body-definition sites, each of
+    // which a mutation run reverted with the suite still green — a link into
+    // another file's first-line heading, a marker rule targeting it, and a
+    // route-bound-schema file with no frontmatter (its own code path).
+    #[test]
+    fn a_byte_order_mark_is_skipped_in_target_files_and_schema_bound_files() {
+        let proj = TempProject::new("bom-targets");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(".mdatron/config.yaml", "file_globs:\n  - \"**/*.md\"\n");
+        proj.write("GOVERNING.md", "# governing doc\n");
+        proj.write("target.md", "\u{feff}# Top\n\ntext\n");
+        proj.write("a.md", "# A\n\nSee [the top](target.md#top).\nRef: Top\n");
+        proj.write(
+            "bound.md",
+            "\u{feff}# Bound\n\nBack to [the top](#bound).\n",
+        );
+        proj.write(
+            ".mdatron/routes.yaml",
+            "routes:\n- files: \"a.md\"\n  governed_by: GOVERNING.md\n  links: true\n  \
+             marker_rules:\n  - pattern: \"^Ref: (.+)$\"\n    element: h1\n    \
+             target_doc: target.md\n- files: \"bound.md\"\n  governed_by: GOVERNING.md\n  \
+             links: true\n  schema: phase-primer\n- files: \"target.md\"\n  \
+             governed_by: GOVERNING.md\n- files: \"GOVERNING.md\"\n  governed_by: GOVERNING.md\n",
+        );
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        let reference_codes: Vec<&str> = findings
+            .iter()
+            .map(|f| f.code.as_str())
+            .filter(|c| matches!(*c, "MDATRON-E0110" | "MDATRON-E0111" | "MDATRON-E0112"))
+            .collect();
+        assert!(
+            reference_codes.is_empty(),
+            "the cross-file anchor, the marker target and the schema-bound file's own \
+             anchor all resolve: {findings:?}"
+        );
+        // The schema-bound file IS validated (its required fields are missing).
+        assert!(
+            findings.iter().any(|f| f.code == "MDATRON-E0050"),
+            "{findings:?}"
+        );
+    }
+
     // #217/#218 end to end: a whole-document count rule (no `section`) on a
     // route reports an empty file and a file missing a required line.
     #[test]

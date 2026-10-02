@@ -119,7 +119,7 @@ Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `cit
 
   In an order rule an element belongs to the FIRST item it matches, so an
   early item that matches broadly (`element: line`, `match: "."`) takes
-  every element and the later items are never reached; a repeated item is
+  every element and the later items are never reached; a repeated item
   and an item with an empty `match` are refused at load, as are an empty
   `every` pattern, a whole-document count of `>= 0` and any count of `< 0`
   (rules that could never report, or never pass). A finding quotes the

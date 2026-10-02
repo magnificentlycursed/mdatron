@@ -14,7 +14,8 @@ and a `count` predicate — one of `>=`, `<=`, `==`, `!=`, `>`, `<`, then an
 integer (`>= 1`, `== 1`, `< 3`); the engine counts the
 elements of that class inside that section's span (from its heading through
 just before the next heading of the same or higher level, fence-aware) that
-match, and asserts the predicate. A rule with no `section` counts over the
+match, and asserts the predicate. The section's own heading line is the
+container, not one of its elements, so it is never counted. A rule with no `section` counts over the
 whole document body, which is how "this file is not empty" (`element: line`,
 `match: "."`, `count: ">= 1"`) and "this file contains this line" are
 written. The body starts after the frontmatter and a leading byte-order

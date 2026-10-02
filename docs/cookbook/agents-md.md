@@ -81,9 +81,12 @@ published source to pin.
 ```yaml
 # The walked set: every AGENTS*.md file, at any depth. Walking the prefix, not
 # only AGENTS.md, is what makes a committed AGENTS.override.md visible: it is
-# walked, no route claims it, and mdatron reports it. Every CLAUDE.md and
-# CLAUDE.local.md is walked for the same reason: wherever one sits, Claude
-# Code reads it instead of the AGENTS.md beside or below it.
+# walked, no route claims it, and mdatron reports it. CLAUDE*.md is walked
+# the same way, for CLAUDE.md and CLAUDE.local.md: wherever one sits, Claude
+# Code reads it instead of the AGENTS.md beside or below it. (One glob, not
+# one per name: a glob that matches no file is itself a warning.) Any other
+# file whose name starts with AGENTS or CLAUDE is walked too and needs a
+# route.
 file_globs:
   - "**/AGENTS*.md"
   - "**/CLAUDE*.md"
@@ -416,6 +419,11 @@ mdatron verify: 1 error(s), 0 warning(s) across 1 finding(s)
   is reported as unrouted instead of silently taking over. Until one exists
   the glob matches nothing and every run prints warning `W0046`, which fails
   a run under `--deny-warnings`; drop the glob too if you cannot have that.
+- **Other files named `AGENTS…` or `CLAUDE…`.** Both globs walk a prefix, so
+  a file such as `docs/AGENTS-guide.md` or `docs/CLAUDE_CODE_SETUP.md` is
+  walked and reported as unrouted. Give it a route, or narrow the glob to
+  the names you use (a glob per exact name works once each name exists; a
+  glob that matches no file is warning `W0046`).
   Claude Code then reads `AGENTS.md` directly, from v2.1.277, with the
   exceptions its documentation lists (some sessions before v2.1.281, a
   disabled `agents-md` plugin, the first session after an upgrade).

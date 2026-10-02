@@ -78,11 +78,11 @@ routes:
   # bullet marker and indentation do not matter.
   - section: "## Docs"
     element: list-item
-    every: "^\\[.+\\]\\(\\S+\\)(:.*)?$"
+    every: "^\\[([^\\[\\]]|\\[[^\\[\\]]*\\])+\\]\\(\\S+\\)(:.*)?$"
     match_on: name
   - section: "## Optional"
     element: list-item
-    every: "^\\[.+\\]\\(\\S+\\)(:.*)?$"
+    every: "^\\[([^\\[\\]]|\\[[^\\[\\]]*\\])+\\]\\(\\S+\\)(:.*)?$"
     match_on: name
   # The blockquote summary comes before the H2 file lists (E0124).
   - section: "# Acme"
@@ -136,9 +136,10 @@ schemas or patterns directory to exist, and this recipe needs no schema.
   specification allows sections "of any type except headings" there) and a
   paragraph inside a file list both pass.
 - **The exact link syntax.** The item pattern asks for `[name](url)` with no
-  whitespace in the URL, then nothing or a `:` and notes. A link with a
-  title (`[name](url "title")`) is reported; text glued to the link with no
-  space (`[a](x)y(z)`) passes.
+  whitespace in the URL, then nothing or a `:` and notes; the name may hold
+  one level of brackets (`[Array[T] reference]`). A link with a title
+  (`[name](url "title")`) is reported, and so is a task item (`- [x] [name](url)`);
+  text glued to the link with no space (`[a](x)y(z)`) passes.
 - **Commented-out items.** A list item inside a multi-line HTML comment is
   still a list item to mdatron, and is reported if malformed.
 - **Anything before the H1.** The rules anchored on the H1 cover its span;
@@ -227,7 +228,7 @@ error[MDATRON-E0122]: section-not-found
    = section:
            > ## Docs
    = every:
-           > ^\[.+\]\(\S+\)(:.*)?$
+           > ^\[([^\[\]]|\[[^\[\]]*\])+\]\(\S+\)(:.*)?$
    = match_on:
            > name
    = element class:
@@ -239,7 +240,7 @@ error[MDATRON-E0122]: section-not-found
    = section:
            > ## Optional
    = every:
-           > ^\[.+\]\(\S+\)(:.*)?$
+           > ^\[([^\[\]]|\[[^\[\]]*\])+\]\(\S+\)(:.*)?$
    = match_on:
            > name
    = element class:
@@ -259,7 +260,7 @@ error[MDATRON-E0123]: section-element-mismatch
    = section:
            > ## Optional
    = every:
-           > ^\[.+\]\(\S+\)(:.*)?$
+           > ^\[([^\[\]]|\[[^\[\]]*\])+\]\(\S+\)(:.*)?$
    = match_on:
            > name
    = element:

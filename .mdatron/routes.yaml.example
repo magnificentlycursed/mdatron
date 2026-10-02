@@ -11,7 +11,8 @@
 #             on a route.
 # KEYS        per route — required: files, governed_by
 #                         optional: naming, citations, links, link_root,
-#                                   marker_rules, section_rules
+#                                   marker_rules, section_rules, schema,
+#                                   name_equals_dir, max_bytes
 #             file-level  — optional: mdatron_format_version (absent = 1)
 # CODES       E0030 E0031 E0032 W0041 W0053 W0054; per opt-in E0100 E0101
 #             W0048 E0081 (citations), E0110 E0111 W0048 E0081 (links),

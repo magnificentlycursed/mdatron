@@ -570,7 +570,8 @@ by the line's own prefix, and a line inside a fenced code block is not one
 element of the class to match its `every` pattern (`E0123` for each that does
 not). An **order** rule lists items of `element` and `match`; an element
 matching an earlier item must not follow one matching a later item (`E0124`);
-an element belongs to the first item it matches.
+an element belongs to the first item it matches. A section's own heading
+line is its container, never one of its elements.
 On a count, every or order rule `section` is optional: without it the rule
 covers the whole document body (after the frontmatter and a leading
 byte-order mark, fenced code excluded). A `disjoint` rule extracts an id (the `id_pattern`'s first

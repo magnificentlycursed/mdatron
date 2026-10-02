@@ -24,11 +24,11 @@ routes:
   # bullet marker and indentation do not matter.
   - section: "## Docs"
     element: list-item
-    every: "^\\[.+\\]\\(\\S+\\)(:.*)?$"
+    every: "^\\[([^\\[\\]]|\\[[^\\[\\]]*\\])+\\]\\(\\S+\\)(:.*)?$"
     match_on: name
   - section: "## Optional"
     element: list-item
-    every: "^\\[.+\\]\\(\\S+\\)(:.*)?$"
+    every: "^\\[([^\\[\\]]|\\[[^\\[\\]]*\\])+\\]\\(\\S+\\)(:.*)?$"
     match_on: name
   # The blockquote summary comes before the H2 file lists (E0124).
   - section: "# Acme"

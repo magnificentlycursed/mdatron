@@ -12,7 +12,8 @@ spec — so the span the rule asserts over cannot be located, and the assertion
 cannot be evaluated. This covers every rule shape: a **count**, **every** or
 **order** rule whose `section` matches nothing (the rule's own pattern, or
 an order rule's items, are quoted, so two rules on one section can be told
-apart), and a
+apart; an every rule also quotes its `element class`, and a `match_on` region
+appears when the pattern is tested against the element's name), and a
 **disjoint** rule where either operand's
 `section` matches nothing (one finding per unmatched operand). A rule that
 names no `section` evaluates over the whole document body and never reports

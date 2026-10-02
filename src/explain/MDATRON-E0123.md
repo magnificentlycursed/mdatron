@@ -20,6 +20,8 @@ region means the pattern was tested against the element's name, not the
 quoted line: a pattern that opens with `^\[` is then not at odds with an
 element that opens with `- `.
 
+The section's own heading line is not one of its elements.
+
 A count rule can only say how many elements match. An every rule says none
 may differ — the shape of "every item in this list is a link".
 

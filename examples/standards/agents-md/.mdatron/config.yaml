@@ -1,8 +1,11 @@
 # The walked set: every AGENTS*.md file, at any depth. Walking the prefix, not
 # only AGENTS.md, is what makes a committed AGENTS.override.md visible: it is
-# walked, no route claims it, and mdatron reports it. Every CLAUDE.md and
-# CLAUDE.local.md is walked for the same reason: wherever one sits, Claude
-# Code reads it instead of the AGENTS.md beside or below it.
+# walked, no route claims it, and mdatron reports it. CLAUDE*.md is walked
+# the same way, for CLAUDE.md and CLAUDE.local.md: wherever one sits, Claude
+# Code reads it instead of the AGENTS.md beside or below it. (One glob, not
+# one per name: a glob that matches no file is itself a warning.) Any other
+# file whose name starts with AGENTS or CLAUDE is walked too and needs a
+# route.
 file_globs:
   - "**/AGENTS*.md"
   - "**/CLAUDE*.md"

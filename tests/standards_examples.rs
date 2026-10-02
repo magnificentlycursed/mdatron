@@ -518,6 +518,9 @@ fn llms_recipe_rejects_text_trailing_the_link() {
         "- [Changelog](docs/changelog.md) and then junk (x)",
         "- [Changelog](not a url) trailing (again)",
         "- [Changelog]( )",
+        // Round 3 (R3-3): text BEFORE the link, where the item opens with `[`.
+        "- [x] [Changelog](docs/changelog.md)",
+        "- [TODO] see [Changelog](docs/changelog.md)",
     ] {
         let s = Scratch::of("llms-txt", "trailing");
         s.edit("llms.txt", |t| {
@@ -557,6 +560,14 @@ fn agents_recipe_reports_a_claude_md_outside_the_allowed_places() {
             .collect();
         assert_eq!(codes, vec!["MDATRON-E0030"], "{stray}");
     }
+    // Round 3 (R3-2): the glob walks the CLAUDE prefix, so another file that
+    // starts with it is reported too. The page says so; this pins it.
+    let s = Scratch::of("agents-md", "prefix");
+    fs::create_dir_all(s.0.join("docs")).unwrap();
+    s.create("docs/CLAUDE_CODE_SETUP.md", "# Setup notes\n");
+    let (code, _, stderr) = verify(&s.0, false);
+    assert_eq!(code, Some(1), "{stderr}");
+    assert!(norm(&stderr).contains("--> docs/CLAUDE_CODE_SETUP.md:1"));
 }
 
 #[test]
