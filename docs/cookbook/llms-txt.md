@@ -139,7 +139,9 @@ schemas or patterns directory to exist, and this recipe needs no schema.
   whitespace in the URL, then nothing or a `:` and notes; the name may hold
   one level of brackets (`[Array[T] reference]`). A link with a title
   (`[name](url "title")`) is reported, and so is a task item (`- [x] [name](url)`);
-  text glued to the link with no space (`[a](x)y(z)`) passes.
+  a name with an escaped or unpaired bracket (`[a\]b]`), or brackets nested
+  two deep, is reported too. Text glued to the link with no space
+  (`[a](x)y(z)`) passes.
 - **Commented-out items.** A list item inside a multi-line HTML comment is
   still a list item to mdatron, and is reported if malformed.
 - **Anything before the H1.** The rules anchored on the H1 cover its span;
