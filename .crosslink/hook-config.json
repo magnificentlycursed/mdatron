@@ -15,7 +15,18 @@
       "git clean -fd",
       "git clean -fdx",
       "git checkout .",
-      "git restore ."
+      "git restore .",
+      "git merge",
+      "git rebase",
+      "git cherry-pick",
+      "git reset",
+      "git stash",
+      "git tag",
+      "git am",
+      "git apply",
+      "git branch -d",
+      "git branch -D",
+      "git branch -m"
     ],
     "gated_git_commands": [],
     "tracking_mode": "relaxed"
@@ -69,7 +80,8 @@
     "dirname ",
     "realpath ",
     "stat ",
-    "file "
+    "file ",
+    "git merge-base"
   ],
   "auto_steal_stale_locks": false,
   "blocked_git_commands": [
