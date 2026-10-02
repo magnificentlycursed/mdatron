@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1240,
-        "tip_oid": "ef518e818d21a00527685e1c206c5e165cde9408",
-        "prefix_sha256": "879c87b5f542e79ddfea8124390a9a723865911bd0a787355b86831a6db1fa05"
+        "sequence": 1241,
+        "tip_oid": "cfd1651e3aab8d7d4ff6cb93c733b2f03d385332",
+        "prefix_sha256": "b509bcc773e72d14e6b0c720c1106301a73ec8475c35c4d1d866064148731041"
       },
       "IMWa": {
         "sequence": 2,
@@ -8034,11 +8034,12 @@
       "display_id": 219,
       "title": "Name the failing rule's match pattern in E0120 findings",
       "description": "Surfaced by the AGENTS.md recipe (#181). Two count rules anchored on the same section (# Acme, h2 ^Build and test$ and h2 ^Security$) produce indistinguishable E0120 findings: the finding names the section and element, not the match, so the reader cannot tell which required heading is missing.",
-      "status": "open",
+      "status": "closed",
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-10-01T21:25:25.397906Z",
-      "updated_at": "2026-10-01T21:26:06.126255Z",
+      "updated_at": "2026-10-02T21:54:13.118024Z",
+      "closed_at": "2026-10-02T21:54:13.088314Z",
       "labels": [
         "enhancement"
       ]
