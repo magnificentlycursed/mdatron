@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1241,
-        "tip_oid": "cfd1651e3aab8d7d4ff6cb93c733b2f03d385332",
-        "prefix_sha256": "b509bcc773e72d14e6b0c720c1106301a73ec8475c35c4d1d866064148731041"
+        "sequence": 1242,
+        "tip_oid": "b8c974f52b7625c56b80e0db3f51392afde658de",
+        "prefix_sha256": "288aaccc392d975fd714f1fcdfb8255a477a29b20313d35951133b56925c5a15"
       },
       "IMWa": {
         "sequence": 2,
@@ -3636,13 +3636,13 @@
     "6810436f-0c90-43d2-9254-92ce7e066aea": {
       "uuid": "6810436f-0c90-43d2-9254-92ce7e066aea",
       "display_id": 221,
-      "title": "Add a rule that a file has a sibling or that an import target exists",
+      "title": "Add a route check that a claimed file has a required sibling file",
       "description": "Surfaced by the AGENTS.md recipe's cold review. With a root CLAUDE.md present, Claude Code reads a package's AGENTS.md only through a CLAUDE.md beside it; mdatron can check each CLAUDE.md it finds but cannot require that every AGENTS.md has a sibling CLAUDE.md, nor that the AGENTS.md an @AGENTS.md import names exists beside the importing file.",
       "status": "open",
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-10-02T20:30:23.543259Z",
-      "updated_at": "2026-10-02T20:31:12.739916Z",
+      "updated_at": "2026-10-02T22:11:36.098195Z",
       "labels": [
         "enhancement"
       ]
