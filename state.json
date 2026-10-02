@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1245,
-        "tip_oid": "999dea35f9df9ca43ec1718412e85f035a758d14",
-        "prefix_sha256": "dfbb00fb8324dc457542e4903f8cd0b5c51a5829649ec9de8077ebd638ff6ce5"
+        "sequence": 1246,
+        "tip_oid": "f8724e80230aceb5872780f59f7db656a56ef679",
+        "prefix_sha256": "a2d90ff4d9b1244e9c0df3e5df4f5ee7146fe9636d48da1b1cfb91ccc1960b9d"
       },
       "IMWa": {
         "sequence": 2,
@@ -6441,12 +6441,12 @@
     "b97459bd-63b2-4e44-9268-8b58abbb3000": {
       "uuid": "b97459bd-63b2-4e44-9268-8b58abbb3000",
       "display_id": 215,
-      "title": "Link family: optional verification of absolute https:// link targets (llms.txt files mostly link out; today the family is tree-confined by design) — needs a network/cache/determinism design and an operator ruling (llms.txt recipe gap, #181)",
+      "title": "Add offline checks for absolute link targets: well-formed URL, link policy, a declared external-link register, and an export for liveness tools",
       "status": "open",
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-09-29T02:20:48.033477Z",
-      "updated_at": "2026-09-29T02:20:48.033477Z"
+      "updated_at": "2026-10-02T23:24:46.366428Z"
     },
     "b996b1ec-a892-47dc-9569-7b00b64bdeec": {
       "uuid": "b996b1ec-a892-47dc-9569-7b00b64bdeec",
