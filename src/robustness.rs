@@ -800,6 +800,7 @@ const ALL_ELEMENTS: [ElementClass; 11] = [
 fn drive_markup_primitives(body: &str) {
     let _ = markup::heading_slugs(body);
     let _ = markup::body_links(body);
+    let _ = markup::body_imports(body);
     let _ = markup::fenced_ranges(body);
     let _ = markup::non_fenced_lines(body);
     let _ = markup::body_inline_code_ranges(body);
@@ -831,6 +832,7 @@ fn drive_target_extraction(body: &str, body_offset: usize, root_relative: bool) 
         root_relative,
     );
     let _ = crate::link::link_targets(Path::new("top.md"), body, body_offset, root_relative);
+    let _ = crate::link::import_targets(Path::new("docs/sub/file.md"), body, body_offset);
 }
 
 /// A section rule from a YAML value, compiled and — when it compiles — run

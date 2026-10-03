@@ -299,6 +299,44 @@ pub(crate) fn body_links(body: &str) -> Vec<BodyLink> {
     out
 }
 
+/// Every `@path` import in `body` (#226): Claude Code's CLAUDE.md / AGENTS.md
+/// import syntax, as its documentation states it — the path runs from the `@`
+/// to the first whitespace; an `@` is an import only at the start of a line or
+/// after whitespace (so `a@b.md` and a quoted `"@x"` are not); and "import
+/// parsing skips Markdown code spans and fenced code blocks". Returned with the
+/// byte offset of the `@` within `body`, like [`body_links`]. Everything after
+/// the `@` is the path, trailing punctuation included: that is what Claude Code
+/// would try to open.
+pub(crate) fn body_imports(body: &str) -> Vec<BodyLink> {
+    let mut out = Vec::new();
+    for (line_start, line) in non_fenced_lines(body) {
+        let code = inline_code_ranges(line);
+        let bytes = line.as_bytes();
+        let mut i = 0;
+        while i < bytes.len() {
+            if bytes[i] != b'@' {
+                i += 1;
+                continue;
+            }
+            let at_boundary = i == 0 || line[..i].ends_with([' ', '\t']);
+            if !at_boundary || in_code_span(&code, i) {
+                i += 1;
+                continue;
+            }
+            let rest = &line[i + 1..];
+            let end = rest.find(|c: char| c.is_whitespace()).unwrap_or(rest.len());
+            if end > 0 {
+                out.push(BodyLink {
+                    dest: rest[..end].to_string(),
+                    offset: line_start + i,
+                });
+            }
+            i += 1 + end;
+        }
+    }
+    out
+}
+
 /// If `line` opens or closes a fenced code block, return its `(fence char, run
 /// length)`. A fence is a run of at least three backticks or tildes indented by
 /// at most three spaces (CommonMark's 0–3 rule, GH #48 finding 5's sibling

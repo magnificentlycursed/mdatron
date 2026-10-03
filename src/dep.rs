@@ -273,6 +273,8 @@ mod tests {
             schema: None,
             name_equals_dir: None,
             max_bytes: None,
+            imports: false,
+            requires_sibling: None,
         }
     }
 

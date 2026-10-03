@@ -6,7 +6,9 @@
 
 ## What this means
 
-A markdown link or image in a link-checked artifact points at a relative path
+A markdown link or image in a link-checked artifact — or, on a route with
+`imports: true`, a Claude Code `@path` import, quoted with the label `import`
+— points at a relative path
 that is missing — or could not be opened (e.g. the open was refused by
 permissions) — in the working-tree snapshot the run captured; the finding
 carries the underlying OS error in a quoted region. Links are found by a full CommonMark

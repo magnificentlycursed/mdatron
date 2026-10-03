@@ -625,6 +625,17 @@ fn agents_case(case: &str) -> Scratch {
             fs::create_dir(s.0.join(".claude")).unwrap();
             s.create(".claude/CLAUDE.md", "Prefer small commits.\n");
         }
+        "missing-sibling" => {
+            fs::create_dir_all(s.0.join("packages/web")).unwrap();
+            s.create(
+                "packages/web/AGENTS.md",
+                "# Acme web\n\nFrontend package.\n",
+            );
+        }
+        "import-without-target" => {
+            fs::create_dir_all(s.0.join("packages/web")).unwrap();
+            s.create("packages/web/CLAUDE.md", "@AGENTS.md\n");
+        }
         other => panic!("unknown case {other}"),
     }
     s
@@ -640,6 +651,8 @@ const AGENTS_CASES: &[&str] = &[
     "empty-nested",
     "claude-without-import",
     "stray-claude",
+    "missing-sibling",
+    "import-without-target",
 ];
 
 #[test]

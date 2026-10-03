@@ -14,6 +14,7 @@
   "MDATRON-E0034": "route-schema-unserved",
   "MDATRON-E0035": "name-dir-mismatch",
   "MDATRON-E0036": "file-over-byte-budget",
+  "MDATRON-E0037": "sibling-file-missing",
   "MDATRON-E0040": "unsupported-schema-dialect",
   "MDATRON-E0050": "frontmatter-schema-violation",
   "MDATRON-E0060": "managed-manifest-drift",

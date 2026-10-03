@@ -1087,6 +1087,9 @@ fn run_inner(
                         crate::route::link_root_enabled(routes, rel),
                     ));
                 }
+                if crate::route::imports_enabled(routes, rel) {
+                    ts.extend(crate::link::import_targets(rel, content, body_offset));
+                }
                 ts
             };
             for target in &prose_targets {
@@ -1188,6 +1191,7 @@ fn run_inner(
         let mut cite_enabled = false;
         let mut link_enabled = false;
         let mut link_root = false;
+        let mut import_enabled = false;
         let mut marker_rules: Vec<&crate::route::MarkerRule> = Vec::new();
         let mut section_rules: Vec<&crate::section::Rule> = Vec::new();
         let mut binding = RouteBinding::default();
@@ -1200,6 +1204,7 @@ fn run_inner(
             cite_enabled = crate::route::citations_enabled(routes, rel);
             link_enabled = crate::route::links_enabled(routes, rel);
             link_root = crate::route::link_root_enabled(routes, rel);
+            import_enabled = crate::route::imports_enabled(routes, rel);
             marker_rules = crate::route::marker_rules_for(routes, rel);
             section_rules = crate::route::section_rules_for(routes, rel);
         }
@@ -1249,6 +1254,12 @@ fn run_inner(
         {
             byte_budget_check(path, content.len(), max, &mut findings);
         }
+        if let Some(sibling) = routes
+            .as_deref()
+            .and_then(|routes| crate::route::sibling_for(routes, rel))
+        {
+            sibling_check(&project_root, path, rel, sibling, &mut findings);
+        }
         let verdict = verify_file(
             path,
             content,
@@ -1258,6 +1269,7 @@ fn run_inner(
             cite_enabled,
             link_enabled,
             link_root,
+            import_enabled,
             &marker_rules,
             if codecat_enabled {
                 catalogs.as_deref().unwrap_or(&[])
@@ -2934,6 +2946,51 @@ fn name_equals_dir_check(
     });
 }
 
+/// `E0037` (#221): the claiming route's `requires_sibling` names a file that
+/// must exist in this file's own directory. Existence is probed no-follow
+/// through the confinement contract, never a plain `exists()`: a symlink in
+/// that place is not the sibling.
+fn sibling_check(
+    project_root: &Path,
+    path: &Path,
+    rel: &Path,
+    sibling: &str,
+    findings: &mut Vec<Finding>,
+) {
+    let candidate = rel.parent().unwrap_or_else(|| Path::new("")).join(sibling);
+    let present = crate::confine::confine_lexically(&candidate)
+        .ok()
+        .is_some_and(|confined| {
+            matches!(
+                crate::confine::open_confined(project_root, &confined),
+                Ok(_) | Err(crate::confine::OpenViolation::NotRegular)
+            )
+        });
+    if present {
+        return;
+    }
+    findings.push(Finding {
+        code: "MDATRON-E0037".into(),
+        severity: Severity::Error,
+        summary: "sibling-file-missing".into(),
+        message: "the route requires a file of this name beside every file it claims, and \
+                  this file's directory has none (a symlink there does not count)"
+            .into(),
+        help: Some(
+            "create the sibling file next to this one, or remove the route's requires_sibling \
+             if the pairing is no longer required"
+                .into(),
+        ),
+        location: Location::whole_file(path),
+        explain_ref: Some("MDATRON-E0037".into()),
+        quoted: vec![QuotedRegion {
+            platform_variant: false,
+            label: "sibling".into(),
+            content: sibling.to_string(),
+        }],
+    });
+}
+
 /// `E0036` (#216): the claiming route's `max_bytes` bounds the file's size —
 /// a consumer with a read budget drops what is past it without a word.
 fn byte_budget_check(path: &Path, bytes: usize, max: u64, findings: &mut Vec<Finding>) {
@@ -2966,6 +3023,7 @@ fn verify_file(
     cite_enabled: bool,
     link_enabled: bool,
     link_root: bool,
+    import_enabled: bool,
     marker_rules: &[&crate::route::MarkerRule],
     code_catalogs: &[crate::codecat::CodeCatalog],
     section_rules: &[&crate::section::Rule],
@@ -3069,6 +3127,17 @@ fn verify_file(
                     findings,
                 );
             }
+            if import_enabled {
+                crate::link::check_imports(
+                    snapshot,
+                    project_root,
+                    path,
+                    content,
+                    body_offset,
+                    memo,
+                    findings,
+                );
+            }
             crate::marker::check_file(
                 snapshot,
                 path,
@@ -3137,6 +3206,18 @@ fn verify_file(
             content,
             body_offset,
             link_root,
+            memo,
+            findings,
+        );
+    }
+    if import_enabled {
+        let body_offset = content.len() - body_len;
+        crate::link::check_imports(
+            snapshot,
+            project_root,
+            path,
+            content,
+            body_offset,
             memo,
             findings,
         );
@@ -11328,6 +11409,120 @@ pattern:
                 .all(|f| !f.location.file.ends_with("x/b.md")),
             "docs/x/b.md is outside the walk: {findings:?}"
         );
+    }
+
+    // RED GATE (#221): requires_sibling — present beside the file is clean; a
+    // missing one, and a symlink in its place, are each E0037; the name is
+    // validated at load.
+    #[test]
+    fn requires_sibling_checks_the_claimed_files_own_directory() {
+        let proj = TempProject::new("sibling");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"packages/**/AGENTS.md\"\n",
+        );
+        proj.write("GOVERNING.md", "# gov\n");
+        proj.write(
+            ".mdatron/routes.yaml",
+            "routes:\n- files: \"packages/*/AGENTS.md\"\n  governed_by: GOVERNING.md\n  \
+             requires_sibling: CLAUDE.md\n",
+        );
+        proj.write("packages/api/AGENTS.md", "# api\n");
+        proj.write("packages/api/CLAUDE.md", "@AGENTS.md\n");
+        proj.write("packages/web/AGENTS.md", "# web\n");
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        let e0037: Vec<String> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0037")
+            .map(|f| f.location.file.to_string_lossy().replace('\\', "/"))
+            .collect();
+        assert_eq!(e0037.len(), 1, "{findings:?}");
+        assert!(e0037[0].ends_with("packages/web/AGENTS.md"), "{findings:?}");
+        assert!(findings.iter().any(|f| f.code == "MDATRON-E0037"
+            && f.quoted
+                .iter()
+                .any(|q| q.label == "sibling" && q.content == "CLAUDE.md")));
+        // A symlink in the sibling's place is not the sibling.
+        #[cfg(unix)]
+        {
+            std::os::unix::fs::symlink("AGENTS.md", proj.0.join("packages/web/CLAUDE.md")).unwrap();
+            let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+            assert!(
+                findings.iter().any(|f| f.code == "MDATRON-E0037"),
+                "a symlinked sibling does not satisfy the rule: {findings:?}"
+            );
+        }
+        // Load: a path is not a file name.
+        for bad in [
+            "  requires_sibling: \"\"\n",
+            "  requires_sibling: a/CLAUDE.md\n",
+            "  requires_sibling: ..\n",
+        ] {
+            let p = skills_project("sibling-bad", bad);
+            p.write(".claude/skills/a/SKILL.md", "# a\n");
+            assert!(
+                verify(&VerifyConfig::from_project(&p.0).unwrap()).is_err(),
+                "{bad:?}"
+            );
+        }
+    }
+
+    // RED GATE (#226): `imports: true` resolves Claude Code's @path imports as
+    // relative links. A present target is clean; a missing one is E0110 with
+    // the label `import`; code spans, fences, a quoted path, an email-shaped
+    // `a@b` and an external (`~`, absolute) import are not resolved. Without
+    // `links`, the key is refused.
+    #[test]
+    fn imports_resolve_like_relative_links() {
+        let proj = TempProject::new("imports");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"**/CLAUDE.md\"\n",
+        );
+        proj.write("GOVERNING.md", "# gov\n");
+        proj.write("AGENTS.md", "# root\n");
+        proj.write("packages/api/AGENTS.md", "# api\n");
+        proj.write(
+            ".mdatron/routes.yaml",
+            "routes:\n- files: \"**/CLAUDE.md\"\n  governed_by: GOVERNING.md\n  links: true\n  \
+             imports: true\n",
+        );
+        proj.write(
+            "CLAUDE.md",
+            "@AGENTS.md\nSee also @./packages/api/AGENTS.md and @~/.claude/shared.md.\n\
+             Not imports: `@missing.md`, \"@missing.md\", mail@missing.md, @/etc/hosts\n\
+             ```\n@missing.md\n```\n",
+        );
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        assert!(findings.is_empty(), "{findings:?}");
+        // A dead import, from a package file (relative to the importing file).
+        proj.write("packages/api/CLAUDE.md", "@AGENTS.md\n@../web/AGENTS.md\n");
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        assert_eq!(findings[0].code, "MDATRON-E0110");
+        assert_eq!(findings[0].location.line, 2);
+        assert!(findings[0]
+            .quoted
+            .iter()
+            .any(|q| q.label == "import" && q.content == "../web/AGENTS.md"));
+        assert!(findings[0].message.starts_with("this import's"));
+        // Trailing punctuation is part of the path, as Claude Code reads it.
+        proj.write("packages/api/CLAUDE.md", "Read @AGENTS.md.\n");
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        assert_eq!(findings.len(), 1, "{findings:?}");
+        assert!(findings[0].quoted.iter().any(|q| q.content == "AGENTS.md."));
+        // imports without links is a dead knob, refused.
+        let p = skills_project("imports-bad", "  imports: true\n");
+        p.write(".claude/skills/a/SKILL.md", "# a\n");
+        assert!(verify(&VerifyConfig::from_project(&p.0).unwrap()).is_err());
     }
 
     // RED GATE (#216): a route's max_bytes bounds each claimed file — at the
