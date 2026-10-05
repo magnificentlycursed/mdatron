@@ -55,7 +55,7 @@ use std::path::{Component, Path, PathBuf};
 
 use crate::confine::{confine_lexically, ConfinedPath};
 use crate::diagnostic::{Finding, Location, QuotedRegion, Severity};
-use crate::markup::{body_links, heading_slugs, slugify};
+use crate::markup::{body_imports, body_links, heading_slugs, slugify};
 use crate::memo::RefMemo;
 use crate::snapshot::{Captured, Snapshot};
 
@@ -92,6 +92,217 @@ pub(crate) fn link_targets(
         }
     }
     out
+}
+
+/// The confinement-accepted `@path` import targets of one file's body (#226),
+/// for the capture phase — the import twin of [`link_targets`]. An import is
+/// document-relative (Claude Code: "relative to the file containing the
+/// import"); one that is absolute or home-relative (`@~/…`) is an external
+/// import, outside the governed tree and outside this family — skipped here and
+/// in the check alike.
+pub(crate) fn import_targets(rel: &Path, content: &str, body_offset: usize) -> Vec<ConfinedPath> {
+    let base_dir = rel.parent().unwrap_or_else(|| Path::new(""));
+    let body = &content[body_offset..];
+    let mut out = Vec::new();
+    for import in body_imports(body) {
+        if !import_is_resolvable(&import.dest) {
+            continue;
+        }
+        if let Ok(confined) = resolve_target(base_dir, &import.dest, false) {
+            if !confined.as_path().as_os_str().is_empty() {
+                out.push(confined);
+            }
+        }
+    }
+    out
+}
+
+/// Whether an import names something inside the tree this run can judge: the
+/// ONE predicate the capture pass and the check share, so no import can be
+/// looked up that was never captured (cold review ENG-1/ENG-6). A URL-shaped
+/// import and an external one (absolute, `~`) are not resolvable here.
+fn import_is_resolvable(dest: &str) -> bool {
+    !is_external(dest) && !is_external_import(dest)
+}
+
+/// An import Claude Code resolves outside the project: absolute, or under the
+/// home directory. Not the governed tree's to judge.
+fn is_external_import(dest: &str) -> bool {
+    dest.starts_with('~') || Path::new(dest).is_absolute() || dest.starts_with('/')
+}
+
+/// What a reference is, for the finding's quoted label and message: a markdown
+/// link, or a Claude Code `@path` import (#226). The link messages are
+/// unchanged by the import's arrival.
+#[derive(Clone, Copy)]
+enum RefKind {
+    Link,
+    Import,
+}
+
+impl RefKind {
+    fn noun(self) -> &'static str {
+        match self {
+            RefKind::Link => "link",
+            RefKind::Import => "import",
+        }
+    }
+}
+
+/// Resolve every `@path` import of one opted-in file against the snapshot
+/// (#226), reported with the label `import`. An import is an OPAQUE relative
+/// file path — Claude Code's syntax has no `#fragment` and no percent-encoding,
+/// so neither is interpreted (the first cut routed imports through the link
+/// resolver, which split and decoded: capture and check then disagreed on any
+/// `#` or `%`, and E0081 fired on healthy files; cold review ENG-1/ENG-2).
+/// Only a readable regular file satisfies an import: a directory is not
+/// something Claude Code can load. External imports (URL-shaped, absolute,
+/// `~`) are skipped.
+pub fn check_imports(
+    snapshot: &Snapshot,
+    project_root: &Path,
+    path: &Path,
+    content: &str,
+    body_offset: usize,
+    memo: &mut RefMemo,
+    findings: &mut Vec<Finding>,
+) {
+    let rel = path.strip_prefix(project_root).unwrap_or(path);
+    let base_dir = rel.parent().unwrap_or_else(|| Path::new(""));
+    let body = &content[body_offset..];
+    for import in body_imports(body) {
+        if !import_is_resolvable(&import.dest) {
+            continue;
+        }
+        resolve_import(
+            snapshot,
+            path,
+            content,
+            body_offset + import.offset,
+            base_dir,
+            &import.dest,
+            findings,
+        );
+    }
+    let _ = memo;
+}
+
+/// The import arm: existence of a regular file at the opaque path, and nothing
+/// else. Mirrors `import_targets` step for step so the seam holds.
+fn resolve_import(
+    snapshot: &Snapshot,
+    path: &Path,
+    content: &str,
+    at: usize,
+    base_dir: &Path,
+    dest: &str,
+    findings: &mut Vec<Finding>,
+) {
+    let kind = RefKind::Import;
+    let confined = match resolve_target(base_dir, dest, false) {
+        Ok(c) => c,
+        Err(TargetViolation::Absolute) => {
+            findings.push(link_finding(
+                path,
+                content,
+                at,
+                kind,
+                "MDATRON-E0010",
+                "absolute-path-refused",
+                "an import target is an absolute path; the governed tree admits only \
+                 relative, in-tree targets",
+                dest,
+            ));
+            return;
+        }
+        Err(TargetViolation::Escapes) => {
+            findings.push(link_finding(
+                path,
+                content,
+                at,
+                kind,
+                "MDATRON-E0011",
+                "parent-segment-refused",
+                "an import target resolves outside the governed tree (its `../` segments \
+                 climb above the project root)",
+                dest,
+            ));
+            return;
+        }
+    };
+    if confined.as_path().as_os_str().is_empty() {
+        return;
+    }
+    match snapshot.get(confined.as_path()) {
+        // A readable regular file (its size does not matter: existence is the
+        // whole check).
+        Some(Captured::Content(_)) | Some(Captured::TooLarge { .. }) => {}
+        // Exists, but is not a file Claude Code could load (a directory, a
+        // FIFO, a file that could not be read).
+        Some(Captured::OpenedUnreadable { .. }) => {
+            findings.push(link_finding(
+                path,
+                content,
+                at,
+                kind,
+                "MDATRON-E0110",
+                "dead-link-target",
+                "this import's target exists but is not a readable regular file (a \
+                 directory, say), so nothing can be imported from it",
+                dest,
+            ));
+        }
+        Some(Captured::SymlinkRefused { tag, .. }) => {
+            let reparse = crate::confine::describe_reparse(tag.as_ref().copied());
+            findings.push(link_finding(
+                path,
+                content,
+                at,
+                kind,
+                "MDATRON-E0012",
+                "symlinked-component-refused",
+                &format!(
+                    "an import's target resolves through {}; no-follow resolution refuses it",
+                    reparse.what
+                ),
+                dest,
+            ));
+        }
+        Some(Captured::OpenIo { error }) => {
+            let mut f = link_finding(
+                path,
+                content,
+                at,
+                kind,
+                "MDATRON-E0110",
+                "dead-link-target",
+                "this import's relative target is missing or could not be opened in the \
+                 working-tree snapshot (uncommitted content counts; no git history is \
+                 consulted)",
+                dest,
+            );
+            f.quoted.push(QuotedRegion {
+                platform_variant: true,
+                label: "os error".into(),
+                content: error.clone(),
+            });
+            findings.push(f);
+        }
+        None => {
+            findings.push(link_finding(
+                path,
+                content,
+                at,
+                kind,
+                "MDATRON-E0081",
+                "reference-target-not-captured",
+                "this import's target was never captured into the run snapshot — an \
+                 engine defect in target discovery, not a defect in this document; \
+                 please report it upstream",
+                dest,
+            ));
+        }
+    }
 }
 
 /// Scan one opted-in file's body for links + images and resolve each against
@@ -146,6 +357,7 @@ pub fn check_file(
             &link.dest,
             &own_slugs,
             root_relative,
+            RefKind::Link,
             &mut memo.link_slugs,
             findings,
         );
@@ -162,9 +374,11 @@ fn resolve_link(
     dest: &str,
     own_slugs: &HashSet<String>,
     root_relative: bool,
+    kind: RefKind,
     target_slugs: &mut HashMap<PathBuf, Option<HashSet<String>>>,
     findings: &mut Vec<Finding>,
 ) {
+    let noun = kind.noun();
     // External links (any URL scheme, or protocol-relative `//host`) are not
     // the engine's to resolve — it never reaches the network.
     if is_external(dest) {
@@ -186,11 +400,14 @@ fn resolve_link(
                     path,
                     content,
                     at,
+                    kind,
                     "MDATRON-E0111",
                     "dead-anchor",
-                    "this same-document link names a `#fragment` that matches no \
+                    &format!(
+                        "this same-document {noun} names a `#fragment` that matches no \
                      heading in this file (fragments resolve via the GitHub \
-                     heading-slug algorithm)",
+                     heading-slug algorithm)"
+                    ),
                     dest,
                 ));
             }
@@ -209,10 +426,13 @@ fn resolve_link(
                 path,
                 content,
                 at,
+                kind,
                 "MDATRON-E0010",
                 "absolute-path-refused",
-                "a link target is an absolute path; the governed tree admits \
-                 only relative, in-tree targets",
+                &format!(
+                    "a {noun} target is an absolute path; the governed tree admits \
+                 only relative, in-tree targets"
+                ),
                 dest,
             ));
             return;
@@ -222,10 +442,13 @@ fn resolve_link(
                 path,
                 content,
                 at,
+                kind,
                 "MDATRON-E0011",
                 "parent-segment-refused",
-                "a link target resolves outside the governed tree (its `../` \
-                 segments climb above the project root)",
+                &format!(
+                    "a {noun} target resolves outside the governed tree (its `../` \
+                 segments climb above the project root)"
+                ),
                 dest,
             ));
             return;
@@ -267,11 +490,14 @@ fn resolve_link(
                             path,
                             content,
                             at,
+                            kind,
                             "MDATRON-E0111",
                             "dead-anchor",
-                            "this link's `#fragment` matches no heading in the target \
+                            &format!(
+                                "this {noun}'s `#fragment` matches no heading in the target \
                              file (fragments resolve via the GitHub heading-slug \
-                             algorithm)",
+                             algorithm)"
+                            ),
                             dest,
                         ));
                     }
@@ -286,11 +512,14 @@ fn resolve_link(
                         path,
                         content,
                         at,
+                        kind,
                         "MDATRON-W0048",
                         "reference-target-unverified",
-                        "this link's target is present but unverifiable (its \
+                        &format!(
+                            "this {noun}'s target is present but unverifiable (its \
                          bytes cannot be read as text), so its fragment was NOT \
-                         resolved — existence only",
+                         resolved — existence only"
+                        ),
                         dest,
                     );
                     f.severity = Severity::Warning;
@@ -317,11 +546,14 @@ fn resolve_link(
                     path,
                     content,
                     at,
+                    kind,
                     "MDATRON-W0048",
                     "reference-target-unverified",
-                    "this link's target is present but unverifiable (its bytes \
+                    &format!(
+                        "this {noun}'s target is present but unverifiable (its bytes \
                      cannot be read as text), so its fragment was NOT resolved — \
-                     existence only",
+                     existence only"
+                    ),
                     dest,
                 );
                 f.severity = Severity::Warning;
@@ -342,11 +574,14 @@ fn resolve_link(
                     path,
                     content,
                     at,
+                    kind,
                     "MDATRON-W0048",
                     "reference-target-unverified",
-                    "this link's target exceeds the input size budget, so its \
+                    &format!(
+                        "this {noun}'s target exceeds the input size budget, so its \
                      fragment was NOT resolved — existence only; raise attention \
-                     on the link or shrink the target",
+                     on the {noun} or shrink the target"
+                    ),
                     dest,
                 );
                 f.severity = Severity::Warning;
@@ -359,10 +594,11 @@ fn resolve_link(
                 path,
                 content,
                 at,
+                kind,
                 "MDATRON-E0012",
                 "symlinked-component-refused",
                 &format!(
-                    "a link's target resolves through {}; no-follow resolution \
+                    "a {noun}'s target resolves through {}; no-follow resolution \
                      refuses it",
                     reparse.what
                 ),
@@ -378,11 +614,14 @@ fn resolve_link(
                 path,
                 content,
                 at,
+                kind,
                 "MDATRON-E0110",
                 "dead-link-target",
-                "this link's relative target is missing or could not be opened \
+                &format!(
+                    "this {noun}'s relative target is missing or could not be opened \
                  in the working-tree snapshot (uncommitted content counts; no \
-                 git history is consulted)",
+                 git history is consulted)"
+                ),
                 dest,
             );
             f.quoted.push(QuotedRegion {
@@ -400,11 +639,14 @@ fn resolve_link(
                 path,
                 content,
                 at,
+                kind,
                 "MDATRON-E0081",
                 "reference-target-not-captured",
-                "this link's target was never captured into the run snapshot — \
+                &format!(
+                    "this {noun}'s target was never captured into the run snapshot — \
                  an engine defect in target discovery, not a defect in this \
-                 document; please report it upstream",
+                 document; please report it upstream"
+                ),
                 dest,
             ));
         }
@@ -577,10 +819,12 @@ fn markdown_body(content: &str) -> &str {
     crate::frontmatter::body_of(content)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn link_finding(
     path: &Path,
     content: &str,
     offset: usize,
+    kind: RefKind,
     code: &str,
     summary: &str,
     message: &str,
@@ -601,7 +845,7 @@ fn link_finding(
         explain_ref: Some(code.to_string()),
         quoted: vec![QuotedRegion {
             platform_variant: false,
-            label: "link".into(),
+            label: kind.noun().into(),
             content: dest.into(),
         }],
     }

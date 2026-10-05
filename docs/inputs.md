@@ -48,7 +48,10 @@ One glob dialect applies to every glob mdatron reads — `file_globs`, the
 scope globs, a route's `files`, a pattern rule's path `context`: `*`, `?` and
 `[…]` match within one path segment; `**` crosses any number of them; a
 leading `.` is not special, so `**/CLAUDE.md` reaches `.claude/CLAUDE.md`.
-(Through 0.6.0 `*` crossed `/`; a glob that relied on that needs `**`.)
+(Through 0.6.0 the matcher let `*` cross `/` in a route's `files`, the scope
+globs and a rule's `context` — the walk never did; a glob that relied on it
+needs `**`. A route glob that now claims fewer files fails loud, `E0030`; a
+scope glob that now matches fewer files is silent unless it matches nothing.)
 
 Activation: `verify` refuses without it. Codes: `W0040`, `W0043`, `W0046`,
 `W0051`, `W0055`.
@@ -58,7 +61,7 @@ Activation: `verify` refuses without it. Codes: `W0040`, `W0043`, `W0046`,
 The route family — the closed-world allowlist over the walked files, and the
 gateway to the citation, link, marker, and section families.
 
-Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `citations`, `links`, `link_root`, `marker_rules`, `pattern`, `element`, `target_doc`, `target_section`, `section_rules`, `section`, `match`, `match_on`, `count`, `disjoint`, `id_pattern`, `schema`, `name_equals_dir`, `max_bytes`, `every`, `order`.
+Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `citations`, `links`, `link_root`, `marker_rules`, `pattern`, `element`, `target_doc`, `target_section`, `section_rules`, `section`, `match`, `match_on`, `count`, `disjoint`, `id_pattern`, `schema`, `name_equals_dir`, `max_bytes`, `every`, `order`, `imports`, `requires_sibling`.
 
 - Per route — required: `files` (root-relative glob; `*` matches within one
   path segment and `**` crosses any number of them — the one glob dialect
@@ -77,7 +80,15 @@ Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `cit
   across their routes; the count is the file's bytes as checked out,
   frontmatter and any CRLF line endings included, so keep bounded files on
   LF; a bound of 0, or one at or above mdatron's own per-file input limit, is
-  refused).
+  refused), `imports: true` (resolve Claude Code's `@path` imports in the
+  claimed files like relative links — an `@` at the start of a line or after
+  whitespace, the path running to the next whitespace, outside code spans and
+  fences, a `\ ` being an escaped space; the path is opaque — `#` and `%`
+  are path characters, not a fragment or an encoding; a missing target, or a
+  directory, is `E0110` with the label `import`; an absolute, `~` or URL-shaped
+  import is not resolved; needs `links`), `requires_sibling` (a file name whose
+  regular file must exist in the same directory as every claimed file,
+  `E0037`; a directory or a symlink there does not count).
 - An `element` is one of `heading`, `h1`…`h6`, `list-item-bold-name`,
   `list-item`, `blockquote` or `line`. Elements are lines, recognised by the
   line's own prefix. A line inside a fenced code block is never an element —
@@ -149,7 +160,7 @@ Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `cit
 
 Activation: the file exists — even `routes: []` (announced as `W0053`); from
 then on every walked file must be claimed by exactly one route. Scope: every
-walked file. Codes: `E0030`, `E0031`, `E0032`, `E0036`, `W0041`, `W0053`, `W0054`; per
+walked file. Codes: `E0030`, `E0031`, `E0032`, `E0036`, `E0037`, `W0041`, `W0053`, `W0054`; per
 opt-in `E0100`/`E0101`/`W0048`/`E0081` (citations), `E0110`/`E0111`/`W0048`/
 `E0081` (links), `E0112`/`E0114`/`W0048`/`E0081` (markers),
 `E0120`/`E0121`/`E0122`/`E0123`/`E0124` (section rules).

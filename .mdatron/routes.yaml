@@ -9,7 +9,8 @@ routes:
 # each subdirectory is its own route; `docs/methodology*` has the standing
 # methodology route below, so the top-level route excludes names starting
 # `m` (two routes claiming one file is an error by contract). A new docs
-# subdirectory lands unrouted (E0030) — loud and fail-closed, a deliberate
+# subdirectory, or a new top-level `docs/m*.md` outside the methodology
+# grammar, lands unrouted (E0030) — loud and fail-closed, a deliberate
 # routing decision.
 - files: "docs/[!m]*.md"
   governed_by: DESIGN.md

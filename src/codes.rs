@@ -23,7 +23,7 @@
 ///   schema, hard-gated at load, #156)
 /// - `MDATRON-E0030` — `E0039` Route family (was delegate protocol, retired);
 ///   route-bound schema `E0033`/`E0034` (#208), `name_equals_dir` `E0035` (#209),
-///   `max_bytes` `E0036` (#216)
+///   `max_bytes` `E0036` (#216), `requires_sibling` `E0037` (#221)
 /// - `MDATRON-E0040` — `E0049` Schema load failures
 /// - `MDATRON-E0050` — `E0059` Frontmatter schema validation failures (v0.1.x)
 /// - `MDATRON-E0060` — `E0069` Pin family (content-hash pins + managed-manifest

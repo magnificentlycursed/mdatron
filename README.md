@@ -295,7 +295,7 @@ walked file is announced as `W0054`. Required and optional keys:
 <!-- mdatron-roundtrip:routes-start -->
 ```yaml
 routes:
-- files: "docs/adr/**/*.md"                              # required: root-relative glob (`*` crosses `/`)
+- files: "docs/adr/**/*.md"                              # required: root-relative glob (`*` one segment, `**` any depth)
   governed_by: DESIGN.md                                 # required: must open inside the governed tree
   naming: "^[0-9]{4}-[a-z0-9-]+\\.md$"                   # optional: filename grammar (W0041)
   citations: true                                        # optional: citation family, see below

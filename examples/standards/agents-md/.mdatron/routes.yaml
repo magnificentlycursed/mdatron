@@ -31,6 +31,9 @@ routes:
   governed_by: CONTRIBUTING.md
   links: true
   max_bytes: 8192
+  # Once the root has a CLAUDE.md, Claude Code reads a package's AGENTS.md
+  # only through a CLAUDE.md beside it (E0037 when missing).
+  requires_sibling: CLAUDE.md
   section_rules:
   # No section: the whole document body. Codex skips an empty file without a
   # word.
@@ -38,17 +41,22 @@ routes:
     match: "."
     count: ">= 1"
 # A CLAUDE.md switches AGENTS.md off for Claude Code unless it imports it, so
-# each routed one holds the import. No route claims .claude/CLAUDE.md, a
-# CLAUDE.local.md, or a CLAUDE.md anywhere but the root and one level under
-# packages/: a committed one is unrouted (E0030).
+# each routed one holds the import (the count rule), and the import must name
+# a file that exists (`imports: true`, E0110). No route claims
+# .claude/CLAUDE.md, a CLAUDE.local.md, or a CLAUDE.md anywhere but the root
+# and one level under packages/: a committed one is unrouted (E0030).
 - files: "CLAUDE.md"
   governed_by: CONTRIBUTING.md
+  links: true
+  imports: true
   section_rules:
   - element: line
     match: "(^|\\s)@(\\./)?AGENTS\\.md(\\s|$)"
     count: ">= 1"
 - files: "packages/*/CLAUDE.md"
   governed_by: CONTRIBUTING.md
+  links: true
+  imports: true
   section_rules:
   - element: line
     match: "(^|\\s)@(\\./)?AGENTS\\.md(\\s|$)"

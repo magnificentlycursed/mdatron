@@ -127,6 +127,9 @@ routes:
   governed_by: CONTRIBUTING.md
   links: true
   max_bytes: 8192
+  # Once the root has a CLAUDE.md, Claude Code reads a package's AGENTS.md
+  # only through a CLAUDE.md beside it (E0037 when missing).
+  requires_sibling: CLAUDE.md
   section_rules:
   # No section: the whole document body. Codex skips an empty file without a
   # word.
@@ -134,17 +137,22 @@ routes:
     match: "."
     count: ">= 1"
 # A CLAUDE.md switches AGENTS.md off for Claude Code unless it imports it, so
-# each routed one holds the import. No route claims .claude/CLAUDE.md, a
-# CLAUDE.local.md, or a CLAUDE.md anywhere but the root and one level under
-# packages/: a committed one is unrouted (E0030).
+# each routed one holds the import (the count rule), and the import must name
+# a file that exists (`imports: true`, E0110). No route claims
+# .claude/CLAUDE.md, a CLAUDE.local.md, or a CLAUDE.md anywhere but the root
+# and one level under packages/: a committed one is unrouted (E0030).
 - files: "CLAUDE.md"
   governed_by: CONTRIBUTING.md
+  links: true
+  imports: true
   section_rules:
   - element: line
     match: "(^|\\s)@(\\./)?AGENTS\\.md(\\s|$)"
     count: ">= 1"
 - files: "packages/*/CLAUDE.md"
   governed_by: CONTRIBUTING.md
+  links: true
+  imports: true
   section_rules:
   - element: line
     match: "(^|\\s)@(\\./)?AGENTS\\.md(\\s|$)"
@@ -182,22 +190,21 @@ schemas or patterns directory to exist, and this recipe needs no schema.
 | Codex skips an empty file | root: the H1 anchor and the section pin; packages: a whole-document count of `line` elements, `>= 1` (`E0120`) |
 | Codex stops reading at 32 KiB combined | route `max_bytes`, split so the root file plus one package file fits (`E0036`) |
 | Claude Code reads a `CLAUDE.md` in place of `AGENTS.md` | each routed `CLAUDE.md` holds a line with the `@AGENTS.md` import (a whole-document count, `E0120`); walking `**/CLAUDE*.md` makes one the routes do not claim unrouted (`E0030`) |
+| A package's `AGENTS.md` is read by Claude Code only through a `CLAUDE.md` beside it | route `requires_sibling: CLAUDE.md` on the package route (`E0037`) |
+| An import names a file that must exist | route `imports: true`: the `@path` resolves like a relative link (`E0110`, label `import`) |
 
 ## What this does not check
 
-- **A `CLAUDE.md` beside every `AGENTS.md`.** The recipe checks each
-  `CLAUDE.md` it finds. It cannot require one to exist: with a root
-  `CLAUDE.md` present, a new package's `AGENTS.md` is invisible to Claude
-  Code until someone adds a `CLAUDE.md` next to it. Nor can it check that
-  the `AGENTS.md` an import names exists beside the importing file. mdatron
-  has no rule that one file must have a sibling (mdatron #221).
-- **Whether the import is live.** The rule looks for `@AGENTS.md` or
-  `@./AGENTS.md`, with whitespace or a line end on both sides, on a line
-  outside fenced code. A tight code span (`` `@AGENTS.md` ``) is rightly not
-  counted, but the same text inside an HTML comment, an indented code block,
-  a fence nested in a list item (indented four spaces or more) or a code
-  span padded with spaces is counted though nothing is imported.
-  An import followed directly by punctuation (`@AGENTS.md.`) is not counted.
+- **Whether the import is live.** Two checks share the work. The count rule
+  looks for `@AGENTS.md` or `@./AGENTS.md` with whitespace or a line end on
+  both sides; `imports: true` then resolves every `@path` the way Claude Code
+  reads one (from the `@` to the next whitespace, with `\ ` an escaped
+  space, so `@AGENTS.md.` names a file called `AGENTS.md.` and `#` and `%`
+  are ordinary characters). Both skip fenced code and a tight code span
+  (`` `@AGENTS.md` ``); both count the same text inside an HTML comment, an
+  indented code block, or a fence nested in a list item (indented four spaces
+  or more), though nothing is imported there. An absolute or `~` import is
+  Claude Code's external import and is not resolved.
 - **What "empty" means.** The package rule counts non-blank lines in the
   body: frontmatter and fenced code blocks are not lines. A file holding
   only a fenced block of commands is reported though Codex would read it,
@@ -210,7 +217,8 @@ schemas or patterns directory to exist, and this recipe needs no schema.
   `.gitattributes`).
 - **A symlinked `CLAUDE.md`.** `ln -s AGENTS.md CLAUDE.md` is a setup the
   Claude Code documentation offers. mdatron refuses symlinks in the governed
-  tree (`E0012`), so this recipe needs the import form.
+  tree (`E0012`), and a symlink is not the sibling the package route requires
+  (`E0037`), so this recipe needs the import form.
 - **Local files.** A committed `CLAUDE.local.md` is walked and reported as
   unrouted. A developer's uncommitted one also stops Claude Code reading
   `AGENTS.md`, and mdatron sees only the tree it is run on.
@@ -383,6 +391,39 @@ error[MDATRON-E0120]: section-count-violation
 mdatron verify: 1 error(s), 0 warning(s) across 1 finding(s)
 ```
 
+**A package without a `CLAUDE.md`.** A new package was added with its
+`AGENTS.md` and nothing else. Every other agent reads the file; Claude Code,
+with the root `CLAUDE.md` present, never does.
+
+<!-- cookbook-case: missing-sibling -->
+```text
+error[MDATRON-E0037]: sibling-file-missing
+  --> packages/web/AGENTS.md:1
+   = note: the route requires a regular file of this name beside every file it claims, and this file's directory has none (a directory or a symlink there does not count)
+   = sibling:
+           > CLAUDE.md
+   = help: create the sibling file next to this one, or remove the route's requires_sibling if the pairing is no longer required
+   = explain: mdatron explain MDATRON-E0037
+mdatron verify: 1 error(s), 0 warning(s) across 1 finding(s)
+```
+
+**An import that names nothing.** A `CLAUDE.md` was copied into a package
+before its `AGENTS.md`. The import line is there, so the count rule is
+satisfied; the import itself resolves to a file that does not exist.
+
+<!-- cookbook-case: import-without-target -->
+```text
+error[MDATRON-E0110]: dead-link-target
+  --> packages/web/CLAUDE.md:1
+   = note: this import's relative target is missing or could not be opened in the working-tree snapshot (uncommitted content counts; no git history is consulted)
+   = import:
+           > AGENTS.md
+   = os error:
+           > No such file or directory (os error 2)
+   = explain: mdatron explain MDATRON-E0110
+mdatron verify: 1 error(s), 0 warning(s) across 1 finding(s)
+```
+
 **A `.claude/CLAUDE.md` appears.** It counts as a `CLAUDE.md` above every
 file in the repository, and it imports nothing. No route allows it, so it is
 reported the way a stray override is. The same happens one level down: a
@@ -408,8 +449,13 @@ mdatron verify: 1 error(s), 0 warning(s) across 1 finding(s)
   it a route of its own so it is checked, rather than leaving it unrouted.
 - **Pin what agents execute.** Pin each section that lists commands,
   including a package's own `## Build and test`.
+- **More packages.** The package routes cover `packages/*`; add a route pair
+  per directory of packages you keep (`apps/*`, say), each with
+  `requires_sibling: CLAUDE.md` on the `AGENTS.md` route and `imports: true`
+  on the `CLAUDE.md` route.
 - **No `CLAUDE.md`.** If your repository has none, drop the two `CLAUDE.md`
-  routes and keep the `**/CLAUDE*.md` glob, so that a `CLAUDE.md` added later
+  routes and the package route's `requires_sibling`, and keep the
+  `**/CLAUDE*.md` glob, so that a `CLAUDE.md` added later
   is reported as unrouted instead of silently taking over. Until one exists
   the glob matches nothing and every run prints warning `W0046`, which fails
   a run under `--deny-warnings`; drop the glob too if you cannot have that.

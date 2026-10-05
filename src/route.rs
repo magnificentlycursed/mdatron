@@ -104,6 +104,18 @@ struct RawEntry {
     /// is split across their routes.
     #[serde(default)]
     max_bytes: Option<u64>,
+    /// Opt this route's files into `@path` import resolution (#226): Claude
+    /// Code's CLAUDE.md / AGENTS.md import syntax, resolved like a relative
+    /// link, so an import naming a missing file is a dead target (E0110).
+    /// Requires `links` — it is the link family's work.
+    #[serde(default)]
+    imports: bool,
+    /// A file name that must exist in the same directory as every claimed
+    /// file (#221): the shape of "every package AGENTS.md has a CLAUDE.md
+    /// beside it", which no reference check can express because the missing
+    /// file refers to nothing. Absent sibling: E0037.
+    #[serde(default)]
+    requires_sibling: Option<String>,
 }
 
 /// One marker-line reference rule as declared in `routes.yaml` (#147).
@@ -160,6 +172,10 @@ pub struct Route {
     pub name_equals_dir: Option<String>,
     /// The per-file byte bound (#216).
     pub max_bytes: Option<u64>,
+    /// Resolve `@path` imports in the claimed files' prose (#226).
+    pub imports: bool,
+    /// A file that must exist beside every claimed file (#221).
+    pub requires_sibling: Option<String>,
 }
 
 /// A compiled marker-line reference rule (#147).
@@ -302,6 +318,30 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
         // without `links: true` it configures a check that never runs, a dead
         // config knob. Statically knowable → refused at load (the branch's
         // dead-config posture, superseding GH #37's silent-inertness ruling).
+        // #226: the same dead-knob posture for `imports`.
+        if entry.imports && !entry.links {
+            return Err(Error::Config(
+                "route sets imports: true without links: true; import resolution is the link \
+                 family's work, so it requires links: true on the same route"
+                    .into(),
+            ));
+        }
+        // #221: a sibling is a file NAME in the claimed file's own directory —
+        // a separator or a traversal segment would make it a path, which is
+        // a different (and unsupported) rule.
+        if let Some(name) = &entry.requires_sibling {
+            let ok = !name.trim().is_empty()
+                && !name.contains(['/', '\\'])
+                && !name.chars().any(char::is_control)
+                && name != "."
+                && name != "..";
+            if !ok {
+                return Err(Error::Config(format!(
+                    "route requires_sibling '{name}' is not a file name; it names a file that \
+                     must exist in the same directory as each claimed file (e.g. CLAUDE.md)"
+                )));
+            }
+        }
         if entry.link_root && !entry.links {
             return Err(Error::Config(
                 "route sets link_root: true without links: true; link_root only \
@@ -459,6 +499,8 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
             schema: entry.schema,
             name_equals_dir: entry.name_equals_dir,
             max_bytes: entry.max_bytes,
+            imports: entry.imports,
+            requires_sibling: entry.requires_sibling,
         });
     }
     // #203 F2 (GH #56 finding 2): "supplied" means the file exists — even with
@@ -626,6 +668,22 @@ pub fn name_equals_dir_for<'a>(routes: &'a [Route], rel: &Path) -> Option<&'a st
         .iter()
         .filter(|r| crate::globs::matches_path(&r.files, rel))
         .find_map(|r| r.name_equals_dir.as_deref())
+}
+
+/// True when a link-checked route claiming `rel` also resolves `@path`
+/// imports (#226). Load refuses `imports` without `links`.
+pub fn imports_enabled(routes: &[Route], rel: &Path) -> bool {
+    routes
+        .iter()
+        .any(|r| r.links && r.imports && crate::globs::matches_path(&r.files, rel))
+}
+
+/// The file that must exist beside `rel`, per a route claiming it (#221).
+pub fn sibling_for<'a>(routes: &'a [Route], rel: &Path) -> Option<&'a str> {
+    routes
+        .iter()
+        .filter(|r| crate::globs::matches_path(&r.files, rel))
+        .find_map(|r| r.requires_sibling.as_deref())
 }
 
 /// The per-file byte bound a route claiming `rel` sets (#216).
