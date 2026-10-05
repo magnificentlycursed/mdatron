@@ -105,7 +105,7 @@ pub(crate) fn import_targets(rel: &Path, content: &str, body_offset: usize) -> V
     let body = &content[body_offset..];
     let mut out = Vec::new();
     for import in body_imports(body) {
-        if is_external_import(&import.dest) {
+        if !import_is_resolvable(&import.dest) {
             continue;
         }
         if let Ok(confined) = resolve_target(base_dir, &import.dest, false) {
@@ -115,6 +115,14 @@ pub(crate) fn import_targets(rel: &Path, content: &str, body_offset: usize) -> V
         }
     }
     out
+}
+
+/// Whether an import names something inside the tree this run can judge: the
+/// ONE predicate the capture pass and the check share, so no import can be
+/// looked up that was never captured (cold review ENG-1/ENG-6). A URL-shaped
+/// import and an external one (absolute, `~`) are not resolvable here.
+fn import_is_resolvable(dest: &str) -> bool {
+    !is_external(dest) && !is_external_import(dest)
 }
 
 /// An import Claude Code resolves outside the project: absolute, or under the
@@ -142,8 +150,14 @@ impl RefKind {
 }
 
 /// Resolve every `@path` import of one opted-in file against the snapshot
-/// (#226): the same resolution as a fragment-less relative link, reported with
-/// the label `import`. External imports (absolute, `~`) are skipped.
+/// (#226), reported with the label `import`. An import is an OPAQUE relative
+/// file path — Claude Code's syntax has no `#fragment` and no percent-encoding,
+/// so neither is interpreted (the first cut routed imports through the link
+/// resolver, which split and decoded: capture and check then disagreed on any
+/// `#` or `%`, and E0081 fired on healthy files; cold review ENG-1/ENG-2).
+/// Only a readable regular file satisfies an import: a directory is not
+/// something Claude Code can load. External imports (URL-shaped, absolute,
+/// `~`) are skipped.
 pub fn check_imports(
     snapshot: &Snapshot,
     project_root: &Path,
@@ -156,24 +170,138 @@ pub fn check_imports(
     let rel = path.strip_prefix(project_root).unwrap_or(path);
     let base_dir = rel.parent().unwrap_or_else(|| Path::new(""));
     let body = &content[body_offset..];
-    let own_slugs = HashSet::new();
     for import in body_imports(body) {
-        if is_external_import(&import.dest) {
+        if !import_is_resolvable(&import.dest) {
             continue;
         }
-        resolve_link(
+        resolve_import(
             snapshot,
             path,
             content,
             body_offset + import.offset,
             base_dir,
             &import.dest,
-            &own_slugs,
-            false,
-            RefKind::Import,
-            &mut memo.link_slugs,
             findings,
         );
+    }
+    let _ = memo;
+}
+
+/// The import arm: existence of a regular file at the opaque path, and nothing
+/// else. Mirrors `import_targets` step for step so the seam holds.
+fn resolve_import(
+    snapshot: &Snapshot,
+    path: &Path,
+    content: &str,
+    at: usize,
+    base_dir: &Path,
+    dest: &str,
+    findings: &mut Vec<Finding>,
+) {
+    let kind = RefKind::Import;
+    let confined = match resolve_target(base_dir, dest, false) {
+        Ok(c) => c,
+        Err(TargetViolation::Absolute) => {
+            findings.push(link_finding(
+                path,
+                content,
+                at,
+                kind,
+                "MDATRON-E0010",
+                "absolute-path-refused",
+                "an import target is an absolute path; the governed tree admits only \
+                 relative, in-tree targets",
+                dest,
+            ));
+            return;
+        }
+        Err(TargetViolation::Escapes) => {
+            findings.push(link_finding(
+                path,
+                content,
+                at,
+                kind,
+                "MDATRON-E0011",
+                "parent-segment-refused",
+                "an import target resolves outside the governed tree (its `../` segments \
+                 climb above the project root)",
+                dest,
+            ));
+            return;
+        }
+    };
+    if confined.as_path().as_os_str().is_empty() {
+        return;
+    }
+    match snapshot.get(confined.as_path()) {
+        // A readable regular file (its size does not matter: existence is the
+        // whole check).
+        Some(Captured::Content(_)) | Some(Captured::TooLarge { .. }) => {}
+        // Exists, but is not a file Claude Code could load (a directory, a
+        // FIFO, a file that could not be read).
+        Some(Captured::OpenedUnreadable { .. }) => {
+            findings.push(link_finding(
+                path,
+                content,
+                at,
+                kind,
+                "MDATRON-E0110",
+                "dead-link-target",
+                "this import's target exists but is not a readable regular file (a \
+                 directory, say), so nothing can be imported from it",
+                dest,
+            ));
+        }
+        Some(Captured::SymlinkRefused { tag, .. }) => {
+            let reparse = crate::confine::describe_reparse(tag.as_ref().copied());
+            findings.push(link_finding(
+                path,
+                content,
+                at,
+                kind,
+                "MDATRON-E0012",
+                "symlinked-component-refused",
+                &format!(
+                    "an import's target resolves through {}; no-follow resolution refuses it",
+                    reparse.what
+                ),
+                dest,
+            ));
+        }
+        Some(Captured::OpenIo { error }) => {
+            let mut f = link_finding(
+                path,
+                content,
+                at,
+                kind,
+                "MDATRON-E0110",
+                "dead-link-target",
+                "this import's relative target is missing or could not be opened in the \
+                 working-tree snapshot (uncommitted content counts; no git history is \
+                 consulted)",
+                dest,
+            );
+            f.quoted.push(QuotedRegion {
+                platform_variant: true,
+                label: "os error".into(),
+                content: error.clone(),
+            });
+            findings.push(f);
+        }
+        None => {
+            findings.push(link_finding(
+                path,
+                content,
+                at,
+                kind,
+                "MDATRON-E0081",
+                "reference-target-not-captured",
+                "this import's target was never captured into the run snapshot — an \
+                 engine defect in target discovery, not a defect in this document; \
+                 please report it upstream",
+                dest,
+            ));
+        }
     }
 }
 

@@ -198,8 +198,9 @@ schemas or patterns directory to exist, and this recipe needs no schema.
 - **Whether the import is live.** Two checks share the work. The count rule
   looks for `@AGENTS.md` or `@./AGENTS.md` with whitespace or a line end on
   both sides; `imports: true` then resolves every `@path` the way Claude Code
-  reads one (from the `@` to the next whitespace, so `@AGENTS.md.` names a
-  file called `AGENTS.md.`). Both skip fenced code and a tight code span
+  reads one (from the `@` to the next whitespace, with `\ ` an escaped
+  space, so `@AGENTS.md.` names a file called `AGENTS.md.` and `#` and `%`
+  are ordinary characters). Both skip fenced code and a tight code span
   (`` `@AGENTS.md` ``); both count the same text inside an HTML comment, an
   indented code block, or a fence nested in a list item (indented four spaces
   or more), though nothing is imported there. An absolute or `~` import is
@@ -216,7 +217,8 @@ schemas or patterns directory to exist, and this recipe needs no schema.
   `.gitattributes`).
 - **A symlinked `CLAUDE.md`.** `ln -s AGENTS.md CLAUDE.md` is a setup the
   Claude Code documentation offers. mdatron refuses symlinks in the governed
-  tree (`E0012`), so this recipe needs the import form.
+  tree (`E0012`), and a symlink is not the sibling the package route requires
+  (`E0037`), so this recipe needs the import form.
 - **Local files.** A committed `CLAUDE.local.md` is walked and reported as
   unrouted. A developer's uncommitted one also stops Claude Code reading
   `AGENTS.md`, and mdatron sees only the tree it is run on.
@@ -397,7 +399,7 @@ with the root `CLAUDE.md` present, never does.
 ```text
 error[MDATRON-E0037]: sibling-file-missing
   --> packages/web/AGENTS.md:1
-   = note: the route requires a file of this name beside every file it claims, and this file's directory has none (a symlink there does not count)
+   = note: the route requires a regular file of this name beside every file it claims, and this file's directory has none (a directory or a symlink there does not count)
    = sibling:
            > CLAUDE.md
    = help: create the sibling file next to this one, or remove the route's requires_sibling if the pairing is no longer required
@@ -452,7 +454,8 @@ mdatron verify: 1 error(s), 0 warning(s) across 1 finding(s)
   `requires_sibling: CLAUDE.md` on the `AGENTS.md` route and `imports: true`
   on the `CLAUDE.md` route.
 - **No `CLAUDE.md`.** If your repository has none, drop the two `CLAUDE.md`
-  routes and keep the `**/CLAUDE*.md` glob, so that a `CLAUDE.md` added later
+  routes and the package route's `requires_sibling`, and keep the
+  `**/CLAUDE*.md` glob, so that a `CLAUDE.md` added later
   is reported as unrouted instead of silently taking over. Until one exists
   the glob matches nothing and every run prints warning `W0046`, which fails
   a run under `--deny-warnings`; drop the glob too if you cannot have that.

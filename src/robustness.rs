@@ -945,6 +945,11 @@ fn drive_snapshot_backed_scanners(
         body_offset,
         root_relative,
     ));
+    targets.extend(crate::link::import_targets(
+        Path::new("docs/sub/file.md"),
+        body,
+        body_offset,
+    ));
     for doc in ["docs/target.md", "docs/sub/target.md", "docs/missing.md"] {
         if let Ok(t) = crate::confine::confine_lexically(Path::new(doc)) {
             targets.push(t);
@@ -966,6 +971,15 @@ fn drive_snapshot_backed_scanners(
         body,
         body_offset,
         root_relative,
+        &mut memo,
+        &mut findings,
+    );
+    crate::link::check_imports(
+        &snapshot,
+        &root.0,
+        &path,
+        body,
+        body_offset,
         &mut memo,
         &mut findings,
     );

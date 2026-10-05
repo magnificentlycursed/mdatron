@@ -1025,6 +1025,24 @@ fn run_inner(
         // means a config-scoped aggregate abort reflects config-declared
         // inputs alone, and prose consumption can only ever degrade prose
         // checks.
+        // Sibling candidates (#221) are config-declared targets, captured
+        // before the seam like every other input the run consults, so the
+        // check judges capture-time state and never reopens the filesystem
+        // (cold review ENG-3). Degrading: existence is all the check reads.
+        for (_path, rel) in &governed {
+            if let Some(scope) = &scope {
+                if !scope.contains(rel) {
+                    continue;
+                }
+            }
+            if let Some(sibling) = crate::route::sibling_for(routes, rel) {
+                if let Ok(confined) =
+                    crate::confine::confine_lexically(&sibling_candidate(rel, sibling))
+                {
+                    snapshot.capture_degrading(&project_root, &confined)?;
+                }
+            }
+        }
         for (_path, rel) in &governed {
             if let Some(scope) = &scope {
                 if !scope.contains(rel) {
@@ -1258,7 +1276,7 @@ fn run_inner(
             .as_deref()
             .and_then(|routes| crate::route::sibling_for(routes, rel))
         {
-            sibling_check(&project_root, path, rel, sibling, &mut findings);
+            sibling_check(&snapshot, path, rel, sibling, &mut findings);
         }
         let verdict = verify_file(
             path,
@@ -2946,24 +2964,32 @@ fn name_equals_dir_check(
     });
 }
 
+/// The path a `requires_sibling` names for `rel`: the file's own directory
+/// plus the sibling's name.
+fn sibling_candidate(rel: &Path, sibling: &str) -> PathBuf {
+    rel.parent().unwrap_or_else(|| Path::new("")).join(sibling)
+}
+
 /// `E0037` (#221): the claiming route's `requires_sibling` names a file that
-/// must exist in this file's own directory. Existence is probed no-follow
-/// through the confinement contract, never a plain `exists()`: a symlink in
-/// that place is not the sibling.
+/// must exist in this file's own directory. Judged on the snapshot the run
+/// captured before the seam, like every other target: a readable regular
+/// file counts, whatever its size; a directory, a symlink (refused at
+/// capture) or an unreadable entry does not. The motivating consumer cannot
+/// load any of those.
 fn sibling_check(
-    project_root: &Path,
+    snapshot: &crate::snapshot::Snapshot,
     path: &Path,
     rel: &Path,
     sibling: &str,
     findings: &mut Vec<Finding>,
 ) {
-    let candidate = rel.parent().unwrap_or_else(|| Path::new("")).join(sibling);
-    let present = crate::confine::confine_lexically(&candidate)
+    let present = crate::confine::confine_lexically(&sibling_candidate(rel, sibling))
         .ok()
         .is_some_and(|confined| {
             matches!(
-                crate::confine::open_confined(project_root, &confined),
-                Ok(_) | Err(crate::confine::OpenViolation::NotRegular)
+                snapshot.get(confined.as_path()),
+                Some(crate::snapshot::Captured::Content(_))
+                    | Some(crate::snapshot::Captured::TooLarge { .. })
             )
         });
     if present {
@@ -2973,8 +2999,9 @@ fn sibling_check(
         code: "MDATRON-E0037".into(),
         severity: Severity::Error,
         summary: "sibling-file-missing".into(),
-        message: "the route requires a file of this name beside every file it claims, and \
-                  this file's directory has none (a symlink there does not count)"
+        message: "the route requires a regular file of this name beside every file it \
+                  claims, and this file's directory has none (a directory or a symlink \
+                  there does not count)"
             .into(),
         help: Some(
             "create the sibling file next to this one, or remove the route's requires_sibling \
@@ -11523,6 +11550,108 @@ pattern:
         let p = skills_project("imports-bad", "  imports: true\n");
         p.write(".claude/skills/a/SKILL.md", "# a\n");
         assert!(verify(&VerifyConfig::from_project(&p.0).unwrap()).is_err());
+    }
+
+    // RED GATE (cold review ENG-1/ENG-2, DOC-1): an import is an OPAQUE path.
+    // `#` and `%` are path characters, a `\ ` is an escaped space, a directory
+    // is not an importable file, and capture and check agree, so E0081 never
+    // fires on an import to a file nothing else captured.
+    #[test]
+    fn imports_are_opaque_paths_captured_and_checked_alike() {
+        let proj = TempProject::new("imports-opaque");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(".mdatron/config.yaml", "file_globs:\n  - \"CLAUDE.md\"\n");
+        proj.write("GOVERNING.md", "# gov\n");
+        proj.write(
+            ".mdatron/routes.yaml",
+            "routes:\n- files: \"CLAUDE.md\"\n  governed_by: GOVERNING.md\n  links: true\n  \
+             imports: true\n",
+        );
+        // None of these targets is walked or linked: only import capture
+        // brings them into the snapshot.
+        proj.write("docs/a#b.md", "# hash\n");
+        proj.write("docs/my%20doc.md", "# percent\n");
+        proj.write("docs/my doc.md", "# space\n");
+        proj.write("docs/sub/inner.md", "# inner\n");
+        proj.write(
+            "CLAUDE.md",
+            "@docs/a#b.md\n@docs/my%20doc.md\n@docs/my\\ doc.md\n@docs/my doc.md\n@docs/sub\n",
+        );
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        assert!(
+            findings.iter().all(|f| f.code != "MDATRON-E0081"),
+            "capture and check must agree on every import: {findings:?}"
+        );
+        let dead: Vec<(u32, String)> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0110")
+            .map(|f| {
+                let import = f
+                    .quoted
+                    .iter()
+                    .find(|q| q.label == "import")
+                    .map(|q| q.content.clone())
+                    .unwrap_or_default();
+                (f.location.line, import)
+            })
+            .collect();
+        // Line 1 (`#` literal), 2 (`%` literal) and 3 (escaped space) resolve;
+        // line 4 is read as `docs/my`; line 5 names a directory.
+        assert_eq!(
+            dead,
+            vec![(4, "docs/my".to_string()), (5, "docs/sub".to_string())],
+            "{findings:?}"
+        );
+        assert_eq!(findings.len(), 2, "{findings:?}");
+        assert!(
+            findings.iter().all(|f| f.code != "MDATRON-E0111"),
+            "an import has no fragment to check: {findings:?}"
+        );
+    }
+
+    // RED GATE (cold review ENG-3/ENG-4): the sibling is judged on the snapshot
+    // captured before the seam, never on a later filesystem probe, and only a
+    // regular file counts.
+    #[test]
+    fn sibling_is_judged_at_capture_time_and_must_be_a_regular_file() {
+        let proj = TempProject::new("sibling-seam");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"packages/**/AGENTS.md\"\n",
+        );
+        proj.write("GOVERNING.md", "# gov\n");
+        proj.write(
+            ".mdatron/routes.yaml",
+            "routes:\n- files: \"packages/*/AGENTS.md\"\n  governed_by: GOVERNING.md\n  \
+             requires_sibling: CLAUDE.md\n",
+        );
+        proj.write("packages/api/AGENTS.md", "# api\n");
+        // A directory where the sibling should be is not the sibling.
+        std::fs::create_dir_all(proj.0.join("packages/api/CLAUDE.md")).unwrap();
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        assert_eq!(codes_of(&findings, "MDATRON-E0037"), 1, "{findings:?}");
+        std::fs::remove_dir(proj.0.join("packages/api/CLAUDE.md")).unwrap();
+        // Created after the seam: the run reports what it captured.
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let sibling = proj.0.join("packages/api/CLAUDE.md");
+        let mutate = || {
+            std::fs::write(&sibling, "@AGENTS.md\n").unwrap();
+        };
+        let (findings, _fam, _vis, _n) = run(&cfg, None, Some(&mutate)).unwrap();
+        assert_eq!(
+            codes_of(&findings, "MDATRON-E0037"),
+            1,
+            "a sibling created after the seam is not seen by this run: {findings:?}"
+        );
+        let after = verify(&cfg).unwrap();
+        assert_eq!(codes_of(&after, "MDATRON-E0037"), 0, "{after:?}");
     }
 
     // RED GATE (#216): a route's max_bytes bounds each claimed file — at the

@@ -49,8 +49,7 @@ and this table together.
 
 A subagent's identity is its `name`, not its path ("The filename doesn't have
 to match"), and Claude Code scans agents directories recursively. The routes
-use a single `*`, which crosses directory boundaries, so nested folders are
-covered.
+use `**`, so nested folders are covered.
 
 ## The configuration
 

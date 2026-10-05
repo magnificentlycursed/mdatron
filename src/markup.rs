@@ -306,7 +306,9 @@ pub(crate) fn body_links(body: &str) -> Vec<BodyLink> {
 /// parsing skips Markdown code spans and fenced code blocks". Returned with the
 /// byte offset of the `@` within `body`, like [`body_links`]. Everything after
 /// the `@` is the path, trailing punctuation included: that is what Claude Code
-/// would try to open.
+/// would try to open. A backslash before a space keeps the space in the path
+/// ("To import a file whose path contains spaces, put a backslash before each
+/// space"); the backslash itself is not part of the path.
 pub(crate) fn body_imports(body: &str) -> Vec<BodyLink> {
     let mut out = Vec::new();
     for (line_start, line) in non_fenced_lines(body) {
@@ -324,17 +326,39 @@ pub(crate) fn body_imports(body: &str) -> Vec<BodyLink> {
                 continue;
             }
             let rest = &line[i + 1..];
-            let end = rest.find(|c: char| c.is_whitespace()).unwrap_or(rest.len());
-            if end > 0 {
+            let (dest, consumed) = import_path(rest);
+            if !dest.is_empty() {
                 out.push(BodyLink {
-                    dest: rest[..end].to_string(),
+                    dest,
                     offset: line_start + i,
                 });
             }
-            i += 1 + end;
+            i += 1 + consumed;
         }
     }
     out
+}
+
+/// The import path at the start of `rest` (the text after an `@`) and the
+/// bytes it occupies: up to the first whitespace, where a `\ ` is an escaped
+/// space that stays in the path without its backslash.
+fn import_path(rest: &str) -> (String, usize) {
+    let mut dest = String::new();
+    let mut chars = rest.char_indices().peekable();
+    let mut consumed = rest.len();
+    while let Some((j, c)) = chars.next() {
+        if c == '\\' && matches!(chars.peek(), Some((_, ' '))) {
+            chars.next();
+            dest.push(' ');
+            continue;
+        }
+        if c.is_whitespace() {
+            consumed = j;
+            break;
+        }
+        dest.push(c);
+    }
+    (dest, consumed)
 }
 
 /// If `line` opens or closes a fenced code block, return its `(fence char, run

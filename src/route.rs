@@ -330,7 +330,11 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
         // a separator or a traversal segment would make it a path, which is
         // a different (and unsupported) rule.
         if let Some(name) = &entry.requires_sibling {
-            let ok = !name.is_empty() && !name.contains(['/', '\\']) && name != "." && name != "..";
+            let ok = !name.trim().is_empty()
+                && !name.contains(['/', '\\'])
+                && !name.chars().any(char::is_control)
+                && name != "."
+                && name != "..";
             if !ok {
                 return Err(Error::Config(format!(
                     "route requires_sibling '{name}' is not a file name; it names a file that \

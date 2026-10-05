@@ -48,7 +48,10 @@ One glob dialect applies to every glob mdatron reads — `file_globs`, the
 scope globs, a route's `files`, a pattern rule's path `context`: `*`, `?` and
 `[…]` match within one path segment; `**` crosses any number of them; a
 leading `.` is not special, so `**/CLAUDE.md` reaches `.claude/CLAUDE.md`.
-(Through 0.6.0 `*` crossed `/`; a glob that relied on that needs `**`.)
+(Through 0.6.0 the matcher let `*` cross `/` in a route's `files`, the scope
+globs and a rule's `context` — the walk never did; a glob that relied on it
+needs `**`. A route glob that now claims fewer files fails loud, `E0030`; a
+scope glob that now matches fewer files is silent unless it matches nothing.)
 
 Activation: `verify` refuses without it. Codes: `W0040`, `W0043`, `W0046`,
 `W0051`, `W0055`.
@@ -80,10 +83,12 @@ Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `cit
   refused), `imports: true` (resolve Claude Code's `@path` imports in the
   claimed files like relative links — an `@` at the start of a line or after
   whitespace, the path running to the next whitespace, outside code spans and
-  fences; a missing target is `E0110` with the label `import`; an absolute or
-  `~` import is Claude Code's external import and is not resolved; needs
-  `links`), `requires_sibling` (a file name that must exist in the same
-  directory as every claimed file, `E0037`; a symlink there does not count).
+  fences, a `\ ` being an escaped space; the path is opaque — `#` and `%`
+  are path characters, not a fragment or an encoding; a missing target, or a
+  directory, is `E0110` with the label `import`; an absolute, `~` or URL-shaped
+  import is not resolved; needs `links`), `requires_sibling` (a file name whose
+  regular file must exist in the same directory as every claimed file,
+  `E0037`; a directory or a symlink there does not count).
 - An `element` is one of `heading`, `h1`…`h6`, `list-item-bold-name`,
   `list-item`, `blockquote` or `line`. Elements are lines, recognised by the
   line's own prefix. A line inside a fenced code block is never an element —
