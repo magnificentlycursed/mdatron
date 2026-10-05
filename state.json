@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1253,
-        "tip_oid": "d0ad09f1eb8bcb0794e87840adab2d4a24c176e2",
-        "prefix_sha256": "990fdee255183a27fa95f682ac511f6af6bbfd91097c12c230937f0151828747"
+        "sequence": 1254,
+        "tip_oid": "1343c118189414967e61bb7a9be1a9d357dca16a",
+        "prefix_sha256": "e9d85be25a8c41b3ed09de3cdcb3c0e2c2a9e867c759e1e7c8fac35bc04cc279"
       },
       "IMWa": {
         "sequence": 2,
@@ -7726,11 +7726,12 @@
       "display_id": 226,
       "title": "Resolve @path imports in the link family so a dead CLAUDE.md import is reported",
       "description": "Split from #221 (operator 2026-10-02). Claude Code's CLAUDE.md and AGENTS.md import syntax is @path (relative to the importing file; 'Import parsing skips Markdown code spans and fenced code blocks'; the path ends at the first space; a quoted path is not imported). Today the AGENTS.md recipe can only assert that a line matching @AGENTS.md exists; it cannot tell that the file it names is missing (packages/web/CLAUDE.md holding @AGENTS.md with no AGENTS.md beside it passes). Design: a route option (e.g. imports: true, requiring links: true) that teaches the link family one more reference syntax — (^|\\s)@(\\S+) outside code spans and fences, resolved relative to the file — so the existing E0110 dead-link-target finding applies with a quoted label 'import'. Mirrors Claude Code's own parsing, including its ambiguity with @handles; document that.",
-      "status": "open",
+      "status": "closed",
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-10-02T22:13:28.237867Z",
-      "updated_at": "2026-10-02T22:14:14.836590Z",
+      "updated_at": "2026-10-05T22:50:07.264231Z",
+      "closed_at": "2026-10-05T22:50:07.238982Z",
       "labels": [
         "enhancement"
       ]
