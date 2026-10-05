@@ -44,6 +44,12 @@ Keys: `file_globs`, `require_frontmatter`, `vocabulary_globs`, `code_catalog_glo
 - `code_catalog_globs` (optional) — the files the code-catalog family scans;
   empty = every walked file; a dead scope warns (`W0055`).
 
+One glob dialect applies to every glob mdatron reads — `file_globs`, the
+scope globs, a route's `files`, a pattern rule's path `context`: `*`, `?` and
+`[…]` match within one path segment; `**` crosses any number of them; a
+leading `.` is not special, so `**/CLAUDE.md` reaches `.claude/CLAUDE.md`.
+(Through 0.6.0 `*` crossed `/`; a glob that relied on that needs `**`.)
+
 Activation: `verify` refuses without it. Codes: `W0040`, `W0043`, `W0046`,
 `W0051`, `W0055`.
 
@@ -54,7 +60,9 @@ gateway to the citation, link, marker, and section families.
 
 Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `citations`, `links`, `link_root`, `marker_rules`, `pattern`, `element`, `target_doc`, `target_section`, `section_rules`, `section`, `match`, `match_on`, `count`, `disjoint`, `id_pattern`, `schema`, `name_equals_dir`, `max_bytes`, `every`, `order`.
 
-- Per route — required: `files` (root-relative glob; `*` crosses `/`),
+- Per route — required: `files` (root-relative glob; `*` matches within one
+  path segment and `**` crosses any number of them — the one glob dialect
+  every adopter glob uses, see `config.yaml`),
   `governed_by` (a document that must open inside the governed tree, `E0031`).
   Optional: `naming` (a filename grammar, `W0041`), `citations: true`,
   `links: true`, `link_root: true` (resolve `/root-relative` links; needs

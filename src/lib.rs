@@ -51,6 +51,7 @@ pub(crate) mod error;
 pub(crate) mod format_version;
 #[doc(hidden)]
 pub mod frontmatter;
+pub(crate) mod globs;
 #[doc(hidden)]
 pub mod init;
 #[doc(hidden)]

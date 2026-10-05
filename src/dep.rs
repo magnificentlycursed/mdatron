@@ -81,7 +81,7 @@ impl DepGraph {
         //    coincides with the file it names (F3).
         for f in files {
             for r in routes {
-                if r.files.matches_path(&f.path) {
+                if crate::globs::matches_path(&r.files, &f.path) {
                     g.connect(&f.path, &normalize_node(&r.governed_by));
                 }
             }

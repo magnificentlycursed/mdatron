@@ -68,8 +68,8 @@ file_globs:
 mdatron_format_version: 1
 routes:
 # Path-specific instructions. GitHub.com: "The file name must end with
-# .instructions.md"; `*` crosses `/`, so subdirectories are covered.
-- files: ".github/instructions/*.md"
+# .instructions.md"; `**` reaches every subdirectory.
+- files: ".github/instructions/**/*.md"
   governed_by: AGENTS.md
   schema: copilot-instructions
   naming: "^[^/]+\\.instructions\\.md$"
@@ -83,7 +83,7 @@ project (JSON Schema draft 2020-12).
 | Source rule | mdatron construct |
 |---|---|
 | "The file name must end with `.instructions.md`" (GitHub.com) | route `naming` grammar over every walked file in `.github/instructions/` (`W0041`) |
-| Files in subdirectories of `.github/instructions` count | the route's `*` crosses directories |
+| Files in subdirectories of `.github/instructions` count | the route's `**` reaches every subdirectory |
 | `excludeAgent` is `"code-review"` or `"cloud-agent"` | schema `enum` |
 | `applyTo`, `excludeAgent`, `name`, `description` are the documented keys | `additionalProperties: false` (`E0050`) |
 | A path-specific file applies through its `applyTo` | `applyTo` required (project policy, see above) |

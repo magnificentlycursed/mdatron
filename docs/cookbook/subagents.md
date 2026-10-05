@@ -68,13 +68,13 @@ file_globs:
 mdatron_format_version: 1
 routes:
 # Project subagents (the same format applies to ~/.claude/agents and to managed
-# agents). `*` crosses `/`, so nested folders are covered.
-- files: ".claude/agents/*.md"
+# agents). `**` reaches every nested folder.
+- files: ".claude/agents/**/*.md"
   governed_by: AGENTS.md
   schema: subagent
 # A plugin's agents: hooks, mcpServers, permissionMode and initialPrompt are
 # ignored there, so the plugin profile does not allow them.
-- files: "plugin/agents/*.md"
+- files: "plugin/agents/**/*.md"
   governed_by: AGENTS.md
   schema: subagent-plugin
 ```

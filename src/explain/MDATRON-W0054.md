@@ -24,7 +24,8 @@ jurisdiction from the command line, so a route outside that glob is not dead.
 
 Correct the glob so it claims the files it should govern (check it against the
 paths under `file_globs` in `.mdatron/config.yaml`; route globs are
-root-relative and `*` crosses `/`), or remove the route if those files are
+root-relative; `*` stays within one path segment, `**` crosses any depth),
+or remove the route if those files are
 gone. A route kept for files that do not exist yet should be added when they
 do.
 

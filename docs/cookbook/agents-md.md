@@ -104,8 +104,8 @@ routes:
   # Codex stops reading at 32 KiB across the files on one path. With one
   # AGENTS.md per package, a path is the root file plus one package's:
   # 24 KiB here and 8 KiB per package file keeps that inside the budget.
-  # (A route's `*` crosses `/`: a second AGENTS.md deeper in a package gets
-  # its own 8 KiB, and the split no longer holds.)
+  # `*` is one directory level, so a second AGENTS.md deeper in a package is
+  # unrouted (E0030) rather than quietly given its own 8 KiB.
   max_bytes: 24576
   section_rules:
   # Project policy: the format itself is "just standard Markdown" with no
@@ -135,9 +135,8 @@ routes:
     count: ">= 1"
 # A CLAUDE.md switches AGENTS.md off for Claude Code unless it imports it, so
 # each routed one holds the import. No route claims .claude/CLAUDE.md, a
-# CLAUDE.local.md, or a CLAUDE.md outside packages/: a committed one is
-# unrouted (E0030). A route's `*` crosses `/`, so the packages route also
-# claims a CLAUDE.md deeper inside a package.
+# CLAUDE.local.md, or a CLAUDE.md anywhere but the root and one level under
+# packages/: a committed one is unrouted (E0030).
 - files: "CLAUDE.md"
   governed_by: CONTRIBUTING.md
   section_rules:
@@ -192,13 +191,6 @@ schemas or patterns directory to exist, and this recipe needs no schema.
   Code until someone adds a `CLAUDE.md` next to it. Nor can it check that
   the `AGENTS.md` an import names exists beside the importing file. mdatron
   has no rule that one file must have a sibling (mdatron #221).
-- **Stray files inside a package.** A route's `*` crosses `/`, so
-  `packages/*/CLAUDE.md` also claims `packages/api/sub/CLAUDE.md` and
-  `packages/api/.claude/CLAUDE.md`. Such a file is held to the import rule
-  instead of being reported as unrouted, and an `@AGENTS.md` in it passes
-  though it points at no file and still hides the package's `AGENTS.md`
-  from Claude Code. Only strays outside `packages/` are caught. mdatron has
-  no route glob whose `*` stops at a directory (mdatron #220).
 - **Whether the import is live.** The rule looks for `@AGENTS.md` or
   `@./AGENTS.md`, with whitespace or a line end on both sides, on a line
   outside fenced code. A tight code span (`` `@AGENTS.md` ``) is rightly not
@@ -210,13 +202,12 @@ schemas or patterns directory to exist, and this recipe needs no schema.
   body: frontmatter and fenced code blocks are not lines. A file holding
   only a fenced block of commands is reported though Codex would read it,
   and a file holding only an invisible character passes.
-- **Deeper files and the budget.** A route's `*` crosses `/`, so
-  `packages/*/AGENTS.md` also claims `packages/api/sub/AGENTS.md`, with its
-  own 8 KiB. The split is sound only while each package has one `AGENTS.md`
-  (mdatron #220).
-  `max_bytes` bounds each file; mdatron does not add up the files along a
-  path. The count is the file's bytes as checked out, so keep bounded files
-  on LF line endings (`eol=lf` in `.gitattributes`).
+- **The combined budget itself.** `max_bytes` bounds each file; mdatron does
+  not add up the files along a path. The split is sound because `*` is one
+  directory level: a second `AGENTS.md` deeper in a package is unrouted
+  rather than given its own 8 KiB. The count is the file's bytes as checked
+  out, so keep bounded files on LF line endings (`eol=lf` in
+  `.gitattributes`).
 - **A symlinked `CLAUDE.md`.** `ln -s AGENTS.md CLAUDE.md` is a setup the
   Claude Code documentation offers. mdatron refuses symlinks in the governed
   tree (`E0012`), so this recipe needs the import form.
@@ -394,7 +385,10 @@ mdatron verify: 1 error(s), 0 warning(s) across 1 finding(s)
 
 **A `.claude/CLAUDE.md` appears.** It counts as a `CLAUDE.md` above every
 file in the repository, and it imports nothing. No route allows it, so it is
-reported the way a stray override is.
+reported the way a stray override is. The same happens one level down: a
+`packages/api/.claude/CLAUDE.md`, which would switch off that package's
+`AGENTS.md` for Claude Code, is not claimed by `packages/*/CLAUDE.md`
+(`*` is one directory level) and is reported too.
 
 <!-- cookbook-case: stray-claude -->
 ```text
