@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1254,
-        "tip_oid": "1343c118189414967e61bb7a9be1a9d357dca16a",
-        "prefix_sha256": "e9d85be25a8c41b3ed09de3cdcb3c0e2c2a9e867c759e1e7c8fac35bc04cc279"
+        "sequence": 1255,
+        "tip_oid": "64272a9c3504d2e13d879ec381e1833aa6cf5b51",
+        "prefix_sha256": "271249cf17568a8cef572ad836d8f94ee9be7ac591cfe44868d87862763bd5d7"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 227,
-  "next_comment_id": 606,
+  "next_comment_id": 607,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -7778,7 +7778,18 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-09-24T21:48:16.084499Z",
-      "updated_at": "2026-09-24T21:48:16.084499Z"
+      "updated_at": "2026-10-05T22:51:05.148356Z",
+      "comments": {
+        "5bd3a021-64ee-4adc-8ce4-59c52704d7cb": {
+          "display_id": 606,
+          "author": "79Ig",
+          "content": "Pre-cut state 2026-10-05: merged since the 0.6.0 cut — #185/#189-#194 lanes, #201, #206-#209, #212, the standards pack (#181, PR #66), the pack's engine gaps (#213/#214/#216-#219, PR #68), glob dialect (#220, PR #69, BREAKING: * no longer crosses / in route files/scope globs/rule context), requires_sibling + @path imports (#221/#226, PR #70). Envelope 3.1.0, unreleased. Fingerprint turnovers all carry migration notes. Open before the cut: nothing blocking; #215 (offline link checks), #222-#225 backlog are post-cut.",
+          "created_at": "2026-10-05T22:51:05.111213Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAdl3/v8gFoKSk+RVJMMmorYvlUdE30jCChi2nA0j5QECWYezleLvSKEKuIAg0ainkGSfD9ZQfvrsG/5HQ1nxuBw=="
+        }
+      }
     },
     "d6a9a419-11bd-4e47-bbfc-1cd8940f61a1": {
       "uuid": "d6a9a419-11bd-4e47-bbfc-1cd8940f61a1",
