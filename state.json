@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1261,
-        "tip_oid": "d16f55b004852eec105fcbb68e10076751951599",
-        "prefix_sha256": "6ea2c482b4c785a246071b176b3405b7201aedf86efe9fd19ea95289f6e7b178"
+        "sequence": 1262,
+        "tip_oid": "4ffc73aeae3377a928dccff3f85824c524d783f8",
+        "prefix_sha256": "16dd8b1377f68a24e5f641515fe42411d43ea272abffc6931d27932ff6cfc12d"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 228,
-  "next_comment_id": 607,
+  "next_comment_id": 608,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -3163,10 +3163,21 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-10-06T19:50:21.135272Z",
-      "updated_at": "2026-10-06T19:51:05.325425Z",
+      "updated_at": "2026-10-06T20:04:04.516996Z",
       "labels": [
         "docs"
-      ]
+      ],
+      "comments": {
+        "fb92b131-6ea5-483a-8825-52a7eb819ffa": {
+          "display_id": 607,
+          "author": "79Ig",
+          "content": "Operator asked (2026-10-06) whether mdatron can dogfood this. The engine cannot: it reads markdown and .mdatron/ only, never Cargo.toml (jurisdiction by design); numeric_claims compares against frontmatter, marker rules against a target document's elements, and a section-rule literal would just move the stale pin into routes.yaml. The repository's own idiom can: as docs/limits.md is rendered from limits::SHIPPED under a test, the README install pin is now a round-trip-marked fence held equal to CARGO_PKG_VERSION by tests/cli_integration.rs::readme_install_pin_is_rendered_from_the_crate_version (regenerate: MDATRON_UPDATE_DOCS=1). Proven red on a stale 0.6 pin. So the release checklist needs no new step: the bump commit fails until the README is regenerated.",
+          "created_at": "2026-10-06T20:04:04.461117Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAWLO6rlm9Ich0y0hcrTJ2572X2A7nG9iFl8hwBsa26uxUopofVks5pU9+hehTRxAho5tOLPr4OhXykgAHZRLHCg=="
+        }
+      }
     },
     "571fe228-1e58-4ec0-8edf-6ebced31ecd8": {
       "uuid": "571fe228-1e58-4ec0-8edf-6ebced31ecd8",
