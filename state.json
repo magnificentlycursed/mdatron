@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1256,
-        "tip_oid": "d55b0c68badac53c540b92acd0bcb587cddbb730",
-        "prefix_sha256": "2966f964fb70bbb850e4c12dca8d05b7772cd3f1f1e0554ec21ebc458270167d"
+        "sequence": 1257,
+        "tip_oid": "a813d31a7f572cec184f41ced070dbd72c1b4c56",
+        "prefix_sha256": "63d7749ae8cee6a041a0abf2e99563efce0890f4fa77ad40d9dedd9b7ec7b9e5"
       },
       "IMWa": {
         "sequence": 2,
@@ -7778,11 +7778,12 @@
       "uuid": "d5e5f80a-4501-486b-bf8b-f79376b9bee5",
       "display_id": 202,
       "title": "cut 0.7.0 release — ONE version for the whole post-cut queue (operator ruling 2026-09-24: no 0.6.1 patch): L1 contract hygiene (merged, PR #55) + L2 Windows fail-closed (#64) + L3 generated artifacts incl. the lib-surface trim (#189/#190/#200/#185 remainder) + L4 harness depth (#193) + L5 standards pack (#181, #192) — crate 0.7.0; envelope stays 3.0.0 unless a recipe-driven feature adds fields (then MINOR 3.1.0)",
-      "status": "open",
+      "status": "closed",
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-09-24T21:48:16.084499Z",
-      "updated_at": "2026-10-05T22:51:05.148356Z",
+      "updated_at": "2026-10-06T19:39:59.610146Z",
+      "closed_at": "2026-10-06T19:39:59.587776Z",
       "comments": {
         "5bd3a021-64ee-4adc-8ce4-59c52704d7cb": {
           "display_id": 606,
