@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1290,
-        "tip_oid": "78236e66575e736e9d7ef88b9b5c352808e85ca4",
-        "prefix_sha256": "89a31f8f6fb2d24595e087e4c16ba40354fc5c147a84ae6aeb3d322bea139abc"
+        "sequence": 1291,
+        "tip_oid": "855b2b9d1d1bea9f79ab1ac06ae4ebfebbb9c296",
+        "prefix_sha256": "bd4bb3d421a7dde0bf501ce02b1ed531d80467ef4e679f0d84594957cf4cf580"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 242,
-  "next_comment_id": 614,
+  "next_comment_id": 615,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -6651,8 +6651,17 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-09-29T02:20:48.033477Z",
-      "updated_at": "2026-10-06T22:18:12.595545Z",
+      "updated_at": "2026-10-06T22:20:26.604977Z",
       "comments": {
+        "0f7ad57e-6c89-4702-8d9f-d1e0d26d96ee": {
+          "display_id": 614,
+          "author": "79Ig",
+          "content": "ROUND 2 architecture cluster: all round-1 architecture fixes HOLD; cargo test --locked, init (no changes), verify --deny-warnings, fmt, clippy under the pinned 1.88 all green on the staged tree. No BLOCKER/MAJOR. 8 items, accepted, NOT YET APPLIED: (1) pub mod links lacks #[doc(hidden)] (lib.rs contract: every exported item hidden) — add it and tighten Entry/LoadedRegister/load/REGISTER_NAME/RawPolicy/Policy::compile to pub(crate), keep Policy/ExternalLink/Export/EXPORT_VERSION pub; (2) OPERATOR DECISION: inputs.links.yaml is emitted under envelope 3.1.0 whose published description does not list it — either bump to 3.2.0 at the 0.8.0 cut (the 3.1.0 manifest.yaml precedent) or write the 'inputs keys are an open set' rule into DESIGN § versioned contract and reword the description at the next bump; (3) DESIGN:74 still says three axes — four from 0.8.0; DESIGN:71 hard-codes 1.0.0 — state the axis without the literal or add it to the version-lockstep tripwire; (4) DESIGN:45 ledger: link_root/imports/link_policy extend links, drop the double 'and'; (5) move LineCursor to markup.rs and pass lines.line_of(at) into resolve_link/link_finding so relative-link findings stop rescanning from byte 0; (6) links::Context holds the whole family's options but lives in links.rs — consider link::Context or LinkOptions; (7) CHANGELOG Unreleased: Added before Fixed (Keep a Changelog order; the release roll trips otherwise); (8) 'wrong everywhere' overclaims https://host: (RFC 3986 admits an empty port) — call it typo-shaped. Export tripwire gaps worth one more test: top-level key order, empty-export JSON, cross-file/line ordering, a line on a frontmatter+CRLF file, exit 2 shape on a load failure. Still running at cutoff: implementation and adversarial clusters.",
+          "created_at": "2026-10-06T22:20:26.575849Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAAZxMrmpd1deCKUIMy5Ux2ab3a8C20vjFbIFc06av+Mi5PirxmNhka8SijJQA/wfImFp68/9JTHCNK23Yyuq6DA=="
+        },
         "69c945c2-a968-4017-ab59-2ec48364a431": {
           "display_id": 612,
           "author": "79Ig",
