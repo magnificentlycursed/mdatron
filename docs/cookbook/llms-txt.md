@@ -57,9 +57,12 @@ routes:
 - files: "llms.txt"
   governed_by: AGENTS.md
   naming: "^llms\\.txt$"
-  # Relative links and #anchors must resolve (absolute https:// URLs are
-  # outside the tree and not checked).
+  # Relative links and #anchors must resolve. An absolute URL is never
+  # fetched; it must be well formed, declared in .mdatron/links.yaml with
+  # the anchor it uses, and https (the policy below).
   links: true
+  link_policy:
+    schemes: [https]
   section_rules:
   # One H1 in the whole file: the rules anchored on "# Acme" cover that H1's
   # span, which a second H1 would end.
@@ -93,6 +96,19 @@ routes:
       match: "."
 ```
 
+<!-- cookbook-file: .mdatron/links.yaml -->
+```yaml
+mdatron_format_version: 1
+# The absolute URLs llms.txt may point at. An agent follows these too, and
+# mdatron cannot see whether they answer: each entry is a promise made by
+# whoever edits this file, and a liveness tool checks the list on a schedule
+# (`mdatron links --external` prints what the corpus links to).
+links:
+- url: https://api.acme.dev/reference
+  # The anchors llms.txt may use on that page, confirmed on the live page.
+  fragments: [endpoints, authentication]
+```
+
 The example's `.mdatron/schemas/` holds only a `.gitkeep`: mdatron requires a
 schemas or patterns directory to exist, and this recipe needs no schema.
 
@@ -105,14 +121,19 @@ schemas or patterns directory to exist, and this recipe needs no schema.
 | Each item is "a required markdown hyperlink `[name](url)`, then optionally a `:` and notes" | an `every` rule over the `list-item` elements of each named file list (`E0123`, one per malformed item) |
 | The blockquote summary precedes the file lists | an `order` rule: `blockquote`, then `h2` (`E0124`) |
 | One H1 (inferred: the specification describes a single H1 and never says "exactly one") | a whole-document count of `h1`, `== 1` (`E0120`): the rules anchored on the H1 cover its span, which a second H1 would end |
-| Links should point to agent-friendly Markdown pages | route `links: true`: every relative link and `#anchor` must resolve (`E0110`, `E0111`) |
+| Links should point to agent-friendly Markdown pages | route `links: true`: every relative link and `#anchor` must resolve (`E0110`, `E0111`); an absolute URL must be well formed (`E0117`) |
+| Links outside the repository are declared, with their anchors, and are `https` (this recipe's policy; the specification says nothing) | `.mdatron/links.yaml` lists each URL and the anchors used on it (`E0115`, `E0116`); `link_policy: {schemes: [https]}` on the route (`E0118`) |
 | The file is named `llms.txt` | route `naming` grammar (`W0041`) |
 
 ## What this does not check
 
-- **Absolute URLs.** The link family resolves links inside the repository;
-  `https://` links, which most published `llms.txt` files use, are not
-  fetched or checked. This is a gap in mdatron, tracked as mdatron #215.
+- **Whether an absolute URL answers.** mdatron never fetches a URL. The
+  register says which URLs `llms.txt` may point at and which anchors on
+  them; whether those pages are live, and whether the anchors exist on them,
+  is for a liveness tool run on a schedule. `mdatron links --external` prints
+  the URLs for it (`--json` adds file and line), and lychee with
+  `--include-fragments` checks the anchors too. An entry in `links.yaml` is a
+  promise made by whoever edits it.
 - **File lists the rules do not name.** An `every` rule names one section,
   so each file list needs its own rule: a new `## Guides` list is unchecked
   until you add one, and removing `## Optional`, which the specification
@@ -212,10 +233,18 @@ mdatron verify: 2 error(s), 0 warning(s) across 2 finding(s)
 
 **No file lists left.** An edit removed every H2 section: the file still
 parses, but it no longer points anywhere. The count rule reports it, and so
-does each list's own rule.
+does each list's own rule; the register entry for the API reference, which
+nothing links to any more, is reported as unused.
 
 <!-- cookbook-case: no-file-lists -->
 ```text
+warning[MDATRON-W0057]: link-register-entry-unused
+  --> .mdatron/links.yaml:1
+   = note: no absolute URL in any link-checked file matches this links.yaml entry, so it declares nothing the corpus says — a stale entry a liveness tool would keep checking, or a link that went away while the register did not
+   = url:
+           > https://api.acme.dev/reference
+   = help: remove the entry, or restore the link it declared
+   = explain: mdatron explain MDATRON-W0057
 error[MDATRON-E0120]: section-count-violation
   --> llms.txt:1
    = note: the named section has 0 matching h2 element(s) across its matching span(s); the rule requires the count >= 1
@@ -248,7 +277,7 @@ error[MDATRON-E0122]: section-not-found
    = element class:
            > list-item
    = explain: mdatron explain MDATRON-E0122
-mdatron verify: 3 error(s), 0 warning(s) across 3 finding(s)
+mdatron verify: 3 error(s), 1 warning(s) across 4 finding(s)
 ```
 
 **An item that is not a link.** Someone wrote the path as text. A tool that
@@ -278,7 +307,7 @@ reported.
 <!-- cookbook-case: summary-after-lists -->
 ```text
 error[MDATRON-E0124]: section-order-violation
-  --> llms.txt:14
+  --> llms.txt:15
    = note: this element appears after an element the rule's order places later
    = section:
            > # Acme
@@ -288,7 +317,7 @@ error[MDATRON-E0124]: section-order-violation
            > h2 matching .
    = explain: mdatron explain MDATRON-E0124
 error[MDATRON-E0124]: section-order-violation
-  --> llms.txt:15
+  --> llms.txt:16
    = note: this element appears after an element the rule's order places later
    = section:
            > # Acme
@@ -315,6 +344,81 @@ error[MDATRON-E0120]: section-count-violation
 mdatron verify: 1 error(s), 0 warning(s) across 1 finding(s)
 ```
 
+**An undeclared URL.** The API reference moved to a new path. The link reads
+fine; the register does not know the new page, and still lists the old one,
+so mdatron reports both halves.
+
+<!-- cookbook-case: undeclared-url -->
+```text
+warning[MDATRON-W0057]: link-register-entry-unused
+  --> .mdatron/links.yaml:1
+   = note: no absolute URL in any link-checked file matches this links.yaml entry, so it declares nothing the corpus says — a stale entry a liveness tool would keep checking, or a link that went away while the register did not
+   = url:
+           > https://api.acme.dev/reference
+   = help: remove the entry, or restore the link it declared
+   = explain: mdatron explain MDATRON-W0057
+error[MDATRON-E0115]: external-link-undeclared
+  --> llms.txt:16
+   = note: this link's absolute URL matches no entry in .mdatron/links.yaml, the register of the URLs this corpus may point at (an entry matches its URL exactly, or every URL starting with it when it sets prefix: true)
+   = link:
+           > https://api.acme.dev/v2/reference#endpoints
+   = help: add the URL to links.yaml — or a prefix entry that covers it — or correct the link
+   = explain: mdatron explain MDATRON-E0115
+mdatron verify: 1 error(s), 1 warning(s) across 2 finding(s)
+```
+
+**An anchor the register does not list.** The page is declared, but
+`#endpoint` is not among the anchors confirmed on it. mdatron cannot read
+the live page's headings, so the list is what it checks against.
+
+<!-- cookbook-case: undeclared-anchor -->
+```text
+error[MDATRON-E0116]: external-anchor-undeclared
+  --> llms.txt:16
+   = note: this link's `#fragment` is not among the fragments .mdatron/links.yaml declares for its URL (the entry's `fragments` is the closed set of anchors the corpus may use on that page; an entry without one accepts any); mdatron does not fetch the page to read its headings, so the list is what it can check against
+   = link:
+           > https://api.acme.dev/reference#endpoint
+   = url:
+           > https://api.acme.dev/reference
+   = fragments:
+           > endpoints, authentication
+   = help: add the fragment to the entry's `fragments` after confirming the anchor exists on the live page, or correct the link
+   = explain: mdatron explain MDATRON-E0116
+mdatron verify: 1 error(s), 0 warning(s) across 1 finding(s)
+```
+
+**An `http://` link.** The policy allows `https` only, and the register
+declares the `https` page: the link breaks the policy and is undeclared,
+and the entry it no longer matches is reported too.
+
+<!-- cookbook-case: http-link -->
+```text
+warning[MDATRON-W0057]: link-register-entry-unused
+  --> .mdatron/links.yaml:1
+   = note: no absolute URL in any link-checked file matches this links.yaml entry, so it declares nothing the corpus says — a stale entry a liveness tool would keep checking, or a link that went away while the register did not
+   = url:
+           > https://api.acme.dev/reference
+   = help: remove the entry, or restore the link it declared
+   = explain: mdatron explain MDATRON-W0057
+error[MDATRON-E0115]: external-link-undeclared
+  --> llms.txt:16
+   = note: this link's absolute URL matches no entry in .mdatron/links.yaml, the register of the URLs this corpus may point at (an entry matches its URL exactly, or every URL starting with it when it sets prefix: true)
+   = link:
+           > http://api.acme.dev/reference#endpoints
+   = help: add the URL to links.yaml — or a prefix entry that covers it — or correct the link
+   = explain: mdatron explain MDATRON-E0115
+error[MDATRON-E0118]: link-policy-violation
+  --> llms.txt:16
+   = note: this link violates the claiming route's link_policy: its scheme `http` is not one the policy allows
+   = link:
+           > http://api.acme.dev/reference#endpoints
+   = policy:
+           > schemes: https
+   = help: change the link to one the policy allows, or widen the policy
+   = explain: mdatron explain MDATRON-E0118
+mdatron verify: 2 error(s), 1 warning(s) across 3 finding(s)
+```
+
 ## Make it yours
 
 - **Your project's name.** Change `# Acme` in the section rules to your H1.
@@ -326,3 +430,7 @@ mdatron verify: 1 error(s), 0 warning(s) across 1 finding(s)
 - **Links that must be Markdown.** Pair `links: true` with a repository
   layout whose linked pages are `.md`, and every link an agent follows is
   checked.
+- **Your outbound links.** Put every absolute URL `llms.txt` uses in
+  `.mdatron/links.yaml` (`mdatron links --external` prints them), with the
+  anchors you have confirmed on each page, and point a liveness tool at the
+  same list on a schedule.

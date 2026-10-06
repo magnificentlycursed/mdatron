@@ -3,9 +3,12 @@ routes:
 - files: "llms.txt"
   governed_by: AGENTS.md
   naming: "^llms\\.txt$"
-  # Relative links and #anchors must resolve (absolute https:// URLs are
-  # outside the tree and not checked).
+  # Relative links and #anchors must resolve. An absolute URL is never
+  # fetched; it must be well formed, declared in .mdatron/links.yaml with
+  # the anchor it uses, and https (the policy below).
   links: true
+  link_policy:
+    schemes: [https]
   section_rules:
   # One H1 in the whole file: the rules anchored on "# Acme" cover that H1's
   # span, which a second H1 would end.

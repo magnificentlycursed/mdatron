@@ -1,0 +1,9 @@
+mdatron_format_version: 1
+# The absolute URLs llms.txt may point at. An agent follows these too, and
+# mdatron cannot see whether they answer: each entry is a promise made by
+# whoever edits this file, and a liveness tool checks the list on a schedule
+# (`mdatron links --external` prints what the corpus links to).
+links:
+- url: https://api.acme.dev/reference
+  # The anchors llms.txt may use on that page, confirmed on the live page.
+  fragments: [endpoints, authentication]
