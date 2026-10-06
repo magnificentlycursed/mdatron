@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1287,
-        "tip_oid": "7fead1dc454464d5b7f7ea9e6a0d65406aa02114",
-        "prefix_sha256": "5cfb5a8a59bf6914987488672642881dc3e5c2e877be83901a94712848feedda"
+        "sequence": 1288,
+        "tip_oid": "538e314e74a2c241c607a1c0771a2f3a5540c8ea",
+        "prefix_sha256": "98a541e2cb9e4a04afb5325289490547b9246f9440405d8002dca7c2adbcb680"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 241,
+  "next_display_id": 242,
   "next_comment_id": 612,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -230,6 +230,7 @@
     "de7bc45b-bc77-4954-b74e-7c8b9b68c96e": 206,
     "decfc009-3573-4782-ba16-6d89f8898711": 191,
     "defb3290-053e-4af9-989f-daf56c87410a": 102,
+    "df676955-ac48-477f-b3c7-af03b395a636": 241,
     "df97fa67-a0e9-46f5-b742-43663606453b": 157,
     "e055a0eb-e767-4ca7-8248-7c695b3c501a": 166,
     "e06b1201-7654-4266-ad6b-93d5c3daabf9": 12,
@@ -8189,6 +8190,17 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAwWI/lw8nFIXQqwhloqiCe3C170yMZw2eHyz+R6rm/uk1JG5iBYWTl9TV1o9FLDzctqbk2GH0X+hczfsid08nBQ=="
         }
       }
+    },
+    "df676955-ac48-477f-b3c7-af03b395a636": {
+      "uuid": "df676955-ac48-477f-b3c7-af03b395a636",
+      "display_id": 241,
+      "title": "W0055 (code-catalog scope matches nothing) fires on an ad-hoc --files run, unlike W0054/W0056/W0057 which require a config-driven whole-tree run; align the gate",
+      "description": "Source: #215 cold review round 1 (adversarial cluster, noted as pre-existing). src/verify.rs: W0055 is gated on scope.is_none() && codecat_scoped && codecat_hits == 0 — an ad-hoc --files run whose glob excludes the catalog scope reports a dead scope that the whole-tree run does not. Gate on config.config_digest.is_some() like W0054, and say so on the W0055 page.",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-10-06T21:46:03.656357Z",
+      "updated_at": "2026-10-06T21:46:03.656357Z"
     },
     "df97fa67-a0e9-46f5-b742-43663606453b": {
       "uuid": "df97fa67-a0e9-46f5-b742-43663606453b",
