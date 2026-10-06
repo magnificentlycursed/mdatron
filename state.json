@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1285,
-        "tip_oid": "d3c30c2530e751f8ad803b7d3fac052b16402440",
-        "prefix_sha256": "937c93c824964c6adcd1f9befabf52b59011f6e5318684bb7c442c5384147b48"
+        "sequence": 1286,
+        "tip_oid": "994683719fe7c5b3cb9ecaf9a1c6937ad1e8d453",
+        "prefix_sha256": "bfc4ab48d903495bf5067c586771a8b4c6eef6558862d67c40c9431754035f50"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 240,
-  "next_comment_id": 611,
+  "next_comment_id": 612,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -662,10 +662,21 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-10-02T21:18:54.055167Z",
-      "updated_at": "2026-10-02T21:19:37.426250Z",
+      "updated_at": "2026-10-06T21:31:25.968806Z",
       "labels": [
         "enhancement"
-      ]
+      ],
+      "comments": {
+        "a2be5ef1-34ec-4d4d-9788-f6b02dd0ccc0": {
+          "display_id": 611,
+          "author": "79Ig",
+          "content": "GH #73 raise 3 (vsdd-cli, 2026-10-06) asks for the same thing: a recipe for Claude Code rules files (.claude/rules/*.md with paths: frontmatter) — 'the pack names the location and stops'. Folded here; cite mdatron GH #73 when the recipe lands.",
+          "created_at": "2026-10-06T21:31:25.911316Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAGZ7A08WN7VGvEmqS5hvb7ou1o3tQzduUb18s4+qC9Yh8iVEahActnjs0Slm6a4VJpyMoEcsdK/GRKiXFXpvdCA=="
+        }
+      }
     },
     "15d7981a-008d-4805-8a69-f3e4f414caf0": {
       "uuid": "15d7981a-008d-4805-8a69-f3e4f414caf0",
