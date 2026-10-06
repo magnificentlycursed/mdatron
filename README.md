@@ -36,18 +36,21 @@ readers.
 
 mdatron ships as an early **0.x** crate — usable now, with the CLI and the
 `--json` diagnostic contract still evolving under SemVer (pre-1.0, a breaking
-change moves the `0.MINOR` position, so `^0.6` will not silently pull a breaking
-`0.7`). Install from crates.io:
+change moves the `0.MINOR` position, so a caret on the previous minor will not
+silently pull a breaking one). Install from crates.io:
 
 ```
 cargo install mdatron --locked
 ```
 
-Pin the minor to avoid an unintended breaking upgrade in CI:
+Pin the minor to avoid an unintended breaking upgrade in CI (the pin below is
+rendered from the crate version, and a test holds it there):
 
+<!-- mdatron-roundtrip:install-pin-start -->
 ```
 cargo install mdatron --locked --version "0.7"
 ```
+<!-- mdatron-roundtrip:install-pin-end -->
 
 `--locked` pins transitive dependencies to the shipped `Cargo.lock`; recommended
 for reproducible builds. To build from a checkout instead (the clone creates a
