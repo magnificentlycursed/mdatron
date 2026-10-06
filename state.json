@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1284,
-        "tip_oid": "b14f71b4ed1a13bb03e0a079c2976a36f8723d29",
-        "prefix_sha256": "9dff1a7df8b201e98b10640a9998330dcd9a8cfeca7b1b34cf0af66f0ada27fc"
+        "sequence": 1285,
+        "tip_oid": "d3c30c2530e751f8ad803b7d3fac052b16402440",
+        "prefix_sha256": "937c93c824964c6adcd1f9befabf52b59011f6e5318684bb7c442c5384147b48"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 239,
+  "next_display_id": 240,
   "next_comment_id": 611,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -109,6 +109,7 @@
     "52ecc683-68d9-47ce-934f-0d9b43c371f4": 70,
     "535ce770-991b-4b76-b2e5-f7107912a629": 198,
     "54d7fcb5-8767-47f0-8666-27b4bec840fe": 227,
+    "56577507-a094-4140-aa8d-20633edd0b5a": 239,
     "571fe228-1e58-4ec0-8edf-6ebced31ecd8": 155,
     "57311af8-98a9-4083-9f80-586f713d0089": 142,
     "588a808f-de8c-4824-8347-2ed0a5891594": 44,
@@ -3254,6 +3255,17 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAWLO6rlm9Ich0y0hcrTJ2572X2A7nG9iFl8hwBsa26uxUopofVks5pU9+hehTRxAho5tOLPr4OhXykgAHZRLHCg=="
         }
       }
+    },
+    "56577507-a094-4140-aa8d-20633edd0b5a": {
+      "uuid": "56577507-a094-4140-aa8d-20633edd0b5a",
+      "display_id": 239,
+      "title": "A shared spelled-out form for citing GitHub-side issues across the two repos (mdatron notes say 'GH #56'; vsdd-cli's handle grammar has no form) (GH #73 raise 7)",
+      "description": "Source: GH #73 raise 7. Propose 'mdatron#73' / 'vsdd-cli#55' (GitHub's own cross-repo short form; unambiguous against tracker '#215'), and adopt it in CHANGELOG/DESIGN/tracker comments from 0.8.0; coordinate with vsdd-cli (their #194 methodology sync is the carrier).",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-10-06T21:29:01.977288Z",
+      "updated_at": "2026-10-06T21:29:01.977288Z"
     },
     "571fe228-1e58-4ec0-8edf-6ebced31ecd8": {
       "uuid": "571fe228-1e58-4ec0-8edf-6ebced31ecd8",
