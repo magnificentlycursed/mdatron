@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1288,
-        "tip_oid": "538e314e74a2c241c607a1c0771a2f3a5540c8ea",
-        "prefix_sha256": "98a541e2cb9e4a04afb5325289490547b9246f9440405d8002dca7c2adbcb680"
+        "sequence": 1289,
+        "tip_oid": "4e50a99b226326eb91c1dcd7ffa559f70cf60834",
+        "prefix_sha256": "421d2c6c68bd7fb70ee55314892848235adf178c7a9e4102b81431d3170b47d2"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 242,
-  "next_comment_id": 612,
+  "next_comment_id": 613,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -6651,8 +6651,17 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-09-29T02:20:48.033477Z",
-      "updated_at": "2026-10-06T21:05:31.703615Z",
+      "updated_at": "2026-10-06T21:51:16.707221Z",
       "comments": {
+        "69c945c2-a968-4017-ab59-2ec48364a431": {
+          "display_id": 612,
+          "author": "79Ig",
+          "content": "ROUND 1 RESULT (4 clusters, 2026-10-06): 0 hallucinated; ~45 findings deduplicated to 14 engine items + 18 doc items, all resolved in the staged fix commit (message: cold-review round 1 — host escapes closed, RFC 3986 hosts, email autolinks, decoded query names, export after parse). Highlights: prefix entry stopping inside its host was a host escape (refused at load); E0117 refused RFC-3986-legal hosts (reg-name accepted, zone ids too); email autolinks were false E0110 since 0.6.0 (mailto: scheme added in body_links; CHANGELOG Fixed); forbid_query bypass via %-encoding (names decoded); W0056 fired on --files (gated like W0054); export recorded non-URLs (now after parse); dot segments and invisible chars refused; per-link line via one LineCursor; link options folded into links::Context. Deferred to tracker: #240 (raw HTML / bare URLs are not links — stated in docs), #241 (W0055 ad-hoc gate, pre-existing). Declined: editing the published 3.1.0 schema description (joins #232 for the next envelope bump). Suite 650+ green, clippy clean. Commit pending: the work-check hook's 3 s crosslink timeout vs a ~5-7 s session status today. ROUND 2 launched on the staged tree.",
+          "created_at": "2026-10-06T21:51:16.665281Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAhiwdNMt6SVyy9L88NO2kPwTAi8booowxtxHttiguuS6GLdLnmOeuoFTPZqXHIUUsGZZNca36w2Ha0KN09AxPAA=="
+        },
         "85dbb6ea-5c42-44c0-8f34-295259f1b7ff": {
           "display_id": 609,
           "author": "79Ig",
