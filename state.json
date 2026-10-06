@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1268,
-        "tip_oid": "7e659c15f382f874bc609aadac15d0bc6933bbe9",
-        "prefix_sha256": "e4aa71ae83b50562d0ec8b4d8b108adf1107d788be2fd2485603c053687cea26"
+        "sequence": 1269,
+        "tip_oid": "9061ac2bc0e09d1034ba7ac80c6e045f291813a0",
+        "prefix_sha256": "c985641f39188c07a10f40a8008dab7a49362d87d86216369eb64ea6b20a0a22"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 228,
+  "next_display_id": 229,
   "next_comment_id": 611,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -68,6 +68,7 @@
     "291f852d-9a3c-429a-8ba1-83a1010974d1": 29,
     "29feef87-7eef-4c50-9464-51184aaf3890": 35,
     "2a58354e-62b0-46da-a4d3-3fbc30a3fa1d": 30,
+    "2af05d83-8de1-4e3f-8a9d-9f48dbd4cdfb": 228,
     "2b207fbe-b656-4cc1-8c3a-db693dfb36ff": 91,
     "2caa1838-562d-461f-9b53-05dbf16b73f4": 120,
     "2cf9c6a8-984e-448b-bf67-a2acd6b9fa13": 63,
@@ -1814,6 +1815,17 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAdIoWY9PATL+4OKK4VMrpT/eJq2hJow3L6nik8VsreTl0vaCWvJpZl8Vb/IlMf0OieBAlTw1JGa0hehyqmly2Cg=="
         }
       }
+    },
+    "2af05d83-8de1-4e3f-8a9d-9f48dbd4cdfb": {
+      "uuid": "2af05d83-8de1-4e3f-8a9d-9f48dbd4cdfb",
+      "display_id": 228,
+      "title": "key() with a Null index key aborts the whole run (E0080 eval, files_checked 0) — a bound frontmatter-less file makes a rule's key($self.field) lookup fail the pipeline (GH #73 defect 2, reproduced on 0.7.0)",
+      "description": "Source: GH #73 defect 2 (vsdd-cli 0.7.0 adoption). REPRODUCED on the 0.7.0 binary 2026-10-06: route schema: doc binds docs/b.md (no frontmatter → empty mapping); pattern rule assert: $self.owner == \"x\" or defined(key(\"owners\", $self.owner)); verify → pipeline_status failed, files_checked 0, every family inactive, pipeline_error {E0080, kind eval, 'type mismatch: expected string (index key), got null'}; exit 2. The guard does not protect and the message names pattern+rule, not the file. src/dsl/expr.rs 'key' arm: a non-string key is TypeMismatch. DESIGN:131 says a missing field reads as Null. Proposed fix: key(name, Null) returns Null (the lookup-miss value; defined() then false), so Null propagates as everywhere else; a remaining eval error should name the file and be a per-file finding, not a whole-run abort (one hostile file must not deny verification of the rest — the #103 posture).",
+      "status": "open",
+      "priority": "high",
+      "created_by": "79Ig",
+      "created_at": "2026-10-06T21:13:41.651511Z",
+      "updated_at": "2026-10-06T21:13:41.651511Z"
     },
     "2b207fbe-b656-4cc1-8c3a-db693dfb36ff": {
       "uuid": "2b207fbe-b656-4cc1-8c3a-db693dfb36ff",
