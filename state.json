@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1266,
-        "tip_oid": "f6c9709980d15f3f3c3425042fb9f973c669c3cf",
-        "prefix_sha256": "946bc93f894b38367cde58d189ac90cbd711eae821aaffdfdbee71557efbf1a7"
+        "sequence": 1267,
+        "tip_oid": "81ae3ff3efb1ec4adcf27f4d906942603a1541df",
+        "prefix_sha256": "816030f586891d12ae81ea45f300b5fd7aa6c6679f4ef32607994d9c25530949"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 228,
-  "next_comment_id": 609,
+  "next_comment_id": 610,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -6479,8 +6479,17 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-09-29T02:20:48.033477Z",
-      "updated_at": "2026-10-06T20:11:55.719823Z",
+      "updated_at": "2026-10-06T20:56:39.591441Z",
       "comments": {
+        "85dbb6ea-5c42-44c0-8f34-295259f1b7ff": {
+          "display_id": 609,
+          "author": "79Ig",
+          "content": "PLAN (lane 1a, audit slug: lychee-link-family-audit — lychee's --offline is exactly this posture; MD042 empty-link stays out of scope). Implementation on feature/215-link-register: (1) src/links.rs — register loader (.mdatron/links.yaml, born versioned, load refusals for inert/ambiguous entries), RFC-3986-shape well-formedness (E0117), route link_policy {schemes, hosts with *.sub, forbid_query regexes} (E0118, one per clause), register check (E0115 undeclared URL, E0116 undeclared fragment; exact wins over prefix, longest prefix wins; as-written comparison), W0056 inert register, W0057 unused entry (whole-tree, config-driven only), export records. (2) link.rs routes absolute destinations to links::check before resolve_link; verify.rs loads the register, adds links.yaml lineage, threads the Context per file, names the register in families.link's reason, carries VerifyReport.external_links. (3) mdatron links --external [--json]: runs the pipeline, prints distinct URLs or {url,file,line} under mdatron_links_version 1.0.0, warns on stderr when nothing is link-checked. (4) init deploys links.yaml.example; routes template gains link_policy. (5) six explain pages + regenerated catalog; inputs.md links.yaml section + routes keys; README Links paragraph + links round-trip fence; DESIGN link bullet records the never-fetch boundary (rulings 2026-10-02/06); CHANGELOG. (6) llms.txt recipe adopts the register + https policy with three new cases; the repo's own docs get a 14-entry register + https policy. No envelope bump: inputs is open, reasons are prose.",
+          "created_at": "2026-10-06T20:56:39.399259Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAosvexX3SuHZQz9hKXtu/1IBrb/kopQxADI6ovkLgN1hJU+Tw9kkkcTgWj9D3RlHtzT9lkolQ3p/b/OGAww0jCw=="
+        },
         "8a1bf484-d1e6-4c46-9e14-84a34c4417a1": {
           "display_id": 605,
           "author": "79Ig",
