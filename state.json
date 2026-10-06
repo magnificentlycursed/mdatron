@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1263,
-        "tip_oid": "39d638340ad1aae783910b31cb44953682436901",
-        "prefix_sha256": "a2259f3e7e50bc386041bd7b90c9ba7e7ec5e0f0f6f8a1381a852fea6d477a98"
+        "sequence": 1264,
+        "tip_oid": "244ff20557dbcd01c943a72f348c85164d8372c0",
+        "prefix_sha256": "b222e15b8fae14be54f404c74d10ab34191e85c52db53f134cbdb12d9d7a9cc6"
       },
       "IMWa": {
         "sequence": 2,
@@ -3159,11 +3159,12 @@
       "display_id": 227,
       "title": "Update the README install pin to 0.7 after the 0.7.0 cut",
       "description": "Post-release docs fix (operator 2026-10-06). README § Install still says 'cargo install mdatron --locked --version \"0.6\"' and the SemVer sentence beside it uses 0.5/0.6 as its example; 0.7.0 is published (crates.io 2026-10-06). The 0.6.0 cut (#171) left the same stale pin behind, so the release checklist should carry 'bump the README install pin' as a step.",
-      "status": "open",
+      "status": "closed",
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-10-06T19:50:21.135272Z",
-      "updated_at": "2026-10-06T20:04:04.516996Z",
+      "updated_at": "2026-10-06T20:14:51.704791Z",
+      "closed_at": "2026-10-06T20:14:51.676065Z",
       "labels": [
         "docs"
       ],
