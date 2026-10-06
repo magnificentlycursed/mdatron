@@ -971,6 +971,7 @@ fn drive_snapshot_backed_scanners(
         body,
         body_offset,
         root_relative,
+        &crate::links::Context::default(),
         &mut memo,
         &mut findings,
     );

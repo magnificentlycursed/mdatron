@@ -157,9 +157,9 @@ enum Command {
     /// with MDATRON-E0060.
     ///
     /// Writes the schemas/ and patterns/ directories, a seeded config.yaml
-    /// (adopter-owned from then on), the init manifest, and four inert
-    /// *.example templates (routes, pins, vocabulary, code-catalogs) that
-    /// activate nothing until copied to their real names — a tree initialized
+    /// (adopter-owned from then on), the init manifest, and five inert
+    /// *.example templates (routes, pins, vocabulary, code-catalogs, links)
+    /// that activate nothing until copied to their real names — a tree initialized
     /// before the templates existed gains them on its next run. Creates no
     /// family file itself. `mdatron docs inputs` documents every input file.
     Init {
@@ -179,6 +179,32 @@ enum Command {
     /// means the frontmatter schema family.)
     #[command(name = "envelope-schema", visible_alias = "schema")]
     EnvelopeSchema,
+
+    /// Export the absolute URLs the link-checked files hold, for a liveness
+    /// tool to fetch — mdatron itself never reaches the network. Walks the
+    /// same jurisdiction `verify` walks and lists every outbound link of
+    /// every file on a route with `links: true`, fragment included; findings
+    /// are not printed (run `verify` for those), a load failure exits 2. The
+    /// default form prints each distinct URL once, one per line, sorted;
+    /// `--json` prints every occurrence with its file and line.
+    Links {
+        /// Project root. Defaults to the current directory.
+        #[arg(long = "project-root", value_name = "DIR")]
+        project_root: Option<PathBuf>,
+
+        /// Select the outbound (absolute-URL) links. The only selection today;
+        /// required so a later in-tree export has a name of its own.
+        #[arg(long = "external", required = true)]
+        external: bool,
+
+        /// Emit JSON on stdout: `{"mdatron_links_version", "links": [{"url", "file", "line"}]}`.
+        #[arg(long = "json")]
+        json: bool,
+
+        /// Suppress stderr notes.
+        #[arg(long = "quiet", short = 'q')]
+        quiet: bool,
+    },
 
     /// Print bundled documentation on stdout: the
     /// complete DSL reference (default), the declared-limits table, the FAQ,
@@ -279,8 +305,90 @@ fn main() -> ExitCode {
             quiet,
         } => cmd_init(project_root, quiet),
         Command::EnvelopeSchema => cmd_schema(),
+        Command::Links {
+            project_root,
+            external,
+            json,
+            quiet,
+        } => cmd_links(project_root, external, json, quiet),
         Command::Docs { topic } => cmd_docs(&topic),
     }
+}
+
+/// `mdatron links --external` (#215 piece 4): run the pipeline and print the
+/// outbound links it recorded instead of its findings. The same jurisdiction,
+/// confinement and route table as `verify`, so the list is exactly the set
+/// the link family checked offline.
+fn cmd_links(project_root: Option<PathBuf>, external: bool, json: bool, quiet: bool) -> ExitCode {
+    debug_assert!(external, "clap requires --external");
+    let root = match project_root.map(Ok).unwrap_or_else(std::env::current_dir) {
+        Ok(r) => r,
+        Err(e) => {
+            if !quiet {
+                eprintln!(
+                    "error[MDATRON-E0070]: cannot resolve project root: {}",
+                    stderr_safe(&e, &[])
+                );
+            }
+            return ExitCode::from(2);
+        }
+    };
+    let root = canonical_project_root(root);
+    let report = VerifyConfig::from_project(&root)
+        .map_err(|e| VerifyError::Config(e.to_string()))
+        .and_then(|config| verify_report(&config));
+    let report = match report {
+        Ok(r) => r,
+        Err(e) => {
+            let e = e.relativize_paths(&root);
+            if !quiet {
+                print_pipeline_error(&e, &[root.as_path()]);
+            }
+            return ExitCode::from(2);
+        }
+    };
+    // An empty list is only meaningful when some file was link-checked: say
+    // so, or an export of nothing passes as "no outbound links" (the dead-scope
+    // posture every family holds).
+    if !quiet {
+        if let mdatron::output::FamilyActivity::Active { .. } = report.families.link {
+        } else {
+            eprintln!(
+                "mdatron links: no walked file is on a route with links: true, so nothing \
+                 is exported — opt the files in (links: true in .mdatron/routes.yaml)"
+            );
+        }
+    }
+    if json {
+        let export = mdatron::links::Export {
+            mdatron_links_version: mdatron::links::EXPORT_VERSION,
+            links: &report.external_links,
+        };
+        match mdatron::output::to_js_safe_json(&export) {
+            Ok(line) => println!("{line}"),
+            Err(e) => {
+                if !quiet {
+                    eprintln!(
+                        "error[MDATRON-E0080]: pipeline-orchestration-failure\n   = note: output serialization failed: {}",
+                        stderr_safe(&e, &[root.as_path()])
+                    );
+                }
+                return ExitCode::from(2);
+            }
+        }
+    } else {
+        let mut urls: Vec<&str> = report
+            .external_links
+            .iter()
+            .map(|l| l.url.as_str())
+            .collect();
+        urls.sort_unstable();
+        urls.dedup();
+        for url in urls {
+            println!("{url}");
+        }
+    }
+    ExitCode::SUCCESS
 }
 
 /// Print the embedded output-envelope schema to stdout (#127). A binary-only

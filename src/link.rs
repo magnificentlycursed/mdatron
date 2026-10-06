@@ -47,8 +47,14 @@
 //! Heading anchors cover ATX **and setext** headings, GitHub duplicate-heading
 //! `-N` disambiguation, and explicit HTML anchors (`markup::heading_slugs`).
 //!
-//! External links (any URL scheme, or protocol-relative `//host`) are out of
-//! scope by design — the engine does not reach the network.
+//! External links (any URL scheme, or protocol-relative `//host`) are never
+//! fetched — the engine does not reach the network — but they are not
+//! ignored: the OFFLINE checks in [`crate::links`] (#215) run on each one — a
+//! malformed URL is `MDATRON-E0117`; with a `.mdatron/links.yaml` register, an
+//! undeclared URL is `MDATRON-E0115` and an undeclared `#fragment` on a
+//! declared page `MDATRON-E0116`; with a route `link_policy`, a scheme, host
+//! or query parameter the policy forbids is `MDATRON-E0118` — and every one is
+//! recorded for `mdatron links --external`, the export a liveness tool reads.
 
 use std::collections::{HashMap, HashSet};
 use std::path::{Component, Path, PathBuf};
@@ -320,6 +326,7 @@ pub fn check_file(
     content: &str,
     body_offset: usize,
     root_relative: bool,
+    external: &crate::links::Context<'_>,
     memo: &mut RefMemo,
     findings: &mut Vec<Finding>,
 ) {
@@ -348,6 +355,21 @@ pub fn check_file(
     // never resolved — the masking is structural (#155), not a line heuristic.
     for link in body_links(body) {
         let at = body_offset + link.offset;
+        // An absolute URL is not resolved against the tree; it gets the
+        // offline checks (#215) and is recorded for the export.
+        if is_external(&link.dest) {
+            crate::links::check(
+                external,
+                &mut memo.external,
+                rel,
+                path,
+                content,
+                at,
+                &link.dest,
+                findings,
+            );
+            continue;
+        }
         resolve_link(
             snapshot,
             path,
@@ -380,7 +402,8 @@ fn resolve_link(
 ) {
     let noun = kind.noun();
     // External links (any URL scheme, or protocol-relative `//host`) are not
-    // the engine's to resolve — it never reaches the network.
+    // resolved against the tree — the engine never reaches the network; the
+    // caller routed them to the offline checks (`links::check`) before this.
     if is_external(dest) {
         return;
     }
@@ -782,7 +805,7 @@ fn split_fragment(dest: &str) -> (&str, Option<&str>) {
 /// Windows drive path in practice, and classifying it external silently
 /// exempted it from resolution; it now resolves as a path (missing → `E0110`
 /// on unix; the absolute-prefix refusal `E0010` on windows).
-fn is_external(dest: &str) -> bool {
+pub(crate) fn is_external(dest: &str) -> bool {
     if dest.starts_with("//") {
         return true;
     }

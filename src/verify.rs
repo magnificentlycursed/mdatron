@@ -288,6 +288,10 @@ pub struct VerifyReport {
     /// Governance-input lineage (#176): the inputs this run consumed, each
     /// mapped to a `sha256:<lowercase-hex>` digest of the bytes it read.
     pub inputs: BTreeMap<String, String>,
+    /// Every absolute URL the link-checked files hold, with file and line
+    /// (#215): what `mdatron links --external` prints. Sorted by file, line,
+    /// URL; empty when no route opts in with `links: true`.
+    pub external_links: Vec<crate::links::ExternalLink>,
 }
 
 /// The run-level metadata `run_inner` collects alongside its findings (#175/
@@ -297,6 +301,8 @@ pub struct VerifyReport {
 struct RunMeta {
     timings: crate::output::Timings,
     inputs: BTreeMap<String, String>,
+    /// The outbound links the link-checked files hold (#215), for the export.
+    external_links: Vec<crate::links::ExternalLink>,
 }
 
 /// A completed incremental run (#102): the report plus the observable
@@ -338,6 +344,7 @@ pub fn verify_report(config: &VerifyConfig) -> Result<VerifyReport, VerifyError>
         files_checked,
         timings: meta.timings,
         inputs: meta.inputs,
+        external_links: meta.external_links,
     })
 }
 
@@ -360,6 +367,7 @@ pub fn verify_incremental(
             files_checked,
             timings: meta.timings,
             inputs: meta.inputs,
+            external_links: meta.external_links,
         },
         visited,
     })
@@ -623,6 +631,12 @@ fn run_inner(
         Ok(c) => c,
         Err(e) => return Err(VerifyError::Config(e.to_string())),
     };
+    // External-link register (#215): the closed set of URLs the corpus may
+    // point at; absent = inactive. Consumed by the link family on its scope.
+    let register = match crate::links::load(&project_root) {
+        Ok(r) => r,
+        Err(e) => return Err(VerifyError::Config(e.to_string())),
+    };
     // #204 D1: the register's own coinage scope (where bold introduces a term),
     // confined exactly like the config's scope globs.
     let coinage_globs = confine_and_compile_globs(
@@ -651,6 +665,10 @@ fn run_inner(
         meta.inputs
             .insert("code-catalogs.yaml".into(), format!("sha256:{}", c.digest));
     }
+    if let Some(r) = &register {
+        meta.inputs
+            .insert("links.yaml".into(), format!("sha256:{}", r.digest));
+    }
     // Capture data-presence per family BEFORE the Options are consumed (#90);
     // the tri-state families object (#107) is built after the walk, since
     // vocabulary's `inert` state needs the scope-hit count.
@@ -662,6 +680,7 @@ fn run_inner(
     let pin_supplied = pin_data.is_some();
     let vocab_supplied = vocab.is_some();
     let code_catalog_supplied = catalogs.is_some();
+    let register_supplied = register.is_some();
     let patterns_supplied = !patterns.is_empty();
     let section_supplied = routes
         .as_ref()
@@ -739,6 +758,7 @@ fn run_inner(
         }
         None => None,
     };
+    let register: Option<Vec<crate::links::Entry>> = register.map(|r| r.entries);
     // Collect the governed files once (absolute + root-relative paths). Two
     // `file_globs` can overlap on the same file; it is deduped by root-relative
     // path (#109) so the walk verifies each file exactly once — a doubled walk
@@ -1278,6 +1298,14 @@ fn run_inner(
         {
             sibling_check(&snapshot, path, rel, sibling, &mut findings);
         }
+        // The offline external-link context (#215): the register, when
+        // supplied, and the claiming route's policy, when declared.
+        let external = crate::links::Context {
+            register: register.as_deref(),
+            policy: routes
+                .as_deref()
+                .and_then(|routes| crate::route::link_policy_for(routes, rel)),
+        };
         let verdict = verify_file(
             path,
             content,
@@ -1288,6 +1316,7 @@ fn run_inner(
             link_enabled,
             link_root,
             import_enabled,
+            &external,
             &marker_rules,
             if codecat_enabled {
                 catalogs.as_deref().unwrap_or(&[])
@@ -1312,6 +1341,29 @@ fn run_inner(
         // checks actually ran on, not files that produced findings.
         files_checked += 1;
     }
+
+    // #215: the register's own dead-scope announcements, whole-tree runs only
+    // (an incremental pass sees part of the tree). Supplied but reaching no
+    // link-checked file is inert (W0056, the W0055 posture); an entry no link
+    // used is announced per entry (W0057), only when the jurisdiction came
+    // from the config — an ad-hoc `--files` run narrows the corpus, so every
+    // entry outside it would look unused (the W0054 posture).
+    if let Some(entries) = &register {
+        if scope.is_none() && link_cov == 0 {
+            findings.push(crate::links::inert_finding(&project_root));
+        } else if scope.is_none() && config.config_digest.is_some() {
+            findings.extend(crate::links::unused_findings(
+                &project_root,
+                entries,
+                &memo.external.used,
+            ));
+        }
+    }
+    // The export (#215 piece 4): every absolute URL the link-checked files
+    // hold, sorted by file, line, URL so the list is deterministic.
+    let mut external_links = std::mem::take(&mut memo.external.export);
+    external_links.sort();
+    meta.external_links = external_links;
 
     // #95: registry-level vocabulary findings (a registered-and-draft term
     // resolves to draft with a W0044 warning) — file-independent, once per run.
@@ -1676,6 +1728,8 @@ fn run_inner(
             FamilyActivity::inactive("no route opts in with links: true")
         } else if link_cov == 0 {
             FamilyActivity::inert("a route opts in with links: true but claims no walked file")
+        } else if register_supplied {
+            FamilyActivity::active("a route opts in with links: true; .mdatron/links.yaml supplied")
         } else {
             FamilyActivity::active("a route opts in with links: true")
         },
@@ -3051,6 +3105,7 @@ fn verify_file(
     link_enabled: bool,
     link_root: bool,
     import_enabled: bool,
+    external: &crate::links::Context<'_>,
     marker_rules: &[&crate::route::MarkerRule],
     code_catalogs: &[crate::codecat::CodeCatalog],
     section_rules: &[&crate::section::Rule],
@@ -3150,6 +3205,7 @@ fn verify_file(
                     content,
                     body_offset,
                     link_root,
+                    external,
                     memo,
                     findings,
                 );
@@ -3233,6 +3289,7 @@ fn verify_file(
             content,
             body_offset,
             link_root,
+            external,
             memo,
             findings,
         );
@@ -7784,6 +7841,7 @@ pattern:
             "[ok](refs/target.md#real-heading)\n",
             0,
             false,
+            &crate::links::Context::default(),
             &mut memo,
             &mut findings,
         );
@@ -7795,6 +7853,7 @@ pattern:
             "[ok](refs/target.md#real-heading)\n[dead](refs/target.md#missing)\n",
             0,
             false,
+            &crate::links::Context::default(),
             &mut memo,
             &mut findings,
         );
@@ -9399,6 +9458,7 @@ pattern:
             "See [t](t2.md#a).\n",
             0,
             false,
+            &crate::links::Context::default(),
             &mut memo,
             &mut findings,
         );
@@ -11778,5 +11838,216 @@ pattern:
         assert_eq!(route_codes(&proj), vec!["MDATRON-E0120"]);
         proj.write(".claude/skills/a/SKILL.md", "");
         assert_eq!(route_codes(&proj), vec!["MDATRON-E0120", "MDATRON-E0120"]);
+    }
+
+    // ── external-link register, policy and export (#215) ───────────────────
+
+    fn external_project(label: &str, register: Option<&str>, policy: &str) -> TempProject {
+        let proj = TempProject::new(label);
+        proj.write(".mdatron/schemas/.gitkeep", "");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write("GOVERNING.md", "# gov\n");
+        proj.write(
+            ".mdatron/routes.yaml",
+            &format!(
+                "routes:\n- files: \"docs/**/*.md\"\n  governed_by: GOVERNING.md\n  links: true\n{policy}"
+            ),
+        );
+        if let Some(r) = register {
+            proj.write(".mdatron/links.yaml", r);
+        }
+        proj
+    }
+
+    const REGISTER: &str = "mdatron_format_version: 1\nlinks:\n- url: https://acme.dev/\n  prefix: true\n- url: https://api.acme.dev/ref\n  fragments: [auth]\n- url: https://unused.example/\n";
+
+    #[test]
+    fn link_register_reports_undeclared_urls_and_fragments_and_tracks_use() {
+        let proj = external_project("register", Some(REGISTER), "");
+        proj.write(
+            "docs/a.md",
+            "[ok](https://acme.dev/x) [ok2](https://api.acme.dev/ref#auth)\n\
+             [undeclared](https://other.example/) [anchor](https://api.acme.dev/ref#nope)\n\
+             [mail](mailto:x@y.z)\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let report = verify_report(&cfg).unwrap();
+        let f = &report.findings;
+        assert_eq!(codes_of(f, "MDATRON-E0115"), 2, "{f:?}");
+        assert_eq!(codes_of(f, "MDATRON-E0116"), 1, "{f:?}");
+        assert_eq!(codes_of(f, "MDATRON-W0057"), 1, "{f:?}");
+        assert_eq!(codes_of(f, "MDATRON-W0056"), 0, "{f:?}");
+        let unused = f.iter().find(|x| x.code == "MDATRON-W0057").unwrap();
+        assert_eq!(unused.quoted[0].content, "https://unused.example/");
+        assert!(unused.location.file.ends_with(".mdatron/links.yaml"));
+        assert!(
+            report.inputs.contains_key("links.yaml"),
+            "{:?}",
+            report.inputs
+        );
+        assert_eq!(state_of(&report.families.link), "active");
+        assert!(
+            format!("{:?}", report.families.link).contains("links.yaml supplied"),
+            "{:?}",
+            report.families.link
+        );
+        // The export: every absolute URL, file-sorted, with the fragment.
+        let urls: Vec<&str> = report
+            .external_links
+            .iter()
+            .map(|l| l.url.as_str())
+            .collect();
+        assert_eq!(
+            urls,
+            vec![
+                "https://acme.dev/x",
+                "https://api.acme.dev/ref#auth",
+                "https://api.acme.dev/ref#nope",
+                "https://other.example/",
+                "mailto:x@y.z",
+            ]
+        );
+        assert!(report.external_links.iter().all(|l| l.file == "docs/a.md"));
+        assert_eq!(report.external_links[2].line, 2);
+    }
+
+    #[test]
+    fn link_register_with_no_link_checked_file_is_inert() {
+        let proj = external_project("inert", Some(REGISTER), "");
+        // The routes claim docs/**, the only walked set; nothing under docs
+        // means the opt-in reaches no file (W0054 for the route, W0056 for
+        // the register) — not three W0057s.
+        proj.write("README.md", "[x](https://acme.dev/)\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let report = verify_report(&cfg).unwrap();
+        let f = &report.findings;
+        assert_eq!(codes_of(f, "MDATRON-W0056"), 1, "{f:?}");
+        assert_eq!(codes_of(f, "MDATRON-W0057"), 0, "{f:?}");
+        assert!(report.external_links.is_empty());
+    }
+
+    #[test]
+    fn link_register_unused_entries_are_whole_tree_only() {
+        let proj = external_project("unused-scope", Some(REGISTER), "");
+        proj.write("docs/a.md", "[ok](https://acme.dev/x)\n");
+        proj.write("docs/b.md", "[ok2](https://api.acme.dev/ref)\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let whole = verify_report(&cfg).unwrap();
+        assert_eq!(codes_of(&whole.findings, "MDATRON-W0057"), 1);
+        let inc = verify_incremental(&cfg, &proj.0.join("docs/a.md")).unwrap();
+        assert_eq!(
+            codes_of(&inc.report.findings, "MDATRON-W0057"),
+            0,
+            "{:?}",
+            inc.report.findings
+        );
+        // An ad-hoc --files jurisdiction narrows the corpus: no W0057 either.
+        let mut adhoc = VerifyConfig::new(&proj.0);
+        adhoc.file_globs = vec!["docs/a.md".into()];
+        let adhoc = verify_report(&adhoc).unwrap();
+        assert_eq!(
+            codes_of(&adhoc.findings, "MDATRON-W0057"),
+            0,
+            "{:?}",
+            adhoc.findings
+        );
+    }
+
+    #[test]
+    fn link_policy_reports_each_broken_clause() {
+        let proj = external_project(
+            "policy",
+            None,
+            "  link_policy:\n    schemes: [https]\n    hosts: [acme.dev, \"*.acme.dev\"]\n    forbid_query: [\"^utm_\"]\n",
+        );
+        proj.write(
+            "docs/a.md",
+            "[ok](https://docs.acme.dev/x?page=2)\n\
+             [http](http://acme.dev/)\n\
+             [host](https://example.com/)\n\
+             [rel](//acme.dev/x)\n\
+             [utm](https://acme.dev/?utm_source=x&utm_medium=y)\n\
+             [mail](mailto:x@acme.dev)\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let f = verify(&cfg).unwrap();
+        // http: scheme; example.com: host; //: no scheme; utm: two
+        // parameters; mailto: a scheme outside the list (no host to judge).
+        assert_eq!(codes_of(&f, "MDATRON-E0118"), 6, "{f:?}");
+        let lines: Vec<u32> = f
+            .iter()
+            .filter(|x| x.code == "MDATRON-E0118")
+            .map(|x| x.location.line)
+            .collect();
+        assert_eq!(lines, vec![2, 3, 4, 5, 5, 6]);
+        assert_eq!(codes_of(&f, "MDATRON-E0115"), 0, "no register, no E0115");
+    }
+
+    #[test]
+    fn link_policy_without_links_or_with_a_dead_clause_is_a_load_error() {
+        for (policy, needle) in [
+            (
+                "  link_policy:\n    schemes: [https]\n",
+                "requires links: true",
+            ),
+            ("  links: true\n  link_policy: {}\n", "declares no clause"),
+            (
+                "  links: true\n  link_policy:\n    hosts: []\n",
+                "hosts is empty",
+            ),
+            (
+                "  links: true\n  link_policy:\n    forbid_query: [\"(\"]\n",
+                "does not compile",
+            ),
+        ] {
+            let proj = TempProject::new("policy-load");
+            proj.write(".mdatron/schemas/.gitkeep", "");
+            proj.write(
+                ".mdatron/config.yaml",
+                "file_globs:\n  - \"docs/**/*.md\"\n",
+            );
+            proj.write("GOVERNING.md", "# gov\n");
+            proj.write(
+                ".mdatron/routes.yaml",
+                &format!(
+                    "routes:\n- files: \"docs/**/*.md\"\n  governed_by: GOVERNING.md\n{policy}"
+                ),
+            );
+            proj.write("docs/a.md", "x\n");
+            let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+            let e = verify(&cfg)
+                .err()
+                .unwrap_or_else(|| panic!("{policy}: loaded"));
+            assert!(e.to_string().contains(needle), "{policy}: {e}");
+        }
+    }
+
+    #[test]
+    fn malformed_absolute_urls_are_reported_without_any_data() {
+        let proj = external_project("malformed", None, "");
+        proj.write(
+            "docs/a.md",
+            "[a](<https://acme.dev/a b>) [b](https://) [c](https://acme.dev/#x#y) [ok](https://acme.dev/)\n[d](mailto:)\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let f = verify(&cfg).unwrap();
+        assert_eq!(codes_of(&f, "MDATRON-E0117"), 4, "{f:?}");
+        assert!(f.iter().all(|x| x.code == "MDATRON-E0117"), "{f:?}");
+    }
+
+    #[test]
+    fn link_register_load_errors_are_config_errors() {
+        let proj = external_project(
+            "register-load",
+            Some("mdatron_format_version: 1\nlinks:\n- url: docs/x.md\n"),
+            "",
+        );
+        proj.write("docs/a.md", "x\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let e = verify(&cfg).err().unwrap();
+        assert!(e.to_string().contains("not an absolute URL"), "{e}");
     }
 }

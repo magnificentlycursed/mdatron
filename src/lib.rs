@@ -57,6 +57,9 @@ pub mod init;
 #[doc(hidden)]
 pub mod limits;
 pub(crate) mod link;
+/// External-link checks (#215): the offline side of absolute URLs — the
+/// register, well-formedness, route policy, and the export.
+pub mod links;
 pub(crate) mod marker;
 pub(crate) mod markup;
 pub(crate) mod memo;

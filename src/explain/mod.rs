@@ -82,6 +82,12 @@ const W0052: &str = include_str!("MDATRON-W0052.md");
 const W0053: &str = include_str!("MDATRON-W0053.md");
 const W0054: &str = include_str!("MDATRON-W0054.md");
 const W0055: &str = include_str!("MDATRON-W0055.md");
+const E0115: &str = include_str!("MDATRON-E0115.md");
+const E0116: &str = include_str!("MDATRON-E0116.md");
+const E0117: &str = include_str!("MDATRON-E0117.md");
+const E0118: &str = include_str!("MDATRON-E0118.md");
+const W0056: &str = include_str!("MDATRON-W0056.md");
+const W0057: &str = include_str!("MDATRON-W0057.md");
 
 /// Structured shape of an explain page. Surfaces the required fields named
 /// in the Phase 1a behavioral spec. Used by `mdatron explain --json <code>`.
@@ -164,6 +170,12 @@ pub fn lookup(code: &str) -> Option<&'static str> {
         "MDATRON-W0053" => Some(W0053),
         "MDATRON-W0054" => Some(W0054),
         "MDATRON-W0055" => Some(W0055),
+        "MDATRON-E0115" => Some(E0115),
+        "MDATRON-E0116" => Some(E0116),
+        "MDATRON-E0117" => Some(E0117),
+        "MDATRON-E0118" => Some(E0118),
+        "MDATRON-W0056" => Some(W0056),
+        "MDATRON-W0057" => Some(W0057),
         _ => None,
     }
 }

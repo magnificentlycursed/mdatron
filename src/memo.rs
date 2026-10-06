@@ -85,6 +85,10 @@ pub struct RefMemo {
     /// into it are not resolved — the same value semantics the per-file cache
     /// had; only its lifetime widened to the run.
     pub link_slugs: HashMap<PathBuf, Option<HashSet<String>>>,
+    /// External-link run state (#215): the register entries some link used
+    /// (for the unused-entry warning) and the export list, both accumulated
+    /// across every link-checked file of the run.
+    pub external: crate::links::RunState,
     /// Test probe: how many marker target resolutions were actually performed
     /// (memo misses). Lets a test assert a shared target parses once for two
     /// referring files.

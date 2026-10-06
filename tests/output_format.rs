@@ -307,6 +307,7 @@ fn inputs_lineage_is_stable_keyed_and_change_sensitive() {
         "vocabulary.yaml",
         "pins.yaml",
         "code-catalogs.yaml",
+        "links.yaml",
         "patterns",
     ] {
         assert!(

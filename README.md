@@ -68,7 +68,7 @@ Scaffold with `mdatron init`, which deploys the `.mdatron/` skeleton — the
 `schemas/` and `patterns/` directories, a seeded `config.yaml` (adopter-owned
 from then on), the init manifest (the record of the engine-managed partition),
 and one inert `*.example` template per family file (`routes`, `pins`,
-`vocabulary`, `code-catalogs`) whose header states its activation rule, keys,
+`vocabulary`, `code-catalogs`, `links`) whose header states its activation rule, keys,
 scope, and codes — copy one to its real name to activate that family, or read
 `mdatron docs inputs` (a tree initialized before 0.7.0 gains the templates on
 its next `mdatron init`, which also refreshes any template you have not edited
@@ -304,6 +304,7 @@ routes:
   citations: true                                        # optional: citation family, see below
   links: true                                            # optional: link family, see below
   link_root: true                                        # optional: resolve /root-relative links (needs links)
+  # link_policy: {schemes: [https], hosts: [...], forbid_query: ["^utm_"]}  # optional: absolute-URL policy (needs links)
   # marker_rules: [...]                                  # optional: marker family, see below
   # section_rules: [...]                                 # optional: section family, see below
 ```
@@ -436,8 +437,31 @@ anchors). Targets resolve **document-relative** (as GitHub renders them):
 governed tree is refused (`E0010`/`E0011`/`E0012`). Destinations are
 percent-decoded first (`my%20doc.md` → `my doc.md`), and `link_root: true`
 opts a route into resolving a leading-slash `/docs/x.md` from the project root
-(still confined) for static-site corpora that author links that way. External
-links (any URL scheme) are left alone.
+(still confined) for static-site corpora that author links that way. An
+**absolute URL** (any scheme, or `//host`) is never fetched — mdatron does not
+reach the network, by design — but it is checked offline: a destination that
+is not a well-formed URL blocks (`E0117`; dead everywhere, before any liveness
+check); with a `.mdatron/links.yaml` **register** of the URLs the corpus may
+point at, an undeclared URL blocks (`E0115`) and an undeclared `#fragment` on a
+declared page blocks (`E0116`, the entry's `fragments` being the anchors you
+confirmed on the live page); and a route's `link_policy` (`schemes`, `hosts`,
+`forbid_query`) blocks a link outside it (`E0118`). A register no
+link-checked file consults warns (`W0056`), as does an entry no link uses
+(`W0057`). `mdatron links --external` exports every outbound URL — fragment
+included; `--json` adds file and line — for the liveness tool that does fetch
+(lychee or its class), and the register is the list such a tool checks on a
+schedule:
+
+<!-- mdatron-roundtrip:links-start -->
+```yaml
+mdatron_format_version: 1
+links:
+- url: https://docs.example.com/        # every URL under this prefix…
+  prefix: true
+- url: https://example.com/reference    # …this page only…
+  fragments: [installation, usage]      # …and only these anchors on it
+```
+<!-- mdatron-roundtrip:links-end -->
 
 **Markers** — route-attached: `marker_rules` exist only on a route in
 `routes.yaml`, so writing that route puts every walked file under the closed

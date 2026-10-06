@@ -116,6 +116,12 @@ struct RawEntry {
     /// file refers to nothing. Absent sibling: E0037.
     #[serde(default)]
     requires_sibling: Option<String>,
+    /// What an absolute URL in the claimed files may be (#215): allowed
+    /// `schemes`, allowed `hosts`, forbidden query-parameter names
+    /// (`forbid_query`). A link outside the policy is E0118. Requires `links`
+    /// — it is the link family's work.
+    #[serde(default)]
+    link_policy: Option<crate::links::RawPolicy>,
 }
 
 /// One marker-line reference rule as declared in `routes.yaml` (#147).
@@ -176,6 +182,8 @@ pub struct Route {
     pub imports: bool,
     /// A file that must exist beside every claimed file (#221).
     pub requires_sibling: Option<String>,
+    /// The policy an absolute URL in the claimed files must satisfy (#215).
+    pub link_policy: Option<crate::links::Policy>,
 }
 
 /// A compiled marker-line reference rule (#147).
@@ -350,6 +358,21 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
                     .into(),
             ));
         }
+        // #215: the same dead-knob posture for `link_policy`, and the policy's
+        // own refusals (an empty block or list, a scheme that is not a scheme
+        // token, a host holding a separator, a pattern that does not compile).
+        if entry.link_policy.is_some() && !entry.links {
+            return Err(Error::Config(
+                "route sets link_policy without links: true; the policy applies to the \
+                 links the link family checks, so it requires links: true on the same \
+                 route"
+                    .into(),
+            ));
+        }
+        let link_policy = match entry.link_policy {
+            Some(raw) => Some(crate::links::Policy::compile(raw)?),
+            None => None,
+        };
 
         let mut marker_rules = Vec::with_capacity(entry.marker_rules.len());
         for rule in entry.marker_rules {
@@ -501,6 +524,7 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
             max_bytes: entry.max_bytes,
             imports: entry.imports,
             requires_sibling: entry.requires_sibling,
+            link_policy,
         });
     }
     // #203 F2 (GH #56 finding 2): "supplied" means the file exists — even with
@@ -684,6 +708,15 @@ pub fn sibling_for<'a>(routes: &'a [Route], rel: &Path) -> Option<&'a str> {
         .iter()
         .filter(|r| crate::globs::matches_path(&r.files, rel))
         .find_map(|r| r.requires_sibling.as_deref())
+}
+
+/// The link policy of a link-checked route claiming `rel` (#215). Load
+/// refuses a policy without `links`; the `links` gate here is defensive.
+pub fn link_policy_for<'a>(routes: &'a [Route], rel: &Path) -> Option<&'a crate::links::Policy> {
+    routes
+        .iter()
+        .filter(|r| r.links && crate::globs::matches_path(&r.files, rel))
+        .find_map(|r| r.link_policy.as_ref())
 }
 
 /// The per-file byte bound a route claiming `rel` sets (#216).
