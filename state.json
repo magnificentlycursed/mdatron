@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1272,
-        "tip_oid": "11897528f19af5a93b4928ac7c3d5aca3a7ff21f",
-        "prefix_sha256": "0393e8aece10c9954aad1cb8c7eca2777984c111786c9184c282335d18b1950e"
+        "sequence": 1273,
+        "tip_oid": "247974ae37b95df8846ee037c49b2d0fcfc74fe9",
+        "prefix_sha256": "4a565fab80ccb08e9ab992fa4dde2f36aa854726e72fc336c2d70eadbdd3a257"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 230,
+  "next_display_id": 231,
   "next_comment_id": 611,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -139,6 +139,7 @@
     "77c6f57d-8b51-4b19-b179-8d083cb0e5a4": 158,
     "7d222949-0302-4dc4-9859-143cf7da11fb": 80,
     "7d3f3244-2166-4727-a6f5-233882cd4457": 49,
+    "7da2ffa3-50d9-4735-9c51-8f05e9b10c57": 230,
     "7f91651e-0b4e-4a0d-aa3e-567f6ebaea4a": 24,
     "81ede3c0-97f1-43d6-b336-5018865cf29a": 179,
     "82cb584a-cbc0-4ddd-9c36-0bd7a641a7a5": 114,
@@ -4421,6 +4422,17 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABARGOhmlRd0b4/9WWaRLrF9A9HZkgiaEWpTupKcSgzpHFYShxu7gTa3pv8Qy9t3A787pKusjIZZm5tMABtjjhsBQ=="
         }
       }
+    },
+    "7da2ffa3-50d9-4735-9c51-8f05e9b10c57": {
+      "uuid": "7da2ffa3-50d9-4735-9c51-8f05e9b10c57",
+      "display_id": 230,
+      "title": "verify never checks managed-template drift — only init does, although manifest.yaml is digested into inputs; decide: verify emits E0060 on managed drift, or document the 'init && git diff --exit-code -- .mdatron/' recipe (GH #73 defect 3)",
+      "description": "Source: GH #73 defect 3. Confirmed by reading: verify loads only the manifest's tombstones (src/verify.rs ~612 load_tombstones); hash comparison lives in init (src/init.rs ~534-560). A CI running only verify cannot see an edited or stale template. Options for the operator: (a) verify compares managed hashes and reports E0060 (manifest is governance data; verify is the gate) — behaviour change for adopters who edited a template (init already refuses them); (b) document the init-then-diff recipe (what vsdd-cli adopted) in README/inputs.md. Note CI self-validation here already runs init then verify.",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-10-06T21:17:29.478949Z",
+      "updated_at": "2026-10-06T21:17:29.478949Z"
     },
     "7f91651e-0b4e-4a0d-aa3e-567f6ebaea4a": {
       "uuid": "7f91651e-0b4e-4a0d-aa3e-567f6ebaea4a",
