@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1270,
-        "tip_oid": "a39b16de4514cc6ca8ad9fa8378a85a8b4e21f53",
-        "prefix_sha256": "e04ee4dee7ef8c3d4c57be288756fa61c52546e2fd45a88de2d8c6de4ed06257"
+        "sequence": 1271,
+        "tip_oid": "f35e7c09c3d4cf9d4b704949bdf2e83daddf1929",
+        "prefix_sha256": "07aa9cbac8f30eeaf0911e3eeda66aeb7a8ec0dd33ccd1189fe95c2402ef9463"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 229,
+  "next_display_id": 230,
   "next_comment_id": 611,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -123,6 +123,7 @@
     "685a5139-6347-4bf4-abd8-ce9c7ac48024": 117,
     "688e0ef3-333c-422b-96dc-d0295a1ff25c": 184,
     "69b33517-946c-45ba-9287-c1231028d5ec": 47,
+    "6bc6fdb6-8969-4fde-bb66-09531efa127b": 229,
     "6ccc5223-9a98-44ca-a398-17334578d0b4": 194,
     "70039fee-0c5f-457a-8cb9-db920105b263": 137,
     "700bbf38-a0db-46e2-90a8-36df989ecb06": 53,
@@ -3805,6 +3806,17 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAQFNCtigAEAU87v1aRohby8wvki8owBG0I2OhLn3xa2NU2Ur0X1xYwimOO2fxXvJj2cAd6sWr14j21TQQVAcKDQ=="
         }
       }
+    },
+    "6bc6fdb6-8969-4fde-bb66-09531efa127b": {
+      "uuid": "6bc6fdb6-8969-4fde-bb66-09531efa127b",
+      "display_id": 229,
+      "title": "rule_dsl activity is aggregate: a pattern file whose every context matches no walked file is invisible (no dead-context warning), and --changed reports active before consulting hits (GH #73 defect 1)",
+      "description": "Source: GH #73 defect 1. Confirmed by reading src/verify.rs ~1705-1717: rule_context_hits is summed over all patterns; one dead pattern among two leaves rule_dsl active with the healthy reason; under --changed the lane is active with no hit count consulted. Every other dead scope has a warning (W0054/W0043/W0051/W0055). Raise: a warning per rule (or pattern file) whose context matched no walked file on a whole-tree run; 'N of M rules matched a file' in the reason (or a per-pattern map); a distinct reason/state for the incremental case.",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-10-06T21:15:36.000283Z",
+      "updated_at": "2026-10-06T21:15:36.000283Z"
     },
     "6ccc5223-9a98-44ca-a398-17334578d0b4": {
       "uuid": "6ccc5223-9a98-44ca-a398-17334578d0b4",
