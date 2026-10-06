@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1281,
-        "tip_oid": "a9d6c30e6fe078fba2961ae4815f9fa1675a2dff",
-        "prefix_sha256": "3da5350745f5703beb1abd6e52adb87e64c1f6c3951f3431a385cd18db5c228c"
+        "sequence": 1282,
+        "tip_oid": "595759886130c808cf8a8f0047d0e3040724af0c",
+        "prefix_sha256": "01bec56a6086d253aed882b55d268e3f38e0c71cf7f6514907248c0d909547e5"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 236,
+  "next_display_id": 237,
   "next_comment_id": 611,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -128,6 +128,7 @@
     "69b33517-946c-45ba-9287-c1231028d5ec": 47,
     "6bc6fdb6-8969-4fde-bb66-09531efa127b": 229,
     "6ccc5223-9a98-44ca-a398-17334578d0b4": 194,
+    "6ff449c7-dfad-4094-938e-a2193382a8ed": 236,
     "70039fee-0c5f-457a-8cb9-db920105b263": 137,
     "700bbf38-a0db-46e2-90a8-36df989ecb06": 53,
     "70e938ea-22f8-45f7-bce4-61204556c4fd": 189,
@@ -3886,6 +3887,17 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAtLN643reHRURfeJA65xXYqxoH7qpT2ACJ4CPxsgtvd4Sr5/RYMIhgZL6rUlVMCLU67oxCACtcQxy5ZfeNAQPCA=="
         }
       }
+    },
+    "6ff449c7-dfad-4094-938e-a2193382a8ed": {
+      "uuid": "6ff449c7-dfad-4094-938e-a2193382a8ed",
+      "display_id": 236,
+      "title": "Standards-pack schemas as managed deployables through the managed-partition mechanism (e.g. mdatron init --standard skill-md), so a vendor-fact pin has one owner instead of a hand-kept adopter copy (GH #73 raise 2)",
+      "description": "Source: GH #73 raise 2. Design question: the pack's example schemas (examples/standards/*/.mdatron/schemas/*.json) carry x-source provenance; an adopter copies them by hand today and owns the drift. A managed deploy (manifest-hashed, refreshed when unedited, refused when edited — the #207 mechanism) would make the engine the owner of the vendor-fact pin. Needs: a selection flag, template provenance in the manifest, and a rule for adopter overrides (demotion tombstones already exist).",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-10-06T21:26:11.245058Z",
+      "updated_at": "2026-10-06T21:26:11.245058Z"
     },
     "70039fee-0c5f-457a-8cb9-db920105b263": {
       "uuid": "70039fee-0c5f-457a-8cb9-db920105b263",
