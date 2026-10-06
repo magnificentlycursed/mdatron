@@ -1840,6 +1840,36 @@ fn verify_quiet_alone_suppresses_all_stderr_output() {
     );
 }
 
+// #227: the README's install pin is a RENDERING of the crate version (the
+// docs/limits.md idiom — the registry as the generator of its derived text),
+// so a cut that bumps Cargo.toml and forgets the README fails here, on the
+// bump commit, instead of shipping a stale pin (0.6.0 and 0.7.0 both did).
+// Under MDATRON_UPDATE_DOCS=1 the test rewrites the pin from the version.
+#[test]
+fn readme_install_pin_is_rendered_from_the_crate_version() {
+    let version = env!("CARGO_PKG_VERSION");
+    let minor = version
+        .rsplit_once('.')
+        .map(|(major_minor, _)| major_minor)
+        .expect("CARGO_PKG_VERSION is MAJOR.MINOR.PATCH");
+    let expected = format!("cargo install mdatron --locked --version \"{minor}\"\n");
+    let path = mdatron_repo_root().join("README.md");
+    let readme = fs::read_to_string(&path).unwrap().replace("\r\n", "\n");
+    let fence = extract_marked_fence(&readme, "install-pin")
+        .expect("README must contain a <!-- mdatron-roundtrip:install-pin-start --> marker");
+    if fence == expected {
+        return;
+    }
+    if std::env::var_os("MDATRON_UPDATE_DOCS").is_some() {
+        fs::write(&path, readme.replace(&fence, &expected)).unwrap();
+        return;
+    }
+    panic!(
+        "README install pin {fence:?} is not the crate version's {expected:?}; regenerate \
+         with `MDATRON_UPDATE_DOCS=1 cargo test readme_install_pin`"
+    );
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 /// Extract the body of a `<!-- mdatron-roundtrip:<label>-start -->` ...
