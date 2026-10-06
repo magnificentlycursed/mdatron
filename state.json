@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1289,
-        "tip_oid": "4e50a99b226326eb91c1dcd7ffa559f70cf60834",
-        "prefix_sha256": "421d2c6c68bd7fb70ee55314892848235adf178c7a9e4102b81431d3170b47d2"
+        "sequence": 1290,
+        "tip_oid": "78236e66575e736e9d7ef88b9b5c352808e85ca4",
+        "prefix_sha256": "89a31f8f6fb2d24595e087e4c16ba40354fc5c147a84ae6aeb3d322bea139abc"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 242,
-  "next_comment_id": 613,
+  "next_comment_id": 614,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -6651,7 +6651,7 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-09-29T02:20:48.033477Z",
-      "updated_at": "2026-10-06T21:51:16.707221Z",
+      "updated_at": "2026-10-06T22:18:12.595545Z",
       "comments": {
         "69c945c2-a968-4017-ab59-2ec48364a431": {
           "display_id": 612,
@@ -6661,6 +6661,15 @@
           "kind": "result",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAhiwdNMt6SVyy9L88NO2kPwTAi8booowxtxHttiguuS6GLdLnmOeuoFTPZqXHIUUsGZZNca36w2Ha0KN09AxPAA=="
+        },
+        "8140d75f-8d1a-4aae-9f72-572d4057f7eb": {
+          "display_id": 613,
+          "author": "79Ig",
+          "content": "ROUND 2 (in progress; session cut at usage limit 2026-10-06). Docs cluster reported: round-1 doc fixes HOLD, 0 regressions; 13 new items, all MINOR/NIT, all accepted, NOT YET APPLIED: (1) E0117 fix bullet claims a wrapped URL is reported — CommonMark drops a destination with a line ending, nothing reports it; reword to the two spellings that reach E0117 (space in a bracketed destination, a decoded char ref) and say a wrapped URL is not a link; (2) E0110 page still says external links are never resolved — add the offline checks; (3) version-axis/born-versioned set out of date in DESIGN:74,:83,:107, format_version.rs:1-3,:19-20,:44, README:458 fence annotation + :527 — links.yaml is born versioned, 4 axes; (4) README:425-430 and DESIGN:126 list three link kinds — add autolink incl. email; (5) load's fragment refusal message names no invisible char — interpolate {what}; inputs.md refusal list likewise; (6) DESIGN:45 ledger: double 'and', add link_policy as a links modifier; (7) README:425 'Data-less' → 'Data-less by default (the register is optional)'; (8) links --help exit: '2 on a pipeline failure (whatever fails verify with 2)'; (9) README:448 W0056 gate wording: whole-tree from config.yaml's jurisdiction; (10) E0116:14 'as written' → after CommonMark decoding; (11) cookbook: name 'the register' and 'the export' at first use; (12) template: add raw HTML <a href> beside bare URL; (13) DESIGN:181 deploy list → five templates. Three other round-2 clusters (implementation, adversarial, architecture) were still running at cutoff; their reports land in the session transcript. State: round-1 fixes staged, uncommitted (work-check hook 3 s timeout vs 5-7 s crosslink session status). Next session: read the three remaining reports, apply round-2 items, suite, commit (needs the hook gate working), round 3 only if round 2 found engine defects.",
+          "created_at": "2026-10-06T22:18:12.563779Z",
+          "kind": "observation",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA3nLVnozfVldOZfhuor1q87TvgzOwkgVfUb1L1tLuYlA85gcSkCUphRM5RuGdmRw7C0vI3WTzYp4pZk0R2/RUBQ=="
         },
         "85dbb6ea-5c42-44c0-8f34-295259f1b7ff": {
           "display_id": 609,
