@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1277,
-        "tip_oid": "b7d26fc6513b079ce7feca2b092062d6b9689d90",
-        "prefix_sha256": "da1877a9ea9295fb1585f5afb5c7dd293a5c0acfe2672bd67b0a97d9127ad5ab"
+        "sequence": 1278,
+        "tip_oid": "4fd83a5829a0b7575e59d68c803a003dcdce2552",
+        "prefix_sha256": "ed1e7c100a94981ed397a8ce943ca0759115cd38a9bc9016333080409f490373"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 233,
+  "next_display_id": 234,
   "next_comment_id": 611,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -187,6 +187,7 @@
     "ad262d4e-1a34-496d-9f64-802bc05ea4fd": 39,
     "ae2f415b-24e4-48b1-85ff-44033199129a": 20,
     "b1c5d325-ab66-41f7-8346-5c3e4b117555": 61,
+    "b262877d-d455-4042-be19-e65557f1b557": 233,
     "b527a823-f4d3-4fb4-bfe8-de996e714488": 131,
     "b5d10e39-0bfb-404b-9751-2bff8c71ecaa": 42,
     "b696933e-86e0-4ffa-8930-363e6dd16bfa": 113,
@@ -6148,6 +6149,17 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABARGNZgL6wrBdq7wVWpaOH8klcO3l9q7nk0r0ggOS+hvEtafktmdeF+O6x4W4jP1sVQQdBF5hYxme/yCgJod/xCw=="
         }
       }
+    },
+    "b262877d-d455-4042-be19-e65557f1b557": {
+      "uuid": "b262877d-d455-4042-be19-e65557f1b557",
+      "display_id": 233,
+      "title": "One absent section yields one E0122 per rule and disjoint operand naming it; state the per-rule behaviour on the E0122 page (aggregating per (file, section) would change counts and fingerprints) (GH #73 defect 7)",
+      "description": "Source: GH #73 defect 7. Confirmed: the llms.txt cookbook's renamed-h1 case shows two E0122 for '# Acme' (count + order rules); the E0122 page does not state the per-rule behaviour. Recommend documenting rather than aggregating (aggregation reshapes finding counts and fingerprints for existing adopters).",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-10-06T21:22:34.081163Z",
+      "updated_at": "2026-10-06T21:22:34.081163Z"
     },
     "b527a823-f4d3-4fb4-bfe8-de996e714488": {
       "uuid": "b527a823-f4d3-4fb4-bfe8-de996e714488",
