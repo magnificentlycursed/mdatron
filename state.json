@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1267,
-        "tip_oid": "81ae3ff3efb1ec4adcf27f4d906942603a1541df",
-        "prefix_sha256": "816030f586891d12ae81ea45f300b5fd7aa6c6679f4ef32607994d9c25530949"
+        "sequence": 1268,
+        "tip_oid": "7e659c15f382f874bc609aadac15d0bc6933bbe9",
+        "prefix_sha256": "e4aa71ae83b50562d0ec8b4d8b108adf1107d788be2fd2485603c053687cea26"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 228,
-  "next_comment_id": 610,
+  "next_comment_id": 611,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -6479,7 +6479,7 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-09-29T02:20:48.033477Z",
-      "updated_at": "2026-10-06T20:56:39.591441Z",
+      "updated_at": "2026-10-06T21:05:31.703615Z",
       "comments": {
         "85dbb6ea-5c42-44c0-8f34-295259f1b7ff": {
           "display_id": 609,
@@ -6498,6 +6498,15 @@
           "kind": "decision",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAXGnMjK491DBMuFDtL4sxLQwmHg8AGXuwLk86L2ON0Irj6Btb4RH6HzgLHovolLm9R73Jq4Q+1u8PGZAuV2rnAQ=="
+        },
+        "a99e3ae4-e113-4d1e-ba3e-3e4076ebe44d": {
+          "display_id": 610,
+          "author": "79Ig",
+          "content": "PHASE-3 COMPOSITION (cold review round 1 on feature/215-link-register @ 4d80256f): cluster_shape 4-cluster (implementation SE+QE+perf; adversarial red-team+UX; communication TW+DR+security-of-docs; architecture/consistency SA+platform incl. the recipe + repo dogfood); composition_mode reviewer-cold-session (fresh subagents, no conversation memory, read-only on the worktree); operator_confirmation: standing ('Yes, there should be a cold review', 2026-10-0x); budget: up to 3 rounds, 4 agents per round, stop at a round with no real findings.",
+          "created_at": "2026-10-06T21:05:31.668358Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAvYlsXI2DK5I8Q1g1BAIrxkDOHYd1dDUVIOMcr0wJsBDgRen+LFfuq+MPazqFs13W7+OI2MIjKGSjOMqMl8KiCA=="
         },
         "c37ebe66-29e3-4500-8c70-12f1e839f330": {
           "display_id": 608,
