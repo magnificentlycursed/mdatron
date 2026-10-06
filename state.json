@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1275,
-        "tip_oid": "88597d881b0634918eab5c511c30229954a51203",
-        "prefix_sha256": "2009fa14b8480a786f5141f0a5bee4a6d4e9b0048197139542b2715261f192b6"
+        "sequence": 1276,
+        "tip_oid": "b1ec5adbe8c818ffef880d502ea820343319b8e4",
+        "prefix_sha256": "790f16514bf72bd3e01452cbd90f618d16a0f574ee08e5c822d53b47ddfd04f8"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 232,
+  "next_display_id": 233,
   "next_comment_id": 611,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -131,6 +131,7 @@
     "70e938ea-22f8-45f7-bce4-61204556c4fd": 189,
     "72e27489-2e30-4b01-9833-62299f42c542": 111,
     "730c7a15-f81f-449a-8323-8d09d5206454": 87,
+    "73340d95-452d-4241-8a9c-ffc5d0264990": 232,
     "73fb2a8c-e991-4bfe-b8d2-7c56f53ce417": 143,
     "74744f3a-fbb8-424a-897e-d4f2b2ed77ff": 40,
     "7515ecfd-31f2-4e53-bbb7-0e50c7cce064": 6,
@@ -4065,6 +4066,17 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAM7+tEjU+IbCzU7+rtu5dDObia941sExhYtgoNQSwCMAxLKDqYYCTpiF5EU8OsO1abtiq2D/csgn8ukNWNrV0Aw=="
         }
       }
+    },
+    "73340d95-452d-4241-8a9c-ffc5d0264990": {
+      "uuid": "73340d95-452d-4241-8a9c-ffc5d0264990",
+      "display_id": 232,
+      "title": "0.7.0 documentation defects from GH #73: E0060 page claims the manifest records the deploying version (it records path+sha256 only); the published 3.1.0 schema description still says 'via mdatron schema'; the 0.7.0 leak Fixed entry does not name the published property (pipeline_error.message root-relativized) that 0.6.0 violated",
+      "description": "Source: GH #73 defects 5, 6, 8. Confirmed by reading: src/explain/MDATRON-E0060.md:41-42; schema/mdatron-output.schema.json:27 description ('via mdatron schema' — description-only text, no semantic change; decide whether a description edit on a published schema file is a PATCH or must wait for the next envelope bump; src/output.rs:72 doc comment too); CHANGELOG 0.7.0 entry (released sections are immutable — carry the clarification as a note in the 0.8.0 notes instead). If the template-refresh issue records a version per managed entry, the E0060 sentence becomes true rather than needing removal.",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-10-06T21:20:23.333104Z",
+      "updated_at": "2026-10-06T21:20:23.333104Z"
     },
     "73fb2a8c-e991-4bfe-b8d2-7c56f53ce417": {
       "uuid": "73fb2a8c-e991-4bfe-b8d2-7c56f53ce417",
