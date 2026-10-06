@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1278,
-        "tip_oid": "4fd83a5829a0b7575e59d68c803a003dcdce2552",
-        "prefix_sha256": "ed1e7c100a94981ed397a8ce943ca0759115cd38a9bc9016333080409f490373"
+        "sequence": 1279,
+        "tip_oid": "50a90c944bb381805f8712270ea720384b17bce4",
+        "prefix_sha256": "9510c91e833a581189fba29b6c7c25d23b15c96d5c67671fe335785678377aa3"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 234,
+  "next_display_id": 235,
   "next_comment_id": 611,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -42,6 +42,7 @@
     "1570a18e-ccd5-42cd-8c78-abf96986d9e9": 222,
     "15d7981a-008d-4805-8a69-f3e4f414caf0": 75,
     "1708ef12-cf35-4706-9dcb-fe672e8db813": 208,
+    "17bae10a-3cd5-4918-b1c9-72258216fa76": 234,
     "18184292-e0ea-4575-b33b-ff82e1ed6c2d": 128,
     "18545077-3dbb-4401-847d-c6b4bdbe7d78": 104,
     "18b49293-d407-4ef5-8252-144a072cf9e7": 140,
@@ -711,6 +712,17 @@
       "created_at": "2026-09-28T23:16:59.240142Z",
       "updated_at": "2026-09-29T00:33:02.009688Z",
       "closed_at": "2026-09-29T00:33:01.983203Z"
+    },
+    "17bae10a-3cd5-4918-b1c9-72258216fa76": {
+      "uuid": "17bae10a-3cd5-4918-b1c9-72258216fa76",
+      "display_id": 234,
+      "title": "Docs follow-ups from GH #73: say on the routes template and inputs.md that an every rule passes vacuously on an element-less section (pair it with a count rule); state for consumers that a failed pipeline reports every family inactive with inputs {} (read families with pipeline_status); FAQ entry on noticing one's own jurisdiction shrinking (W0054/W0051 under --deny-warnings; the inputs.config.yaml digest is what to pin)",
+      "description": "Source: GH #73 guide items 3-4 and raise 6. Three small documentation additions: (1) every-rule vacuity sentence next to the every example in src/init.rs ROUTES_TEMPLATE and docs/inputs.md (explain E0123 already says it); (2) a consumer note in README § envelope / docs/inputs.md: failed pipeline → families all inactive, inputs {} (partial lineage deliberately not attested, #176); (3) docs/faq.md entry on a consistently shrunk jurisdiction being invisible by construction and what a consumer can pin or diff.",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-10-06T21:23:29.337626Z",
+      "updated_at": "2026-10-06T21:23:29.337626Z"
     },
     "18184292-e0ea-4575-b33b-ff82e1ed6c2d": {
       "uuid": "18184292-e0ea-4575-b33b-ff82e1ed6c2d",
