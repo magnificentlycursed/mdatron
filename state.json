@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1283,
-        "tip_oid": "08cf1823ba7f526050907c86ac3df337517c5d72",
-        "prefix_sha256": "2ad77340a76b9b79f27a1b46e19a9cb7d2acdf5ffb350aa01f31deb377cac340"
+        "sequence": 1284,
+        "tip_oid": "b14f71b4ed1a13bb03e0a079c2976a36f8723d29",
+        "prefix_sha256": "9dff1a7df8b201e98b10640a9998330dcd9a8cfeca7b1b34cf0af66f0ada27fc"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 238,
+  "next_display_id": 239,
   "next_comment_id": 611,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -92,6 +92,7 @@
     "3e1b9fb3-5649-4501-9534-d4a76241a808": 211,
     "4237af12-ff53-4d2f-beac-cff1fe994e9a": 106,
     "44e04ea5-0edc-4919-bcf7-7c234a3c8954": 74,
+    "45a8afdf-7eca-4a0d-9645-fd1067c1a78d": 238,
     "46a2adcb-44f8-4977-b221-88b3f426e01e": 214,
     "48642aed-2145-4a65-b014-0df508ad37c5": 11,
     "48ff2863-5b28-471b-88b6-022000925b26": 225,
@@ -2648,6 +2649,17 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAjfnYQtEXWiIwngvjKvOwwGU2tX7TBq/3TsxQv8HYtWAivDRot5ddplEmMjwqFYOdAvaugPrPYIEewKJsQznUDA=="
         }
       }
+    },
+    "45a8afdf-7eca-4a0d-9645-fd1067c1a78d": {
+      "uuid": "45a8afdf-7eca-4a0d-9645-fd1067c1a78d",
+      "display_id": 238,
+      "title": "Release attestation: the pipeline has a publish rehearsal and no provenance or signature; consumers cargo install on crates.io's index checksum alone (GH #73 raise 5)",
+      "description": "Source: GH #73 raise 5. Operator decision: cargo publish from CI with provenance (GitHub artifact attestations / sigstore), a signed tag policy, or a documented 'checksum from the index is the attestation' stance. Record the choice in DESIGN § engine verifies itself or the release process notes.",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-10-06T21:28:05.728419Z",
+      "updated_at": "2026-10-06T21:28:05.728419Z"
     },
     "46a2adcb-44f8-4977-b221-88b3f426e01e": {
       "uuid": "46a2adcb-44f8-4977-b221-88b3f426e01e",
