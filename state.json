@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1292,
-        "tip_oid": "7dec25df4d740d9e25741168d55f5884c1596a81",
-        "prefix_sha256": "6496830fdaf3968dc47694dfa9807f2f8a3b095eb1f5afacbd2de08075765595"
+        "sequence": 1293,
+        "tip_oid": "3b1dd103cae6973add50951c2a9053818b12a69e",
+        "prefix_sha256": "787703339c0c956342613e9e64bd58ade6ef194cd8dfe9382ebc431f844df6b3"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 242,
+  "next_display_id": 243,
   "next_comment_id": 616,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -215,6 +215,7 @@
     "c279283e-4eda-48c4-b703-b7843fd1bec0": 182,
     "c5dc858e-4a6e-4662-9360-2aac4b0c176d": 18,
     "c6a307a0-8d76-4f7f-8b36-f94187f13dd5": 163,
+    "c74b05b5-cbf8-4202-9d82-b30690ac1423": 242,
     "c80e0096-9ce9-4085-a622-b46b6b0ed8e6": 71,
     "ca00d2d1-8e37-4109-8c35-24b6950cd6e2": 156,
     "ca04fb0c-6c95-4f52-ab78-d7a1c0b05bf9": 36,
@@ -7437,6 +7438,17 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAHYTcnUrtlR6HxcE/5jxLGveXob2GmpD45Mth65bYt7TaZrXXXwHQshvvhWfeqFN9hZtx3ha7K77ui6MhJWmMDg=="
         }
       }
+    },
+    "c74b05b5-cbf8-4202-9d82-b30690ac1423": {
+      "uuid": "c74b05b5-cbf8-4202-9d82-b30690ac1423",
+      "display_id": 242,
+      "title": "A markdown body with ~300 unbalanced '[' (e.g. 300 '<https://acme.dev/[>' autolinks) aborts the whole verify run with E0080 'nests flow collections 300 deep' — the YAML nesting guard misfires on body text (found by the #215 round-3 cold review)",
+      "description": "Source: #215 cold review round 3 (adversarial cluster), outside the #215 diff. src/verify.rs ~869-877: the flow-collection nesting bound meant for frontmatter YAML counts '[' in markdown body text, so a hostile or merely unusual body denies verification of the whole tree (exit 2) — the #103 posture says one file must not abort the run. Reproduce: a link-checked file with 300 '<https://acme.dev/[>' autolinks. Fix: apply max_flow_nesting to the frontmatter block only; add a red test.",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-10-07T01:37:15.316375Z",
+      "updated_at": "2026-10-07T01:37:15.316375Z"
     },
     "c80e0096-9ce9-4085-a622-b46b6b0ed8e6": {
       "uuid": "c80e0096-9ce9-4085-a622-b46b6b0ed8e6",
