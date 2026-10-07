@@ -7,16 +7,20 @@
 ## What this means
 
 A link in a link-checked file has an absolute destination (a scheme, or a
-protocol-relative `//host`) that is not a well-formed URL, so it is dead
-everywhere, before any liveness check could run. The reason is in the
-message. What is checked is the structural shape of RFC 3986 and nothing
-stylistic: the destination holds whitespace or a control character (a
-`<https://a b>` angle-bracket destination, say), or more than one `#`; an
-`http`, `https` or `//host` destination has no host, a host with an empty
-label (`https://.acme.dev`, `https://a..b`), a host holding a character a
-host name cannot (`_`, `/` in the wrong place), an empty or non-numeric port,
-or an unclosed IPv6 literal; any other scheme has nothing after its `:`
-(`mailto:`). Internationalised host names are accepted as written.
+protocol-relative `//host`) that is not a well-formed URL. The reason is in
+the message. What is checked is the structural shape of RFC 3986 and nothing
+stylistic: the destination holds whitespace, a control character or an
+invisible format character such as a zero-width space (a `<https://a b>`
+angle-bracket destination, say), or more than one `#`; an `http`, `https` or
+`//host` destination has no host, a host with an empty label
+(`https://.acme.dev`, `https://a..b`), a host holding a character a host
+name cannot (`\`, `|`, `<`; `_`, `~` and percent-encoded labels are legal
+and accepted), an empty or non-numeric port, an unclosed or malformed IPv6
+literal, or a `.` or `..` path segment, which a client resolves away so the
+page a reader lands on is not the text a register would compare; any other
+scheme has nothing after its `:` (`mailto:`). Internationalised host names
+are accepted as written. No liveness tool could fetch such a destination,
+so it is not exported by `mdatron links`.
 
 This check needs no data: every route with `links: true` runs it. It is the
 first of the offline checks on absolute URLs; the register
@@ -31,9 +35,10 @@ not a URL.
 - **Two `#`.** A URL has one fragment; drop the second `#` or encode it.
 - **No host.** `https://` must be followed by the host (`https://acme.dev/…`);
   `https:docs` and `https:///path` are not URLs.
-- **A relative path mistaken for a URL.** A destination such as
-  `docs:intro.md` reads as the scheme `docs`; write the relative path
-  (`docs/intro.md`) so the link family resolves it in the tree.
+- **A `.` or `..` in the path.** Write the resolved path
+  (`https://acme.dev/private/x`, not `https://acme.dev/public/../private/x`).
+- **An invisible character.** A zero-width space or a soft hyphen copied in
+  with the URL; retype the destination.
 
 ## Related codes
 

@@ -963,6 +963,27 @@ fn drive_snapshot_backed_scanners(
     let path = root.0.join("docs/sub/file.md");
     let mut findings = Vec::new();
     let mut memo = crate::memo::RefMemo::default();
+    // A small register and policy so the external-link branches (#215) run
+    // against the hostile bodies too, not only the well-formedness check.
+    let register = vec![
+        crate::links::Entry {
+            url: "https://docs.acme.dev/".into(),
+            prefix: true,
+            fragments: None,
+        },
+        crate::links::Entry {
+            url: "https://acme.dev/ref".into(),
+            prefix: false,
+            fragments: Some(vec!["a".into()]),
+        },
+    ];
+    let policy = crate::links::Policy::compile(
+        serde_yaml_ng::from_str(
+            "schemes: [https]\nhosts: [acme.dev, '*.acme.dev']\nforbid_query: ['^utm_']",
+        )
+        .unwrap(),
+    )
+    .unwrap();
     crate::cite::check_file(&snapshot, &path, body, body_offset, &mut findings);
     crate::link::check_file(
         &snapshot,
@@ -970,8 +991,12 @@ fn drive_snapshot_backed_scanners(
         &path,
         body,
         body_offset,
-        root_relative,
-        &crate::links::Context::default(),
+        &crate::links::Context {
+            root_relative,
+            register: Some(&register),
+            policy: Some(&policy),
+            ..Default::default()
+        },
         &mut memo,
         &mut findings,
     );

@@ -11,8 +11,8 @@ file this run: no link's page equals its `url`, or, for a `prefix: true`
 entry, starts with it. The entry is quoted beneath the diagnostic. An unused
 entry declares nothing the corpus says, and it costs something: the register
 is the list a liveness tool checks on a schedule, so a stale entry is a URL
-fetched for no reader, and an entry that *was* used is often the trace of a
-link that went away while the register did not. It is the dead-glob posture
+fetched for no reader, and an entry that was once used is often the trace of
+a link that went away while the register did not. It is the dead-glob posture
 (`MDATRON-W0046`, `W0054`) applied to the register, reported once per entry,
 only on a whole-tree run whose jurisdiction came from `config.yaml` — an
 incremental (`--changed`) run sees part of the tree, and an ad-hoc `--files`

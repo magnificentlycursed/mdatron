@@ -11,12 +11,17 @@ scheme, such as `https://…`, or a protocol-relative `//host/…`) that no entr
 in `.mdatron/links.yaml` declares. The register is the closed set of URLs the
 corpus may point at: an entry matches a link whose page (the URL before any
 `#`) equals its `url` exactly, or, when the entry sets `prefix: true`, any
-link whose page starts with its `url`. Matching is on the text as written —
-no case folding, no normalising of a trailing slash — so `https://Acme.dev/`
-is not `https://acme.dev/` and `https://acme.dev` is not `https://acme.dev/`.
-Every link kind the link family sees is subject to the register: inline,
-reference-style, image and autolink destinations alike, including
-`mailto:` and other non-web schemes.
+link whose page starts with its `url` (a prefix for a web URL runs past its
+host — `https://acme.dev/`, never `https://acme.dev` — so it cannot be
+extended into another host). The comparison is on the destination as the
+CommonMark parser reads it (`&amp;` is `&`, `\_` is `_`) and nothing more:
+no case folding, no normalising of a trailing slash, no percent-decoding, so
+`https://Acme.dev/` is not `https://acme.dev/` and `https://acme.dev` is not
+`https://acme.dev/`. Every markdown link kind is subject to the register:
+inline, reference-style, image and autolink destinations alike, including
+`<x@y.z>` (a `mailto:` link) and other non-web schemes. A bare URL in prose
+and a raw HTML `<a href>` are not markdown links: they are neither checked
+nor exported.
 
 mdatron does not fetch the URL, so this is not a liveness verdict: the link
 may be perfectly alive. What the finding says is that the corpus points
@@ -35,8 +40,14 @@ nothing else.
   will check.
 - **The link is wrong.** Correct it to a URL the register declares; a typo
   in the host or path is the common case.
-- **The register was meant to cover it.** Compare the entry and the link
-  character by character: scheme, host case, trailing slash, `www.`.
+- **The register was meant to cover it.** Compare the entry and the link as
+  the link reads once CommonMark has decoded it: scheme, host case, trailing
+  slash, `www.`, and whether a prefix entry really runs past its host.
+- **A relative path mistaken for a URL.** A destination such as
+  `docs:intro.md` reads as the scheme `docs` and is a well-formed URL to
+  mdatron, so it reaches the register (or passes silently without one);
+  write the relative path (`docs/intro.md`) so the link family resolves it
+  in the tree.
 
 ## Related codes
 

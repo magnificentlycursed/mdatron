@@ -1298,9 +1298,13 @@ fn run_inner(
         {
             sibling_check(&snapshot, path, rel, sibling, &mut findings);
         }
-        // The offline external-link context (#215): the register, when
-        // supplied, and the claiming route's policy, when declared.
-        let external = crate::links::Context {
+        // The link family's options for this file (#215): the opt-in, how
+        // relative links resolve, imports, and — for absolute destinations —
+        // the register, when supplied, and the claiming route's policy.
+        let links = crate::links::Context {
+            enabled: link_enabled,
+            root_relative: link_root,
+            imports: import_enabled,
             register: register.as_deref(),
             policy: routes
                 .as_deref()
@@ -1313,10 +1317,7 @@ fn run_inner(
             &project_root,
             &require,
             cite_enabled,
-            link_enabled,
-            link_root,
-            import_enabled,
-            &external,
+            &links,
             &marker_rules,
             if codecat_enabled {
                 catalogs.as_deref().unwrap_or(&[])
@@ -1342,16 +1343,18 @@ fn run_inner(
         files_checked += 1;
     }
 
-    // #215: the register's own dead-scope announcements, whole-tree runs only
-    // (an incremental pass sees part of the tree). Supplied but reaching no
-    // link-checked file is inert (W0056, the W0055 posture); an entry no link
-    // used is announced per entry (W0057), only when the jurisdiction came
-    // from the config — an ad-hoc `--files` run narrows the corpus, so every
-    // entry outside it would look unused (the W0054 posture).
+    // #215: the register's own dead-scope announcements, only on a whole-tree
+    // run whose jurisdiction came from the config (the W0054 posture): an
+    // incremental pass sees part of the tree, and an ad-hoc `--files` run
+    // narrows the corpus, so the register would look inert or every entry
+    // outside the glob unused. Supplied but reaching no link-checked file is
+    // inert (W0056); an entry no link used is announced per entry (W0057).
     if let Some(entries) = &register {
-        if scope.is_none() && link_cov == 0 {
+        if scope.is_some() || config.config_digest.is_none() {
+            // Not a whole-tree, config-driven run: nothing to announce.
+        } else if link_cov == 0 {
             findings.push(crate::links::inert_finding(&project_root));
-        } else if scope.is_none() && config.config_digest.is_some() {
+        } else {
             findings.extend(crate::links::unused_findings(
                 &project_root,
                 entries,
@@ -3102,10 +3105,7 @@ fn verify_file(
     project_root: &Path,
     require_frontmatter: &FileScope,
     cite_enabled: bool,
-    link_enabled: bool,
-    link_root: bool,
-    import_enabled: bool,
-    external: &crate::links::Context<'_>,
+    links: &crate::links::Context<'_>,
     marker_rules: &[&crate::route::MarkerRule],
     code_catalogs: &[crate::codecat::CodeCatalog],
     section_rules: &[&crate::section::Rule],
@@ -3197,20 +3197,19 @@ fn verify_file(
             if cite_enabled {
                 crate::cite::check_file(snapshot, path, content, body_offset, findings);
             }
-            if link_enabled {
+            if links.enabled {
                 crate::link::check_file(
                     snapshot,
                     project_root,
                     path,
                     content,
                     body_offset,
-                    link_root,
-                    external,
+                    links,
                     memo,
                     findings,
                 );
             }
-            if import_enabled {
+            if links.imports {
                 crate::link::check_imports(
                     snapshot,
                     project_root,
@@ -3280,7 +3279,7 @@ fn verify_file(
         let body_offset = content.len() - body_len;
         crate::cite::check_file(snapshot, path, content, body_offset, findings);
     }
-    if link_enabled {
+    if links.enabled {
         let body_offset = content.len() - body_len;
         crate::link::check_file(
             snapshot,
@@ -3288,13 +3287,12 @@ fn verify_file(
             path,
             content,
             body_offset,
-            link_root,
-            external,
+            links,
             memo,
             findings,
         );
     }
-    if import_enabled {
+    if links.imports {
         let body_offset = content.len() - body_len;
         crate::link::check_imports(
             snapshot,
@@ -7840,7 +7838,6 @@ pattern:
             &proj.0.join("a.md"),
             "[ok](refs/target.md#real-heading)\n",
             0,
-            false,
             &crate::links::Context::default(),
             &mut memo,
             &mut findings,
@@ -7852,7 +7849,6 @@ pattern:
             &proj.0.join("b.md"),
             "[ok](refs/target.md#real-heading)\n[dead](refs/target.md#missing)\n",
             0,
-            false,
             &crate::links::Context::default(),
             &mut memo,
             &mut findings,
@@ -9457,7 +9453,6 @@ pattern:
             Path::new("docs/a.md"),
             "See [t](t2.md#a).\n",
             0,
-            false,
             &crate::links::Context::default(),
             &mut memo,
             &mut findings,
@@ -11944,7 +11939,9 @@ pattern:
             "{:?}",
             inc.report.findings
         );
-        // An ad-hoc --files jurisdiction narrows the corpus: no W0057 either.
+        // An ad-hoc --files jurisdiction narrows the corpus: no W0057 either,
+        // and no W0056 when the narrowed corpus has no link-checked file (the
+        // register governs docs/, which is simply outside the glob).
         let mut adhoc = VerifyConfig::new(&proj.0);
         adhoc.file_globs = vec!["docs/a.md".into()];
         let adhoc = verify_report(&adhoc).unwrap();
@@ -11953,6 +11950,53 @@ pattern:
             0,
             "{:?}",
             adhoc.findings
+        );
+        proj.write("GOVERNING.md", "# gov\n[x](https://acme.dev/)\n");
+        let mut adhoc = VerifyConfig::new(&proj.0);
+        adhoc.file_globs = vec!["GOVERNING.md".into()];
+        let adhoc = verify_report(&adhoc).unwrap();
+        assert_eq!(
+            codes_of(&adhoc.findings, "MDATRON-W0056"),
+            0,
+            "{:?}",
+            adhoc.findings
+        );
+        assert!(
+            adhoc.external_links.is_empty(),
+            "GOVERNING.md is not link-checked"
+        );
+    }
+
+    #[test]
+    fn email_autolinks_and_images_are_absolute_destinations() {
+        let proj = external_project(
+            "autolink",
+            Some("mdatron_format_version: 1\nlinks:\n- url: mailto:team@acme.dev\n- url: https://cdn.acme.dev/\n  prefix: true\n"),
+            "  link_policy:\n    schemes: [https, mailto]\n",
+        );
+        proj.write(
+            "docs/a.md",
+            "Write to <team@acme.dev>; logo: ![logo](https://cdn.acme.dev/logo.png)\n<ops@acme.dev>\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let report = verify_report(&cfg).unwrap();
+        let f = &report.findings;
+        // The declared address and the image pass; the second address is an
+        // undeclared mailto: link — never a dead relative path.
+        assert_eq!(codes_of(f, "MDATRON-E0110"), 0, "{f:?}");
+        assert_eq!(codes_of(f, "MDATRON-E0115"), 1, "{f:?}");
+        let urls: Vec<&str> = report
+            .external_links
+            .iter()
+            .map(|l| l.url.as_str())
+            .collect();
+        assert_eq!(
+            urls,
+            vec![
+                "https://cdn.acme.dev/logo.png",
+                "mailto:team@acme.dev",
+                "mailto:ops@acme.dev"
+            ]
         );
     }
 
@@ -11970,19 +12014,21 @@ pattern:
              [host](https://example.com/)\n\
              [rel](//acme.dev/x)\n\
              [utm](https://acme.dev/?utm_source=x&utm_medium=y)\n\
-             [mail](mailto:x@acme.dev)\n",
+             [mail](mailto:x@acme.dev)\n\
+             [relhost](//evil.example/x)\n",
         );
         let cfg = VerifyConfig::from_project(&proj.0).unwrap();
         let f = verify(&cfg).unwrap();
         // http: scheme; example.com: host; //: no scheme; utm: two
-        // parameters; mailto: a scheme outside the list (no host to judge).
-        assert_eq!(codes_of(&f, "MDATRON-E0118"), 6, "{f:?}");
+        // parameters; mailto: a scheme outside the list (no host to judge);
+        // //evil: no scheme AND a host outside the list.
+        assert_eq!(codes_of(&f, "MDATRON-E0118"), 8, "{f:?}");
         let lines: Vec<u32> = f
             .iter()
             .filter(|x| x.code == "MDATRON-E0118")
             .map(|x| x.location.line)
             .collect();
-        assert_eq!(lines, vec![2, 3, 4, 5, 5, 6]);
+        assert_eq!(lines, vec![2, 3, 4, 5, 5, 6, 7, 7]);
         assert_eq!(codes_of(&f, "MDATRON-E0115"), 0, "no register, no E0115");
     }
 

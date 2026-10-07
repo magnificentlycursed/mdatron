@@ -14,8 +14,10 @@ in, and nothing else. With nothing opted in, every entry is inert and
 a corpus whose every link is declared. This is the link-register counterpart
 of `MDATRON-W0055` (a dead code-catalog scope) and `W0043` (a dead vocabulary
 scope): data that governs nothing is announced, never silently tolerated. It
-is reported once, at the register, and only on a whole-tree run — an
-incremental (`--changed`) run sees just part of the tree.
+is reported once, at the register, and only on a whole-tree run whose
+jurisdiction came from `config.yaml` — an incremental (`--changed`) run sees
+just part of the tree, and an ad-hoc `--files` run replaces the jurisdiction
+from the command line, so the link-checked files may simply be outside it.
 
 Either no route sets `links: true`, or the routes that do claim no walked
 file (announced on their own as `MDATRON-W0054`).

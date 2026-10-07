@@ -180,13 +180,18 @@ enum Command {
     #[command(name = "envelope-schema", visible_alias = "schema")]
     EnvelopeSchema,
 
-    /// Export the absolute URLs the link-checked files hold, for a liveness
-    /// tool to fetch — mdatron itself never reaches the network. Walks the
-    /// same jurisdiction `verify` walks and lists every outbound link of
-    /// every file on a route with `links: true`, fragment included; findings
-    /// are not printed (run `verify` for those), a load failure exits 2. The
-    /// default form prints each distinct URL once, one per line, sorted;
-    /// `--json` prints every occurrence with its file and line.
+    /// Export the absolute link destinations the link-checked files hold,
+    /// for a liveness tool to fetch — mdatron itself never reaches the
+    /// network. Walks the same jurisdiction `verify` walks and lists every
+    /// markdown link (inline, reference-style, image, autolink) to an
+    /// absolute URL in every file on a route with `links: true`, fragment
+    /// included; a bare URL in prose or a raw HTML `<a href>` is not a
+    /// markdown link and is not exported, and a destination that is not a
+    /// well-formed URL is reported by `verify` instead. Findings are not
+    /// printed and do not affect the exit (run `verify` for those): 0 on an
+    /// export, 2 on a load failure. The default form prints each distinct
+    /// destination once, one per line, sorted; `--json` prints every
+    /// occurrence with its file and line.
     Links {
         /// Project root. Defaults to the current directory.
         #[arg(long = "project-root", value_name = "DIR")]
@@ -197,7 +202,7 @@ enum Command {
         #[arg(long = "external", required = true)]
         external: bool,
 
-        /// Emit JSON on stdout: `{"mdatron_links_version", "links": [{"url", "file", "line"}]}`.
+        /// Emit JSON on stdout: `{"mdatron_links_version", "links": [{"file", "line", "url"}]}`.
         #[arg(long = "json")]
         json: bool,
 

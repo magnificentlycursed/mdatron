@@ -93,14 +93,17 @@ Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `cit
   broken: `schemes`, the schemes a link may use — a `//host` link has none
   and violates any list; `hosts`, the hosts an `http`, `https` or `//host`
   link may name, `*.example.com` covering every subdomain and not the apex,
-  a link with no host such as `mailto:` being judged by `schemes` alone;
-  `forbid_query`, regexes over the query-parameter names a link must not
-  carry, `^utm_` for the tracking parameters; schemes and hosts compare
-  case-insensitively; each list given must be non-empty and an empty block
-  is refused; needs `links`). Every route with `links: true` also reports
-  an absolute URL that is not well-formed (`E0117`) and, when
-  `links.yaml` exists, one the register does not declare (`E0115`,
-  `E0116`); mdatron never fetches a URL.
+  a bracketed IPv6 literal listed as one, a trailing-dot name being its
+  own name; a link with no web host such as `mailto:` or `ftp://` is judged
+  by `schemes` alone, so a `hosts` list without `schemes` says nothing
+  about it; `forbid_query`, regexes over the query-parameter names a link
+  must not carry, `^utm_` for the tracking parameters, one `E0118` per
+  forbidden parameter, names percent-decoded first; schemes and hosts
+  compare without regard to ASCII case; each list given must be non-empty
+  and an empty block is refused; needs `links`). Every route with
+  `links: true` also reports an absolute URL that is not well-formed
+  (`E0117`) and, when `links.yaml` exists, one the register does not
+  declare (`E0115`, `E0116`); mdatron never fetches a URL.
 - An `element` is one of `heading`, `h1`…`h6`, `list-item-bold-name`,
   `list-item`, `blockquote` or `line`. Elements are lines, recognised by the
   line's own prefix. A line inside a fenced code block is never an element —
@@ -239,28 +242,38 @@ inline code spans are scanned, fenced blocks are not. Codes: `E0113`, `W0055`.
 The external-link register — the closed set of absolute URLs the corpus may
 point at, read by the link family. mdatron never fetches a URL: the register
 is the list a liveness tool checks on a schedule, and `mdatron links
---external` exports every URL the corpus links to (`--json` adds file and
-line) for that tool.
+--external` exports every markdown link to an absolute URL (`--json` adds
+file and line) for that tool. What the link family sees is what CommonMark
+calls a link — inline, reference-style, image and `<autolink>` destinations
+(an email autolink is a `mailto:` link); a bare URL in prose and a raw HTML
+`<a href>` are not links and are neither checked nor exported.
 
 Keys: `mdatron_format_version`, `links`, `url`, `prefix`, `fragments`.
 
 - Per entry — required: `url` (an absolute URL: a scheme such as `https:`, or
-  a protocol-relative `//host`; written without a `#`). Optional: `prefix`
-  (default `false`; `true` covers every URL that starts with `url`),
-  `fragments` (the anchors the corpus may use on the page — or on every page
-  a prefix entry covers — written without their `#`; absent accepts any
-  fragment, an empty list accepts none, and a bare `#` is always accepted).
-  An exact entry wins over a prefix entry and the longest prefix over a
-  shorter one; a URL and a fragment compare as written — no case folding, no
-  slash normalising, no percent-decoding.
+  a protocol-relative `//host`; written without a `#`; a well-formed URL
+  itself, except a prefix for an opaque scheme such as `mailto:`). Optional:
+  `prefix` (default `false`; `true` covers every URL that starts with `url`;
+  a prefix for an `http`, `https` or `//host` URL must run past its host —
+  `https://acme.dev/`, never `https://acme.dev`, which would also cover
+  `https://acme.dev.evil.example/`), `fragments` (the anchors the corpus may
+  use on the page — or on every page a prefix entry covers — written without
+  their `#`; absent accepts any fragment, an empty list accepts none, and a
+  bare `#` is always accepted). An exact entry wins over a prefix entry and
+  the longest prefix over a shorter one; a URL and a fragment compare as the
+  link's destination reads after CommonMark decoding (`&amp;` is `&`, `\_`
+  is `_`) — no case folding, no slash normalising, no percent-decoding.
 - `mdatron_format_version` is required on this file. Refused at load: an
-  empty `url`, one that is not absolute, one holding `#`, whitespace or a
-  control character, a duplicate `url`, and an empty, repeated or
-  `#`-holding fragment.
+  empty `url`, one that is not absolute or not well-formed, one holding
+  `#`, whitespace or a control character, a web prefix that stops inside
+  its host, a duplicate `url`, and an empty or repeated fragment, or one
+  holding `#`, whitespace or a control character.
 
-Activation: the file exists. Scope: every absolute URL in every file on a
-route with `links: true` (the link family's scope; `W0056` when no such
-file is walked). Codes: `E0115`, `E0116`, `W0056`, `W0057`.
+Activation: the file exists. Scope: every markdown link to an absolute URL
+in every file on a route with `links: true` (the link family's scope;
+`W0056` when no such file is walked, on a whole-tree run whose jurisdiction
+came from `config.yaml`, as `W0057`). Codes: `E0115`, `E0116`, `W0056`,
+`W0057`.
 
 ## manifest.yaml
 

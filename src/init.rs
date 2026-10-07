@@ -245,11 +245,14 @@ const LINKS_TEMPLATE: &str = r####"# links.yaml.example — the external-link re
 #
 # ACTIVATION  the file exists; it applies to the files a route opts in with
 #             links: true (W0056 if none is walked).
-# SCOPE       every absolute URL (a scheme, or //host) in a link-checked
-#             file must match an entry — exactly, or by prefix when the
-#             entry sets prefix: true — else E0115; its #fragment must be one
-#             the entry lists under fragments, when it lists any (E0116). An
-#             entry no link uses is W0057. mdatron never fetches a URL: the
+# SCOPE       every markdown link (inline, reference, image, autolink) to an
+#             absolute URL (a scheme, or //host) in a link-checked file must
+#             match an entry — exactly, or by prefix when the entry sets
+#             prefix: true (a web prefix runs past its host: end it with /)
+#             — else E0115; its #fragment must be one the entry lists under
+#             fragments when the entry has a fragments key (an empty list
+#             accepts none; E0116). An entry no link uses is W0057. A bare
+#             URL in prose is not a link. mdatron never fetches a URL: the
 #             register is the list a liveness tool checks on a schedule, and
 #             `mdatron links --external` exports what the corpus links to.
 # KEYS        per entry — required: url

@@ -70,9 +70,9 @@ from then on), the init manifest (the record of the engine-managed partition),
 and one inert `*.example` template per family file (`routes`, `pins`,
 `vocabulary`, `code-catalogs`, `links`) whose header states its activation rule, keys,
 scope, and codes — copy one to its real name to activate that family, or read
-`mdatron docs inputs` (a tree initialized before 0.7.0 gains the templates on
-its next `mdatron init`, which also refreshes any template you have not edited
-to the running version's content):
+`mdatron docs inputs` (a tree initialized before a template existed gains it
+on its next `mdatron init`, which also refreshes any template you have not
+edited to the running version's content):
 
 ```
 mkdir my-typed-docs && cd my-typed-docs
@@ -440,17 +440,18 @@ opts a route into resolving a leading-slash `/docs/x.md` from the project root
 (still confined) for static-site corpora that author links that way. An
 **absolute URL** (any scheme, or `//host`) is never fetched — mdatron does not
 reach the network, by design — but it is checked offline: a destination that
-is not a well-formed URL blocks (`E0117`; dead everywhere, before any liveness
-check); with a `.mdatron/links.yaml` **register** of the URLs the corpus may
+is not a well-formed URL blocks (`E0117`, before any liveness check could
+run); with a `.mdatron/links.yaml` **register** of the URLs the corpus may
 point at, an undeclared URL blocks (`E0115`) and an undeclared `#fragment` on a
 declared page blocks (`E0116`, the entry's `fragments` being the anchors you
 confirmed on the live page); and a route's `link_policy` (`schemes`, `hosts`,
-`forbid_query`) blocks a link outside it (`E0118`). A register no
-link-checked file consults warns (`W0056`), as does an entry no link uses
-(`W0057`). `mdatron links --external` exports every outbound URL — fragment
-included; `--json` adds file and line — for the liveness tool that does fetch
-(lychee or its class), and the register is the list such a tool checks on a
-schedule:
+`forbid_query`) blocks a link outside it (`E0118`). On a whole-tree run, a
+register no link-checked file consults warns (`W0056`), as does an entry no
+link uses (`W0057`). `mdatron links --external` exports every markdown link
+to an absolute URL — fragment included; `--json` adds file and line — for
+the liveness tool that does fetch (lychee or its class), and the register is
+the list such a tool checks on a schedule. A bare URL in prose or a raw HTML
+`<a href>` is not a markdown link: it is neither checked nor exported.
 
 <!-- mdatron-roundtrip:links-start -->
 ```yaml

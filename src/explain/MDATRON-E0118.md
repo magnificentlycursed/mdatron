@@ -13,10 +13,16 @@ scheme and violates any `schemes` list); its host is not one of the route's
 `hosts` (a host matches an entry exactly, or is any subdomain of a
 `*.example.com` entry — never the apex); or one of its query parameters has
 a name matching a `forbid_query` pattern (`^utm_` for the tracking
-parameters). Schemes and hosts compare case-insensitively; a destination
-with no host (`mailto:…`) is judged by `schemes` alone. A link that violates
-two clauses is reported twice, once per clause, each quoting the clause it
-broke.
+parameters; names are percent-decoded first, so `utm%5Fsource` is
+`utm_source`). Schemes and hosts compare without regard to ASCII case; a
+host compares as written otherwise, so `acme.dev.` (a trailing dot) is not
+`acme.dev`, and a bracketed IPv6 literal (`[::1]`) must be listed as one. A
+destination with no host (`mailto:…`, `ftp://…` has one but is not web) is
+judged by `schemes` alone: a `hosts` list on its own says nothing about a
+link whose scheme is not `http` or `https`, so pair it with `schemes` to
+close that door. A link that violates two clauses is reported twice, once
+per clause, and under `forbid_query` once per forbidden parameter, each
+quoting the clause it broke.
 
 The policy is per route, so a corpus can be `https`-only on its published
 pages and looser on an internal one. It needs no register: `link_policy`
@@ -33,6 +39,10 @@ a statement about what the link says, not whether it answers.
   too strict.
 - **The link is not the route's business.** Move the file to a route whose
   policy fits it; a route's policy applies to every file it claims.
+- **A relative path mistaken for a URL.** A destination such as
+  `docs:intro.md` reads as the scheme `docs` and fails a `schemes` clause;
+  write the relative path (`docs/intro.md`) so the link family resolves it
+  in the tree.
 
 ## Related codes
 

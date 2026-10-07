@@ -281,18 +281,26 @@ pub(crate) struct BodyLink {
 /// destination inside an inline code span or a fenced/indented code block never
 /// surfaces as a link event, so code examples are excluded **structurally** —
 /// this retires the hand-rolled fence + inline-code masking and its #154 defect.
-/// Autolinks/emails carry a URL scheme; the caller's external filter drops them.
+/// A URL autolink (`<https://…>`) carries its scheme; an EMAIL autolink
+/// (`<x@y.z>`) is yielded as the bare address — the HTML writer is what adds
+/// `mailto:` — so it is given its scheme here, and the caller's external
+/// filter sees every autolink as the absolute destination it renders as.
 pub(crate) fn body_links(body: &str) -> Vec<BodyLink> {
-    use pulldown_cmark::{Event, Parser, Tag};
+    use pulldown_cmark::{Event, LinkType, Parser, Tag};
     let mut out = Vec::new();
     for (event, range) in Parser::new(body).into_offset_iter() {
         let dest = match event {
+            Event::Start(Tag::Link {
+                link_type: LinkType::Email,
+                dest_url,
+                ..
+            }) => format!("mailto:{dest_url}"),
             Event::Start(Tag::Link { dest_url, .. })
-            | Event::Start(Tag::Image { dest_url, .. }) => dest_url,
+            | Event::Start(Tag::Image { dest_url, .. }) => dest_url.to_string(),
             _ => continue,
         };
         out.push(BodyLink {
-            dest: dest.to_string(),
+            dest,
             offset: range.start,
         });
     }
@@ -1005,6 +1013,15 @@ below the snippet\n\n## Next\n\ntail\n";
         let slugs = heading_slugs("# Real\n\n```\n# Not A Heading\n```\n");
         assert!(slugs.contains("real"));
         assert!(!slugs.contains("not-a-heading"));
+    }
+
+    #[test]
+    fn email_autolinks_carry_their_mailto_scheme() {
+        let dests: Vec<String> = body_links("<team@acme.dev> and <https://acme.dev/x>\n")
+            .into_iter()
+            .map(|l| l.dest)
+            .collect();
+        assert_eq!(dests, vec!["mailto:team@acme.dev", "https://acme.dev/x"]);
     }
 
     #[test]

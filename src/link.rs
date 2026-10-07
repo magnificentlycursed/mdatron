@@ -325,11 +325,11 @@ pub fn check_file(
     path: &Path,
     content: &str,
     body_offset: usize,
-    root_relative: bool,
-    external: &crate::links::Context<'_>,
+    links: &crate::links::Context<'_>,
     memo: &mut RefMemo,
     findings: &mut Vec<Finding>,
 ) {
+    let root_relative = links.root_relative;
     // The containing file's directory, root-relative — the base every
     // document-relative target resolves against. `path` is the engine-supplied
     // absolute path; strip the root to get the governed-tree-relative form
@@ -353,18 +353,20 @@ pub fn check_file(
     // destination with its byte offset. Destinations inside a code span or a
     // fenced/indented code block are not link events, so a syntax example is
     // never resolved — the masking is structural (#155), not a line heuristic.
+    // Links come in offset order, so one forward cursor gives each external
+    // link its line in a single pass (not a rescan from byte 0 per link).
+    let mut lines = crate::section::LineCursor::new(content);
     for link in body_links(body) {
         let at = body_offset + link.offset;
         // An absolute URL is not resolved against the tree; it gets the
         // offline checks (#215) and is recorded for the export.
         if is_external(&link.dest) {
             crate::links::check(
-                external,
+                links,
                 &mut memo.external,
                 rel,
                 path,
-                content,
-                at,
+                lines.line_of(at),
                 &link.dest,
                 findings,
             );
@@ -750,7 +752,7 @@ fn resolve_target(
 /// to a corrupted path, so decoding can only *remove* a false positive, never
 /// introduce a false resolution. Applied AFTER fragment splitting (RFC 3986:
 /// the fragment delimiter is a literal `#`; an encoded `%23` is path content).
-fn percent_decode(s: &str) -> std::borrow::Cow<'_, str> {
+pub(crate) fn percent_decode(s: &str) -> std::borrow::Cow<'_, str> {
     if !s.contains('%') {
         return std::borrow::Cow::Borrowed(s);
     }
@@ -791,7 +793,7 @@ fn percent_decode(s: &str) -> std::borrow::Cow<'_, str> {
 /// Split a destination into its path and optional `#fragment`. The first `#`
 /// delimits the fragment (URL fragments always do); everything before is the
 /// path, everything after is the fragment (possibly empty).
-fn split_fragment(dest: &str) -> (&str, Option<&str>) {
+pub(crate) fn split_fragment(dest: &str) -> (&str, Option<&str>) {
     match dest.find('#') {
         Some(i) => (&dest[..i], Some(&dest[i + 1..])),
         None => (dest, None),

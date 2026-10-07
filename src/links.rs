@@ -6,9 +6,9 @@
 //! offline pieces replace the fetch:
 //!
 //! 1. **Well-formedness** (`E0117`): a destination that is not a URL at all —
-//!    whitespace, a control character, two `#`, an `https://` with no host —
-//!    is dead everywhere, forever, and is reported by every link-checked
-//!    route with no data supplied.
+//!    whitespace, an invisible character, two `#`, an `https://` with no
+//!    host, a `..` segment — is reported by every link-checked route with no
+//!    data supplied, and is not exported (nothing could fetch it).
 //! 2. **The register** (`.mdatron/links.yaml`): the closed set of URLs the
 //!    corpus may point at, exactly or by prefix. An absolute link no entry
 //!    matches is `E0115`; a `#fragment` an entry does not list, when it lists
@@ -17,14 +17,20 @@
 //!    (`W0056`, `W0057`), like every dead scope in this engine.
 //! 3. **Policy** (`link_policy` on a route): allowed schemes, allowed hosts,
 //!    forbidden query parameters (`E0118`).
-//! 4. **The export** (`mdatron links --external`): every absolute URL the
-//!    link-checked files hold, with file and line, for whatever liveness tool
-//!    runs it — fragment included, so a tool that checks anchors can.
+//! 4. **The export** (`mdatron links --external`): every markdown link to an
+//!    absolute URL the link-checked files hold, with file and line under
+//!    `--json`, for whatever liveness tool runs it — fragment included, so a
+//!    tool that checks anchors can.
 //!
 //! Activation of the register: the file exists; its scope is the link family's
-//! (files a route opts in with `links: true`). Entries and links are compared
-//! AS WRITTEN — no case folding, no normalisation of a trailing slash — so
-//! what the register says is what the corpus must say.
+//! (files a route opts in with `links: true`). Entries are compared with the
+//! link's destination as the CommonMark parser yields it (`&amp;` and `\_`
+//! decoded, nothing else) — no case folding, no normalisation of a trailing
+//! slash, no percent-decoding — so what the register says is what the corpus
+//! must say. What the link family sees is what CommonMark calls a link:
+//! inline, reference-style, image and `<autolink>` destinations; a bare URL
+//! in prose and a raw HTML `<a href>` are not links and are neither checked
+//! nor exported.
 
 use std::collections::HashSet;
 use std::path::Path;
@@ -128,6 +134,29 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRegister>, Error> {
                 "links.yaml entry '{url}' is not an absolute URL (a scheme such as `https:`, \
                  or a protocol-relative `//host`); a relative link is resolved against the \
                  tree, never the register"
+            )));
+        }
+        // An entry no link could ever match is refused: an exact entry must
+        // itself be a well-formed URL (a link equal to it is E0117 before the
+        // register is consulted), and a prefix entry for a web URL must run
+        // PAST its host — `https://acme.dev` as a prefix also covers
+        // `https://acme.dev.evil.example/` and `https://acme.dev@evil.example/`,
+        // the host escapes a text prefix cannot see. A prefix for an opaque
+        // scheme (`mailto:`) may stop at the scheme.
+        let opaque_prefix = e.prefix && !is_hierarchical(url);
+        if !opaque_prefix {
+            if let Err(reason) = parse(url) {
+                return Err(Error::Config(format!(
+                    "links.yaml entry '{url}' is not a well-formed URL ({reason}); no link \
+                     could match it"
+                )));
+            }
+        }
+        if e.prefix && is_hierarchical(url) && !authority_closed(url) {
+            return Err(Error::Config(format!(
+                "links.yaml prefix entry '{url}' stops inside its host; a prefix must run \
+                 past the host (end it with `/`), or `{url}.evil.example/` and \
+                 `{url}@evil.example/` would start with it too"
             )));
         }
         if !seen.insert(url) {
@@ -280,17 +309,24 @@ impl Policy {
                 for h in list {
                     let lower = h.to_ascii_lowercase();
                     let name = lower.strip_prefix("*.").unwrap_or(&lower);
-                    let ok = !name.is_empty()
-                        && !name.starts_with('.')
-                        && !name.contains("..")
-                        && name.chars().all(|c| {
-                            !c.is_ascii() || c.is_ascii_alphanumeric() || matches!(c, '-' | '.')
-                        });
+                    let literal = lower
+                        .strip_prefix('[')
+                        .and_then(|r| r.strip_suffix(']'))
+                        .is_some_and(is_ipv6_literal);
+                    let ok = literal
+                        || (!name.is_empty()
+                            && !name.starts_with('.')
+                            && !name.contains("..")
+                            && name.chars().all(|c| {
+                                !c.is_ascii()
+                                    || c.is_ascii_alphanumeric()
+                                    || matches!(c, '-' | '.' | '_' | '~')
+                            }));
                     if !ok {
                         return Err(Error::Config(format!(
                             "route link_policy host '{h}' is not a host name (letters, digits, \
-                             `-` and `.`, optionally led by `*.` for every subdomain; no \
-                             scheme, port or path)"
+                             `-`, `.`, `_` and `~`, optionally led by `*.` for every \
+                             subdomain, or a bracketed IPv6 literal; no scheme, port or path)"
                         )));
                     }
                     out.push(lower);
@@ -335,10 +371,56 @@ impl Policy {
 /// the hierarchical forms (`http`, `https`, `//host`).
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct Url<'a> {
+    /// The destination before its `#`: the text the register compares.
+    pub page: &'a str,
     pub scheme: Option<&'a str>,
     pub host: Option<&'a str>,
     pub query: Option<&'a str>,
     pub fragment: Option<&'a str>,
+}
+
+/// Whether a destination is one of the forms with an authority: `http:`,
+/// `https:`, or protocol-relative `//host`.
+fn is_hierarchical(dest: &str) -> bool {
+    dest.starts_with("//")
+        || dest
+            .split_once(':')
+            .is_some_and(|(s, _)| s.eq_ignore_ascii_case("http") || s.eq_ignore_ascii_case("https"))
+}
+
+/// Whether a hierarchical destination's authority is closed by a `/` or a
+/// `?`, so a text prefix cannot be extended inside the host.
+fn authority_closed(dest: &str) -> bool {
+    let after = match dest.strip_prefix("//") {
+        Some(rest) => rest,
+        None => dest.split_once("://").map(|(_, rest)| rest).unwrap_or(""),
+    };
+    after.contains(['/', '?'])
+}
+
+/// A Unicode format character (category Cf): invisible in rendered text —
+/// a zero-width space, a soft hyphen, a direction mark, a byte-order mark —
+/// so a link holding one can never resolve as its author reads it.
+fn is_format_char(c: char) -> bool {
+    matches!(
+        c,
+        '\u{00AD}'
+            | '\u{061C}'
+            | '\u{180E}'
+            | '\u{200B}'..='\u{200F}'
+            | '\u{202A}'..='\u{202E}'
+            | '\u{2060}'..='\u{2064}'
+            | '\u{2066}'..='\u{206F}'
+            | '\u{FEFF}'
+            | '\u{FFF9}'..='\u{FFFB}'
+            | '\u{110BD}'
+            | '\u{110CD}'
+            | '\u{13430}'..='\u{1343F}'
+            | '\u{1BCA0}'..='\u{1BCA3}'
+            | '\u{1D173}'..='\u{1D17A}'
+            | '\u{E0001}'
+            | '\u{E0020}'..='\u{E007F}'
+    )
 }
 
 /// The character class a URL is written without: it is the one check that
@@ -349,6 +431,8 @@ fn holds_forbidden_char(s: &str) -> Option<&'static str> {
             Some("whitespace")
         } else if c.is_control() {
             Some("a control character")
+        } else if is_format_char(c) {
+            Some("an invisible character")
         } else {
             None
         }
@@ -364,30 +448,24 @@ pub(crate) fn parse(dest: &str) -> Result<Url<'_>, String> {
     if let Some(what) = holds_forbidden_char(dest) {
         return Err(format!("it holds {what}"));
     }
-    let (before_fragment, fragment) = match dest.find('#') {
-        Some(i) => (&dest[..i], Some(&dest[i + 1..])),
-        None => (dest, None),
-    };
+    let (page, fragment) = crate::link::split_fragment(dest);
     if fragment.is_some_and(|f| f.contains('#')) {
         return Err("it holds more than one `#`".into());
     }
-    let query = before_fragment.split_once('?').map(|(_, q)| q);
-    let (scheme, after_scheme) = match before_fragment.strip_prefix("//") {
+    let query = page.split_once('?').map(|(_, q)| q);
+    let (scheme, after_scheme) = match page.strip_prefix("//") {
         Some(rest) => (None, rest),
-        None => match before_fragment.split_once(':') {
+        None => match page.split_once(':') {
             Some((s, rest)) => (Some(s), rest),
             None => return Err("it has no scheme".into()),
         },
     };
-    let hierarchical = match scheme {
-        None => true,
-        Some(s) => s.eq_ignore_ascii_case("http") || s.eq_ignore_ascii_case("https"),
-    };
-    if !hierarchical {
+    if !is_hierarchical(page) {
         if after_scheme.is_empty() {
             return Err("nothing follows its scheme".into());
         }
         return Ok(Url {
+            page,
             scheme,
             host: None,
             query,
@@ -406,7 +484,21 @@ pub(crate) fn parse(dest: &str) -> Result<Url<'_>, String> {
         .unwrap_or(after_slashes.len());
     let authority = &after_slashes[..authority_end];
     let host = host_of(authority)?;
+    // A dot segment resolves away in every client (RFC 3986 §5.2.4), so the
+    // text a register compares is not the page a reader lands on; refuse it
+    // (percent-encoded forms included) rather than normalise silently.
+    let rest = &after_slashes[authority_end..];
+    let path = rest.split_once('?').map(|(p, _)| p).unwrap_or(rest);
+    for segment in path.split('/') {
+        let decoded = crate::link::percent_decode(segment);
+        if decoded == "." || decoded == ".." {
+            return Err(
+                "its path holds a `.` or `..` segment, which a client resolves away".into(),
+            );
+        }
+    }
     Ok(Url {
+        page,
         scheme,
         host: Some(host),
         query,
@@ -426,20 +518,14 @@ fn host_of(authority: &str) -> Result<&str, String> {
             return Err("its IPv6 host literal is not closed with `]`".into());
         };
         check_port(&inner[close + 1..])?;
-        let literal = &inner[..close];
-        if literal.is_empty()
-            || !literal
-                .bytes()
-                .all(|b| b.is_ascii_hexdigit() || matches!(b, b':' | b'.'))
-        {
+        if !is_ipv6_literal(&inner[..close]) {
             return Err("its IPv6 host literal is not an address".into());
         }
         return Ok(&hostport[..close + 2]);
     }
     let host = match hostport.rsplit_once(':') {
-        Some((h, port)) => {
+        Some((h, _)) => {
             check_port(&hostport[h.len()..])?;
-            let _ = port;
             h
         }
         None => hostport,
@@ -450,13 +536,56 @@ fn host_of(authority: &str) -> Result<&str, String> {
     if host.starts_with('.') || host.contains("..") {
         return Err("its host has an empty label".into());
     }
-    if let Some(c) = host
-        .chars()
-        .find(|c| c.is_ascii() && !(c.is_ascii_alphanumeric() || matches!(c, '-' | '.')))
-    {
+    // RFC 3986 reg-name: unreserved, percent-encoded, sub-delims — plus any
+    // non-ASCII char (an internationalised name, written as it is). Nothing
+    // stylistic: `_` and `~` are legal here and browsers open them.
+    if let Some(c) = host.chars().find(|c| c.is_ascii() && !is_reg_name_char(*c)) {
         return Err(format!("its host holds `{c}`"));
     }
     Ok(host)
+}
+
+/// RFC 3986 `reg-name` characters: unreserved, the `%` of a percent-encoding,
+/// and the sub-delims.
+fn is_reg_name_char(c: char) -> bool {
+    c.is_ascii_alphanumeric()
+        || matches!(
+            c,
+            '-' | '.'
+                | '_'
+                | '~'
+                | '%'
+                | '!'
+                | '$'
+                | '&'
+                | '\''
+                | '('
+                | ')'
+                | '*'
+                | '+'
+                | ','
+                | ';'
+                | '='
+        )
+}
+
+/// The inside of a bracketed IPv6 literal: hex groups and `:` (an IPv4 tail
+/// with `.` allowed), optionally a `%25`-led zone id (RFC 6874).
+fn is_ipv6_literal(literal: &str) -> bool {
+    let (address, zone) = match literal.split_once("%25") {
+        Some((a, z)) => (a, Some(z)),
+        None => (literal, None),
+    };
+    let address_ok = address.contains(':')
+        && address
+            .bytes()
+            .all(|b| b.is_ascii_hexdigit() || matches!(b, b':' | b'.'));
+    let zone_ok = zone.is_none_or(|z| {
+        !z.is_empty()
+            && z.bytes()
+                .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'.' | b'_' | b'~'))
+    });
+    address_ok && zone_ok
 }
 
 /// `rest` is what follows the host: empty, or `:` and a port.
@@ -472,12 +601,14 @@ fn check_port(rest: &str) -> Result<(), String> {
     }
 }
 
-/// The names of a query string's parameters, as written.
-fn query_parameter_names(query: &str) -> impl Iterator<Item = &str> {
+/// The names of a query string's parameters, percent-decoded the way a server
+/// reads them (`utm%5Fsource` is `utm_source`); a name whose encoding is
+/// malformed is kept as written.
+fn query_parameter_names(query: &str) -> impl Iterator<Item = std::borrow::Cow<'_, str>> {
     query
         .split('&')
         .filter(|p| !p.is_empty())
-        .map(|p| p.split_once('=').map(|(k, _)| k).unwrap_or(p))
+        .map(|p| crate::link::percent_decode(p.split_once('=').map(|(k, _)| k).unwrap_or(p)))
 }
 
 /// Whether `host` (lowercased) is one of the policy's hosts: an exact name,
@@ -510,41 +641,42 @@ pub struct Export<'a> {
     pub links: &'a [ExternalLink],
 }
 
-/// Per-run state the external checks accumulate: which register entries a
-/// link used (for `W0057`) and the export list. Lives in the run memo.
+/// Per-run OUTPUT of the external checks — not a cache: which register
+/// entries a link used (for `W0057`) and the export list, accumulated across
+/// every link-checked file of the run and read once the walk ends. Carried in
+/// the run memo for its lifetime (one per `run_inner`), never dropped early.
 #[derive(Default)]
-pub struct RunState {
+pub(crate) struct RunState {
     pub used: HashSet<usize>,
     pub export: Vec<ExternalLink>,
 }
 
-/// What the checks read for one file: the register (when supplied) and the
-/// claiming route's policy (when declared).
+/// The link family's per-file options: whether the file is link-checked at
+/// all, how relative links resolve, whether `@path` imports are resolved,
+/// and — for absolute destinations — the register (when supplied) and the
+/// claiming route's policy (when declared). Built once per file at the walk.
 #[derive(Default, Clone, Copy)]
-pub struct Context<'a> {
+pub(crate) struct Context<'a> {
+    pub enabled: bool,
+    pub root_relative: bool,
+    pub imports: bool,
     pub register: Option<&'a [Entry]>,
     pub policy: Option<&'a Policy>,
 }
 
-/// Check one absolute destination at byte `at` of `content` (whole file) and
-/// record it for the export. `rel` is the file's root-relative path.
-#[allow(clippy::too_many_arguments)]
+/// Check one absolute destination on `line` of the file at `path` (`rel` is
+/// its root-relative form) and, when it is a URL at all, record it for the
+/// export — a destination that is not one is `E0117` and nothing a liveness
+/// tool could fetch.
 pub(crate) fn check(
     ctx: &Context<'_>,
     state: &mut RunState,
     rel: &Path,
     path: &Path,
-    content: &str,
-    at: usize,
+    line: u32,
     dest: &str,
     findings: &mut Vec<Finding>,
 ) {
-    let line = line_at(content, at);
-    state.export.push(ExternalLink {
-        file: rel.to_string_lossy().replace('\\', "/"),
-        line,
-        url: dest.to_string(),
-    });
     let url = match parse(dest) {
         Ok(u) => u,
         Err(reason) => {
@@ -553,22 +685,23 @@ pub(crate) fn check(
                 line,
                 "MDATRON-E0117",
                 "malformed-url",
-                &format!(
-                    "this link's destination is not a well-formed URL: {reason}; it is dead \
-                     everywhere, before any liveness check"
-                ),
+                &format!("this link's destination is not a well-formed URL: {reason}"),
                 Some("correct the destination, or remove the link"),
                 vec![quoted("link", dest)],
             ));
             return;
         }
     };
+    state.export.push(ExternalLink {
+        file: crate::diagnostic::to_forward_slash(rel),
+        line,
+        url: dest.to_string(),
+    });
     if let Some(policy) = ctx.policy {
         check_policy(policy, path, line, dest, &url, findings);
     }
     if let Some(entries) = ctx.register {
-        let page = dest.split_once('#').map(|(p, _)| p).unwrap_or(dest);
-        match resolve(entries, page) {
+        match resolve(entries, url.page) {
             None => findings.push(finding(
                 path,
                 line,
@@ -669,7 +802,7 @@ fn check_policy(
     }
     if let (Some(patterns), Some(query)) = (&policy.forbid_query, url.query) {
         for name in query_parameter_names(query) {
-            if let Some((source, _)) = patterns.iter().find(|(_, re)| re.is_match(name)) {
+            if let Some((source, _)) = patterns.iter().find(|(_, re)| re.is_match(&name)) {
                 findings.push(violation(
                     &format!("its query parameter `{name}` matches a forbidden pattern"),
                     &format!("forbid_query: {source}"),
@@ -746,10 +879,6 @@ pub(crate) fn unused_findings(
         .collect()
 }
 
-fn line_at(content: &str, at: usize) -> u32 {
-    1 + content[..at.min(content.len())].matches('\n').count() as u32
-}
-
 fn quoted(label: &str, content: &str) -> QuotedRegion {
     QuotedRegion {
         platform_variant: false,
@@ -800,6 +929,7 @@ mod tests {
     #[test]
     fn well_formed_urls_parse_into_their_parts() {
         let u = ok("https://docs.acme.dev/guide?x=1&utm_source=a#install");
+        assert_eq!(u.page, "https://docs.acme.dev/guide?x=1&utm_source=a");
         assert_eq!(u.scheme, Some("https"));
         assert_eq!(u.host, Some("docs.acme.dev"));
         assert_eq!(u.query, Some("x=1&utm_source=a"));
@@ -818,6 +948,18 @@ mod tests {
         assert_eq!(m.host, None);
         assert_eq!(m.query, Some("subject=hi"));
         assert_eq!(ok("https://a.b/#").fragment, Some(""));
+        // RFC 3986 reg-name and RFC 6874 zone ids are legal, not stylistic.
+        assert_eq!(
+            ok("https://my_host.acme.dev/").host,
+            Some("my_host.acme.dev")
+        );
+        assert_eq!(ok("https://a~b.acme.dev/").host, Some("a~b.acme.dev"));
+        assert_eq!(ok("https://acme%2Edev/").host, Some("acme%2Edev"));
+        assert_eq!(
+            ok("https://[fe80::1%25eth0]:80/").host,
+            Some("[fe80::1%25eth0]")
+        );
+        assert_eq!(ok("https://acme.dev/a/b.c/").host, Some("acme.dev"));
     }
 
     #[test]
@@ -830,7 +972,32 @@ mod tests {
         assert_eq!(err("https:docs"), "its scheme is not followed by `//`");
         assert_eq!(err("https://.acme.dev"), "its host has an empty label");
         assert_eq!(err("https://a..b"), "its host has an empty label");
-        assert_eq!(err("https://a_b.c"), "its host holds `_`");
+        assert_eq!(err("https://a|b.c"), "its host holds `|`");
+        assert_eq!(err("https://a\\b.c"), "its host holds `\\`");
+        assert_eq!(
+            err("https://acme.dev/public/../private/x"),
+            "its path holds a `.` or `..` segment, which a client resolves away"
+        );
+        assert_eq!(
+            err("https://acme.dev/%2e%2e/x"),
+            "its path holds a `.` or `..` segment, which a client resolves away"
+        );
+        assert_eq!(
+            err("https://acme.dev/./x?y=../z"),
+            "its path holds a `.` or `..` segment, which a client resolves away"
+        );
+        assert_eq!(
+            err("https://acme\u{200B}.dev/"),
+            "it holds an invisible character"
+        );
+        assert_eq!(
+            err("https://[::1%25]/"),
+            "its IPv6 host literal is not an address"
+        );
+        assert_eq!(
+            err("https://[abc]/"),
+            "its IPv6 host literal is not an address"
+        );
         assert_eq!(err("https://host:"), "its port is empty");
         assert_eq!(err("https://host:8o80"), "its port is not a number");
         assert_eq!(
@@ -897,9 +1064,11 @@ mod tests {
     }
 
     #[test]
-    fn query_parameter_names_are_split_as_written() {
-        let names: Vec<&str> = query_parameter_names("a=1&utm_source=x&&flag&b=2=3").collect();
-        assert_eq!(names, vec!["a", "utm_source", "flag", "b"]);
+    fn query_parameter_names_are_split_and_decoded() {
+        let names: Vec<String> = query_parameter_names("a=1&utm%5Fsource=x&&flag&b=2=3&%zz=1")
+            .map(|c| c.into_owned())
+            .collect();
+        assert_eq!(names, vec!["a", "utm_source", "flag", "b", "%zz"]);
     }
 
     fn raw_policy(yaml: &str) -> RawPolicy {
@@ -926,13 +1095,18 @@ mod tests {
             assert!(e.to_string().contains(needle), "{yaml}: {e}");
         }
         let p = Policy::compile(raw_policy(
-            "schemes: [HTTPS]\nhosts: ['*.Example.com', acme.dev]\nforbid_query: ['^utm_']",
+            "schemes: [HTTPS]\nhosts: ['*.Example.com', acme.dev, '[::1]', my_host.dev]\nforbid_query: ['^utm_']",
         ))
         .unwrap();
         assert_eq!(p.schemes, Some(vec!["https".to_string()]));
         assert_eq!(
             p.hosts,
-            Some(vec!["*.example.com".to_string(), "acme.dev".to_string()])
+            Some(vec![
+                "*.example.com".to_string(),
+                "acme.dev".to_string(),
+                "[::1]".to_string(),
+                "my_host.dev".to_string()
+            ])
         );
         assert_eq!(p.forbid_query.as_ref().map(|v| v.len()), Some(1));
     }
@@ -943,16 +1117,8 @@ mod tests {
         let rel = Path::new("docs/a.md");
         for link in crate::markup::body_links(body) {
             if crate::link::is_external(&link.dest) {
-                check(
-                    ctx,
-                    state,
-                    rel,
-                    path,
-                    body,
-                    link.offset,
-                    &link.dest,
-                    &mut findings,
-                );
+                let line = 1 + body[..link.offset].matches('\n').count() as u32;
+                check(ctx, state, rel, path, line, &link.dest, &mut findings);
             }
         }
         findings
@@ -977,12 +1143,13 @@ mod tests {
             },
         ];
         let policy = Policy::compile(raw_policy(
-            "schemes: [https]\nhosts: [a.dev, '*.a.dev']\nforbid_query: ['^utm_']",
+            "schemes: [https]\nhosts: [a.dev, '*.a.dev', '[::1]']\nforbid_query: ['^utm_']",
         ))
         .unwrap();
         let ctx = Context {
             register: Some(&entries),
             policy: Some(&policy),
+            ..Default::default()
         };
         let mut state = RunState::default();
         let body = "\
@@ -990,9 +1157,10 @@ mod tests {
 [bad anchor](https://a.dev/page#outro)
 [undeclared](https://b.dev/)
 [http](http://a.dev/page)
-[tracking](https://cdn.a.dev/x?utm_source=y)
+[tracking](https://cdn.a.dev/x?utm%5Fsource=y)
 [malformed](<https://a.dev/a b>)
 [relative](../x.md)
+[v6](https://[::1]/x) [v6bad](https://[::2]/x)
 ";
         let findings = run_check(&ctx, &mut state, body);
         assert_eq!(
@@ -1005,14 +1173,19 @@ mod tests {
                 "MDATRON-E0115",
                 "MDATRON-E0118",
                 "MDATRON-E0117",
+                "MDATRON-E0115",
+                "MDATRON-E0118",
+                "MDATRON-E0115",
             ],
             "{findings:?}"
         );
         let lines: Vec<u32> = findings.iter().map(|f| f.location.line).collect();
         // The http link violates the scheme clause AND is undeclared: the
         // register compares the page as written, and `http://a.dev/page` is
-        // not the declared `https://a.dev/page`.
-        assert_eq!(lines, vec![2, 3, 3, 4, 4, 5, 6]);
+        // not the declared `https://a.dev/page`. The tracking parameter is
+        // caught through its percent-encoding. The listed IPv6 literal passes
+        // the hosts clause (and is undeclared); the other fails it too.
+        assert_eq!(lines, vec![2, 3, 3, 4, 4, 5, 6, 8, 8, 8]);
         assert_eq!(state.used, HashSet::from([0, 1]));
         let urls: Vec<&str> = state.export.iter().map(|l| l.url.as_str()).collect();
         assert_eq!(
@@ -1022,9 +1195,11 @@ mod tests {
                 "https://a.dev/page#outro",
                 "https://b.dev/",
                 "http://a.dev/page",
-                "https://cdn.a.dev/x?utm_source=y",
-                "https://a.dev/a b",
-            ]
+                "https://cdn.a.dev/x?utm%5Fsource=y",
+                "https://[::1]/x",
+                "https://[::2]/x",
+            ],
+            "a destination that is not a URL is reported, not exported"
         );
         assert!(state.export.iter().all(|l| l.file == "docs/a.md"));
     }
@@ -1045,7 +1220,7 @@ mod tests {
         ];
         let ctx = Context {
             register: Some(&entries),
-            policy: None,
+            ..Default::default()
         };
         let mut state = RunState::default();
         let body = "[top](https://a.dev/listed#) [any](https://a.dev/open#whatever) [closed](https://a.dev/listed#x)\n";
@@ -1061,7 +1236,25 @@ mod tests {
         let body = "[a](https://anything.example/#x) [b](mailto:x@y) [c](<https://a b>)\n";
         let findings = run_check(&ctx, &mut state, body);
         assert_eq!(codes(&findings), vec!["MDATRON-E0117"]);
-        assert_eq!(state.export.len(), 3);
+        assert_eq!(state.export.len(), 2, "the malformed one is not exported");
+    }
+
+    #[test]
+    fn a_prefix_that_runs_past_its_host_cannot_be_extended_into_another() {
+        let entries = vec![Entry {
+            url: "https://acme.dev/".into(),
+            prefix: true,
+            fragments: None,
+        }];
+        let ctx = Context {
+            register: Some(&entries),
+            ..Default::default()
+        };
+        let mut state = RunState::default();
+        let body = "[ok](https://acme.dev/x) [a](https://acme.dev.evil.example/) \
+                    [b](https://acme.dev@evil.example/) [c](https://acme.devious.example/)\n";
+        let findings = run_check(&ctx, &mut state, body);
+        assert_eq!(codes(&findings), vec!["MDATRON-E0115"; 3], "{findings:?}");
     }
 
     #[test]
@@ -1129,6 +1322,16 @@ mod tests {
             .unwrap()
             .entries
             .is_empty());
+        // An opaque-scheme prefix may stop at the scheme; a web prefix must
+        // run past its host.
+        assert_eq!(
+            d.register("mdatron_format_version: 1\nlinks:\n- url: 'mailto:'\n  prefix: true\n- url: //cdn.acme.dev/\n  prefix: true\n")
+                .unwrap()
+                .unwrap()
+                .entries
+                .len(),
+            2
+        );
         for (yaml, needle) in [
             ("links:\n- url: https://a.dev/\n", "must declare `mdatron_format_version"),
             ("mdatron_format_version: 1\nlinks:\n- url: https://a.dev/\n  bogus: 1\n", "bogus"),
@@ -1136,6 +1339,10 @@ mod tests {
             ("mdatron_format_version: 1\nlinks:\n- url: 'https://a.dev/a b'\n", "holds whitespace"),
             ("mdatron_format_version: 1\nlinks:\n- url: https://a.dev/#x\n", "holds a `#`"),
             ("mdatron_format_version: 1\nlinks:\n- url: docs/x.md\n", "not an absolute URL"),
+            ("mdatron_format_version: 1\nlinks:\n- url: 'https://host:'\n", "not a well-formed URL"),
+            ("mdatron_format_version: 1\nlinks:\n- url: 'https://'\n  prefix: true\n", "not a well-formed URL"),
+            ("mdatron_format_version: 1\nlinks:\n- url: https://acme.dev\n  prefix: true\n", "stops inside its host"),
+            ("mdatron_format_version: 1\nlinks:\n- url: //acme.dev\n  prefix: true\n", "stops inside its host"),
             ("mdatron_format_version: 1\nlinks:\n- url: https://a.dev/\n- url: https://a.dev/\n  prefix: true\n", "duplicate"),
             ("mdatron_format_version: 1\nlinks:\n- url: https://a.dev/\n  fragments: ['']\n", "empty fragment"),
             ("mdatron_format_version: 1\nlinks:\n- url: https://a.dev/\n  fragments: ['a#b']\n", "holding `#`"),

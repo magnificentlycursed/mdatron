@@ -132,8 +132,11 @@ schemas or patterns directory to exist, and this recipe needs no schema.
   them; whether those pages are live, and whether the anchors exist on them,
   is for a liveness tool run on a schedule. `mdatron links --external` prints
   the URLs for it (`--json` adds file and line), and lychee with
-  `--include-fragments` checks the anchors too. An entry in `links.yaml` is a
-  promise made by whoever edits it.
+  `--include-fragments` can check the anchors too. An entry in `links.yaml`
+  is a promise made by whoever edits it.
+- **A URL that is not a link.** The register and the export see markdown
+  links; a bare `https://…` in prose, or a raw HTML `<a href>`, is neither
+  checked nor exported.
 - **File lists the rules do not name.** An `every` rule names one section,
   so each file list needs its own rule: a new `## Guides` list is unchecked
   until you add one, and removing `## Optional`, which the specification
@@ -430,7 +433,7 @@ mdatron verify: 2 error(s), 1 warning(s) across 3 finding(s)
 - **Links that must be Markdown.** Pair `links: true` with a repository
   layout whose linked pages are `.md`, and every link an agent follows is
   checked.
-- **Your outbound links.** Put every absolute URL `llms.txt` uses in
+- **Your outbound links.** Put every absolute URL `llms.txt` links to in
   `.mdatron/links.yaml` (`mdatron links --external` prints them), with the
   anchors you have confirmed on each page, and point a liveness tool at the
   same list on a schedule.

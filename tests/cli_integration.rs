@@ -1803,6 +1803,73 @@ fn readme_family_examples_load_through_the_real_parsers() {
     }
 }
 
+// #215: `mdatron links --external` is a second machine output with its own
+// version axis; its two forms are pinned here (the cold review's tripwire).
+#[test]
+fn links_export_lists_absolute_destinations_in_both_forms() {
+    let proj = TempProject::new("links-export");
+    proj.seed_blog_schema();
+    proj.write(
+        ".mdatron/routes.yaml",
+        "routes:\n- files: \"**/*.md\"\n  governed_by: README.md\n  links: true\n",
+    );
+    proj.write(
+        "README.md",
+        "# r\n[b](https://b.example/) [a](https://a.example/#x) [b again](https://b.example/)\n\
+         bare https://bare.example/ and <a href=\"https://html.example/\">x</a>\n\
+         [bad](<https://a b>)\n",
+    );
+    let root = proj.path().to_str().unwrap();
+    let out = run(&["links", "--external", "--project-root", root]);
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&out.stdout),
+        "https://a.example/#x\nhttps://b.example/\n",
+        "distinct, sorted; a bare URL, raw HTML and a non-URL are not exported"
+    );
+    assert!(
+        out.stderr.is_empty(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let out = run(&["links", "--external", "--json", "--project-root", root]);
+    assert_eq!(out.status.code(), Some(0));
+    let doc: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(doc["mdatron_links_version"], "1.0.0");
+    let links = doc["links"].as_array().unwrap();
+    assert_eq!(links.len(), 3, "{doc}");
+    for l in links {
+        let keys: Vec<&str> = l.as_object().unwrap().keys().map(String::as_str).collect();
+        assert_eq!(keys, vec!["file", "line", "url"], "{l}");
+        assert_eq!(l["file"], "README.md");
+        assert_eq!(l["line"], 2);
+    }
+    assert_eq!(links[0]["url"], "https://a.example/#x");
+    // No link-checked file: an empty export says so on stderr (not under -q).
+    proj.write(
+        ".mdatron/routes.yaml",
+        "routes:\n- files: \"**/*.md\"\n  governed_by: README.md\n",
+    );
+    let out = run(&["links", "--external", "--project-root", root]);
+    assert_eq!(out.status.code(), Some(0));
+    assert!(out.stdout.is_empty());
+    assert!(
+        String::from_utf8_lossy(&out.stderr).contains("nothing is exported"),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let out = run(&["links", "--external", "-q", "--project-root", root]);
+    assert!(out.stderr.is_empty());
+    // --external is required (the only selection today).
+    let out = run(&["links", "--project-root", root]);
+    assert_eq!(out.status.code(), Some(2));
+}
+
 // ── 4. Drive-by `--quiet` and `--quiet --json` coverage ────────────────────────
 
 #[test]
