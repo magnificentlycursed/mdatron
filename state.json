@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1294,
-        "tip_oid": "78b310404d5ec009a894ff59528dc18e2bbcb025",
-        "prefix_sha256": "8b5e0e829512d1836575bf1d8d7251e4dd08238b646f65479f9e47cab3b3bfb1"
+        "sequence": 1295,
+        "tip_oid": "f84a273934faadf960ed77e4ba3df3793992a4cb",
+        "prefix_sha256": "46ce654a2294f840e64c30a1795b1d19ce30a3a6c758f8f6adcf56c65c3313d4"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 243,
+  "next_display_id": 244,
   "next_comment_id": 616,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -51,6 +51,7 @@
     "1ba1bc71-1b50-4f6c-b672-1524a61a3096": 116,
     "1cafa0f3-dcdd-491b-b455-52af79c6c85d": 122,
     "1da67425-f44d-40d6-8ba1-2d2ed768de38": 97,
+    "1df299df-ca9f-4f12-8585-938d1e36ef3c": 243,
     "1ea10de4-469c-46f7-95d6-001d6263913c": 217,
     "1f3bc3ea-d9a5-4d3f-b230-b2ca1b8f9697": 178,
     "1f89fa15-980c-4d2d-ac43-108f45c87c2e": 146,
@@ -1062,6 +1063,17 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAhz7vBxtSi4vYiC4LBR64ebNoHG6Oo4A1FYkicKqlD/jK9QJ0G6Tj7C0HOrCxz5XFYbg9vntlIi1omB3NfAknCA=="
         }
       }
+    },
+    "1df299df-ca9f-4f12-8585-938d1e36ef3c": {
+      "uuid": "1df299df-ca9f-4f12-8585-938d1e36ef3c",
+      "display_id": 243,
+      "title": "Footnote definitions ([^1]: [fn](https://…)) are parsed as reference definitions because the CommonMark parser runs without the footnotes extension, so GFM corpora get a false E0110 (found by the #215 round-3 cold review)",
+      "description": "Source: #215 cold review round 3 (docs/architecture cluster), predates #215. markup::body_links uses Parser::new with no options; GFM footnotes are common in docs. Decide: enable ENABLE_FOOTNOTES (and check what link events footnote bodies yield) or document. Add a test.",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-10-07T01:38:59.984976Z",
+      "updated_at": "2026-10-07T01:38:59.984976Z"
     },
     "1ea10de4-469c-46f7-95d6-001d6263913c": {
       "uuid": "1ea10de4-469c-46f7-95d6-001d6263913c",
