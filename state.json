@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1297,
-        "tip_oid": "3aa22e96777915f3724370283bbaf8758c65ae31",
-        "prefix_sha256": "c16c061f1878a2649941eb3c017e0620876f0a68a55732a592dd9a0bac6ca597"
+        "sequence": 1298,
+        "tip_oid": "578916b419eaf7a7e078a76cbce287f20001a7d2",
+        "prefix_sha256": "63372f5d63dfad497fff5c1cba916973ebcffcf26f90867acd846bf03d3c43e6"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 244,
-  "next_comment_id": 617,
+  "next_comment_id": 618,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -4181,10 +4181,21 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-10-06T21:20:23.333104Z",
-      "updated_at": "2026-10-06T21:21:20.036750Z",
+      "updated_at": "2026-10-07T02:07:48.687555Z",
       "labels": [
         "docs"
-      ]
+      ],
+      "comments": {
+        "80b3ded7-153a-4e4c-ba83-a269aad583c9": {
+          "display_id": 617,
+          "author": "79Ig",
+          "content": "Operator 2026-10-06: the envelope bumps to 3.2.0 at the 0.8.0 cut (#215 decision); the schema description fix here rides that bump.",
+          "created_at": "2026-10-07T02:07:48.651909Z",
+          "kind": "decision",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA4lj9pSjr5ODnKms0a7fbPnBo4p1hhib4zX99jnDtPzKM6gCEjspzgwuSspKGnTlpUtPzAw/fx5ZX7xybhqJwDw=="
+        }
+      }
     },
     "73fb2a8c-e991-4bfe-b8d2-7c56f53ce417": {
       "uuid": "73fb2a8c-e991-4bfe-b8d2-7c56f53ce417",
