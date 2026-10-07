@@ -189,7 +189,7 @@ enum Command {
     /// markdown link and is not exported, and a destination that is not a
     /// well-formed URL is reported by `verify` instead. Findings are not
     /// printed and do not affect the exit (run `verify` for those): 0 on an
-    /// export, 2 on a load failure. The default form prints each distinct
+    /// export, 2 on a pipeline failure (whatever fails `verify` with 2). The default form prints each distinct
     /// destination once, one per line, sorted; `--json` prints every
     /// occurrence with its file and line.
     Links {

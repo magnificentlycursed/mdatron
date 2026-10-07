@@ -265,9 +265,10 @@ Keys: `mdatron_format_version`, `links`, `url`, `prefix`, `fragments`.
   is `_`) — no case folding, no slash normalising, no percent-decoding.
 - `mdatron_format_version` is required on this file. Refused at load: an
   empty `url`, one that is not absolute or not well-formed, one holding
-  `#`, whitespace or a control character, a web prefix that stops inside
+  `#`, whitespace, a control or an invisible character, a prefix for any
+  `scheme://` URL that stops inside
   its host, a duplicate `url`, and an empty or repeated fragment, or one
-  holding `#`, whitespace or a control character.
+  holding `#`, whitespace, a control or an invisible character.
 
 Activation: the file exists. Scope: every markdown link to an absolute URL
 in every file on a route with `links: true` (the link family's scope;

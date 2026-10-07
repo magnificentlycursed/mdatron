@@ -99,7 +99,7 @@ routes:
 <!-- cookbook-file: .mdatron/links.yaml -->
 ```yaml
 mdatron_format_version: 1
-# The absolute URLs llms.txt may point at. An agent follows these too, and
+# The register: the absolute URLs llms.txt may point at. An agent follows these too, and
 # mdatron cannot see whether they answer: each entry is a promise made by
 # whoever edits this file, and a liveness tool checks the list on a schedule
 # (`mdatron links --external` prints what the corpus links to).
@@ -130,8 +130,8 @@ schemas or patterns directory to exist, and this recipe needs no schema.
 - **Whether an absolute URL answers.** mdatron never fetches a URL. The
   register says which URLs `llms.txt` may point at and which anchors on
   them; whether those pages are live, and whether the anchors exist on them,
-  is for a liveness tool run on a schedule. `mdatron links --external` prints
-  the URLs for it (`--json` adds file and line), and lychee with
+  is for a liveness tool run on a schedule. `mdatron links --external` (the
+  export) prints the URLs for it (`--json` adds file and line), and lychee with
   `--include-fragments` can check the anchors too. An entry in `links.yaml`
   is a promise made by whoever edits it.
 - **A URL that is not a link.** The register and the export see markdown

@@ -10,7 +10,8 @@
 #             — else E0115; its #fragment must be one the entry lists under
 #             fragments when the entry has a fragments key (an empty list
 #             accepts none; E0116). An entry no link uses is W0057. A bare
-#             URL in prose is not a link. mdatron never fetches a URL: the
+#             URL in prose or a raw HTML <a href> is not a link. mdatron
+#             never fetches a URL: the
 #             register is the list a liveness tool checks on a schedule, and
 #             `mdatron links --external` exports what the corpus links to.
 # KEYS        per entry — required: url

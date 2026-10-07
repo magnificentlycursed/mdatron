@@ -11,8 +11,8 @@ with a `#fragment` that the matching entry's `fragments` list does not hold.
 An entry's `fragments` is the closed set of anchors the corpus may use on
 that page (or on every page a `prefix: true` entry covers); an entry with no
 `fragments` key accepts any fragment, and one with an empty list accepts
-none. A bare `#` (top of page) is always accepted. Fragments are compared as
-written, without percent-decoding or slug derivation: for a page outside the
+none. A bare `#` (top of page) is always accepted. Fragments are compared
+as the destination reads after CommonMark decoding, without percent-decoding or slug derivation: for a page outside the
 tree, mdatron has no headings to derive slugs from.
 
 This is the external twin of `MDATRON-E0111`. For a page inside the tree the

@@ -422,10 +422,11 @@ corpora simply don't opt in.
 
 **Links** — route-attached: the opt-in exists only on a route in `routes.yaml`, so
 writing that route puts every walked file under the closed world (see
-**Routes**). Data-less; opt a route in with `links: true` and its files' inline
+**Routes**). Data-less by default (the register below is optional); opt a route in with `links: true` and its files' inline
 markdown links are resolved against the working-tree snapshot via a CommonMark parse
 (`pulldown-cmark`), so **inline** `[text](target)`, **reference-style**
-`[text][ref]`, and **image** `![alt](src)` links are all checked, while a link
+`[text][ref]`, **image** `![alt](src)` and **autolink** `<https://…>` / `<x@y.z>`
+destinations are all checked, while a link
 inside an inline `` `code` `` span or a fenced block is a syntax example and
 skipped. A link to a relative path that isn't there blocks (`E0110`); an existing
 markdown target — or the same document — whose `#fragment` matches no heading
@@ -445,7 +446,7 @@ run); with a `.mdatron/links.yaml` **register** of the URLs the corpus may
 point at, an undeclared URL blocks (`E0115`) and an undeclared `#fragment` on a
 declared page blocks (`E0116`, the entry's `fragments` being the anchors you
 confirmed on the live page); and a route's `link_policy` (`schemes`, `hosts`,
-`forbid_query`) blocks a link outside it (`E0118`). On a whole-tree run, a
+`forbid_query`) blocks a link outside it (`E0118`). On a whole-tree run from `config.yaml`'s jurisdiction, a
 register no link-checked file consults warns (`W0056`), as does an entry no
 link uses (`W0057`). `mdatron links --external` exports every markdown link
 to an absolute URL — fragment included; `--json` adds file and line — for
@@ -455,7 +456,7 @@ the list such a tool checks on a schedule. A bare URL in prose or a raw HTML
 
 <!-- mdatron-roundtrip:links-start -->
 ```yaml
-mdatron_format_version: 1
+mdatron_format_version: 1             # required on this file (born in 0.8.0)
 links:
 - url: https://docs.example.com/        # every URL under this prefix…
   prefix: true
@@ -524,8 +525,8 @@ loud (`W0055`) and the family reports `inert`.
 Every adopter input file carries `mdatron_format_version` — the **input**
 contract's own version axis (independent of the DSL's `mdatron_dsl_version`
 and the JSON `mdatron_output_version`), so a future format change breaks
-legibly instead of mis-parsing silently. It is **required** on files born in
-0.6.0 (this one) and **optional** on `routes.yaml`/`vocabulary.yaml`/
+legibly instead of mis-parsing silently. It is **required** on files born versioned
+(this one, 0.6.0; `links.yaml`, 0.8.0) and **optional** on `routes.yaml`/`vocabulary.yaml`/
 `pins.yaml` (absent = the v1 legacy baseline; a 0.5.0-authored file still
 parses); `pin --update` stamps it going forward.
 

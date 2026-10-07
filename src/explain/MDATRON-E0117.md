@@ -10,13 +10,13 @@ A link in a link-checked file has an absolute destination (a scheme, or a
 protocol-relative `//host`) that is not a well-formed URL. The reason is in
 the message. What is checked is the structural shape of RFC 3986 and nothing
 stylistic: the destination holds whitespace, a control character or an
-invisible format character such as a zero-width space (a `<https://a b>`
-angle-bracket destination, say), or more than one `#`; an `http`, `https` or
+invisible format character such as a zero-width space (a `[text](<https://a b>)`
+bracketed destination, the one link form that admits a space), or more than one `#`; an `http`, `https` or
 `//host` destination has no host, a host with an empty label
 (`https://.acme.dev`, `https://a..b`), a host holding a character a host
 name cannot (`\`, `|`, `<`; `_`, `~` and percent-encoded labels are legal
-and accepted), an empty or non-numeric port, an unclosed or malformed IPv6
-literal, or a `.` or `..` path segment, which a client resolves away so the
+and accepted), an empty or non-numeric port (RFC 3986 admits an empty one; it is refused as the typo it almost always is), an unclosed or malformed IPv6
+literal, or a `.` or `..` path segment on any `scheme://` form (a `\` too, on a web one), which a client resolves away so the
 page a reader lands on is not the text a register would compare; any other
 scheme has nothing after its `:` (`mailto:`). Internationalised host names
 are accepted as written. No liveness tool could fetch such a destination,
@@ -30,8 +30,13 @@ not a URL.
 
 ## How to fix
 
-- **A space or line break crept in.** Percent-encode it (`%20`) or remove it;
-  a URL wrapped onto a second line in the source is this finding.
+- **A space crept in.** Only two spellings reach this finding: a space
+  inside a bracketed destination (`[text](<https://a b>)`) or whitespace a
+  character reference decodes to (`&#32;`, `&#10;`). Percent-encode it
+  (`%20`) or remove it. A URL wrapped onto a second line is not a link to
+  CommonMark at all — nothing reports it, so rejoin it.
+- **A `\` in a web path.** A browser reads it as `/`, so `x\..\admin`
+  lands somewhere other than the text says; write `/` and the resolved path.
 - **Two `#`.** A URL has one fragment; drop the second `#` or encode it.
 - **No host.** `https://` must be followed by the host (`https://acme.dev/…`);
   `https:docs` and `https:///path` are not URLs.
