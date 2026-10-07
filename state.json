@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1299,
-        "tip_oid": "4c5c9479de2810c4cde548bd7096e7dc1afc3471",
-        "prefix_sha256": "2c2795deeb97f299335375cf05d9848854da55279d987c36e537a43268664340"
+        "sequence": 1300,
+        "tip_oid": "1a98bb5e7eef65278db9b050d296900863142000",
+        "prefix_sha256": "18103f6dbe94b17f2b382516f201398ffd842243a63ccd1a565c4fc240c84c5d"
       },
       "IMWa": {
         "sequence": 2,
@@ -6674,11 +6674,12 @@
       "uuid": "b97459bd-63b2-4e44-9268-8b58abbb3000",
       "display_id": 215,
       "title": "Add offline checks for absolute link targets: well-formed URL, link policy, a declared external-link register, and an export for liveness tools",
-      "status": "open",
+      "status": "closed",
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-09-29T02:20:48.033477Z",
-      "updated_at": "2026-10-07T02:16:25.307454Z",
+      "updated_at": "2026-10-07T02:35:26.560505Z",
+      "closed_at": "2026-10-07T02:35:26.534801Z",
       "comments": {
         "0f7ad57e-6c89-4702-8d9f-d1e0d26d96ee": {
           "display_id": 614,
