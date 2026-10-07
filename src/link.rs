@@ -800,17 +800,10 @@ pub(crate) fn split_fragment(dest: &str) -> (&str, Option<&str>) {
     }
 }
 
-/// True when `dest` carries a URL scheme (`http:`, `mailto:`, …) or is
-/// protocol-relative (`//host`) — an external reference the engine does not
-/// resolve. A scheme is `[A-Za-z][A-Za-z0-9+.-]+:` — at least TWO characters
-/// (GH #48 lane G): a single-letter "scheme" (`C:/docs/x.md`, `C:\docs`) is a
-/// Windows drive path in practice, and classifying it external silently
-/// exempted it from resolution; it now resolves as a path (missing → `E0110`
-/// on unix; the absolute-prefix refusal `E0010` on windows).
 /// Whether a browser reads `dest` as an absolute URL: as written, or after
 /// the WHATWG URL parser's own clean-up — leading and trailing C0 controls
 /// and spaces stripped, tab and line breaks dropped, `\` read as `/`. A
-/// destination such as `< https://evil.example/>` or `\/evil.example` is
+/// destination such as `< https://evil.example/>` or a decoded `\/evil.example` is
 /// external to every reader even though its text starts like a path, so it
 /// goes to the offline checks (where its spelling is `E0117`), never to the
 /// tree.
@@ -827,6 +820,13 @@ pub(crate) fn reads_as_external(dest: &str) -> bool {
     cleaned != dest && is_external(&cleaned)
 }
 
+/// True when `dest` carries a URL scheme (`http:`, `mailto:`, …) or is
+/// protocol-relative (`//host`) — an external reference the engine does not
+/// resolve. A scheme is `[A-Za-z][A-Za-z0-9+.-]+:` — at least TWO characters
+/// (GH #48 lane G): a single-letter "scheme" (`C:/docs/x.md`, `C:\docs`) is a
+/// Windows drive path in practice, and classifying it external silently
+/// exempted it from resolution; it now resolves as a path (missing → `E0110`
+/// on unix; the absolute-prefix refusal `E0010` on windows).
 pub(crate) fn is_external(dest: &str) -> bool {
     if dest.starts_with("//") {
         return true;
@@ -899,6 +899,32 @@ fn link_finding(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn reads_as_external_follows_the_browser_cleanup() {
+        for d in [
+            "\\/h",
+            "/\\h",
+            "\\\\h",
+            " https://h",
+            "\u{C}https://h",
+            "ht\ttps://h",
+            "https://h ",
+        ] {
+            assert!(reads_as_external(d), "{d:?}");
+        }
+        for d in [
+            "C:\\x",
+            "docs\\a.md",
+            " docs/a.md",
+            "\u{A0}https://h",
+            "\u{3000}https://h",
+            "\u{200B}https://h",
+            "a.md#x",
+        ] {
+            assert!(!reads_as_external(d), "{d:?}");
+        }
+    }
 
     #[test]
     fn is_external_classifies_schemes() {

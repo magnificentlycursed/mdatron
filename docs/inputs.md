@@ -103,7 +103,9 @@ Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `cit
   compare without regard to ASCII case; each list given must be non-empty
   and an empty block is refused; needs `links`). Every route with
   `links: true` also reports an absolute URL that is not well-formed
-  (`E0117`) and, when `links.yaml` exists, one the register does not
+  (`E0117`) — including a destination a browser trims into one
+  (`< https://…>`; a decoded `\/host`, written `\\/host` in the source),
+  judged as a URL and never resolved as a path — and, when `links.yaml` exists, one the register does not
   declare (`E0115`, `E0116`); mdatron never fetches a URL.
 - An `element` is one of `heading`, `h1`…`h6`, `list-item-bold-name`,
   `list-item`, `blockquote` or `line`. Elements are lines, recognised by the
@@ -266,13 +268,15 @@ Keys: `mdatron_format_version`, `links`, `url`, `prefix`, `fragments`.
   is `_`) — no case folding, no slash normalising, no percent-decoding. The
   invisible characters inside a real emoji or ideograph are not
   "invisible characters" (a zero-width joiner between pictographs, one
-  presentation or ideographic variation selector, a flag's 3-6
-  subdivision-id tags); a joiner, selector or tag run anywhere else, and
+  presentation or ideographic variation selector, the tags of the
+  England, Scotland and Wales flags; an ideographic selector is accepted
+  whatever its value, so a CJK path can carry about one hidden byte per
+  ideograph); a joiner, selector or tag run anywhere else, and
   any invisible character in a host, are.
 - `mdatron_format_version` is required on this file. Refused at load: an
   empty `url`, one that is not absolute or not well-formed, one holding
   `#`, whitespace, a control or an invisible character, a prefix for any
-  `scheme://` URL that stops inside
+  `scheme://` or `//host` URL that stops inside
   its host, a duplicate `url`, and an empty or repeated fragment, or one
   holding `#`, whitespace, a control or an invisible character.
 

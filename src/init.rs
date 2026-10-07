@@ -253,7 +253,7 @@ const LINKS_TEMPLATE: &str = r####"# links.yaml.example — the external-link re
 #             — else E0115; its #fragment must be one the entry lists under
 #             fragments when the entry has a fragments key (an empty list
 #             accepts none; E0116). An entry no link uses is W0057 (whole-tree
-#             runs only). A bare
+#             runs from config.yaml only). A bare
 #             URL in prose or a raw HTML <a href> is not a link. mdatron
 #             never fetches a URL: the
 #             register is the list a liveness tool checks on a schedule, and

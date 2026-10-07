@@ -459,10 +459,10 @@ fn authority_closed(dest: &str) -> bool {
 /// visible Cf signs such as U+0600 are not listed) — a zero-width space, a
 /// soft hyphen, a direction mark, a byte-order mark — and the blank fillers
 /// that render as nothing (Hangul fillers, the braille blank, the combining
-/// grapheme joiner, Mongolian free variation selectors). A link holding one
-/// can never resolve as its author reads it. A zero-width joiner inside an
-/// emoji sequence, and the tag characters of an emoji flag, are not hidden
-/// text: see [`holds_forbidden_char`].
+/// grapheme joiner, Mongolian free variation selectors), and the variation
+/// selectors U+FE00-FE0F and U+E0100-E01EF. A link holding one can never
+/// resolve as its author reads it. The joiners, selectors and flag tags of a
+/// real emoji or ideograph are not hidden text: see [`in_emoji_sequence`].
 fn is_format_char(c: char) -> bool {
     matches!(
         c,
@@ -536,11 +536,16 @@ fn is_pictographic(c: char) -> bool {
 }
 
 /// Whether the invisible character at `i` is a legitimate part of an emoji
-/// sequence: a ZWJ between two pictographs (an emoji-presentation selector
-/// or a skin-tone modifier may sit before it), or a tag character inside a
-/// flag tag sequence — U+1F3F4, tag characters, ended by U+E007F CANCEL TAG.
-/// Anything else is hidden text (`é` followed by tag-encoded ASCII is the
-/// "ASCII smuggling" payload, and is refused).
+/// or ideograph: a ZWJ between two pictographs (one presentation selector or
+/// skin-tone modifier may sit before it), one presentation selector
+/// (U+FE0E/FE0F) after a pictograph or inside a keycap, one ideographic
+/// variation selector after a CJK unified ideograph, or a tag inside a
+/// RGI subdivision flag — U+1F3F4, the tags of `gbeng`, `gbsct` or `gbwls`,
+/// then U+E007F CANCEL TAG. Anything else is hidden text (`é` followed by
+/// tag-encoded ASCII is the "ASCII smuggling" payload, and is refused).
+/// Residual, stated: an ideographic selector is accepted whatever its value
+/// (Ideographic Variation Database sequences use the whole range), so a CJK
+/// path can still carry about one hidden byte per ideograph.
 fn in_emoji_sequence(chars: &[char], i: usize) -> bool {
     let c = chars[i];
     let at = |j: Option<usize>| j.and_then(|j| chars.get(j)).copied();
@@ -556,9 +561,12 @@ fn in_emoji_sequence(chars: &[char], i: usize) -> bool {
         return before && at(Some(i + 1)).is_some_and(is_pictographic);
     }
     if c == '\u{FE0E}' || c == '\u{FE0F}' {
-        // One presentation selector after a pictograph or a keycap base.
-        return at(i.checked_sub(1))
-            .is_some_and(|p| is_pictographic(p) || p.is_ascii_digit() || p == '#' || p == '*');
+        // One presentation selector after a pictograph, or inside a keycap
+        // (`1` + selector + U+20E3 COMBINING ENCLOSING KEYCAP).
+        let base = at(i.checked_sub(1));
+        return base.is_some_and(is_pictographic)
+            || (base.is_some_and(|p| p.is_ascii_digit() || p == '#' || p == '*')
+                && at(Some(i + 1)) == Some('\u{20E3}'));
     }
     if ('\u{E0100}'..='\u{E01EF}').contains(&c) {
         // One ideographic variation selector after a CJK unified ideograph.
@@ -567,8 +575,8 @@ fn in_emoji_sequence(chars: &[char], i: usize) -> bool {
         });
     }
     if ('\u{E0020}'..='\u{E007F}').contains(&c) {
-        // A flag tag sequence: U+1F3F4, then 3-6 tags spelling a lowercase
-        // subdivision id (`gbsct`), then CANCEL TAG — never free text.
+        // A flag tag sequence: U+1F3F4, the tags of one of the three RGI
+        // subdivision ids, then CANCEL TAG — never free text.
         let is_id_tag =
             |t: char| matches!(t, '\u{E0030}'..='\u{E0039}' | '\u{E0061}'..='\u{E007A}');
         let mut j = i;
@@ -582,7 +590,15 @@ fn in_emoji_sequence(chars: &[char], i: usize) -> bool {
         while k < chars.len() && is_id_tag(chars[k]) {
             k += 1;
         }
-        return (3..=6).contains(&(k - j)) && chars.get(k) == Some(&'\u{E007F}') && i <= k;
+        // Only the three recommended (RGI) subdivision flags: any other id
+        // renders as a plain black flag with its tags hidden, so a chain of
+        // "flags" would carry free text five letters at a time.
+        let id: String = chars[j..k]
+            .iter()
+            .map(|&t| char::from_u32(t as u32 - 0xE0000).unwrap_or('?'))
+            .collect();
+        return matches!(id.as_str(), "gbeng" | "gbsct" | "gbwls")
+            && chars.get(k) == Some(&'\u{E007F}');
     }
     false
 }
@@ -907,7 +923,15 @@ pub(crate) fn check(
                 line,
                 "MDATRON-E0117",
                 "malformed-url",
-                &format!("this link's destination is not a well-formed URL: {reason}"),
+                &if crate::link::is_external(dest) {
+                    format!("this link's destination is not a well-formed URL: {reason}")
+                } else {
+                    format!(
+                        "this link's destination is read by a browser as an absolute URL \
+                         (it trims spaces and controls and reads `\\` as `/`), and as one \
+                         it is not well-formed: {reason}"
+                    )
+                },
                 Some("correct the destination, or remove the link"),
                 vec![quoted("link", dest)],
             ));
@@ -1335,6 +1359,32 @@ mod tests {
             "it holds an invisible character"
         );
         assert!(parse("https://acme.dev/1\u{FE0F}\u{20E3}").is_ok());
+        // Only RGI subdivision flags: a chain of made-up "flags" is text.
+        let flag = |id: &str| -> String {
+            let tags: String = id
+                .chars()
+                .map(|c| char::from_u32(0xE0000 + c as u32).unwrap())
+                .collect();
+            format!("\u{1F3F4}{tags}\u{E007F}")
+        };
+        let chained: String = ["ignor", "eallp", "revio"]
+            .iter()
+            .map(|id| flag(id))
+            .collect();
+        assert_eq!(
+            err(&format!("https://acme.dev/{chained}")),
+            "it holds an invisible character"
+        );
+        assert!(parse(&format!(
+            "https://acme.dev/{}{}",
+            flag("gbwls"),
+            flag("gbeng")
+        ))
+        .is_ok());
+        assert_eq!(
+            err("https://a.example/1\u{FE0E}2\u{FE0F}3"),
+            "it holds an invisible character"
+        );
         assert!(parse("https://acme.dev/\u{8FBB}\u{E0100}").is_ok());
         assert!(parse("https://acme.dev/\u{1F3F3}\u{FE0F}\u{200D}\u{26A7}\u{FE0F}").is_ok());
         assert!(parse("https://[2001:db8::7]:8080/").is_ok());
@@ -1516,7 +1566,7 @@ mod tests {
         let path = Path::new("/root/docs/a.md");
         let rel = Path::new("docs/a.md");
         for link in crate::markup::body_links(body) {
-            if crate::link::is_external(&link.dest) {
+            if crate::link::reads_as_external(&link.dest) {
                 let line = 1 + body[..link.offset].matches('\n').count() as u32;
                 check(ctx, state, rel, path, line, &link.dest, &mut findings);
             }

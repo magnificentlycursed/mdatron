@@ -15,11 +15,12 @@ bracketed destination, the one link form that admits a space) — the
 invisible characters inside a real emoji or ideograph are accepted (a
 zero-width joiner between two pictographs, one presentation selector after
 a pictograph or keycap base, one ideographic variation selector after a CJK
-ideograph, and a flag's 3 to 6 tags spelling a lowercase subdivision id),
+ideograph, and the tags of the three recommended subdivision flags,
+England, Scotland and Wales),
 and anything else is not: a run of tag characters or variation selectors
 carrying hidden text, and any invisible character in a host; a destination
 a browser trims into a URL, `< https://…>` or `\/host`, is judged as one,
-never resolved as a path — or more than one `#`; an `http`, `https`, `ws`, `wss`, `ftp` or `//host`
+never resolved as a path (its message says so) — or more than one `#`; an `http`, `https`, `ws`, `wss`, `ftp` or `//host`
 destination lacks the `//` or has no host, a host with an empty label
 (`https://.acme.dev`, `https://a..b`), a host or userinfo holding a
 character neither may (`|`, `<`, `` ` ``; `_`, `~` and percent-encoded
