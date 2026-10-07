@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1298,
-        "tip_oid": "578916b419eaf7a7e078a76cbce287f20001a7d2",
-        "prefix_sha256": "63372f5d63dfad497fff5c1cba916973ebcffcf26f90867acd846bf03d3c43e6"
+        "sequence": 1299,
+        "tip_oid": "4c5c9479de2810c4cde548bd7096e7dc1afc3471",
+        "prefix_sha256": "2c2795deeb97f299335375cf05d9848854da55279d987c36e537a43268664340"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 244,
-  "next_comment_id": 618,
+  "next_comment_id": 619,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -6678,7 +6678,7 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-09-29T02:20:48.033477Z",
-      "updated_at": "2026-10-07T02:06:37.729716Z",
+      "updated_at": "2026-10-07T02:16:25.307454Z",
       "comments": {
         "0f7ad57e-6c89-4702-8d9f-d1e0d26d96ee": {
           "display_id": 614,
@@ -6688,6 +6688,15 @@
           "kind": "observation",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAAZxMrmpd1deCKUIMy5Ux2ab3a8C20vjFbIFc06av+Mi5PirxmNhka8SijJQA/wfImFp68/9JTHCNK23Yyuq6DA=="
+        },
+        "1ed04b4a-7ebc-47b9-b2d0-86700582f0f0": {
+          "display_id": 618,
+          "author": "79Ig",
+          "content": "COLD REVIEW COMPLETE (2026-10-06): seven rounds; round 7 (combined cluster) returned 'No further findings at this depth' with no MAJOR. Majors by round: R1 prefix host escape, RFC3986 hosts, email autolinks; R2 non-web authority forms; R3 evil\\@good split, emoji exemption over-broad, ws/wss/ftp; R4 flag tag runs, variation selectors; R5 chained made-up flags; R6 reserved default-ignorables (table now = full Default_Ignorable set). Stated residual: one hidden byte per CJK ideograph via IVS. Branch feature/215-link-register, 11 commits on b858940d; suite/clippy/fmt/self-verify green. Next: operator pushes; PR opened from the drafted description.",
+          "created_at": "2026-10-07T02:16:25.272952Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA2HK6+7def+/jniBxNKn+Cpjf4DFPL/RD7Dt0BSzYRgGffH7sOCz4aqPVJZcZIa7/VfnDNSn+2B0IA2MdBiBXAg=="
         },
         "32608d48-3169-4388-86dd-82dbfba2642f": {
           "display_id": 615,
