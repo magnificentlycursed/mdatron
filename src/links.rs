@@ -466,6 +466,9 @@ fn authority_closed(dest: &str) -> bool {
 fn is_format_char(c: char) -> bool {
     matches!(
         c,
+        // Unicode's complete Default_Ignorable_Code_Point set (assigned and
+        // reserved — a renderer draws an unassigned one as nothing too), the
+        // invisible Cf format controls outside it, and the braille blank.
         '\u{00AD}'
             | '\u{034F}'
             | '\u{061C}'
@@ -474,24 +477,21 @@ fn is_format_char(c: char) -> bool {
             | '\u{17B4}'
             | '\u{17B5}'
             | '\u{180B}'..='\u{180F}'
-            | '\u{FE00}'..='\u{FE0F}'
-            | '\u{E0100}'..='\u{E01EF}'
-            | '\u{2800}'
-            | '\u{3164}'
-            | '\u{FFA0}'
             | '\u{200B}'..='\u{200F}'
             | '\u{202A}'..='\u{202E}'
-            | '\u{2060}'..='\u{2064}'
-            | '\u{2066}'..='\u{206F}'
+            | '\u{2060}'..='\u{206F}'
+            | '\u{2800}'
+            | '\u{3164}'
+            | '\u{FE00}'..='\u{FE0F}'
             | '\u{FEFF}'
-            | '\u{FFF9}'..='\u{FFFB}'
+            | '\u{FFA0}'
+            | '\u{FFF0}'..='\u{FFFB}'
             | '\u{110BD}'
             | '\u{110CD}'
             | '\u{13430}'..='\u{1343F}'
             | '\u{1BCA0}'..='\u{1BCA3}'
             | '\u{1D173}'..='\u{1D17A}'
-            | '\u{E0001}'
-            | '\u{E0020}'..='\u{E007F}'
+            | '\u{E0000}'..='\u{E0FFF}'
     )
 }
 
@@ -523,6 +523,7 @@ fn is_pictographic(c: char) -> bool {
             | '\u{2122}'
             | '\u{2139}'
             | '\u{2194}'..='\u{21FF}'
+            | '\u{24C2}'
             | '\u{2300}'..='\u{23FF}'
             | '\u{25A0}'..='\u{27BF}'
             | '\u{2900}'..='\u{297F}'
@@ -925,6 +926,14 @@ pub(crate) fn check(
                 "malformed-url",
                 &if crate::link::is_external(dest) {
                     format!("this link's destination is not a well-formed URL: {reason}")
+                } else if dest.trim_start().starts_with('\\')
+                    || dest.trim_start().starts_with("/\\")
+                {
+                    "this link's destination opens with `\\`, which a browser reads as `/`, so \
+                     it is the protocol-relative `//host` URL to every reader; write `//host` \
+                     or `https://host` if it is meant as one, or a relative path without the \
+                     leading `\\`"
+                        .to_string()
                 } else {
                     format!(
                         "this link's destination is read by a browser as an absolute URL \
@@ -1359,6 +1368,28 @@ mod tests {
             "it holds an invisible character"
         );
         assert!(parse("https://acme.dev/1\u{FE0F}\u{20E3}").is_ok());
+        // Round 6: the whole Default_Ignorable set, reserved code points too.
+        let shifted: String = "ignore all"
+            .chars()
+            .map(|c| char::from_u32(0xE0080 + c as u32).unwrap())
+            .collect();
+        assert_eq!(
+            err(&format!("https://a.example/x{shifted}")),
+            "it holds an invisible character"
+        );
+        assert_eq!(
+            err("https://a.example/x\u{2065}y"),
+            "it holds an invisible character"
+        );
+        assert_eq!(
+            err("https://a.example/x\u{FFF0}y"),
+            "it holds an invisible character"
+        );
+        assert_eq!(
+            err("https://a.example/x\u{E0200}y"),
+            "it holds an invisible character"
+        );
+        assert!(parse("https://a.example/\u{24C2}\u{FE0F}").is_ok());
         // Only RGI subdivision flags: a chain of made-up "flags" is text.
         let flag = |id: &str| -> String {
             let tags: String = id

@@ -14,11 +14,15 @@ invisible character such as a zero-width space (a `[text](<https://a b>)`
 bracketed destination, the one link form that admits a space) — the
 invisible characters inside a real emoji or ideograph are accepted (a
 zero-width joiner between two pictographs, one presentation selector after
-a pictograph or keycap base, one ideographic variation selector after a CJK
+a pictograph or inside a keycap (followed by U+20E3), one ideographic variation selector after a CJK
 ideograph, and the tags of the three recommended subdivision flags,
 England, Scotland and Wales),
 and anything else is not: a run of tag characters or variation selectors
-carrying hidden text, and any invisible character in a host; a destination
+carrying hidden text, and any invisible character in a host (the invisible
+characters are Unicode's whole Default_Ignorable set, reserved code points
+included; one residual is stated rather than closed: an ideographic
+selector is accepted whatever its value, so a CJK path can carry about one
+hidden byte per ideograph); a destination
 a browser trims into a URL, `< https://…>` or `\/host`, is judged as one,
 never resolved as a path (its message says so) — or more than one `#`; an `http`, `https`, `ws`, `wss`, `ftp` or `//host`
 destination lacks the `//` or has no host, a host with an empty label
