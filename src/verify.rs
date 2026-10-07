@@ -12057,9 +12057,13 @@ pattern:
     fn destinations_a_browser_reads_as_urls_are_never_resolved_as_paths() {
         let proj = external_project("whatwg-view", None, "");
         // A file at each path the raw text would resolve to, so a tree-side
-        // resolution would come back clean.
-        proj.write("docs/ https:/evil.example/x", "x\n");
-        proj.write("docs/\\/evil.example", "x\n");
+        // resolution would come back clean. Unix only: Windows refuses both
+        // names, and there the assertion below holds without the decoys.
+        #[cfg(unix)]
+        {
+            proj.write("docs/ https:/evil.example/x", "x\n");
+            proj.write("docs/\\/evil.example", "x\n");
+        }
         proj.write(
             "docs/a.md",
             "[t](< https://evil.example/x>)\n[s](\\\\/evil.example)\n",
