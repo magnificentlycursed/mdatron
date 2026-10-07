@@ -24,15 +24,15 @@
 //!
 //! Activation of the register: the file exists; its scope is the link family's
 //! (files a route opts in with `links: true`). Entries are compared with the
-//! link's destination as the CommonMark parser yields it (`&amp;` and `\_`
-//! decoded, nothing else) — no case folding, no normalisation of a trailing
+//! link's destination as the CommonMark parser yields it (entity and
+//! character references and backslash escapes decoded, nothing more) — no case folding, no normalisation of a trailing
 //! slash, no percent-decoding — so what the register says is what the corpus
 //! must say. What the link family sees is what CommonMark calls a link:
 //! inline, reference-style, image and `<autolink>` destinations; a bare URL
 //! in prose and a raw HTML `<a href>` are not links and are neither checked
 //! nor exported.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
@@ -111,6 +111,7 @@ pub(crate) fn load(project_root: &Path) -> Result<Option<LoadedRegister>, Error>
     let mut seen: HashSet<&str> = HashSet::new();
     for e in &raw.links {
         let url = e.url.as_str();
+        let u = shown(url);
         if url.is_empty() {
             return Err(Error::Config(
                 "a links.yaml entry has an empty url; an entry names the URL the corpus \
@@ -120,18 +121,18 @@ pub(crate) fn load(project_root: &Path) -> Result<Option<LoadedRegister>, Error>
         }
         if let Some(what) = holds_forbidden_char(url) {
             return Err(Error::Config(format!(
-                "links.yaml entry '{url}' holds {what}; a URL is written without them"
+                "links.yaml entry '{u}' holds {what}; a URL is written without them"
             )));
         }
         if url.contains('#') {
             return Err(Error::Config(format!(
-                "links.yaml entry '{url}' holds a `#`; keep `url` to the page and list the \
+                "links.yaml entry '{u}' holds a `#`; keep `url` to the page and list the \
                  anchors the corpus may use under `fragments`"
             )));
         }
         if !crate::link::is_external(url) {
             return Err(Error::Config(format!(
-                "links.yaml entry '{url}' is not an absolute URL (a scheme such as `https:`, \
+                "links.yaml entry '{u}' is not an absolute URL (a scheme such as `https:`, \
                  or a protocol-relative `//host`); a relative link is resolved against the \
                  tree, never the register"
             )));
@@ -144,52 +145,54 @@ pub(crate) fn load(project_root: &Path) -> Result<Option<LoadedRegister>, Error>
         // the host escapes a text prefix cannot see. The same holds for every
         // `scheme://authority` form (`ftp://`, `wss://`, `git://`): RFC 3986
         // §3.2 makes `//` after any scheme an authority. A prefix for an opaque
-        // scheme with no authority (`mailto:`) may stop at the scheme.
-        let opaque_prefix = e.prefix && !has_authority(url);
+        // scheme with no authority (`mailto:`) may stop at the scheme; a web
+        // scheme is never opaque (`wss:acme.dev` is no URL a browser opens).
+        let opaque_prefix = e.prefix && !has_authority(url) && !is_web(url);
         if !opaque_prefix {
             if let Err(reason) = parse(url) {
                 return Err(Error::Config(format!(
-                    "links.yaml entry '{url}' is not a well-formed URL ({reason}); no link \
+                    "links.yaml entry '{u}' is not a well-formed URL ({reason}); no link \
                      could match it"
                 )));
             }
         }
         if e.prefix && has_authority(url) && !authority_closed(url) {
             return Err(Error::Config(format!(
-                "links.yaml prefix entry '{url}' stops inside its host; a prefix must run \
-                 past the host (end it with `/`), or `{url}.evil.example/` and \
-                 `{url}@evil.example/` would start with it too"
+                "links.yaml prefix entry '{u}' stops inside its host; a prefix must run \
+                 past the host (end it with `/`), or `{u}.evil.example/` and \
+                 `{u}@evil.example/` would start with it too"
             )));
         }
         if !seen.insert(url) {
             return Err(Error::Config(format!(
-                "duplicate links.yaml entry '{url}': two entries for one URL is ambiguous \
+                "duplicate links.yaml entry '{u}': two entries for one URL is ambiguous \
                  authority — merge them into one"
             )));
         }
         if let Some(frags) = &e.fragments {
             let mut seen_frags: HashSet<&str> = HashSet::new();
             for f in frags {
+                let fs = shown(f);
                 if f.is_empty() {
                     return Err(Error::Config(format!(
-                        "links.yaml entry '{url}' declares an empty fragment; a bare `#` \
+                        "links.yaml entry '{u}' declares an empty fragment; a bare `#` \
                          (top of page) is always accepted and needs no entry"
                     )));
                 }
                 if f.contains('#') {
                     return Err(Error::Config(format!(
-                        "links.yaml entry '{url}' declares fragment '{f}' holding `#`; a \
+                        "links.yaml entry '{u}' declares fragment '{fs}' holding `#`; a \
                          fragment is written without its `#`"
                     )));
                 }
                 if let Some(what) = holds_forbidden_char(f) {
                     return Err(Error::Config(format!(
-                        "links.yaml entry '{url}' declares fragment '{f}' holding {what}"
+                        "links.yaml entry '{u}' declares fragment '{fs}' holding {what}"
                     )));
                 }
                 if !seen_frags.insert(f) {
                     return Err(Error::Config(format!(
-                        "links.yaml entry '{url}' declares fragment '{f}' twice"
+                        "links.yaml entry '{u}' declares fragment '{fs}' twice"
                     )));
                 }
             }
@@ -211,23 +214,54 @@ pub(crate) fn load(project_root: &Path) -> Result<Option<LoadedRegister>, Error>
     }))
 }
 
-/// The register entry covering `url` (the destination without its fragment):
-/// an exact entry wins over a prefix entry, and among prefix entries the
-/// longest wins. Returns the entry's index for the used-set.
-fn resolve<'a>(entries: &'a [Entry], url: &str) -> Option<(usize, &'a Entry)> {
-    let mut best: Option<(usize, &Entry)> = None;
-    for (i, e) in entries.iter().enumerate() {
-        if e.url == url {
-            return Some((i, e));
-        }
-        if e.prefix && url.starts_with(e.url.as_str()) {
-            match best {
-                Some((_, b)) if b.url.len() >= e.url.len() => {}
-                _ => best = Some((i, e)),
+/// The loaded register, indexed for lookup: an exact map over every entry's
+/// `url`, and the prefix entries by `url` with their distinct lengths
+/// (longest first), so a link costs one hash probe per distinct prefix
+/// length rather than a scan of the register.
+pub(crate) struct Register {
+    entries: Vec<Entry>,
+    exact: HashMap<String, usize>,
+    prefixes: HashMap<String, usize>,
+    prefix_lens: Vec<usize>,
+}
+
+impl Register {
+    pub(crate) fn new(entries: Vec<Entry>) -> Self {
+        let mut exact = HashMap::new();
+        let mut prefixes = HashMap::new();
+        let mut lens = std::collections::BTreeSet::new();
+        for (i, e) in entries.iter().enumerate() {
+            exact.entry(e.url.clone()).or_insert(i);
+            if e.prefix {
+                prefixes.entry(e.url.clone()).or_insert(i);
+                lens.insert(e.url.len());
             }
         }
+        Register {
+            entries,
+            exact,
+            prefixes,
+            prefix_lens: lens.into_iter().rev().collect(),
+        }
     }
-    best
+
+    pub(crate) fn entries(&self) -> &[Entry] {
+        &self.entries
+    }
+
+    /// The entry covering `url` (the destination without its fragment): an
+    /// exact entry wins over a prefix entry, and among prefix entries the
+    /// longest wins. Returns the entry's index for the used-set.
+    fn resolve(&self, url: &str) -> Option<(usize, &Entry)> {
+        if let Some(&i) = self.exact.get(url) {
+            return Some((i, &self.entries[i]));
+        }
+        self.prefix_lens
+            .iter()
+            .filter(|&&n| n <= url.len() && url.is_char_boundary(n))
+            .find_map(|&n| self.prefixes.get(&url[..n]))
+            .map(|&i| (i, &self.entries[i]))
+    }
 }
 
 /// A route's link policy as declared in `routes.yaml` (#215, piece 3).
@@ -238,9 +272,9 @@ pub(crate) struct RawPolicy {
     /// `//host` link has no scheme and violates any list.
     #[serde(default)]
     schemes: Option<Vec<String>>,
-    /// The hosts an `http`/`https` (or `//host`) link may name; `*.example.com`
-    /// covers every subdomain and not the apex. A link with no host (`mailto:`)
-    /// is judged by `schemes` alone.
+    /// The hosts a web link (`http`, `https`, `ws`, `wss`, `ftp`, `//host`)
+    /// may name; `*.example.com` covers every subdomain and not the apex. A
+    /// link of another scheme (`mailto:`, `ssh://`) is judged by `schemes`.
     #[serde(default)]
     hosts: Option<Vec<String>>,
     /// Patterns over query-parameter NAMES a link must not carry (`^utm_`).
@@ -374,7 +408,7 @@ impl Policy {
 
 /// The parts of an absolute destination the checks read. `scheme` is `None`
 /// for a protocol-relative `//host` destination; `host` is `Some` only for
-/// the hierarchical forms (`http`, `https`, `//host`).
+/// the web forms ([`WEB_SCHEMES`] and `//host`).
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct Url<'a> {
     /// The destination before its `#`: the text the register compares.
@@ -385,14 +419,19 @@ pub(crate) struct Url<'a> {
     pub fragment: Option<&'a str>,
 }
 
-/// Whether a destination is a WEB form: `http:`, `https:`, or protocol-
-/// relative `//host` — the forms whose host the parser validates, a `hosts`
-/// policy judges, and a browser reads with `\` as `/`.
+/// The WHATWG special schemes that carry a host: `http`, `https`, `ws`,
+/// `wss`, `ftp`. (`file` is special too, but its host may be empty.)
+const WEB_SCHEMES: &[&str] = &["http", "https", "ws", "wss", "ftp"];
+
+/// Whether a destination is a WEB form: one of [`WEB_SCHEMES`], or
+/// protocol-relative `//host` — the forms whose `//` is required, whose host
+/// the parser validates and a `hosts` policy judges, and which a browser
+/// reads with `\` as `/`.
 fn is_web(dest: &str) -> bool {
     dest.starts_with("//")
         || dest
             .split_once(':')
-            .is_some_and(|(s, _)| s.eq_ignore_ascii_case("http") || s.eq_ignore_ascii_case("https"))
+            .is_some_and(|(s, _)| WEB_SCHEMES.iter().any(|w| s.eq_ignore_ascii_case(w)))
 }
 
 /// Whether a destination carries an authority: `//host`, or any
@@ -416,18 +455,28 @@ fn authority_closed(dest: &str) -> bool {
     after.contains(['/', '?'])
 }
 
-/// The invisible Unicode format characters (a subset of category Cf; the
-/// visible Cf signs such as U+0600 are not listed): a zero-width space, a
-/// soft hyphen, a direction mark, a byte-order mark — a link holding one can
-/// never resolve as its author reads it. A zero-width joiner and the tag
-/// characters are exempt right after a non-ASCII character, where they join
-/// an emoji sequence rather than hide in the text.
+/// The invisible characters: the invisible members of category Cf (the
+/// visible Cf signs such as U+0600 are not listed) — a zero-width space, a
+/// soft hyphen, a direction mark, a byte-order mark — and the blank fillers
+/// that render as nothing (Hangul fillers, the braille blank, the combining
+/// grapheme joiner, Mongolian free variation selectors). A link holding one
+/// can never resolve as its author reads it. A zero-width joiner inside an
+/// emoji sequence, and the tag characters of an emoji flag, are not hidden
+/// text: see [`holds_forbidden_char`].
 fn is_format_char(c: char) -> bool {
     matches!(
         c,
         '\u{00AD}'
+            | '\u{034F}'
             | '\u{061C}'
-            | '\u{180E}'
+            | '\u{115F}'
+            | '\u{1160}'
+            | '\u{17B4}'
+            | '\u{17B5}'
+            | '\u{180B}'..='\u{180F}'
+            | '\u{2800}'
+            | '\u{3164}'
+            | '\u{FFA0}'
             | '\u{200B}'..='\u{200F}'
             | '\u{202A}'..='\u{202E}'
             | '\u{2060}'..='\u{2064}'
@@ -447,20 +496,90 @@ fn is_format_char(c: char) -> bool {
 /// The character class a URL is written without: it is the one check that
 /// applies to every scheme.
 fn holds_forbidden_char(s: &str) -> Option<&'static str> {
-    let mut prev: Option<char> = None;
-    for c in s.chars() {
-        let joins_emoji = (c == '\u{200D}' || ('\u{E0020}'..='\u{E007F}').contains(&c))
-            && prev.is_some_and(|p| !p.is_ascii());
+    let chars: Vec<char> = s.chars().collect();
+    for (i, &c) in chars.iter().enumerate() {
         if c.is_whitespace() {
             return Some("whitespace");
         } else if c.is_control() {
             return Some("a control character");
-        } else if is_format_char(c) && !joins_emoji {
+        } else if is_format_char(c) && !in_emoji_sequence(&chars, i) {
             return Some("an invisible character");
         }
-        prev = Some(c);
     }
     None
+}
+
+/// An emoji presentation code point: the pictographic blocks a ZWJ sequence
+/// joins (approximating Unicode's Extended_Pictographic).
+fn is_pictographic(c: char) -> bool {
+    matches!(
+        c,
+        '\u{00A9}'
+            | '\u{00AE}'
+            | '\u{203C}'
+            | '\u{2049}'
+            | '\u{2122}'
+            | '\u{2139}'
+            | '\u{2194}'..='\u{21FF}'
+            | '\u{2300}'..='\u{23FF}'
+            | '\u{25A0}'..='\u{27BF}'
+            | '\u{2900}'..='\u{297F}'
+            | '\u{2B00}'..='\u{2BFF}'
+            | '\u{3030}'
+            | '\u{303D}'
+            | '\u{3297}'
+            | '\u{3299}'
+            | '\u{1F000}'..='\u{1FAFF}'
+    )
+}
+
+/// Whether the invisible character at `i` is a legitimate part of an emoji
+/// sequence: a ZWJ between two pictographs (an emoji-presentation selector
+/// or a skin-tone modifier may sit before it), or a tag character inside a
+/// flag tag sequence — U+1F3F4, tag characters, ended by U+E007F CANCEL TAG.
+/// Anything else is hidden text (`é` followed by tag-encoded ASCII is the
+/// "ASCII smuggling" payload, and is refused).
+fn in_emoji_sequence(chars: &[char], i: usize) -> bool {
+    let c = chars[i];
+    if c == '\u{200D}' {
+        let before = i.checked_sub(1).map(|j| chars[j]).is_some_and(|p| {
+            is_pictographic(p) || p == '\u{FE0F}' || ('\u{1F3FB}'..='\u{1F3FF}').contains(&p)
+        });
+        let after = chars.get(i + 1).is_some_and(|&n| is_pictographic(n));
+        return before && after;
+    }
+    if ('\u{E0020}'..='\u{E007F}').contains(&c) {
+        // Walk back over the tag run to its base; it must be the black flag.
+        let mut j = i;
+        while j > 0 && ('\u{E0020}'..='\u{E007E}').contains(&chars[j - 1]) {
+            j -= 1;
+        }
+        if j == 0 || chars[j - 1] != '\u{1F3F4}' {
+            return false;
+        }
+        // Walk forward: the run must end with CANCEL TAG.
+        let mut k = i;
+        while k < chars.len() && ('\u{E0020}'..='\u{E007E}').contains(&chars[k]) {
+            k += 1;
+        }
+        return chars.get(k) == Some(&'\u{E007F}');
+    }
+    false
+}
+
+/// A string as a message may quote it: controls and invisible characters
+/// shown as `\u{…}` escapes, so a bidi override or a tag character in
+/// adopter data cannot rewrite the terminal line that reports it.
+fn shown(s: &str) -> String {
+    s.chars()
+        .map(|c| {
+            if c.is_control() || is_format_char(c) {
+                c.escape_unicode().to_string()
+            } else {
+                c.to_string()
+            }
+        })
+        .collect()
 }
 
 /// Refuse a path that a client resolves away from the text a register
@@ -512,7 +631,8 @@ pub(crate) fn parse(dest: &str) -> Result<Url<'_>, String> {
             let rest = after_slashes
                 .find(['/', '?'])
                 .map_or("", |i| &after_slashes[i..]);
-            check_path(rest.split_once('?').map_or(rest, |(p, _)| p), false)?;
+            let file = scheme.is_some_and(|s| s.eq_ignore_ascii_case("file"));
+            check_path(rest.split_once('?').map_or(rest, |(p, _)| p), file)?;
         }
         return Ok(Url {
             page,
@@ -529,8 +649,11 @@ pub(crate) fn parse(dest: &str) -> Result<Url<'_>, String> {
             None => return Err("its scheme is not followed by `//`".into()),
         },
     };
+    // A browser ends a web authority at `\` as at `/` (WHATWG authority
+    // state), so `https://evil.example\@acme.dev/` is the host `evil.example`;
+    // ending it there too puts the `\` in the path, where it is refused.
     let authority_end = after_slashes
-        .find(['/', '?'])
+        .find(['/', '?', '\\'])
         .unwrap_or(after_slashes.len());
     let authority = &after_slashes[..authority_end];
     let host = host_of(authority)?;
@@ -551,10 +674,17 @@ pub(crate) fn parse(dest: &str) -> Result<Url<'_>, String> {
 /// The host of an authority component: userinfo stripped, port validated and
 /// stripped, an IPv6 literal kept with its brackets.
 fn host_of(authority: &str) -> Result<&str, String> {
-    let hostport = authority
-        .rsplit_once('@')
-        .map(|(_, h)| h)
-        .unwrap_or(authority);
+    let (userinfo, hostport) = match authority.rsplit_once('@') {
+        Some((u, h)) => (Some(u), h),
+        None => (None, authority),
+    };
+    // RFC 3986 userinfo: unreserved, percent-encoded, sub-delims and `:`.
+    if let Some(c) = userinfo.and_then(|u| {
+        u.chars()
+            .find(|c| c.is_ascii() && !(is_reg_name_char(*c) || *c == ':'))
+    }) {
+        return Err(format!("its userinfo holds `{c}`"));
+    }
     if let Some(inner) = hostport.strip_prefix('[') {
         let Some(close) = inner.find(']') else {
             return Err("its IPv6 host literal is not closed with `]`".into());
@@ -583,6 +713,11 @@ fn host_of(authority: &str) -> Result<&str, String> {
     // stylistic: `_` and `~` are legal here and browsers open them.
     if let Some(c) = host.chars().find(|c| c.is_ascii() && !is_reg_name_char(*c)) {
         return Err(format!("its host holds `{c}`"));
+    }
+    // No emoji-sequence exemption in a host: a joiner there fails IDNA
+    // (UTS 46 CheckJoiners) and hides a lookalike label.
+    if host.chars().any(|c| is_format_char(c) || c == '\u{200D}') {
+        return Err("its host holds an invisible character".into());
     }
     // A `%` must start a percent-encoding, and what it encodes must itself be
     // a host character: `evil.example%23.acme.dev` decodes to a `#` and is no
@@ -634,17 +769,14 @@ fn is_reg_name_char(c: char) -> bool {
         )
 }
 
-/// The inside of a bracketed IPv6 literal: hex groups and `:` (an IPv4 tail
-/// with `.` allowed), optionally a `%25`-led zone id (RFC 6874).
+/// The inside of a bracketed IPv6 literal: an IPv6 address (`std::net`'s
+/// grammar, an IPv4 tail allowed), optionally a `%25`-led zone id (RFC 6874).
 fn is_ipv6_literal(literal: &str) -> bool {
     let (address, zone) = match literal.split_once("%25") {
         Some((a, z)) => (a, Some(z)),
         None => (literal, None),
     };
-    let address_ok = address.contains(':')
-        && address
-            .bytes()
-            .all(|b| b.is_ascii_hexdigit() || matches!(b, b':' | b'.'));
+    let address_ok = address.parse::<std::net::Ipv6Addr>().is_ok();
     let zone_ok = zone.is_none_or(|z| {
         !z.is_empty()
             && z.bytes()
@@ -662,6 +794,7 @@ fn check_port(rest: &str) -> Result<(), String> {
         Some(port) if !port.bytes().all(|b| b.is_ascii_digit()) => {
             Err("its port is not a number".into())
         }
+        Some(port) if port.parse::<u16>().is_err() => Err("its port is above 65535".into()),
         Some(_) => Ok(()),
     }
 }
@@ -725,7 +858,7 @@ pub(crate) struct Context<'a> {
     pub enabled: bool,
     pub root_relative: bool,
     pub imports: bool,
-    pub register: Option<&'a [Entry]>,
+    pub register: Option<&'a Register>,
     pub policy: Option<&'a Policy>,
 }
 
@@ -765,8 +898,8 @@ pub(crate) fn check(
     if let Some(policy) = ctx.policy {
         check_policy(policy, path, line, dest, &url, findings);
     }
-    if let Some(entries) = ctx.register {
-        match resolve(entries, url.page) {
+    if let Some(register) = ctx.register {
+        match register.resolve(url.page) {
             None => findings.push(finding(
                 path,
                 line,
@@ -866,17 +999,44 @@ fn check_policy(
         }
     }
     if let (Some(patterns), Some(query)) = (&policy.forbid_query, url.query) {
-        let mut reported: HashSet<String> = HashSet::new();
+        // One finding per link for the clause, naming the forbidden names
+        // (distinct, decoded, the first ten): a finding per parameter made a
+        // link with thousands of them thousands of findings, each quoting the
+        // whole destination.
+        const SHOWN: usize = 10;
+        let mut names: Vec<String> = Vec::new();
+        let mut sources: Vec<&str> = Vec::new();
+        let mut seen: HashSet<String> = HashSet::new();
         for name in query_parameter_names(query) {
-            if !reported.insert(name.to_string()) {
+            if !seen.insert(name.to_string()) {
                 continue;
             }
             if let Some((source, _)) = patterns.iter().find(|(_, re)| re.is_match(&name)) {
-                findings.push(violation(
-                    &format!("its query parameter `{name}` matches a forbidden pattern"),
-                    &format!("forbid_query: {source}"),
-                ));
+                names.push(name.into_owned());
+                if !sources.contains(&source.as_str()) {
+                    sources.push(source);
+                }
             }
+        }
+        if !names.is_empty() {
+            let mut list = names
+                .iter()
+                .take(SHOWN)
+                .map(|n| format!("`{}`", shown(n)))
+                .collect::<Vec<_>>()
+                .join(", ");
+            if names.len() > SHOWN {
+                list.push_str(&format!(" and {} more", names.len() - SHOWN));
+            }
+            let noun = if names.len() == 1 {
+                "parameter"
+            } else {
+                "parameters"
+            };
+            findings.push(violation(
+                &format!("its query {noun} {list} match a forbidden pattern"),
+                &format!("forbid_query: {}", sources.join(", ")),
+            ));
         }
     }
 }
@@ -1057,7 +1217,59 @@ mod tests {
         assert_eq!(err("https://.acme.dev"), "its host has an empty label");
         assert_eq!(err("https://a..b"), "its host has an empty label");
         assert_eq!(err("https://a|b.c"), "its host holds `|`");
-        assert_eq!(err("https://a\\b.c"), "its host holds `\\`");
+        // A browser ends a web authority at `\`: the backslash is in the path.
+        assert_eq!(
+            err("https://a\\b.c"),
+            "its path holds `\\`, which a browser reads as `/`"
+        );
+        // Round 3: the `evil\@good` split, every web scheme, emoji smuggling,
+        // invisible host characters, strict IPv6 and ports.
+        assert_eq!(
+            err("https://evil.example\\@acme.dev/x"),
+            "its path holds `\\`, which a browser reads as `/`"
+        );
+        assert_eq!(err("https://a|b@acme.dev/"), "its userinfo holds `|`");
+        assert_eq!(err("wss:acme.dev/x"), "its scheme is not followed by `//`");
+        assert_eq!(
+            err("wss://acme.dev/x\\..\\admin"),
+            "its path holds `\\`, which a browser reads as `/`"
+        );
+        assert_eq!(
+            err("file:///x\\..\\y"),
+            "its path holds `\\`, which a browser reads as `/`"
+        );
+        assert_eq!(ok("wss://Acme.dev:443/s").host, Some("Acme.dev"));
+        assert_eq!(
+            err("https://acme.dev/\u{e9}\u{E0041}\u{E0042}"),
+            "it holds an invisible character"
+        );
+        assert_eq!(
+            err("https://acme.dev/\u{e9}\u{200D}\u{200D}"),
+            "it holds an invisible character"
+        );
+        assert_eq!(
+            err("https://ac\u{e9}\u{200D}me.acme.dev/"),
+            "it holds an invisible character"
+        );
+        assert_eq!(
+            err("https://\u{1F468}\u{200D}\u{1F469}.acme.dev/"),
+            "its host holds an invisible character"
+        );
+        assert_eq!(
+            err("https://acme.dev/\u{3164}"),
+            "it holds an invisible character"
+        );
+        assert_eq!(
+            err("https://[:]/"),
+            "its IPv6 host literal is not an address"
+        );
+        assert_eq!(
+            err("https://[:::::]/"),
+            "its IPv6 host literal is not an address"
+        );
+        assert_eq!(err("https://host:99999/"), "its port is above 65535");
+        assert!(parse("https://acme.dev/\u{2764}\u{FE0F}\u{200D}\u{1F525}/").is_ok());
+        assert!(parse("https://[2001:db8::7]:8080/").is_ok());
         assert_eq!(
             err("https://acme.dev/public/../private/x"),
             "its path holds a `.` or `..` segment, which a client resolves away"
@@ -1134,24 +1346,42 @@ mod tests {
             },
         ];
         assert_eq!(
-            resolve(&entries, "https://a.dev/docs/exact").map(|(i, _)| i),
+            Register::new(entries.clone())
+                .resolve("https://a.dev/docs/exact")
+                .map(|(i, _)| i),
             Some(2)
         );
         assert_eq!(
-            resolve(&entries, "https://a.dev/docs/other").map(|(i, _)| i),
+            Register::new(entries.clone())
+                .resolve("https://a.dev/docs/other")
+                .map(|(i, _)| i),
             Some(1)
         );
         assert_eq!(
-            resolve(&entries, "https://a.dev/blog").map(|(i, _)| i),
+            Register::new(entries.clone())
+                .resolve("https://a.dev/blog")
+                .map(|(i, _)| i),
             Some(0)
         );
-        assert_eq!(resolve(&entries, "https://b.dev/").map(|(i, _)| i), None);
-        // As written: no case folding, no slash normalisation.
         assert_eq!(
-            resolve(&entries, "https://A.dev/docs/exact").map(|(i, _)| i),
+            Register::new(entries.clone())
+                .resolve("https://b.dev/")
+                .map(|(i, _)| i),
             None
         );
-        assert_eq!(resolve(&entries, "https://a.dev").map(|(i, _)| i), None);
+        // As written: no case folding, no slash normalisation.
+        assert_eq!(
+            Register::new(entries.clone())
+                .resolve("https://A.dev/docs/exact")
+                .map(|(i, _)| i),
+            None
+        );
+        assert_eq!(
+            Register::new(entries.clone())
+                .resolve("https://a.dev")
+                .map(|(i, _)| i),
+            None
+        );
     }
 
     #[test]
@@ -1248,8 +1478,9 @@ mod tests {
             "schemes: [https]\nhosts: [a.dev, '*.a.dev', '[::1]']\nforbid_query: ['^utm_']",
         ))
         .unwrap();
+        let reg = Register::new(entries.clone());
         let ctx = Context {
-            register: Some(&entries),
+            register: Some(&reg),
             policy: Some(&policy),
             ..Default::default()
         };
@@ -1320,8 +1551,9 @@ mod tests {
                 fragments: None,
             },
         ];
+        let reg = Register::new(entries.clone());
         let ctx = Context {
-            register: Some(&entries),
+            register: Some(&reg),
             ..Default::default()
         };
         let mut state = RunState::default();
@@ -1342,14 +1574,34 @@ mod tests {
     }
 
     #[test]
+    fn one_finding_per_link_for_forbidden_query_names() {
+        let policy = Policy::compile(raw_policy("forbid_query: ['^utm_']")).unwrap();
+        let ctx = Context {
+            policy: Some(&policy),
+            ..Default::default()
+        };
+        let mut state = RunState::default();
+        let q: Vec<String> = (0..12).map(|i| format!("utm_{i}=1")).collect();
+        let body = format!("[x](https://a.dev/?{}&utm_0=2&ok=1)\n", q.join("&"));
+        let findings = run_check(&ctx, &mut state, &body);
+        assert_eq!(codes(&findings), vec!["MDATRON-E0118"], "{findings:?}");
+        assert!(
+            findings[0].message.contains("`utm_9` and 2 more"),
+            "{}",
+            findings[0].message
+        );
+    }
+
+    #[test]
     fn a_prefix_that_runs_past_its_host_cannot_be_extended_into_another() {
         let entries = vec![Entry {
             url: "https://acme.dev/".into(),
             prefix: true,
             fragments: None,
         }];
+        let reg = Register::new(entries.clone());
         let ctx = Context {
-            register: Some(&entries),
+            register: Some(&reg),
             ..Default::default()
         };
         let mut state = RunState::default();
@@ -1447,6 +1699,8 @@ mod tests {
             ("mdatron_format_version: 1\nlinks:\n- url: //acme.dev\n  prefix: true\n", "stops inside its host"),
             ("mdatron_format_version: 1\nlinks:\n- url: ftp://acme.dev\n  prefix: true\n", "stops inside its host"),
             ("mdatron_format_version: 1\nlinks:\n- url: wss://acme.dev\n  prefix: true\n", "stops inside its host"),
+            ("mdatron_format_version: 1\nlinks:\n- url: 'wss:acme.dev'\n  prefix: true\n", "not a well-formed URL"),
+            ("mdatron_format_version: 1\nlinks:\n- url: 'https:acme.dev'\n  prefix: true\n", "not a well-formed URL"),
             ("mdatron_format_version: 1\nlinks:\n- url: https://a.dev/\n- url: https://a.dev/\n  prefix: true\n", "duplicate"),
             ("mdatron_format_version: 1\nlinks:\n- url: https://a.dev/\n  fragments: ['']\n", "empty fragment"),
             ("mdatron_format_version: 1\nlinks:\n- url: https://a.dev/\n  fragments: ['a#b']\n", "holding `#`"),

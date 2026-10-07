@@ -6,7 +6,7 @@
 # SCOPE       every markdown link (inline, reference, image, autolink) to an
 #             absolute URL (a scheme, or //host) in a link-checked file must
 #             match an entry — exactly, or by prefix when the entry sets
-#             prefix: true (a web prefix runs past its host: end it with /)
+#             prefix: true (a scheme:// prefix runs past its host: end it /)
 #             — else E0115; its #fragment must be one the entry lists under
 #             fragments when the entry has a fragments key (an empty list
 #             accepts none; E0116). An entry no link uses is W0057. A bare

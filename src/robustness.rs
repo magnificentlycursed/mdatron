@@ -965,7 +965,7 @@ fn drive_snapshot_backed_scanners(
     let mut memo = crate::memo::RefMemo::default();
     // A small register and policy so the external-link branches (#215) run
     // against the hostile bodies too, not only the well-formedness check.
-    let register = vec![
+    let register = crate::links::Register::new(vec![
         crate::links::Entry {
             url: "https://docs.acme.dev/".into(),
             prefix: true,
@@ -976,7 +976,7 @@ fn drive_snapshot_backed_scanners(
             prefix: false,
             fragments: Some(vec!["a".into()]),
         },
-    ];
+    ]);
     let policy = crate::links::Policy::compile(
         serde_yaml_ng::from_str(
             "schemes: [https]\nhosts: [acme.dev, '*.acme.dev']\nforbid_query: ['^utm_']",

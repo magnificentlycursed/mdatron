@@ -91,14 +91,15 @@ Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `cit
   `E0037`; a directory or a symlink there does not count), `link_policy`
   (what an absolute URL in the claimed files may be, `E0118` per clause
   broken: `schemes`, the schemes a link may use — a `//host` link has none
-  and violates any list; `hosts`, the hosts an `http`, `https` or `//host`
+  and violates any list; `hosts`, the hosts an `http`, `https`, `ws`, `wss`, `ftp` or `//host`
   link may name, `*.example.com` covering every subdomain and not the apex,
   a bracketed IPv6 literal listed as one, a trailing-dot name being its
-  own name; a link with no web host such as `mailto:` or `ftp://` is judged
-  by `schemes` alone, so a `hosts` list without `schemes` says nothing
-  about it; `forbid_query`, regexes over the query-parameter names a link
+  own name; a link of another scheme (`mailto:`, `ssh://`, `git://`) is
+  judged by `schemes` alone, so a `hosts` list without `schemes` says
+  nothing about it; `forbid_query`, regexes over the query-parameter names a link
   must not carry, `^utm_` for the tracking parameters, one `E0118` per
-  forbidden parameter, names percent-decoded first; schemes and hosts
+  link naming its forbidden parameters (distinct, percent-decoded first,
+  the first ten listed); schemes and hosts
   compare without regard to ASCII case; each list given must be non-empty
   and an empty block is refused; needs `links`). Every route with
   `links: true` also reports an absolute URL that is not well-formed
@@ -254,7 +255,7 @@ Keys: `mdatron_format_version`, `links`, `url`, `prefix`, `fragments`.
   a protocol-relative `//host`; written without a `#`; a well-formed URL
   itself, except a prefix for an opaque scheme such as `mailto:`). Optional:
   `prefix` (default `false`; `true` covers every URL that starts with `url`;
-  a prefix for an `http`, `https` or `//host` URL must run past its host —
+  a prefix for any `scheme://` or `//host` URL must run past its host —
   `https://acme.dev/`, never `https://acme.dev`, which would also cover
   `https://acme.dev.evil.example/`), `fragments` (the anchors the corpus may
   use on the page — or on every page a prefix entry covers — written without
@@ -262,7 +263,10 @@ Keys: `mdatron_format_version`, `links`, `url`, `prefix`, `fragments`.
   bare `#` is always accepted). An exact entry wins over a prefix entry and
   the longest prefix over a shorter one; a URL and a fragment compare as the
   link's destination reads after CommonMark decoding (`&amp;` is `&`, `\_`
-  is `_`) — no case folding, no slash normalising, no percent-decoding.
+  is `_`) — no case folding, no slash normalising, no percent-decoding. A
+  zero-width joiner inside an emoji sequence and the tag characters of an
+  emoji flag are not "invisible characters"; a joiner anywhere else, a
+  tag run without its flag, and any invisible character in a host are.
 - `mdatron_format_version` is required on this file. Refused at load: an
   empty `url`, one that is not absolute or not well-formed, one holding
   `#`, whitespace, a control or an invisible character, a prefix for any
@@ -271,9 +275,9 @@ Keys: `mdatron_format_version`, `links`, `url`, `prefix`, `fragments`.
   holding `#`, whitespace, a control or an invisible character.
 
 Activation: the file exists. Scope: every markdown link to an absolute URL
-in every file on a route with `links: true` (the link family's scope;
-`W0056` when no such file is walked, on a whole-tree run whose jurisdiction
-came from `config.yaml`, as `W0057`). Codes: `E0115`, `E0116`, `W0056`,
+in every file on a route with `links: true` (the link family's scope; on a
+whole-tree run whose jurisdiction came from `config.yaml`, `W0056` when no
+such file is walked and `W0057` for each entry no link uses). Codes: `E0115`, `E0116`, `W0056`,
 `W0057`.
 
 ## manifest.yaml

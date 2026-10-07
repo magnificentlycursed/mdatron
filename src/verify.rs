@@ -758,7 +758,8 @@ fn run_inner(
         }
         None => None,
     };
-    let register: Option<Vec<crate::links::Entry>> = register.map(|r| r.entries);
+    let register: Option<crate::links::Register> =
+        register.map(|r| crate::links::Register::new(r.entries));
     // Collect the governed files once (absolute + root-relative paths). Two
     // `file_globs` can overlap on the same file; it is deduped by root-relative
     // path (#109) so the walk verifies each file exactly once — a doubled walk
@@ -1305,7 +1306,7 @@ fn run_inner(
             enabled: link_enabled,
             root_relative: link_root,
             imports: import_enabled,
-            register: register.as_deref(),
+            register: register.as_ref(),
             policy: routes
                 .as_deref()
                 .and_then(|routes| crate::route::link_policy_for(routes, rel)),
@@ -1357,7 +1358,7 @@ fn run_inner(
         } else {
             findings.extend(crate::links::unused_findings(
                 &project_root,
-                entries,
+                entries.entries(),
                 &memo.external.used,
             ));
         }
@@ -12019,17 +12020,37 @@ pattern:
         );
         let cfg = VerifyConfig::from_project(&proj.0).unwrap();
         let f = verify(&cfg).unwrap();
-        // http: scheme; example.com: host; //: no scheme; utm: two
-        // parameters; mailto: a scheme outside the list (no host to judge);
-        // //evil: no scheme AND a host outside the list.
-        assert_eq!(codes_of(&f, "MDATRON-E0118"), 8, "{f:?}");
+        // http: scheme; example.com: host; //: no scheme; utm: one finding
+        // naming both parameters; mailto: a scheme outside the list (no host
+        // to judge); //evil: no scheme AND a host outside the list.
+        assert_eq!(codes_of(&f, "MDATRON-E0118"), 7, "{f:?}");
         let lines: Vec<u32> = f
             .iter()
             .filter(|x| x.code == "MDATRON-E0118")
             .map(|x| x.location.line)
             .collect();
-        assert_eq!(lines, vec![2, 3, 4, 5, 5, 6, 7, 7]);
+        assert_eq!(lines, vec![2, 3, 4, 5, 6, 7, 7]);
         assert_eq!(codes_of(&f, "MDATRON-E0115"), 0, "no register, no E0115");
+    }
+
+    #[test]
+    fn a_backslash_userinfo_and_a_websocket_host_cannot_pass_a_hosts_policy() {
+        let proj = external_project(
+            "policy-escape",
+            None,
+            "  link_policy:\n    schemes: [https, wss]\n    hosts: [acme.dev]\n",
+        );
+        proj.write(
+            "docs/a.md",
+            "[a](<https://evil.example\\\\@acme.dev/x>)\n[b](wss://evil.example/s)\n[ok](wss://acme.dev/s)\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let f = verify(&cfg).unwrap();
+        // The browser's host for line 1 is evil.example: E0117, never clean.
+        assert_eq!(codes_of(&f, "MDATRON-E0117"), 1, "{f:?}");
+        // A wss host is judged by `hosts` like an https one.
+        assert_eq!(codes_of(&f, "MDATRON-E0118"), 1, "{f:?}");
+        assert!(f.iter().all(|x| x.location.line != 3), "{f:?}");
     }
 
     #[test]

@@ -11,8 +11,8 @@ scheme, such as `https://…`, or a protocol-relative `//host/…`) that no entr
 in `.mdatron/links.yaml` declares. The register is the closed set of URLs the
 corpus may point at: an entry matches a link whose page (the URL before any
 `#`) equals its `url` exactly, or, when the entry sets `prefix: true`, any
-link whose page starts with its `url` (a prefix for a web URL runs past its
-host — `https://acme.dev/`, never `https://acme.dev` — so it cannot be
+link whose page starts with its `url` (a prefix for any `scheme://` or `//host`
+URL runs past its host — `https://acme.dev/`, never `https://acme.dev` — so it cannot be
 extended into another host). The comparison is on the destination as the
 CommonMark parser reads it (`&amp;` is `&`, `\_` is `_`) and nothing more:
 no case folding, no normalising of a trailing slash, no percent-decoding, so

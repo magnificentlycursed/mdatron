@@ -10,19 +10,19 @@ A link in a file claimed by a route with a `link_policy` has an absolute
 destination the policy forbids. The message names the clause: its scheme is
 not one of the route's `schemes` (a protocol-relative `//host` link has no
 scheme and violates any `schemes` list); its host is not one of the route's
-`hosts` (a host matches an entry exactly, or is any subdomain of a
+`hosts` (judged for `http`, `https`, `ws`, `wss`, `ftp` or `//host` links; a host matches an entry exactly, or is any subdomain of a
 `*.example.com` entry — never the apex); or one of its query parameters has
 a name matching a `forbid_query` pattern (`^utm_` for the tracking
 parameters; names are percent-decoded first, so `utm%5Fsource` is
 `utm_source`). Schemes and hosts compare without regard to ASCII case; a
 host compares as written otherwise, so `acme.dev.` (a trailing dot) is not
 `acme.dev`, and a bracketed IPv6 literal (`[::1]`) must be listed as one. A
-destination with no host (`mailto:…`, `ftp://…` has one but is not web) is
-judged by `schemes` alone: a `hosts` list on its own says nothing about a
-link whose scheme is not `http` or `https`, so pair it with `schemes` to
-close that door. A link that violates two clauses is reported twice, once
-per clause, and under `forbid_query` once per forbidden parameter, each
-quoting the clause it broke.
+link of any other scheme (`mailto:…`, `ssh://…`, `git://…`) is judged by
+`schemes` alone: a `hosts` list on its own says nothing about it, so pair it
+with `schemes` to close that door. A link that violates two clauses is
+reported twice, once per clause, each quoting the clause it broke; under
+`forbid_query` that is one finding per link, naming its forbidden
+parameters (distinct, the first ten listed).
 
 The policy is per route, so a corpus can be `https`-only on its published
 pages and looser on an internal one. It needs no register: `link_policy`

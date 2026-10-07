@@ -10,14 +10,22 @@ A link in a link-checked file has an absolute destination (a scheme, or a
 protocol-relative `//host`) that is not a well-formed URL. The reason is in
 the message. What is checked is the structural shape of RFC 3986 and nothing
 stylistic: the destination holds whitespace, a control character or an
-invisible format character such as a zero-width space (a `[text](<https://a b>)`
-bracketed destination, the one link form that admits a space), or more than one `#`; an `http`, `https` or
-`//host` destination has no host, a host with an empty label
-(`https://.acme.dev`, `https://a..b`), a host holding a character a host
-name cannot (`\`, `|`, `<`; `_`, `~` and percent-encoded labels are legal
-and accepted), an empty or non-numeric port (RFC 3986 admits an empty one; it is refused as the typo it almost always is), an unclosed or malformed IPv6
-literal, or a `.` or `..` path segment on any `scheme://` form (a `\` too, on a web one), which a client resolves away so the
-page a reader lands on is not the text a register would compare; any other
+invisible character such as a zero-width space (a `[text](<https://a b>)`
+bracketed destination, the one link form that admits a space) — a
+zero-width joiner inside an emoji sequence and the tag characters of an
+emoji flag are accepted, a joiner or tag run anywhere else is not, nor any
+invisible character in a host — or more than one `#`; an `http`, `https`, `ws`, `wss`, `ftp` or `//host`
+destination lacks the `//` or has no host, a host with an empty label
+(`https://.acme.dev`, `https://a..b`), a host or userinfo holding a
+character neither may (`|`, `<`, `` ` ``; `_`, `~` and percent-encoded
+labels are legal and accepted, unless a `%` starts no encoding or encodes
+a character no host may hold, `%23` or `%2F`), an empty, non-numeric or out-of-range port (RFC 3986 admits an empty
+one; it is refused as the typo it almost always is), an unclosed or
+malformed IPv6 literal, or a `.` or `..` path segment on any `scheme://` form, or a `\` in a
+web or `file:` URL's authority or path — a browser reads it as `/`, so
+`https://evil.example\@acme.dev/` is the host `evil.example` — which a
+client resolves away so the page a reader lands on is not the text a
+register or policy would judge; any other
 scheme has nothing after its `:` (`mailto:`). Internationalised host names
 are accepted as written. No liveness tool could fetch such a destination,
 so it is not exported by `mdatron links`.
