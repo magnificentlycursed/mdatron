@@ -263,10 +263,12 @@ Keys: `mdatron_format_version`, `links`, `url`, `prefix`, `fragments`.
   bare `#` is always accepted). An exact entry wins over a prefix entry and
   the longest prefix over a shorter one; a URL and a fragment compare as the
   link's destination reads after CommonMark decoding (`&amp;` is `&`, `\_`
-  is `_`) — no case folding, no slash normalising, no percent-decoding. A
-  zero-width joiner inside an emoji sequence and the tag characters of an
-  emoji flag are not "invisible characters"; a joiner anywhere else, a
-  tag run without its flag, and any invisible character in a host are.
+  is `_`) — no case folding, no slash normalising, no percent-decoding. The
+  invisible characters inside a real emoji or ideograph are not
+  "invisible characters" (a zero-width joiner between pictographs, one
+  presentation or ideographic variation selector, a flag's 3-6
+  subdivision-id tags); a joiner, selector or tag run anywhere else, and
+  any invisible character in a host, are.
 - `mdatron_format_version` is required on this file. Refused at load: an
   empty `url`, one that is not absolute or not well-formed, one holding
   `#`, whitespace, a control or an invisible character, a prefix for any

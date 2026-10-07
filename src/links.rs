@@ -474,6 +474,8 @@ fn is_format_char(c: char) -> bool {
             | '\u{17B4}'
             | '\u{17B5}'
             | '\u{180B}'..='\u{180F}'
+            | '\u{FE00}'..='\u{FE0F}'
+            | '\u{E0100}'..='\u{E01EF}'
             | '\u{2800}'
             | '\u{3164}'
             | '\u{FFA0}'
@@ -541,28 +543,46 @@ fn is_pictographic(c: char) -> bool {
 /// "ASCII smuggling" payload, and is refused).
 fn in_emoji_sequence(chars: &[char], i: usize) -> bool {
     let c = chars[i];
+    let at = |j: Option<usize>| j.and_then(|j| chars.get(j)).copied();
+    let is_modifier = |p: char| p == '\u{FE0F}' || ('\u{1F3FB}'..='\u{1F3FF}').contains(&p);
     if c == '\u{200D}' {
-        let before = i.checked_sub(1).map(|j| chars[j]).is_some_and(|p| {
-            is_pictographic(p) || p == '\u{FE0F}' || ('\u{1F3FB}'..='\u{1F3FF}').contains(&p)
+        // A pictograph before it — directly, or under one presentation
+        // selector or skin-tone modifier — and a pictograph after it.
+        let before = match at(i.checked_sub(1)) {
+            Some(p) if is_pictographic(p) => true,
+            Some(p) if is_modifier(p) => at(i.checked_sub(2)).is_some_and(is_pictographic),
+            _ => false,
+        };
+        return before && at(Some(i + 1)).is_some_and(is_pictographic);
+    }
+    if c == '\u{FE0E}' || c == '\u{FE0F}' {
+        // One presentation selector after a pictograph or a keycap base.
+        return at(i.checked_sub(1))
+            .is_some_and(|p| is_pictographic(p) || p.is_ascii_digit() || p == '#' || p == '*');
+    }
+    if ('\u{E0100}'..='\u{E01EF}').contains(&c) {
+        // One ideographic variation selector after a CJK unified ideograph.
+        return at(i.checked_sub(1)).is_some_and(|p| {
+            matches!(p, '\u{3400}'..='\u{4DBF}' | '\u{4E00}'..='\u{9FFF}' | '\u{F900}'..='\u{FAFF}' | '\u{20000}'..='\u{3134F}')
         });
-        let after = chars.get(i + 1).is_some_and(|&n| is_pictographic(n));
-        return before && after;
     }
     if ('\u{E0020}'..='\u{E007F}').contains(&c) {
-        // Walk back over the tag run to its base; it must be the black flag.
+        // A flag tag sequence: U+1F3F4, then 3-6 tags spelling a lowercase
+        // subdivision id (`gbsct`), then CANCEL TAG — never free text.
+        let is_id_tag =
+            |t: char| matches!(t, '\u{E0030}'..='\u{E0039}' | '\u{E0061}'..='\u{E007A}');
         let mut j = i;
-        while j > 0 && ('\u{E0020}'..='\u{E007E}').contains(&chars[j - 1]) {
+        while j > 0 && is_id_tag(chars[j - 1]) {
             j -= 1;
         }
         if j == 0 || chars[j - 1] != '\u{1F3F4}' {
             return false;
         }
-        // Walk forward: the run must end with CANCEL TAG.
-        let mut k = i;
-        while k < chars.len() && ('\u{E0020}'..='\u{E007E}').contains(&chars[k]) {
+        let mut k = j;
+        while k < chars.len() && is_id_tag(chars[k]) {
             k += 1;
         }
-        return chars.get(k) == Some(&'\u{E007F}');
+        return (3..=6).contains(&(k - j)) && chars.get(k) == Some(&'\u{E007F}') && i <= k;
     }
     false
 }
@@ -603,8 +623,8 @@ fn check_path(path: &str, web: bool) -> Result<(), String> {
 /// Parse an absolute destination (one `link::is_external` accepted), or say
 /// why it is not a well-formed URL. Conservative: only what is wrong
 /// everywhere — the structural shape of RFC 3986 — is refused, never a
-/// stylistic choice. `http`/`https` and `//host` require a host; any other
-/// scheme requires something after its `:`.
+/// stylistic choice. The web forms ([`WEB_SCHEMES`] and `//host`) require
+/// `//` and a host; any other scheme requires something after its `:`.
 pub(crate) fn parse(dest: &str) -> Result<Url<'_>, String> {
     if let Some(what) = holds_forbidden_char(dest) {
         return Err(format!("it holds {what}"));
@@ -625,14 +645,18 @@ pub(crate) fn parse(dest: &str) -> Result<Url<'_>, String> {
         if after_scheme.is_empty() {
             return Err("nothing follows its scheme".into());
         }
-        // `ftp://host/a/../b`: the authority is not validated as a web host,
-        // but the path is resolved like any hierarchical URI's.
+        // `file:` is a WHATWG special scheme: a browser reads `\` as `/`
+        // anywhere in it (`file://a\b`, `file:C:\x`), so it is refused there.
+        if scheme.is_some_and(|s| s.eq_ignore_ascii_case("file")) && page.contains('\\') {
+            return Err("it holds `\\`, which a browser reads as `/` in a `file:` URL".into());
+        }
+        // `ftp://host/a/../b`-style forms: the authority is not validated as
+        // a web host, but the path is resolved like any hierarchical URI's.
         if let Some(after_slashes) = after_scheme.strip_prefix("//") {
             let rest = after_slashes
                 .find(['/', '?'])
                 .map_or("", |i| &after_slashes[i..]);
-            let file = scheme.is_some_and(|s| s.eq_ignore_ascii_case("file"));
-            check_path(rest.split_once('?').map_or(rest, |(p, _)| p), file)?;
+            check_path(rest.split_once('?').map_or(rest, |(p, _)| p), false)?;
         }
         return Ok(Url {
             page,
@@ -1034,7 +1058,10 @@ fn check_policy(
                 "parameters"
             };
             findings.push(violation(
-                &format!("its query {noun} {list} match a forbidden pattern"),
+                &format!(
+                    "its query {noun} {list} {} a forbidden pattern",
+                    if names.len() == 1 { "matches" } else { "match" }
+                ),
                 &format!("forbid_query: {}", sources.join(", ")),
             ));
         }
@@ -1195,7 +1222,7 @@ mod tests {
             Some("acme.dev")
         );
         assert_eq!(
-            ok("https://acme.dev/🏴\u{E0067}\u{E0062}\u{E007F}/").host,
+            ok("https://acme.dev/🏴\u{E0067}\u{E0062}\u{E0073}\u{E0063}\u{E0074}\u{E007F}/").host,
             Some("acme.dev")
         );
         assert!(parse("https://acme.dev/a\u{200D}b").is_err());
@@ -1236,7 +1263,15 @@ mod tests {
         );
         assert_eq!(
             err("file:///x\\..\\y"),
-            "its path holds `\\`, which a browser reads as `/`"
+            "it holds `\\`, which a browser reads as `/` in a `file:` URL"
+        );
+        assert_eq!(
+            err("file://a\\b/c"),
+            "it holds `\\`, which a browser reads as `/` in a `file:` URL"
+        );
+        assert_eq!(
+            err("file:C:\\x"),
+            "it holds `\\`, which a browser reads as `/` in a `file:` URL"
         );
         assert_eq!(ok("wss://Acme.dev:443/s").host, Some("Acme.dev"));
         assert_eq!(
@@ -1269,6 +1304,39 @@ mod tests {
         );
         assert_eq!(err("https://host:99999/"), "its port is above 65535");
         assert!(parse("https://acme.dev/\u{2764}\u{FE0F}\u{200D}\u{1F525}/").is_ok());
+        // Round 4: a flag's tag run spells a subdivision id, nothing else;
+        // variation selectors only where they select.
+        let smuggled: String = "ignore previous"
+            .chars()
+            .map(|c| char::from_u32(0xE0000 + c as u32).unwrap())
+            .collect();
+        assert_eq!(
+            err(&format!("https://acme.dev/\u{1F3F4}{smuggled}\u{E007F}")),
+            "it holds an invisible character"
+        );
+        assert!(parse(
+            "https://acme.dev/\u{1F3F4}\u{E0067}\u{E0062}\u{E0073}\u{E0063}\u{E0074}\u{E007F}/"
+        )
+        .is_ok());
+        let vs: String = "hidden"
+            .bytes()
+            .map(|b| char::from_u32(0xE0100 + b as u32).unwrap())
+            .collect();
+        assert_eq!(
+            err(&format!("https://acme.dev/\u{1F600}{vs}")),
+            "it holds an invisible character"
+        );
+        assert_eq!(
+            err("https://acme.dev/x\u{FE00}y"),
+            "it holds an invisible character"
+        );
+        assert_eq!(
+            err("https://acme.dev/a\u{FE0F}\u{200D}\u{1F600}"),
+            "it holds an invisible character"
+        );
+        assert!(parse("https://acme.dev/1\u{FE0F}\u{20E3}").is_ok());
+        assert!(parse("https://acme.dev/\u{8FBB}\u{E0100}").is_ok());
+        assert!(parse("https://acme.dev/\u{1F3F3}\u{FE0F}\u{200D}\u{26A7}\u{FE0F}").is_ok());
         assert!(parse("https://[2001:db8::7]:8080/").is_ok());
         assert_eq!(
             err("https://acme.dev/public/../private/x"),

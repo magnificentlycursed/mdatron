@@ -81,7 +81,7 @@ pub(crate) fn link_targets(
     let body = &content[body_offset..];
     let mut out = Vec::new();
     for link in body_links(body) {
-        if is_external(&link.dest) {
+        if reads_as_external(&link.dest) {
             continue;
         }
         let (path_part, _anchor) = split_fragment(&link.dest);
@@ -360,7 +360,7 @@ pub fn check_file(
         let at = body_offset + link.offset;
         // An absolute URL is not resolved against the tree; it gets the
         // offline checks (#215) and is recorded for the export.
-        if is_external(&link.dest) {
+        if reads_as_external(&link.dest) {
             crate::links::check(
                 links,
                 &mut memo.external,
@@ -807,6 +807,26 @@ pub(crate) fn split_fragment(dest: &str) -> (&str, Option<&str>) {
 /// Windows drive path in practice, and classifying it external silently
 /// exempted it from resolution; it now resolves as a path (missing → `E0110`
 /// on unix; the absolute-prefix refusal `E0010` on windows).
+/// Whether a browser reads `dest` as an absolute URL: as written, or after
+/// the WHATWG URL parser's own clean-up — leading and trailing C0 controls
+/// and spaces stripped, tab and line breaks dropped, `\` read as `/`. A
+/// destination such as `< https://evil.example/>` or `\/evil.example` is
+/// external to every reader even though its text starts like a path, so it
+/// goes to the offline checks (where its spelling is `E0117`), never to the
+/// tree.
+pub(crate) fn reads_as_external(dest: &str) -> bool {
+    if is_external(dest) {
+        return true;
+    }
+    let trimmed = dest.trim_matches(|c: char| c <= ' ');
+    let cleaned: String = trimmed
+        .chars()
+        .filter(|c| !matches!(c, '\t' | '\n' | '\r'))
+        .map(|c| if c == '\\' { '/' } else { c })
+        .collect();
+    cleaned != dest && is_external(&cleaned)
+}
+
 pub(crate) fn is_external(dest: &str) -> bool {
     if dest.starts_with("//") {
         return true;

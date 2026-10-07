@@ -11,21 +11,26 @@ protocol-relative `//host`) that is not a well-formed URL. The reason is in
 the message. What is checked is the structural shape of RFC 3986 and nothing
 stylistic: the destination holds whitespace, a control character or an
 invisible character such as a zero-width space (a `[text](<https://a b>)`
-bracketed destination, the one link form that admits a space) — a
-zero-width joiner inside an emoji sequence and the tag characters of an
-emoji flag are accepted, a joiner or tag run anywhere else is not, nor any
-invisible character in a host — or more than one `#`; an `http`, `https`, `ws`, `wss`, `ftp` or `//host`
+bracketed destination, the one link form that admits a space) — the
+invisible characters inside a real emoji or ideograph are accepted (a
+zero-width joiner between two pictographs, one presentation selector after
+a pictograph or keycap base, one ideographic variation selector after a CJK
+ideograph, and a flag's 3 to 6 tags spelling a lowercase subdivision id),
+and anything else is not: a run of tag characters or variation selectors
+carrying hidden text, and any invisible character in a host; a destination
+a browser trims into a URL, `< https://…>` or `\/host`, is judged as one,
+never resolved as a path — or more than one `#`; an `http`, `https`, `ws`, `wss`, `ftp` or `//host`
 destination lacks the `//` or has no host, a host with an empty label
 (`https://.acme.dev`, `https://a..b`), a host or userinfo holding a
 character neither may (`|`, `<`, `` ` ``; `_`, `~` and percent-encoded
 labels are legal and accepted, unless a `%` starts no encoding or encodes
 a character no host may hold, `%23` or `%2F`), an empty, non-numeric or out-of-range port (RFC 3986 admits an empty
 one; it is refused as the typo it almost always is), an unclosed or
-malformed IPv6 literal, or a `.` or `..` path segment on any `scheme://` form, or a `\` in a
-web or `file:` URL's authority or path — a browser reads it as `/`, so
-`https://evil.example\@acme.dev/` is the host `evil.example` — which a
-client resolves away so the page a reader lands on is not the text a
-register or policy would judge; any other
+malformed IPv6 literal, or a `.` or `..` path segment on any `scheme://` form, which a client
+resolves away so the page a reader lands on is not the text a register or
+policy would judge; or a `\` in a web URL's authority or path, or anywhere
+in a `file:` URL — a browser reads it as `/`, so
+`https://evil.example\@acme.dev/` is the host `evil.example`; any other
 scheme has nothing after its `:` (`mailto:`). Internationalised host names
 are accepted as written. No liveness tool could fetch such a destination,
 so it is not exported by `mdatron links`.

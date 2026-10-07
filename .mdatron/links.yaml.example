@@ -2,14 +2,16 @@
 # activate.
 #
 # ACTIVATION  the file exists; it applies to the files a route opts in with
-#             links: true (W0056 if none is walked).
+#             links: true (W0056 if none is walked, on a whole-tree run
+#             from config.yaml).
 # SCOPE       every markdown link (inline, reference, image, autolink) to an
 #             absolute URL (a scheme, or //host) in a link-checked file must
 #             match an entry — exactly, or by prefix when the entry sets
-#             prefix: true (a scheme:// prefix runs past its host: end it /)
+#             prefix: true (a scheme:// or //host prefix runs past its host)
 #             — else E0115; its #fragment must be one the entry lists under
 #             fragments when the entry has a fragments key (an empty list
-#             accepts none; E0116). An entry no link uses is W0057. A bare
+#             accepts none; E0116). An entry no link uses is W0057 (whole-tree
+#             runs only). A bare
 #             URL in prose or a raw HTML <a href> is not a link. mdatron
 #             never fetches a URL: the
 #             register is the list a liveness tool checks on a schedule, and

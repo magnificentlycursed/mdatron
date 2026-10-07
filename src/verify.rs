@@ -1350,7 +1350,7 @@ fn run_inner(
     // narrows the corpus, so the register would look inert or every entry
     // outside the glob unused. Supplied but reaching no link-checked file is
     // inert (W0056); an entry no link used is announced per entry (W0057).
-    if let Some(entries) = &register {
+    if let Some(reg) = &register {
         if scope.is_some() || config.config_digest.is_none() {
             // Not a whole-tree, config-driven run: nothing to announce.
         } else if link_cov == 0 {
@@ -1358,7 +1358,7 @@ fn run_inner(
         } else {
             findings.extend(crate::links::unused_findings(
                 &project_root,
-                entries.entries(),
+                reg.entries(),
                 &memo.external.used,
             ));
         }
@@ -12051,6 +12051,22 @@ pattern:
         // A wss host is judged by `hosts` like an https one.
         assert_eq!(codes_of(&f, "MDATRON-E0118"), 1, "{f:?}");
         assert!(f.iter().all(|x| x.location.line != 3), "{f:?}");
+    }
+
+    #[test]
+    fn destinations_a_browser_reads_as_urls_are_never_resolved_as_paths() {
+        let proj = external_project("whatwg-view", None, "");
+        // A file at each path the raw text would resolve to, so a tree-side
+        // resolution would come back clean.
+        proj.write("docs/ https:/evil.example/x", "x\n");
+        proj.write("docs/\\/evil.example", "x\n");
+        proj.write(
+            "docs/a.md",
+            "[t](< https://evil.example/x>)\n[s](\\\\/evil.example)\n",
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let f = verify(&cfg).unwrap();
+        assert_eq!(codes_of(&f, "MDATRON-E0117"), 2, "{f:?}");
     }
 
     #[test]

@@ -10,7 +10,7 @@ managed:
 - path: code-catalogs.yaml.example
   sha256: b4083b0aa957019cf7397747032deb38292aab8384e68923ecf6d043bab5be6f
 - path: links.yaml.example
-  sha256: 7340aed83179a95648a0bcdd2f9812274f8189405297c607414a1f1e4770d076
+  sha256: 2df230352303cca5aab20d9d374ea59b5c0b98f696ab765be413719d63c8738a
 demoted:
 - path: config.yaml
   reason: file_globs are project-specific adopter configuration; config.yaml is seeded by init and adopter-owned once deployed — drift-guarding it made consumer scoping impossible (#77, consumer raise 3)
