@@ -8,35 +8,43 @@
 
 A link in a link-checked file has an absolute destination (a scheme, or a
 protocol-relative `//host`) that is not a well-formed URL. The reason is in
-the message. What is checked is the structural shape of RFC 3986 and nothing
-stylistic: the destination holds whitespace, a control character or an
-invisible character such as a zero-width space (a `[text](<https://a b>)`
-bracketed destination, the one link form that admits a space) — the
-invisible characters inside a real emoji or ideograph are accepted (a
-zero-width joiner between two pictographs, one presentation selector after
-a pictograph or inside a keycap (followed by U+20E3), one ideographic variation selector after a CJK
-ideograph, and the tags of the three recommended subdivision flags,
-England, Scotland and Wales),
-and anything else is not: a run of tag characters or variation selectors
-carrying hidden text, and any invisible character in a host (the invisible
-characters are Unicode's whole Default_Ignorable set, reserved code points
-included; one residual is stated rather than closed: an ideographic
-selector is accepted whatever its value, so a CJK path can carry about one
-hidden byte per ideograph); a destination
-a browser trims into a URL, `< https://…>` or `\/host`, is judged as one,
-never resolved as a path (its message says so) — or more than one `#`; an `http`, `https`, `ws`, `wss`, `ftp` or `//host`
-destination lacks the `//` or has no host, a host with an empty label
-(`https://.acme.dev`, `https://a..b`), a host or userinfo holding a
-character neither may (`|`, `<`, `` ` ``; `_`, `~` and percent-encoded
-labels are legal and accepted, unless a `%` starts no encoding or encodes
-a character no host may hold, `%23` or `%2F`), an empty, non-numeric or out-of-range port (RFC 3986 admits an empty
-one; it is refused as the typo it almost always is), an unclosed or
-malformed IPv6 literal, or a `.` or `..` path segment on any `scheme://` form, which a client
-resolves away so the page a reader lands on is not the text a register or
-policy would judge; or a `\` in a web URL's authority or path, or anywhere
-in a `file:` URL — a browser reads it as `/`, so
-`https://evil.example\@acme.dev/` is the host `evil.example`; any other
-scheme has nothing after its `:` (`mailto:`). Internationalised host names
+the message. What is checked is the structural shape of RFC 3986, and
+nothing stylistic. The destination is refused when:
+
+- it holds whitespace or a control character (a `[text](<https://a b>)`
+  bracketed destination is the one link form that admits a space);
+- it holds an invisible character — any of Unicode's Default_Ignorable code
+  points, reserved ones included, such as a zero-width space, a
+  direction mark, a tag or a variation selector — except inside a real
+  emoji or ideograph: a zero-width joiner between two pictographs, one
+  presentation selector after a pictograph or inside a keycap (followed by
+  U+20E3), one ideographic variation selector after a CJK ideograph, and
+  the tags of the three recommended subdivision flags (England, Scotland,
+  Wales). No exemption applies in a host. One residual is stated rather
+  than closed: an ideographic selector is accepted whatever its value, so
+  a CJK path can carry about one hidden byte per ideograph;
+- it holds more than one `#`;
+- it is an `http`, `https`, `ws`, `wss`, `ftp` or `//host` destination
+  that lacks the `//` or a host; has a host with an empty label
+  (`https://.acme.dev`, `https://a..b`); has a host or userinfo holding a
+  character neither may (`|`, `<`, `` ` ``; `_`, `~` and percent-encoded
+  labels are legal, unless a `%` starts no encoding or encodes a character
+  no host may hold, `%23` or `%2F`); has an empty, non-numeric or
+  out-of-range port (RFC 3986 admits an empty one; it is refused as the
+  typo it almost always is); or has an unclosed or malformed IPv6 literal;
+- it has a `.` or `..` path segment on any `scheme://` form, which a client
+  resolves away, so the page a reader lands on is not the text a register
+  or policy would judge;
+- it has a `\` in a web URL's authority or path, or anywhere in a `file:`
+  URL: a browser reads it as `/`, so `https://evil.example\@acme.dev/` is
+  the host `evil.example`;
+- it is of any other scheme and has nothing after its `:` (`mailto:`).
+
+A destination a browser trims into a URL — `< https://…>`, or one opening
+with `\` such as a decoded `\/host` — is judged as a URL and never
+resolved as a path; its message says so.
+
+Internationalised host names
 are accepted as written. No liveness tool could fetch such a destination,
 so it is not exported by `mdatron links`.
 

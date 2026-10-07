@@ -467,8 +467,8 @@ fn is_format_char(c: char) -> bool {
     matches!(
         c,
         // Unicode's complete Default_Ignorable_Code_Point set (assigned and
-        // reserved — a renderer draws an unassigned one as nothing too), the
-        // invisible Cf format controls outside it, and the braille blank.
+        // reserved — a renderer draws an unassigned one as nothing too), plus
+        // some Cf format controls outside it and the braille blank.
         '\u{00AD}'
             | '\u{034F}'
             | '\u{061C}'
@@ -929,11 +929,19 @@ pub(crate) fn check(
                 } else if dest.trim_start().starts_with('\\')
                     || dest.trim_start().starts_with("/\\")
                 {
-                    "this link's destination opens with `\\`, which a browser reads as `/`, so \
-                     it is the protocol-relative `//host` URL to every reader; write `//host` \
-                     or `https://host` if it is meant as one, or a relative path without the \
-                     leading `\\`"
-                        .to_string()
+                    {
+                        let lead = if dest.trim_start().starts_with('\\') {
+                            "`\\`"
+                        } else {
+                            "`/\\`"
+                        };
+                        format!(
+                            "this link's destination opens with {lead}, and a browser reads \
+                             `\\` as `/`, so it is the protocol-relative `//host` URL to every \
+                             reader; write `//host` or `https://host` if it is meant as one, or \
+                             a path with a single `/` if it is not"
+                        )
+                    }
                 } else {
                     format!(
                         "this link's destination is read by a browser as an absolute URL \
