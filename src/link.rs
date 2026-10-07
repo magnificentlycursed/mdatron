@@ -47,8 +47,14 @@
 //! Heading anchors cover ATX **and setext** headings, GitHub duplicate-heading
 //! `-N` disambiguation, and explicit HTML anchors (`markup::heading_slugs`).
 //!
-//! External links (any URL scheme, or protocol-relative `//host`) are out of
-//! scope by design — the engine does not reach the network.
+//! External links (any URL scheme, or protocol-relative `//host`) are never
+//! fetched — the engine does not reach the network — but they are not
+//! ignored: the OFFLINE checks in [`crate::links`] (#215) run on each one — a
+//! malformed URL is `MDATRON-E0117`; with a `.mdatron/links.yaml` register, an
+//! undeclared URL is `MDATRON-E0115` and an undeclared `#fragment` on a
+//! declared page `MDATRON-E0116`; with a route `link_policy`, a scheme, host
+//! or query parameter the policy forbids is `MDATRON-E0118` — and every one is
+//! recorded for `mdatron links --external`, the export a liveness tool reads.
 
 use std::collections::{HashMap, HashSet};
 use std::path::{Component, Path, PathBuf};
@@ -75,7 +81,7 @@ pub(crate) fn link_targets(
     let body = &content[body_offset..];
     let mut out = Vec::new();
     for link in body_links(body) {
-        if is_external(&link.dest) {
+        if reads_as_external(&link.dest) {
             continue;
         }
         let (path_part, _anchor) = split_fragment(&link.dest);
@@ -319,10 +325,11 @@ pub fn check_file(
     path: &Path,
     content: &str,
     body_offset: usize,
-    root_relative: bool,
+    links: &crate::links::Context<'_>,
     memo: &mut RefMemo,
     findings: &mut Vec<Finding>,
 ) {
+    let root_relative = links.root_relative;
     // The containing file's directory, root-relative — the base every
     // document-relative target resolves against. `path` is the engine-supplied
     // absolute path; strip the root to get the governed-tree-relative form
@@ -346,8 +353,25 @@ pub fn check_file(
     // destination with its byte offset. Destinations inside a code span or a
     // fenced/indented code block are not link events, so a syntax example is
     // never resolved — the masking is structural (#155), not a line heuristic.
+    // Links come in offset order, so one forward cursor gives each external
+    // link its line in a single pass (not a rescan from byte 0 per link).
+    let mut lines = crate::section::LineCursor::new(content);
     for link in body_links(body) {
         let at = body_offset + link.offset;
+        // An absolute URL is not resolved against the tree; it gets the
+        // offline checks (#215) and is recorded for the export.
+        if reads_as_external(&link.dest) {
+            crate::links::check(
+                links,
+                &mut memo.external,
+                rel,
+                path,
+                lines.line_of(at),
+                &link.dest,
+                findings,
+            );
+            continue;
+        }
         resolve_link(
             snapshot,
             path,
@@ -380,7 +404,8 @@ fn resolve_link(
 ) {
     let noun = kind.noun();
     // External links (any URL scheme, or protocol-relative `//host`) are not
-    // the engine's to resolve — it never reaches the network.
+    // resolved against the tree — the engine never reaches the network; the
+    // caller routed them to the offline checks (`links::check`) before this.
     if is_external(dest) {
         return;
     }
@@ -727,7 +752,7 @@ fn resolve_target(
 /// to a corrupted path, so decoding can only *remove* a false positive, never
 /// introduce a false resolution. Applied AFTER fragment splitting (RFC 3986:
 /// the fragment delimiter is a literal `#`; an encoded `%23` is path content).
-fn percent_decode(s: &str) -> std::borrow::Cow<'_, str> {
+pub(crate) fn percent_decode(s: &str) -> std::borrow::Cow<'_, str> {
     if !s.contains('%') {
         return std::borrow::Cow::Borrowed(s);
     }
@@ -768,11 +793,31 @@ fn percent_decode(s: &str) -> std::borrow::Cow<'_, str> {
 /// Split a destination into its path and optional `#fragment`. The first `#`
 /// delimits the fragment (URL fragments always do); everything before is the
 /// path, everything after is the fragment (possibly empty).
-fn split_fragment(dest: &str) -> (&str, Option<&str>) {
+pub(crate) fn split_fragment(dest: &str) -> (&str, Option<&str>) {
     match dest.find('#') {
         Some(i) => (&dest[..i], Some(&dest[i + 1..])),
         None => (dest, None),
     }
+}
+
+/// Whether a browser reads `dest` as an absolute URL: as written, or after
+/// the WHATWG URL parser's own clean-up — leading and trailing C0 controls
+/// and spaces stripped, tab and line breaks dropped, `\` read as `/`. A
+/// destination such as `< https://evil.example/>` or a decoded `\/evil.example` is
+/// external to every reader even though its text starts like a path, so it
+/// goes to the offline checks (where its spelling is `E0117`), never to the
+/// tree.
+pub(crate) fn reads_as_external(dest: &str) -> bool {
+    if is_external(dest) {
+        return true;
+    }
+    let trimmed = dest.trim_matches(|c: char| c <= ' ');
+    let cleaned: String = trimmed
+        .chars()
+        .filter(|c| !matches!(c, '\t' | '\n' | '\r'))
+        .map(|c| if c == '\\' { '/' } else { c })
+        .collect();
+    cleaned != dest && is_external(&cleaned)
 }
 
 /// True when `dest` carries a URL scheme (`http:`, `mailto:`, …) or is
@@ -782,7 +827,7 @@ fn split_fragment(dest: &str) -> (&str, Option<&str>) {
 /// Windows drive path in practice, and classifying it external silently
 /// exempted it from resolution; it now resolves as a path (missing → `E0110`
 /// on unix; the absolute-prefix refusal `E0010` on windows).
-fn is_external(dest: &str) -> bool {
+pub(crate) fn is_external(dest: &str) -> bool {
     if dest.starts_with("//") {
         return true;
     }
@@ -854,6 +899,32 @@ fn link_finding(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn reads_as_external_follows_the_browser_cleanup() {
+        for d in [
+            "\\/h",
+            "/\\h",
+            "\\\\h",
+            " https://h",
+            "\u{C}https://h",
+            "ht\ttps://h",
+            "https://h ",
+        ] {
+            assert!(reads_as_external(d), "{d:?}");
+        }
+        for d in [
+            "C:\\x",
+            "docs\\a.md",
+            " docs/a.md",
+            "\u{A0}https://h",
+            "\u{3000}https://h",
+            "\u{200B}https://h",
+            "a.md#x",
+        ] {
+            assert!(!reads_as_external(d), "{d:?}");
+        }
+    }
 
     #[test]
     fn is_external_classifies_schemes() {

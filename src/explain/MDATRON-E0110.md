@@ -36,8 +36,11 @@ unchanged under `link_root`: a `..` climbing above the root is still refused
 snapshot is authoritative: uncommitted files count as present, and no git
 history is consulted. Link checking is per-route opt-in (`links: true` in
 `.mdatron/routes.yaml`), so a route declares it on its own scope. External links
-(any URL scheme, or a protocol-relative `//host`) are never resolved — the
-engine does not reach the network.
+(any URL scheme, or a protocol-relative `//host`) are never resolved against
+the tree and never fetched — the engine does not reach the network — but
+they get the offline checks: a malformed URL is `MDATRON-E0117`, and with a
+`.mdatron/links.yaml` register or a route `link_policy`, `MDATRON-E0115`,
+`MDATRON-E0116` and `MDATRON-E0118`.
 
 ## How to fix
 

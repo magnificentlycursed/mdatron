@@ -453,6 +453,16 @@ fn llms_case(case: &str) -> Scratch {
         "second-h1" => s.edit(l, |t| {
             format!("{t}\n# Appendix\n\n- notes kept out of every rule\n")
         }),
+        "undeclared-url" => s.edit(l, |t| {
+            t.replace(
+                "https://api.acme.dev/reference",
+                "https://api.acme.dev/v2/reference",
+            )
+        }),
+        "undeclared-anchor" => s.edit(l, |t| t.replace("#endpoints", "#endpoint")),
+        "http-link" => s.edit(l, |t| {
+            t.replace("https://api.acme.dev", "http://api.acme.dev")
+        }),
         other => panic!("unknown case {other}"),
     }
     s
@@ -466,6 +476,9 @@ const LLMS_CASES: &[&str] = &[
     "item-not-a-link",
     "summary-after-lists",
     "second-h1",
+    "undeclared-url",
+    "undeclared-anchor",
+    "http-link",
 ];
 
 #[test]
@@ -504,6 +517,11 @@ fn llms_recipe_accepts_what_the_specification_allows() {
              - [Array[T] reference](docs/changelog.md):notes\n\n* * *\n",
         );
         format!("\u{feff}{t}")
+    });
+    // The recipe's register is the recipe's policy, not the specification's:
+    // the absolute URL above is declared so the shape alone is under test.
+    s.edit(".mdatron/links.yaml", |t| {
+        format!("{t}- url: https://en.wikipedia.org/wiki/Acme_(x)\n")
     });
     let (code, _, stderr) = verify(&s.0, false);
     assert_eq!(code, Some(0), "{stderr}");
@@ -584,7 +602,11 @@ fn agents_recipe_reports_a_claude_md_outside_the_allowed_places() {
 fn llms_page_lists_the_example_configuration_verbatim() {
     let page = page("llms-txt.md");
     let root = repo().join("examples/standards/llms-txt");
-    for rel in [".mdatron/config.yaml", ".mdatron/routes.yaml"] {
+    for rel in [
+        ".mdatron/config.yaml",
+        ".mdatron/routes.yaml",
+        ".mdatron/links.yaml",
+    ] {
         let file = norm(&fs::read_to_string(root.join(rel)).unwrap());
         assert_eq!(
             block_after(&page, &format!("cookbook-file: {rel}")),

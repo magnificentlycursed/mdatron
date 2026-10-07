@@ -53,6 +53,7 @@ pub const TEMPLATE_FILES: &[(&str, &str)] = &[
     ("pins.yaml.example", PINS_TEMPLATE),
     ("vocabulary.yaml.example", VOCABULARY_TEMPLATE),
     ("code-catalogs.yaml.example", CODE_CATALOGS_TEMPLATE),
+    ("links.yaml.example", LINKS_TEMPLATE),
 ];
 
 /// The line that separates a template's header from its (commented) example
@@ -78,14 +79,14 @@ const ROUTES_TEMPLATE: &str = r####"# routes.yaml.example — the route family. 
 #                         optional: naming, citations, links, link_root,
 #                                   marker_rules, section_rules, schema,
 #                                   name_equals_dir, max_bytes, imports,
-#                                   requires_sibling
+#                                   requires_sibling, link_policy
 #             file-level  — optional: mdatron_format_version (absent = 1)
 # CODES       E0030 E0031 E0032 W0041 W0053 W0054; per opt-in E0100 E0101
-#             W0048 E0081 (citations), E0110 E0111 W0048 E0081 (links),
-#             E0112 E0114 W0048 E0081 (markers), E0120 E0121 E0122 E0123
-#             E0124 (section rules), E0033 E0034 (schema), E0035
-#             (name_equals_dir), E0036 (max_bytes), E0037
-#             (requires_sibling);
+#             W0048 E0081 (citations), E0110 E0111 E0115 E0116 E0117 W0048
+#             E0081 (links), E0118 (link_policy), E0112 E0114 W0048 E0081
+#             (markers), E0120 E0121 E0122 E0123 E0124 (section rules),
+#             E0033 E0034 (schema), E0035 (name_equals_dir), E0036
+#             (max_bytes), E0037 (requires_sibling);
 #             E0010 E0011 E0012 on paths.
 # The body below is the minimal activating shape: one route claiming every
 # walked file, answering to a document that must exist (point governed_by at
@@ -107,6 +108,10 @@ const ROUTES_TEMPLATE: &str = r####"# routes.yaml.example — the route family. 
 #   links: true
 #   link_root: false
 #   imports: true          # resolve @path imports like relative links
+#   link_policy:           # what an absolute URL may be (needs links)
+#     schemes: [https]
+#     hosts: [docs.example.com, "*.example.com"]
+#     forbid_query: ["^utm_"]
 #   marker_rules:
 #   - pattern: "^Provenance: (.+)$"
 #     element: list-item-bold-name
@@ -233,6 +238,37 @@ const CODE_CATALOGS_TEMPLATE: &str = r####"# code-catalogs.yaml.example — the 
 # - namespace: "ADOPTER-"
 #   comprehensive: true
 #   codes: ["E0001", "W0100"]
+"####;
+
+const LINKS_TEMPLATE: &str = r####"# links.yaml.example — the external-link register. Copy to links.yaml to
+# activate.
+#
+# ACTIVATION  the file exists; it applies to the files a route opts in with
+#             links: true (W0056 if none is walked, on a whole-tree run
+#             from config.yaml).
+# SCOPE       every markdown link (inline, reference, image, autolink) to an
+#             absolute URL (a scheme, or //host) in a link-checked file must
+#             match an entry — exactly, or by prefix when the entry sets
+#             prefix: true (a scheme:// or //host prefix runs past its host)
+#             — else E0115; its #fragment must be one the entry lists under
+#             fragments when the entry has a fragments key (an empty list
+#             accepts none; E0116). An entry no link uses is W0057 (whole-tree
+#             runs from config.yaml only). A bare
+#             URL in prose or a raw HTML <a href> is not a link. mdatron
+#             never fetches a URL: the
+#             register is the list a liveness tool checks on a schedule, and
+#             `mdatron links --external` exports what the corpus links to.
+# KEYS        per entry — required: url
+#                         optional: prefix (default false), fragments[]
+#             file-level  — required: mdatron_format_version
+# CODES       E0115 E0116 W0056 W0057.
+# (example: uncomment the lines below)
+# mdatron_format_version: 1
+# links:
+# - url: https://docs.example.com/
+#   prefix: true
+# - url: https://example.com/reference
+#   fragments: [installation, usage]
 "####;
 
 /// Engine-known content for manifest-listed managed paths, used to repair a

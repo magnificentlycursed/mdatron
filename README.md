@@ -68,11 +68,11 @@ Scaffold with `mdatron init`, which deploys the `.mdatron/` skeleton — the
 `schemas/` and `patterns/` directories, a seeded `config.yaml` (adopter-owned
 from then on), the init manifest (the record of the engine-managed partition),
 and one inert `*.example` template per family file (`routes`, `pins`,
-`vocabulary`, `code-catalogs`) whose header states its activation rule, keys,
+`vocabulary`, `code-catalogs`, `links`) whose header states its activation rule, keys,
 scope, and codes — copy one to its real name to activate that family, or read
-`mdatron docs inputs` (a tree initialized before 0.7.0 gains the templates on
-its next `mdatron init`, which also refreshes any template you have not edited
-to the running version's content):
+`mdatron docs inputs` (a tree initialized before a template existed gains it
+on its next `mdatron init`, which also refreshes any template you have not
+edited to the running version's content):
 
 ```
 mkdir my-typed-docs && cd my-typed-docs
@@ -304,6 +304,7 @@ routes:
   citations: true                                        # optional: citation family, see below
   links: true                                            # optional: link family, see below
   link_root: true                                        # optional: resolve /root-relative links (needs links)
+  # link_policy: {schemes: [https], hosts: [...], forbid_query: ["^utm_"]}  # optional: absolute-URL policy (needs links)
   # marker_rules: [...]                                  # optional: marker family, see below
   # section_rules: [...]                                 # optional: section family, see below
 ```
@@ -421,10 +422,11 @@ corpora simply don't opt in.
 
 **Links** — route-attached: the opt-in exists only on a route in `routes.yaml`, so
 writing that route puts every walked file under the closed world (see
-**Routes**). Data-less; opt a route in with `links: true` and its files' inline
+**Routes**). Data-less by default (the register below is optional); opt a route in with `links: true` and its files' inline
 markdown links are resolved against the working-tree snapshot via a CommonMark parse
 (`pulldown-cmark`), so **inline** `[text](target)`, **reference-style**
-`[text][ref]`, and **image** `![alt](src)` links are all checked, while a link
+`[text][ref]`, **image** `![alt](src)` and **autolink** `<https://…>` / `<x@y.z>`
+destinations are all checked, while a link
 inside an inline `` `code` `` span or a fenced block is a syntax example and
 skipped. A link to a relative path that isn't there blocks (`E0110`); an existing
 markdown target — or the same document — whose `#fragment` matches no heading
@@ -436,8 +438,32 @@ anchors). Targets resolve **document-relative** (as GitHub renders them):
 governed tree is refused (`E0010`/`E0011`/`E0012`). Destinations are
 percent-decoded first (`my%20doc.md` → `my doc.md`), and `link_root: true`
 opts a route into resolving a leading-slash `/docs/x.md` from the project root
-(still confined) for static-site corpora that author links that way. External
-links (any URL scheme) are left alone.
+(still confined) for static-site corpora that author links that way. An
+**absolute URL** (any scheme, or `//host`) is never fetched — mdatron does not
+reach the network, by design — but it is checked offline: a destination that
+is not a well-formed URL blocks (`E0117`, before any liveness check could
+run); with a `.mdatron/links.yaml` **register** of the URLs the corpus may
+point at, an undeclared URL blocks (`E0115`) and an undeclared `#fragment` on a
+declared page blocks (`E0116`, the entry's `fragments` being the anchors you
+confirmed on the live page); and a route's `link_policy` (`schemes`, `hosts`,
+`forbid_query`) blocks a link outside it (`E0118`). On a whole-tree run from `config.yaml`'s jurisdiction, a
+register no link-checked file consults warns (`W0056`), as does an entry no
+link uses (`W0057`). `mdatron links --external` exports every markdown link
+to an absolute URL — fragment included; `--json` adds file and line — for
+the liveness tool that does fetch (lychee or its class), and the register is
+the list such a tool checks on a schedule. A bare URL in prose or a raw HTML
+`<a href>` is not a markdown link: it is neither checked nor exported.
+
+<!-- mdatron-roundtrip:links-start -->
+```yaml
+mdatron_format_version: 1             # required on this file (born in 0.8.0)
+links:
+- url: https://docs.example.com/        # every URL under this prefix…
+  prefix: true
+- url: https://example.com/reference    # …this page only…
+  fragments: [installation, usage]      # …and only these anchors on it
+```
+<!-- mdatron-roundtrip:links-end -->
 
 **Markers** — route-attached: `marker_rules` exist only on a route in
 `routes.yaml`, so writing that route puts every walked file under the closed
@@ -499,8 +525,8 @@ loud (`W0055`) and the family reports `inert`.
 Every adopter input file carries `mdatron_format_version` — the **input**
 contract's own version axis (independent of the DSL's `mdatron_dsl_version`
 and the JSON `mdatron_output_version`), so a future format change breaks
-legibly instead of mis-parsing silently. It is **required** on files born in
-0.6.0 (this one) and **optional** on `routes.yaml`/`vocabulary.yaml`/
+legibly instead of mis-parsing silently. It is **required** on files born versioned
+(this one, 0.6.0; `links.yaml`, 0.8.0) and **optional** on `routes.yaml`/`vocabulary.yaml`/
 `pins.yaml` (absent = the v1 legacy baseline; a 0.5.0-authored file still
 parses); `pin --update` stamps it going forward.
 

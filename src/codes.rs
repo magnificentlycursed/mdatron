@@ -36,7 +36,9 @@
 /// - `MDATRON-E0100` — `E0109` Citation family (citation conformance)
 /// - `MDATRON-E0110` — `E0119` Reference families: body links/anchors (link, #145);
 ///   marker-line references (marker, `E0112`, #147); adopter code-catalog
-///   integrity (code_catalog, `E0113`, #148)
+///   integrity (code_catalog, `E0113`, #148); the offline external-link
+///   checks (link, #215: `E0115` undeclared URL, `E0116` undeclared fragment,
+///   `E0117` malformed URL, `E0118` policy violation)
 /// - `MDATRON-E0120` — `E0129` Section-structural family (count/disjointness over
 ///   body sections: `E0120` section-count-violation, `E0121` section-ids-not-disjoint, #157;
 ///   `E0123` section-element-mismatch, #213; `E0124` section-order-violation, #214)

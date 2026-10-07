@@ -1,11 +1,12 @@
 //! Input-format versioning (DEF5, #131 SO ruling; executed by the
 //! scoping-consistency pass, #34). Each adopter input file — `routes.yaml`,
-//! `vocabulary.yaml`, `pins.yaml`, `code-catalogs.yaml` — may declare
+//! `vocabulary.yaml`, `pins.yaml`, `code-catalogs.yaml`, `links.yaml` — may declare
 //! `mdatron_format_version`: a per-file version on the **input** contract, its
 //! own version axis, independent of the DSL's `mdatron_dsl_version` and the JSON
-//! output's `mdatron_output_version` (three axes, one release). The input and
-//! DSL axes are bare integers — every increment is a break, so they are
-//! major-only; the envelope's is the one SemVer triple (#185, GH #52 minor).
+//! output's `mdatron_output_version` (three axes, one release — four from 0.8.0,
+//! with the `mdatron links --json` export's `mdatron_links_version`, #215). The
+//! input and DSL axes are bare integers — every increment is a break, so they
+//! are major-only; the two output axes are SemVer triples (#185, GH #52 minor).
 //!
 //! The version turns an unknown-future-format file into a **legible break**
 //! ("declares format v2, engine supports v1") instead of an opaque parse error.
@@ -15,7 +16,7 @@
 //! (the Platform Engineer review's F4). The version field is also declared on
 //! each strict struct so `deny_unknown_fields` accepts it.
 //!
-//! Files **new in 0.6.0** (`code-catalogs.yaml`) are born versioned — the field
+//! Files born versioned — `code-catalogs.yaml` (0.6.0), `links.yaml` (0.8.0) — the field
 //! is required. Existing hand-authored files (`routes.yaml`, `vocabulary.yaml`,
 //! `pins.yaml`) take it **optional, absent = v1** (the legacy baseline), so a
 //! 0.5.0-authored file still parses. The lenient `config.yaml` (#80 D1) does not
@@ -40,7 +41,7 @@ struct FormatProbe {
 /// Probe `content` for its declared `mdatron_format_version` and check it against
 /// the engine's supported range — a **legible break** run ahead of the strict
 /// parse. `file` names the file for the message; `required` is true for files
-/// born versioned in this release (`code-catalogs.yaml`).
+/// born versioned (`code-catalogs.yaml`, `links.yaml`).
 pub(crate) fn check_input_format_version(
     content: &str,
     file: &str,

@@ -1,0 +1,78 @@
+# MDATRON-E0117 — malformed-url
+
+**Severity:** error
+**Status:** accepted
+**Introduced in:** 0.8.0
+
+## What this means
+
+A link in a link-checked file has an absolute destination (a scheme, or a
+protocol-relative `//host`) that is not a well-formed URL. The reason is in
+the message. What is checked is the structural shape of RFC 3986, and
+nothing stylistic. The destination is refused when:
+
+- it holds whitespace or a control character (a `[text](<https://a b>)`
+  bracketed destination is the one link form that admits a space);
+- it holds an invisible character — any of Unicode's Default_Ignorable code
+  points, reserved ones included, such as a zero-width space, a
+  direction mark, a tag or a variation selector — except inside a real
+  emoji or ideograph: a zero-width joiner between two pictographs, one
+  presentation selector after a pictograph or inside a keycap (followed by
+  U+20E3), one ideographic variation selector after a CJK ideograph, and
+  the tags of the three recommended subdivision flags (England, Scotland,
+  Wales). No exemption applies in a host. One residual is stated rather
+  than closed: an ideographic selector is accepted whatever its value, so
+  a CJK path can carry about one hidden byte per ideograph;
+- it holds more than one `#`;
+- it is an `http`, `https`, `ws`, `wss`, `ftp` or `//host` destination
+  that lacks the `//` or a host; has a host with an empty label
+  (`https://.acme.dev`, `https://a..b`); has a host or userinfo holding a
+  character neither may (`|`, `<`, `` ` ``; `_`, `~` and percent-encoded
+  labels are legal, unless a `%` starts no encoding or encodes a character
+  no host may hold, `%23` or `%2F`); has an empty, non-numeric or
+  out-of-range port (RFC 3986 admits an empty one; it is refused as the
+  typo it almost always is); or has an unclosed or malformed IPv6 literal;
+- it has a `.` or `..` path segment on any `scheme://` form, which a client
+  resolves away, so the page a reader lands on is not the text a register
+  or policy would judge;
+- it has a `\` in a web URL's authority or path, or anywhere in a `file:`
+  URL: a browser reads it as `/`, so `https://evil.example\@acme.dev/` is
+  the host `evil.example`;
+- it is of any other scheme and has nothing after its `:` (`mailto:`).
+
+A destination a browser trims into a URL — `< https://…>`, or one opening
+with `\` such as a decoded `\/host` — is judged as a URL and never
+resolved as a path; its message says so.
+
+Internationalised host names
+are accepted as written. No liveness tool could fetch such a destination,
+so it is not exported by `mdatron links`.
+
+This check needs no data: every route with `links: true` runs it. It is the
+first of the offline checks on absolute URLs; the register
+(`.mdatron/links.yaml`, `MDATRON-E0115`/`MDATRON-E0116`) and a route's
+`link_policy` (`MDATRON-E0118`) are not consulted for a destination that is
+not a URL.
+
+## How to fix
+
+- **A space crept in.** Only two spellings reach this finding: a space
+  inside a bracketed destination (`[text](<https://a b>)`) or whitespace a
+  character reference decodes to (`&#32;`, `&#10;`). Percent-encode it
+  (`%20`) or remove it. A URL wrapped onto a second line is not a link to
+  CommonMark at all — nothing reports it, so rejoin it.
+- **A `\` in a web path.** A browser reads it as `/`, so `x\..\admin`
+  lands somewhere other than the text says; write `/` and the resolved path.
+- **Two `#`.** A URL has one fragment; drop the second `#` or encode it.
+- **No host.** `https://` must be followed by the host (`https://acme.dev/…`);
+  `https:docs` and `https:///path` are not URLs.
+- **A `.` or `..` in the path.** Write the resolved path
+  (`https://acme.dev/private/x`, not `https://acme.dev/public/../private/x`).
+- **An invisible character.** A zero-width space or a soft hyphen copied in
+  with the URL; retype the destination.
+
+## Related codes
+
+- MDATRON-E0115 — an absolute URL the register does not declare
+- MDATRON-E0118 — a URL outside the claiming route's `link_policy`
+- MDATRON-E0110 — a relative link whose in-tree target is missing

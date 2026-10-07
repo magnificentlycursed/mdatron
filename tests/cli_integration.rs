@@ -427,7 +427,7 @@ fn schema_subcommand_prints_the_published_envelope_schema() {
     );
 }
 
-// #203 F4 (GH #56 finding 4): the four inert templates `init` deploys are
+// #203 F4 (GH #56 finding 4): the five inert templates `init` deploys are
 // executable documentation — uncommenting the body of each yields a file the
 // real loader accepts (exit 0 or 1, never a load refusal) — and the keys the
 // inputs reference lists for each file are exactly the keys the template
@@ -472,6 +472,7 @@ fn init_templates_load_and_match_the_inputs_reference() {
         ("pins.yaml", "pins.yaml"),
         ("vocabulary.yaml", "vocabulary.yaml"),
         ("code-catalogs.yaml", "code-catalogs.yaml"),
+        ("links.yaml", "links.yaml"),
     ] {
         let template = fs::read_to_string(proj.path().join(format!(".mdatron/{name}.example")))
             .unwrap_or_else(|e| panic!("{name}.example deployed: {e}"));
@@ -547,9 +548,9 @@ fn init_templates_load_and_match_the_inputs_reference() {
             "{name}: docs/inputs.md `Keys:` must equal the keys the template exercises"
         );
     }
-    // The four templates are managed (hashed) — a hand edit is drift.
+    // The five templates are managed (hashed) — a hand edit is drift.
     let manifest = fs::read_to_string(proj.path().join(".mdatron/manifest.yaml")).unwrap();
-    for name in ["routes", "pins", "vocabulary", "code-catalogs"] {
+    for name in ["routes", "pins", "vocabulary", "code-catalogs", "links"] {
         assert!(
             manifest.contains(&format!("{name}.yaml.example")),
             "{manifest}"
@@ -692,13 +693,14 @@ fn inputs_reference_keys_match_the_parsers() {
         accepted.retain(|k| !aliases.contains(&k.as_str()));
         accepted
     };
-    let cases: [(&str, &str, Vec<&str>); 6] = [
+    let cases: [(&str, &str, Vec<&str>); 7] = [
         (
             "routes.yaml",
             ".mdatron/routes.yaml",
             vec![
                 "bogus_zz: 1\n",
                 "routes:\n- bogus_zz: 1\n",
+                "routes:\n- files: \"**/*.md\"\n  governed_by: doc.md\n  links: true\n  link_policy:\n    bogus_zz: 1\n",
                 "routes:\n- files: \"**/*.md\"\n  governed_by: doc.md\n  marker_rules:\n  - bogus_zz: 1\n",
                 "routes:\n- files: \"**/*.md\"\n  governed_by: doc.md\n  section_rules:\n  - bogus_zz: 1\n",
                 "routes:\n- files: \"**/*.md\"\n  governed_by: doc.md\n  section_rules:\n  - disjoint:\n    - bogus_zz: 1\n",
@@ -730,6 +732,14 @@ fn inputs_reference_keys_match_the_parsers() {
             vec![
                 "mdatron_format_version: 1\nbogus_zz: 1\n",
                 "mdatron_format_version: 1\ncatalogs:\n- bogus_zz: 1\n",
+            ],
+        ),
+        (
+            "links.yaml",
+            ".mdatron/links.yaml",
+            vec![
+                "mdatron_format_version: 1\nbogus_zz: 1\n",
+                "mdatron_format_version: 1\nlinks:\n- bogus_zz: 1\n",
             ],
         ),
         (
@@ -769,13 +779,14 @@ fn inputs_reference_keys_match_the_parsers() {
 // tracker reference, no review-round vocabulary, on any subcommand.
 #[test]
 fn help_text_carries_no_tracker_or_review_jargon() {
-    let subs: [&[&str]; 7] = [
+    let subs: [&[&str]; 8] = [
         &["--help"],
         &["verify", "--help"],
         &["explain", "--help"],
         &["pin", "--help"],
         &["init", "--help"],
         &["envelope-schema", "--help"],
+        &["links", "--help"],
         &["docs", "--help"],
     ];
     for args in subs {
@@ -1755,6 +1766,7 @@ fn readme_family_examples_load_through_the_real_parsers() {
         ),
         ("vocabulary", ".mdatron/vocabulary.yaml", vec![]),
         ("code-catalogs", ".mdatron/code-catalogs.yaml", vec![]),
+        ("links", ".mdatron/links.yaml", vec![]),
         (
             "pins",
             ".mdatron/pins.yaml",
@@ -1789,6 +1801,73 @@ fn readme_family_examples_load_through_the_real_parsers() {
             String::from_utf8_lossy(&out.stderr)
         );
     }
+}
+
+// #215: `mdatron links --external` is a second machine output with its own
+// version axis; its two forms are pinned here (the cold review's tripwire).
+#[test]
+fn links_export_lists_absolute_destinations_in_both_forms() {
+    let proj = TempProject::new("links-export");
+    proj.seed_blog_schema();
+    proj.write(
+        ".mdatron/routes.yaml",
+        "routes:\n- files: \"**/*.md\"\n  governed_by: README.md\n  links: true\n",
+    );
+    proj.write(
+        "README.md",
+        "# r\n[b](https://b.example/) [a](https://a.example/#x) [b again](https://b.example/)\n\
+         bare https://bare.example/ and <a href=\"https://html.example/\">x</a>\n\
+         [bad](<https://a b>)\n",
+    );
+    let root = proj.path().to_str().unwrap();
+    let out = run(&["links", "--external", "--project-root", root]);
+    assert_eq!(
+        out.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&out.stdout),
+        "https://a.example/#x\nhttps://b.example/\n",
+        "distinct, sorted; a bare URL, raw HTML and a non-URL are not exported"
+    );
+    assert!(
+        out.stderr.is_empty(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let out = run(&["links", "--external", "--json", "--project-root", root]);
+    assert_eq!(out.status.code(), Some(0));
+    let doc: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(doc["mdatron_links_version"], "1.0.0");
+    let links = doc["links"].as_array().unwrap();
+    assert_eq!(links.len(), 3, "{doc}");
+    for l in links {
+        let keys: Vec<&str> = l.as_object().unwrap().keys().map(String::as_str).collect();
+        assert_eq!(keys, vec!["file", "line", "url"], "{l}");
+        assert_eq!(l["file"], "README.md");
+        assert_eq!(l["line"], 2);
+    }
+    assert_eq!(links[0]["url"], "https://a.example/#x");
+    // No link-checked file: an empty export says so on stderr (not under -q).
+    proj.write(
+        ".mdatron/routes.yaml",
+        "routes:\n- files: \"**/*.md\"\n  governed_by: README.md\n",
+    );
+    let out = run(&["links", "--external", "--project-root", root]);
+    assert_eq!(out.status.code(), Some(0));
+    assert!(out.stdout.is_empty());
+    assert!(
+        String::from_utf8_lossy(&out.stderr).contains("nothing is exported"),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let out = run(&["links", "--external", "-q", "--project-root", root]);
+    assert!(out.stderr.is_empty());
+    // --external is required (the only selection today).
+    let out = run(&["links", "--project-root", root]);
+    assert_eq!(out.status.code(), Some(2));
 }
 
 // ── 4. Drive-by `--quiet` and `--quiet --json` coverage ────────────────────────

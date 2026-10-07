@@ -1,0 +1,20 @@
+mdatron_format_version: 1
+# The external-link register (#215): every absolute URL the governed docs may
+# point at, with the anchors used on it. mdatron never fetches these; a
+# liveness tool checks this list on a schedule, and `mdatron links --external`
+# prints what the docs link to, for maintaining it. Exact entries, sorted.
+links:
+- url: https://bookshop.org/book/9781098179922
+- url: https://gist.github.com/dollspace-gay/d8d3bc3ecf4188df049d7a4726bb2a00
+- url: https://github.com/astral-sh/ruff
+- url: https://github.com/cedar-policy/cedar
+- url: https://github.com/Corvidae-Coding-Projects/crosslink
+- url: https://github.com/dollspace-gay
+- url: https://github.com/lycheeverse/lychee
+- url: https://github.com/magnificentlycursed/vsdd-cli
+- url: https://github.com/oasis-tcs/sarif-spec
+- url: https://github.com/open-policy-agent/opa
+- url: https://github.com/rust-lang/rust
+- url: https://github.com/Schematron/schematron
+- url: https://www.amazon.com/dp/1098179927
+- url: https://www.honeycomb.io/observability-engineering-oreilly-book

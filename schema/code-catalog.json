@@ -36,6 +36,10 @@
   "MDATRON-E0112": "dead-marker-reference",
   "MDATRON-E0113": "orphaned-adopter-code",
   "MDATRON-E0114": "marker-target-section-not-found",
+  "MDATRON-E0115": "external-link-undeclared",
+  "MDATRON-E0116": "external-anchor-undeclared",
+  "MDATRON-E0117": "malformed-url",
+  "MDATRON-E0118": "link-policy-violation",
   "MDATRON-E0120": "section-count-violation",
   "MDATRON-E0121": "section-ids-not-disjoint",
   "MDATRON-E0122": "section-not-found",
@@ -57,5 +61,7 @@
   "MDATRON-W0052": "inert-pattern-key",
   "MDATRON-W0053": "route-table-empty",
   "MDATRON-W0054": "route-glob-matches-nothing",
-  "MDATRON-W0055": "code-catalog-scope-matches-nothing"
+  "MDATRON-W0055": "code-catalog-scope-matches-nothing",
+  "MDATRON-W0056": "link-register-inert",
+  "MDATRON-W0057": "link-register-entry-unused"
 }

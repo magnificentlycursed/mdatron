@@ -20,10 +20,10 @@ a `..` segment is refused (`E0010`, `E0011`), a symlinked component is refused
 (`E0012`). Every family file is parsed strictly — an unknown key is a load
 refusal (exit 2), never ignored — except `config.yaml`, which tolerates unknown
 keys. "Supplied" means the file exists; delete a file to deactivate its family.
-The four family files (`routes.yaml`, `pins.yaml`, `vocabulary.yaml`,
-`code-catalogs.yaml`) carry `mdatron_format_version`, the input contract's own
-version axis (absent reads as `1`; required on `code-catalogs.yaml`, optional
-on the other three). `manifest.yaml` carries its own `version`, and a pattern
+The five family files (`routes.yaml`, `pins.yaml`, `vocabulary.yaml`,
+`code-catalogs.yaml`, `links.yaml`) carry `mdatron_format_version`, the input
+contract's own version axis (absent reads as `1`; required on
+`code-catalogs.yaml` and `links.yaml`, optional on the other three). `manifest.yaml` carries its own `version`, and a pattern
 file carries `mdatron_dsl_version`; neither accepts `mdatron_format_version`.
 
 ## config.yaml
@@ -61,7 +61,7 @@ Activation: `verify` refuses without it. Codes: `W0040`, `W0043`, `W0046`,
 The route family — the closed-world allowlist over the walked files, and the
 gateway to the citation, link, marker, and section families.
 
-Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `citations`, `links`, `link_root`, `marker_rules`, `pattern`, `element`, `target_doc`, `target_section`, `section_rules`, `section`, `match`, `match_on`, `count`, `disjoint`, `id_pattern`, `schema`, `name_equals_dir`, `max_bytes`, `every`, `order`, `imports`, `requires_sibling`.
+Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `citations`, `links`, `link_root`, `marker_rules`, `pattern`, `element`, `target_doc`, `target_section`, `section_rules`, `section`, `match`, `match_on`, `count`, `disjoint`, `id_pattern`, `schema`, `name_equals_dir`, `max_bytes`, `every`, `order`, `imports`, `requires_sibling`, `link_policy`, `schemes`, `hosts`, `forbid_query`.
 
 - Per route — required: `files` (root-relative glob; `*` matches within one
   path segment and `**` crosses any number of them — the one glob dialect
@@ -88,7 +88,25 @@ Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `cit
   directory, is `E0110` with the label `import`; an absolute, `~` or URL-shaped
   import is not resolved; needs `links`), `requires_sibling` (a file name whose
   regular file must exist in the same directory as every claimed file,
-  `E0037`; a directory or a symlink there does not count).
+  `E0037`; a directory or a symlink there does not count), `link_policy`
+  (what an absolute URL in the claimed files may be, `E0118` per clause
+  broken: `schemes`, the schemes a link may use — a `//host` link has none
+  and violates any list; `hosts`, the hosts an `http`, `https`, `ws`, `wss`, `ftp` or `//host`
+  link may name, `*.example.com` covering every subdomain and not the apex,
+  a bracketed IPv6 literal listed as one, a trailing-dot name being its
+  own name; a link of another scheme (`mailto:`, `ssh://`, `git://`) is
+  judged by `schemes` alone, so a `hosts` list without `schemes` says
+  nothing about it; `forbid_query`, regexes over the query-parameter names a link
+  must not carry, `^utm_` for the tracking parameters, one `E0118` per
+  link naming its forbidden parameters (distinct, percent-decoded first,
+  the first ten listed); schemes and hosts
+  compare without regard to ASCII case; each list given must be non-empty
+  and an empty block is refused; needs `links`). Every route with
+  `links: true` also reports an absolute URL that is not well-formed
+  (`E0117`) — including a destination a browser trims into one
+  (`< https://…>`; a decoded `\/host`, written `\\/host` in the source),
+  judged as a URL and never resolved as a path — and, when `links.yaml` exists, one the register does not
+  declare (`E0115`, `E0116`); mdatron never fetches a URL.
 - An `element` is one of `heading`, `h1`…`h6`, `list-item-bold-name`,
   `list-item`, `blockquote` or `line`. Elements are lines, recognised by the
   line's own prefix. A line inside a fenced code block is never an element —
@@ -161,8 +179,9 @@ Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `cit
 Activation: the file exists — even `routes: []` (announced as `W0053`); from
 then on every walked file must be claimed by exactly one route. Scope: every
 walked file. Codes: `E0030`, `E0031`, `E0032`, `E0036`, `E0037`, `W0041`, `W0053`, `W0054`; per
-opt-in `E0100`/`E0101`/`W0048`/`E0081` (citations), `E0110`/`E0111`/`W0048`/
-`E0081` (links), `E0112`/`E0114`/`W0048`/`E0081` (markers),
+opt-in `E0100`/`E0101`/`W0048`/`E0081` (citations), `E0110`/`E0111`/`E0115`/
+`E0116`/`E0117`/`W0048`/`E0081` (links), `E0118` (link_policy),
+`E0112`/`E0114`/`W0048`/`E0081` (markers),
 `E0120`/`E0121`/`E0122`/`E0123`/`E0124` (section rules).
 
 ## pins.yaml
@@ -220,6 +239,52 @@ Keys: `mdatron_format_version`, `catalogs`, `namespace`, `comprehensive`, `codes
 
 Activation: the file exists. Scope: every walked file, or `code_catalog_globs`;
 inline code spans are scanned, fenced blocks are not. Codes: `E0113`, `W0055`.
+
+## links.yaml
+
+The external-link register — the closed set of absolute URLs the corpus may
+point at, read by the link family. mdatron never fetches a URL: the register
+is the list a liveness tool checks on a schedule, and `mdatron links
+--external` exports every markdown link to an absolute URL (`--json` adds
+file and line) for that tool. What the link family sees is what CommonMark
+calls a link — inline, reference-style, image and `<autolink>` destinations
+(an email autolink is a `mailto:` link); a bare URL in prose and a raw HTML
+`<a href>` are not links and are neither checked nor exported.
+
+Keys: `mdatron_format_version`, `links`, `url`, `prefix`, `fragments`.
+
+- Per entry — required: `url` (an absolute URL: a scheme such as `https:`, or
+  a protocol-relative `//host`; written without a `#`; a well-formed URL
+  itself, except a prefix for an opaque scheme such as `mailto:`). Optional:
+  `prefix` (default `false`; `true` covers every URL that starts with `url`;
+  a prefix for any `scheme://` or `//host` URL must run past its host —
+  `https://acme.dev/`, never `https://acme.dev`, which would also cover
+  `https://acme.dev.evil.example/`), `fragments` (the anchors the corpus may
+  use on the page — or on every page a prefix entry covers — written without
+  their `#`; absent accepts any fragment, an empty list accepts none, and a
+  bare `#` is always accepted). An exact entry wins over a prefix entry and
+  the longest prefix over a shorter one; a URL and a fragment compare as the
+  link's destination reads after CommonMark decoding (`&amp;` is `&`, `\_`
+  is `_`) — no case folding, no slash normalising, no percent-decoding. The
+  invisible characters inside a real emoji or ideograph are not
+  "invisible characters" (a zero-width joiner between pictographs, one
+  presentation or ideographic variation selector, the tags of the
+  England, Scotland and Wales flags; an ideographic selector is accepted
+  whatever its value, so a CJK path can carry about one hidden byte per
+  ideograph); a joiner, selector or tag run anywhere else, and
+  any invisible character in a host, are.
+- `mdatron_format_version` is required on this file. Refused at load: an
+  empty `url`, one that is not absolute or not well-formed, one holding
+  `#`, whitespace, a control or an invisible character, a prefix for any
+  `scheme://` or `//host` URL that stops inside
+  its host, a duplicate `url`, and an empty or repeated fragment, or one
+  holding `#`, whitespace, a control or an invisible character.
+
+Activation: the file exists. Scope: every markdown link to an absolute URL
+in every file on a route with `links: true` (the link family's scope; on a
+whole-tree run whose jurisdiction came from `config.yaml`, `W0056` when no
+such file is walked and `W0057` for each entry no link uses). Codes: `E0115`, `E0116`, `W0056`,
+`W0057`.
 
 ## manifest.yaml
 

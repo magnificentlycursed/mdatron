@@ -822,14 +822,14 @@ fn abs_offset(body_offset: usize, body: &str, span: &str, offset: usize) -> usiz
 /// the file once. Recounting from the top for every finding made a file with
 /// many findings quadratic (cold review round 1: 80,000 failing list items
 /// took 30 s). An offset behind the cursor restarts the count.
-struct LineCursor<'a> {
+pub(crate) struct LineCursor<'a> {
     bytes: &'a [u8],
     at: usize,
     line: u32,
 }
 
 impl<'a> LineCursor<'a> {
-    fn new(content: &'a str) -> Self {
+    pub(crate) fn new(content: &'a str) -> Self {
         Self {
             bytes: content.as_bytes(),
             at: 0,
@@ -837,7 +837,7 @@ impl<'a> LineCursor<'a> {
         }
     }
 
-    fn line_of(&mut self, abs: usize) -> u32 {
+    pub(crate) fn line_of(&mut self, abs: usize) -> u32 {
         let abs = abs.min(self.bytes.len());
         if abs < self.at {
             self.at = 0;

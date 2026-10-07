@@ -277,7 +277,7 @@ pub struct Output {
     pub families: Families,
     /// Governance-input lineage (#176): each input the run consumed —
     /// `config.yaml`, `routes.yaml`, `vocabulary.yaml`, `pins.yaml`,
-    /// `code-catalogs.yaml` (present only when found and read), plus one
+    /// `code-catalogs.yaml`, `links.yaml` (present only when found and read), plus one
     /// aggregate digest each for the `schemas` and `patterns` directories —
     /// mapped to a `sha256:<lowercase-hex>` digest of the same bytes the run
     /// read. Deterministic (sorted map, forward-slashed names inside the

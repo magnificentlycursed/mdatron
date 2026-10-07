@@ -13,3 +13,4 @@ Every page linked below is Markdown, written for agents to read directly.
 ## Optional
 
 - [Changelog](docs/changelog.md)
+- [API reference](https://api.acme.dev/reference#endpoints): the HTTP API, generated from the server

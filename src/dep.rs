@@ -275,6 +275,7 @@ mod tests {
             max_bytes: None,
             imports: false,
             requires_sibling: None,
+            link_policy: None,
         }
     }
 
