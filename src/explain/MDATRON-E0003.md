@@ -12,6 +12,12 @@ reading it failed after the confined open (for example, an I/O error mid-read).
 Nothing validated this file: no schema, rule, vocabulary, or body check ran on
 it, and it does not count toward `files_checked`.
 
+The same code reports a **managed** file listed in `.mdatron/manifest.yaml`
+that `verify` cannot check against its recorded hash (from 0.8.0): not a
+regular file (a FIFO or device), over the per-file input limit, or unreadable.
+A managed file reached through a symlink is `MDATRON-E0012` instead. `init`
+refuses to run over either; delete the file and re-run `init` to restore it.
+
 This is a per-file finding by design. One unreadable file must not deny
 verification of the rest of the tree (a whole-run abort here would be a
 denial-of-verification lever: any writer able to drop one hostile file into the

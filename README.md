@@ -85,7 +85,9 @@ only what they claim, so third-party markdown deployed into your tree by other
 tools is never mdatron's to refuse. A tree with no config refuses loudly
 (`no jurisdiction declared`) rather than guessing — pass explicit `--files`
 globs for an ad-hoc run without one. Re-running `init` is a no-op on an intact
-tree; a hand-modified *managed* file is refused with `MDATRON-E0060`.
+tree; a hand-modified *managed* file is refused with `MDATRON-E0060`, and
+`mdatron verify` reports the same drift, so a CI that runs only `verify` sees
+it.
 
 Drop a JSON Schema at `.mdatron/schemas/blog.json` (a schema example follows
 below), drop a markdown file with matching frontmatter inside your globs, and

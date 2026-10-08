@@ -497,14 +497,21 @@ pub fn load_manifest(project_root: &Path) -> Result<Option<LoadedManifest>, crat
         .map_err(|e| crate::Error::Config(format!("cannot parse '{}': {e}", path.display())))?;
     let dir = project_root.join(".mdatron");
     let mut drifts = Vec::new();
+    let mut unverifiable = Vec::new();
     for entry in &manifest.managed {
         match entry_state(&dir, &path, entry) {
             Ok(EntryState::Drifted(d)) => drifts.push(d),
             Ok(EntryState::Intact | EntryState::Missing) => {}
+            // One managed file that cannot be checked must not deny the rest
+            // of the run (#103 posture): a per-file finding at that file.
+            Ok(EntryState::Unverifiable(why)) => {
+                unverifiable.push(unverifiable_managed_finding(&dir, &entry.path, &why))
+            }
             Err(e) => return Err(crate::Error::Config(e.to_string())),
         }
     }
     let mut findings = drift_findings(project_root, &drifts);
+    findings.append(&mut unverifiable);
     for t in &manifest.demoted {
         // The same confinement the managed[] half of this file gets (round-2
         // m13): a demoted path escaping .mdatron/ is a manifest-integrity
@@ -619,6 +626,16 @@ pub fn init(project_root: &Path) -> Result<InitOutcome, InitError> {
             match entry_state(&dir, &manifest_path, entry)? {
                 EntryState::Drifted(d) => drifts.push(d),
                 EntryState::Missing => missing.push(i),
+                EntryState::Unverifiable(why) => {
+                    return Err(InitError::Io {
+                        path: format!(".mdatron/{}", entry.path),
+                        error: format!(
+                            "the managed file cannot be checked ({}); init does not \
+                             write through or over it",
+                            why.describe()
+                        ),
+                    });
+                }
                 EntryState::Intact => {
                     // Untouched since recorded, but this version ships
                     // different content: refresh below (never on drift) —
@@ -856,6 +873,30 @@ enum EntryState {
     Drifted(Drift),
     /// The file is absent (`init` repairs it; not drift).
     Missing,
+    /// The file could not be checked (#230 review): a symlinked component,
+    /// not a regular file (a FIFO would block the read), over the per-file
+    /// input bound, or unreadable. Read no-follow, like every governed file.
+    Unverifiable(Unverifiable),
+}
+
+/// Why a managed file could not be checked against its recorded hash.
+#[derive(Debug)]
+enum Unverifiable {
+    Symlink(std::path::PathBuf),
+    NotRegular,
+    TooLarge,
+    Io(String),
+}
+
+impl Unverifiable {
+    fn describe(&self) -> String {
+        match self {
+            Unverifiable::Symlink(c) => format!("'{}' is a symlink", c.display()),
+            Unverifiable::NotRegular => "not a regular file".into(),
+            Unverifiable::TooLarge => "over the per-file input limit".into(),
+            Unverifiable::Io(e) => e.clone(),
+        }
+    }
 }
 
 /// Decide `entry`'s state under `dir` (`.mdatron/`). The manifest is read from
@@ -877,23 +918,44 @@ fn entry_state(
                 entry.path
             ),
         })?;
-    let p = dir.join(confined.as_path());
-    match std::fs::read(&p) {
-        Ok(bytes) => {
-            let actual = sha256_hex(&bytes);
-            Ok(if actual == entry.sha256 {
-                EntryState::Intact
-            } else {
-                EntryState::Drifted(Drift {
-                    file: entry.path.clone(),
-                    expected_sha256: entry.sha256.clone(),
-                    actual_sha256: actual,
-                })
-            })
+    // No-follow, regular-file-only, bounded — the confined open every governed
+    // read uses (#230 review: a plain read followed a committed symlink out of
+    // the partition, and a FIFO hung the run).
+    let cap = crate::limits::SHIPPED.per_file_bytes;
+    let handle = match crate::confine::open_confined(dir, &confined) {
+        Ok(h) => h,
+        Err(crate::confine::OpenViolation::Io(e)) if e.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(EntryState::Missing)
         }
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(EntryState::Missing),
-        Err(e) => Err(io_err(&p, &e)),
+        Err(crate::confine::OpenViolation::Symlink { component, .. }) => {
+            return Ok(EntryState::Unverifiable(Unverifiable::Symlink(component)))
+        }
+        Err(crate::confine::OpenViolation::NotRegular) => {
+            return Ok(EntryState::Unverifiable(Unverifiable::NotRegular))
+        }
+        Err(crate::confine::OpenViolation::Io(e)) => {
+            return Ok(EntryState::Unverifiable(Unverifiable::Io(e.to_string())))
+        }
+    };
+    let mut bytes = Vec::new();
+    if let Err(e) =
+        std::io::Read::read_to_end(&mut std::io::Read::take(handle, cap as u64 + 1), &mut bytes)
+    {
+        return Ok(EntryState::Unverifiable(Unverifiable::Io(e.to_string())));
     }
+    if bytes.len() > cap {
+        return Ok(EntryState::Unverifiable(Unverifiable::TooLarge));
+    }
+    let actual = sha256_hex(&bytes);
+    Ok(if actual == entry.sha256 {
+        EntryState::Intact
+    } else {
+        EntryState::Drifted(Drift {
+            file: entry.path.clone(),
+            expected_sha256: entry.sha256.clone(),
+            actual_sha256: actual,
+        })
+    })
 }
 
 fn read_manifest(path: &Path) -> Result<Manifest, InitError> {
@@ -908,6 +970,43 @@ fn io_err(path: &Path, e: &std::io::Error) -> InitError {
     InitError::Io {
         path: path.to_string_lossy().into_owned(),
         error: e.to_string(),
+    }
+}
+
+/// A managed file `verify` could not check (#230 review): a symlinked
+/// component is the confinement refusal `MDATRON-E0012`; anything else (not a
+/// regular file, over the per-file bound, unreadable) is `MDATRON-E0003`.
+fn unverifiable_managed_finding(dir: &Path, managed: &str, why: &Unverifiable) -> Finding {
+    let (code, summary, message, help) = match why {
+        Unverifiable::Symlink(_) => (
+            "MDATRON-E0012",
+            "symlinked-component-refused",
+            "a managed file resolves through a symlink; no-follow resolution \
+             refuses it, so its recorded hash cannot be checked",
+            "replace the symlink with the file init deployed (delete it and \
+             re-run init)",
+        ),
+        _ => (
+            "MDATRON-E0003",
+            "governed-file-unreadable",
+            "this managed file's content cannot be read, so its recorded hash \
+             cannot be checked",
+            "restore the file init deployed (delete it and re-run init)",
+        ),
+    };
+    Finding {
+        code: code.into(),
+        severity: Severity::Error,
+        summary: summary.into(),
+        message: message.into(),
+        help: Some(help.into()),
+        location: Location::whole_file(dir.join(managed)),
+        explain_ref: Some(code.into()),
+        quoted: vec![QuotedRegion {
+            platform_variant: true,
+            label: "cause".into(),
+            content: why.describe(),
+        }],
     }
 }
 

@@ -28,7 +28,8 @@ manifest and is never guarded or touched by `init`.
 
 ## How to fix
 
-Read the `= note:` line for the drifted file and its recorded-vs-found hashes,
+Read the `= file:`, `= recorded:` and `= found:` lines for the drifted file and
+its recorded-vs-found hashes,
 then apply the matching pattern:
 
 - **You edited a `*.example` template.** The templates `init` deploys are

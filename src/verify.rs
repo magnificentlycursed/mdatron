@@ -6465,6 +6465,77 @@ pattern:
         assert_eq!(codes_of(&inc.report.findings, "MDATRON-E0060"), 1);
     }
 
+    // #230 review: verify reads managed files no-follow and bounded, like every
+    // governed file. A symlinked component (here a directory pointing outside
+    // the tree), a FIFO, and an unreadable file are each a per-file finding —
+    // never a read outside the partition, a hang, or a whole-run abort — and
+    // init refuses each rather than write through it.
+    #[cfg(unix)]
+    #[test]
+    fn unverifiable_managed_files_are_per_file_findings() {
+        use std::os::unix::fs::PermissionsExt;
+        let proj = TempProject::new("verify-drift-hostile");
+        crate::init::init(&proj.0).unwrap();
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write("docs/a.md", "# a\n");
+        let outside = TempProject::new("verify-drift-outside");
+        outside.write("secret.txt", "not yours\n");
+        let dot = proj.0.join(".mdatron");
+        std::os::unix::fs::symlink(&outside.0, dot.join("linkdir")).unwrap();
+        let fifo = dot.join("pipe.example");
+        assert!(std::process::Command::new("mkfifo")
+            .arg(&fifo)
+            .status()
+            .unwrap()
+            .success());
+        let locked = dot.join("pins.yaml.example");
+        std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o000)).unwrap();
+        let manifest = std::fs::read_to_string(dot.join("manifest.yaml")).unwrap();
+        std::fs::write(
+            dot.join("manifest.yaml"),
+            format!("{manifest}- path: linkdir/secret.txt\n  sha256: \"00\"\n- path: pipe.example\n  sha256: \"00\"\n")
+                .replacen("demoted:", "demoted:", 1),
+        )
+        .unwrap();
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let report =
+            verify_report(&cfg).expect("an unverifiable managed file must not abort the run");
+        let at = |file: &str, code: &str| {
+            report
+                .findings
+                .iter()
+                .any(|f| f.code == code && f.location.file == Path::new(file))
+        };
+        assert!(
+            at(".mdatron/linkdir/secret.txt", "MDATRON-E0012"),
+            "{:?}",
+            report.findings
+        );
+        assert!(
+            at(".mdatron/pipe.example", "MDATRON-E0003"),
+            "{:?}",
+            report.findings
+        );
+        assert!(
+            at(".mdatron/pins.yaml.example", "MDATRON-E0003"),
+            "{:?}",
+            report.findings
+        );
+        assert!(
+            report.findings.iter().all(|f| f.code != "MDATRON-E0060"),
+            "{:?}",
+            report.findings
+        );
+        assert!(matches!(
+            crate::init::init(&proj.0),
+            Err(crate::init::InitError::Io { .. })
+        ));
+        std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o644)).unwrap();
+    }
+
     // #204 D1: `coinage_globs` scopes the bold-introduced-term check inside
     // the register's own scope; a reserved word still fires everywhere the
     // register scans; a coinage scope reaching nothing is W0043-loud.
