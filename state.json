@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1334,
-        "tip_oid": "90fb67259160b6656d1ca322d6ad23ad75df108d",
-        "prefix_sha256": "fa372c8d0c4495c316325e4f87aa60a42170760709712945adf9ad1d95b5c70f"
+        "sequence": 1335,
+        "tip_oid": "fe1b2c6048a2cf9bb61d3d27ecbb8ac92119ea3b",
+        "prefix_sha256": "b88ef2c67e1cb0a779ffe7941864161a0096bc5add272031e58de0ad7346ba74"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 245,
-  "next_comment_id": 634,
+  "next_comment_id": 635,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -526,10 +526,21 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-10-06T21:18:28.631202Z",
-      "updated_at": "2026-10-06T21:19:18.018087Z",
+      "updated_at": "2026-10-08T20:55:25.805112Z",
       "labels": [
         "bug"
-      ]
+      ],
+      "comments": {
+        "df70bb41-3a56-48a3-8add-926fa2c725fb": {
+          "display_id": 634,
+          "author": "79Ig",
+          "content": "Plan/implementation: forward-only refresh WITHOUT a manifest format change (a per-entry version field would make older binaries refuse the deny_unknown_fields manifest, breaking their verify). RELEASED_TEMPLATE_HASHES lists every released template hash (0.7.0's four, from the real v0.7.0 binary's deploy; fixtures committed); refresh only from a known released hash, else keep + report ('newer'). Tests incl. red gate init_never_moves_a_newer_template_back and a hash-pin tripwire. Also fixes the E0060 page claim (part of #232).",
+          "created_at": "2026-10-08T20:55:25.771185Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAB5zF6jEh2fGESTLqb8PjHDO9xnREDXJIFTi6ps9Ij3fMR/aq2ZH9tKIcr6o5UC4q8SegwQM3Mr1LtYtqv9jyBg=="
+        }
+      }
     },
     "1197e92a-56c6-4b95-9d5a-a6e376ec37e9": {
       "uuid": "1197e92a-56c6-4b95-9d5a-a6e376ec37e9",
