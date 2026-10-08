@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1319,
-        "tip_oid": "1f3574dc8d4df007c8f845ce004ca6f9f6bd1e87",
-        "prefix_sha256": "41760c8dc4cb5fe7be63a8252bc442fe2916bc897e29d7a6c9ceb58a1f2370bf"
+        "sequence": 1320,
+        "tip_oid": "0a78b3df1a1ecd05b31e57380d16d576c90dc1b6",
+        "prefix_sha256": "93e6a03b277d7573e01c88ce1d557d860b51d002d919d568edd1327705e0d476"
       },
       "IMWa": {
         "sequence": 2,
@@ -3655,11 +3655,12 @@
       "display_id": 244,
       "title": "YAML parses outside the governed walk have no flow-nesting guard: a link/marker/pin target's frontmatter, or an index source, nested ~100k deep costs ~29s (quadratic; 400k ran >6.5 min) and the run reports clean",
       "description": "Found by the #242 cold review (measured on the release binary, scratch repro /private/tmp/claude-501/r-242/tgt100000). The structural-nesting pre-scan runs only in the governed walk (verify.rs ~865, now frontmatter-only since #242). Other YAML parses of file content go through frontmatter::body_of -> parse unguarded: link targets (link.rs:864), marker targets (marker.rs:275), section-pin targets (pin.rs:474), .md index sources (dsl/index.rs:790); .yaml index sources (index.rs:774) have no pre-scan at all. Repro: docs/*.md governed with a link to ../t.md#h, t.md ungoverned with frontmatter x: [[[...]]] 100k deep (~200 KB): 28.9s and 'clean'; 400k deep killed after 6.5 min. At the 8 MiB per-file cap this is hours of CPU from one committed file. serde_yaml_ng's recursion guard errors only after the quadratic scan. Proposed fix: one enforcement point — max_flow_nesting(yaml_block) inside frontmatter::parse so every caller inherits it (bound or E0001), plus a whole-content pre-scan for .yaml/.yml index sources; decide per-caller whether exceedance is a whole-run bound_exceeded or a per-file finding (the #103 posture). Also consider: the byte count trips on brackets in quoted scalars/comments (documented in #242).",
-      "status": "open",
+      "status": "closed",
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-10-08T04:26:17.382685Z",
-      "updated_at": "2026-10-08T18:48:19.468343Z",
+      "updated_at": "2026-10-08T18:49:44.511923Z",
+      "closed_at": "2026-10-08T18:49:44.489523Z",
       "labels": [
         "bug"
       ],
