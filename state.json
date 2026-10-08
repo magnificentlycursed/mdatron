@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1349,
-        "tip_oid": "e069918b9377cd38cdd3a7d6121221374abefde4",
-        "prefix_sha256": "11661e3e3dbd1ce9e14b7f99089623989718f34ecb7a2e1cc7d187611d595e4c"
+        "sequence": 1350,
+        "tip_oid": "e53cbe7e326ae57f4be242854e7f982ef5db57cd",
+        "prefix_sha256": "9d19fdb876707a0ce2355309b4ef699f672dbd4327ca1d25cb88a019a41e99f2"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 246,
-  "next_comment_id": 641,
+  "next_comment_id": 642,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -4753,7 +4753,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-10-06T21:17:29.478949Z",
-      "updated_at": "2026-10-08T22:24:21.755323Z",
+      "updated_at": "2026-10-08T22:36:09.008775Z",
       "comments": {
         "0e26a0f2-a9b6-48b2-ba55-c95ae44be6d8": {
           "display_id": 640,
@@ -4763,6 +4763,15 @@
           "kind": "plan",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAFkUUcVG6Zd9NmZWZQpU5VDMKFXjsqo98QD2OrV0flH3UUiS5P84xMNVTS1Wmip6MJtEm4lnswwI/6EPD6OWZAA=="
+        },
+        "81326fd4-2a90-472d-84a8-07fa50ca8eec": {
+          "display_id": 641,
+          "author": "79Ig",
+          "content": "PR opened (f0ecd491 + review fixes: no-follow bounded managed reads; E0012/E0003 per-file; CHANGELOG behaviour changes). CRLF follow-up #245.",
+          "created_at": "2026-10-08T22:36:08.968864Z",
+          "kind": "note",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABADrF7WSCDhxISeXbWfbAxTmJKtaFU8WO0XytLtwJlc413o3x6wFxug6D9mGLio5VHJqcTP3deP+09jFsIf23VCg=="
         }
       }
     },
