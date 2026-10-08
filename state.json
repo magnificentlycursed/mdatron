@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1304,
-        "tip_oid": "843b5702f762a720a679d65c6154701bd0c152a9",
-        "prefix_sha256": "3c276d20b2aa9373a2b7b65c7b87cb25c9b1570040300beb596662d59445acb6"
+        "sequence": 1305,
+        "tip_oid": "e931a18e50a65c047988453a0a3adbfc37377f10",
+        "prefix_sha256": "dc845e9ede14e2de23a12b45b301548509c4b3f08f8887ad518a698452ffb4a9"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 244,
-  "next_comment_id": 621,
+  "next_comment_id": 622,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -1893,11 +1893,20 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-10-06T21:13:41.651511Z",
-      "updated_at": "2026-10-08T03:40:11.086386Z",
+      "updated_at": "2026-10-08T03:50:44.193120Z",
       "labels": [
         "bug"
       ],
       "comments": {
+        "32f9e11f-4479-4fe2-8264-15a8b9b20119": {
+          "display_id": 621,
+          "author": "79Ig",
+          "content": "Delivered in PR #75 (merged): key(index, Null) -> Null; data-dependent eval errors are the per-file finding MDATRON-E0023 (exit 1, run continues; a failed rule keeps its verdict when only its message can't render); data-independent defects (unknown fn, arity, undefined binding) refused once at load incl. message placeholders. Envelope: new code rides the pending 3.2.0 MINOR at the 0.8.0 cut.",
+          "created_at": "2026-10-08T03:50:44.151303Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAk9LOXYEC/uK1LXACTDKYzradVHaAfJgrbcw7VnzGGb/yvJsbdzdaZNpH8qnts16JCbyQTuHj2+F8YKH0NwOcBw=="
+        },
         "8e3e4ca7-bc43-4224-aa5a-d37f2b09fd72": {
           "display_id": 619,
           "author": "79Ig",
