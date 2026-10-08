@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1331,
-        "tip_oid": "44395d21267ba32746f4035803f4d92939482e36",
-        "prefix_sha256": "7321b20861f9918319af510c57b043b230e5672a12dcee02ee465f4fd03afa6a"
+        "sequence": 1332,
+        "tip_oid": "f2209f2a2893b6a476cf664a91185c9bfa43b93d",
+        "prefix_sha256": "3d4ddbc702d9affb2d4881c20cc8ea19b56abf8e46a74cfb265feb305b0855a9"
       },
       "IMWa": {
         "sequence": 2,
@@ -1070,11 +1070,12 @@
       "display_id": 243,
       "title": "Footnote definitions ([^1]: [fn](https://…)) are parsed as reference definitions because the CommonMark parser runs without the footnotes extension, so GFM corpora get a false E0110 (found by the #215 round-3 cold review)",
       "description": "Source: #215 cold review round 3 (docs/architecture cluster), predates #215. markup::body_links uses Parser::new with no options; GFM footnotes are common in docs. Decide: enable ENABLE_FOOTNOTES (and check what link events footnote bodies yield) or document. Add a test.",
-      "status": "open",
+      "status": "closed",
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-10-07T01:38:59.984976Z",
-      "updated_at": "2026-10-08T19:39:40.491027Z",
+      "updated_at": "2026-10-08T19:41:02.408322Z",
+      "closed_at": "2026-10-08T19:41:02.383896Z",
       "labels": [
         "bug"
       ],
