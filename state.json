@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1318,
-        "tip_oid": "57710309e3724dfc904d42a78497bd95004a51ee",
-        "prefix_sha256": "b79d80cef9db6348d9b18fb7c7256328a42cf0d3dc928bf536b5510de6be9b2d"
+        "sequence": 1319,
+        "tip_oid": "1f3574dc8d4df007c8f845ce004ca6f9f6bd1e87",
+        "prefix_sha256": "41760c8dc4cb5fe7be63a8252bc442fe2916bc897e29d7a6c9ceb58a1f2370bf"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 245,
-  "next_comment_id": 627,
+  "next_comment_id": 628,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -3659,11 +3659,20 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-10-08T04:26:17.382685Z",
-      "updated_at": "2026-10-08T16:44:58.770980Z",
+      "updated_at": "2026-10-08T18:48:19.468343Z",
       "labels": [
         "bug"
       ],
       "comments": {
+        "c294602c-dbec-40b0-88b9-e9a71eb1c54a": {
+          "display_id": 627,
+          "author": "79Ig",
+          "content": "Delivered in PR #77 (merged): crate::yaml::from_str applies the structural-nesting bound before every YAML parse (frontmatter, index sources, all .mdatron/ files); clippy.toml bans direct serde_yaml_ng parsing.",
+          "created_at": "2026-10-08T18:48:19.412160Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAwlDhieuMFG85gKQWxAFzpTmJlr6s6so3JV8eC6Xfc9qxfYkUR3U7Nxwsw1iseMvrbuFizZJn0xKfj2bJSVIsDg=="
+        },
         "dddc4bda-a95a-4549-8618-4a01e639c14d": {
           "display_id": 626,
           "author": "79Ig",
