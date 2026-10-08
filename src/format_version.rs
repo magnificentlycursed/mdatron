@@ -47,7 +47,7 @@ pub(crate) fn check_input_format_version(
     file: &str,
     required: bool,
 ) -> Result<(), Error> {
-    let probe: FormatProbe = serde_yaml_ng::from_str(content).map_err(|e| {
+    let probe: FormatProbe = crate::yaml::from_str(content).map_err(|e| {
         Error::Config(format!(
             "cannot read mdatron_format_version from '{file}': {e}"
         ))
@@ -103,7 +103,7 @@ pub(crate) fn check_dsl_version(content: &str, file: &str) -> Result<(), Error> 
     // error reports as the pattern-file parse error, and a wrong-typed
     // version field reports field-precisely from the strict parse. `file`
     // stays in the signature for the version-refusal messages below.
-    let Ok(probe) = serde_yaml_ng::from_str::<DslProbe>(content) else {
+    let Ok(probe) = crate::yaml::from_str::<DslProbe>(content) else {
         return Ok(());
     };
     match probe.mdatron_dsl_version {

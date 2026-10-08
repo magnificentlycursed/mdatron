@@ -21,7 +21,7 @@ size, is enforced by cutting the block to fit rather than by a diagnostic.
 |---|---|---|---|
 | `max-input-size-per-file` | 8 MiB | every captured input (bodies, index sources, pin/cite/link/marker targets) | config-scoped: `bound_exceeded`; prose-scoped: `W0048` degrade |
 | `aggregate-snapshot-size` | 64 MiB | total bytes stored in one run's snapshot | config-scoped: `bound_exceeded`; prose-scoped: `W0048` degrade |
-| `structural-nesting-depth` | 256 | flow-collection nesting in a governed file's frontmatter YAML (bracket bytes, quoted or not) | `bound_exceeded` |
+| `structural-nesting-depth` | 256 | flow-collection nesting in any YAML mdatron parses — frontmatter, `.yaml` index sources, `.mdatron/` files — counted before parsing (bracket bytes, quoted or not) | governed file: `bound_exceeded`; index source: `index_build`; `.mdatron/` file: its load error; link, marker or pin target: read as having no frontmatter |
 | DSL expression depth | 256 | adopter `assert:` expression nesting | expression `ParseError` at pattern load |
 | walk `depth` | 64 | engine-owned no-follow glob walk (index sources) | `WalkBounded` index error |
 | walk `entries` | 100 000 | directory entries listed across one glob walk | `WalkBounded` index error |

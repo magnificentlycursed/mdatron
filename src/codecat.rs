@@ -96,7 +96,7 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedCatalogs>, Error> {
     // DEF5 (#131): code-catalogs.yaml is new in 0.6.0 → born versioned (required).
     // Probe the version leniently before the strict parse (a legible break).
     crate::format_version::check_input_format_version(&content, CATALOGS_NAME, true)?;
-    let raw: RawCatalogs = serde_yaml_ng::from_str(&content)
+    let raw: RawCatalogs = crate::yaml::from_str(&content)
         .map_err(|e| Error::Config(format!("cannot parse '{}': {e}", path.display())))?;
 
     // GH #48 lane G (config-integrity refusals): an EMPTY namespace makes the

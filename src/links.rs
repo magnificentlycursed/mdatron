@@ -103,7 +103,7 @@ pub(crate) fn load(project_root: &Path) -> Result<Option<LoadedRegister>, Error>
         }
     };
     crate::format_version::check_input_format_version(&content, REGISTER_NAME, true)?;
-    let raw: RawRegister = serde_yaml_ng::from_str(&content)
+    let raw: RawRegister = crate::yaml::from_str(&content)
         .map_err(|e| Error::Config(format!("cannot parse '{}': {e}", path.display())))?;
 
     // Load-time refusals: every one is statically knowable and would make an
@@ -1561,7 +1561,7 @@ mod tests {
     }
 
     fn raw_policy(yaml: &str) -> RawPolicy {
-        serde_yaml_ng::from_str(yaml).unwrap()
+        crate::yaml::from_str(yaml).unwrap()
     }
 
     #[test]

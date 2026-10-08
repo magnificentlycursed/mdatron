@@ -970,7 +970,7 @@ mod tests {
     // the same variants as aliases (DESIGN.md § Input-field renames are aliased and ledgered).
     #[test]
     fn element_aliases_parse_to_the_unified_class() {
-        let parse = |y: &str| serde_yaml_ng::from_str::<RawOperand>(y).unwrap().element;
+        let parse = |y: &str| crate::yaml::from_str::<RawOperand>(y).unwrap().element;
         assert_eq!(
             parse("section: '## A'\nid_from: h3-heading\nid_pattern: x"),
             ElementClass::H3
@@ -988,11 +988,11 @@ mod tests {
             ElementClass::H2
         );
         let rule: RawRule =
-            serde_yaml_ng::from_str("section: '## A'\nelement: heading\nmatch: .\ncount: '>= 1'")
+            crate::yaml::from_str("section: '## A'\nelement: heading\nmatch: .\ncount: '>= 1'")
                 .unwrap();
         assert_eq!(rule.element, Some(ElementClass::Heading));
         assert!(
-            serde_yaml_ng::from_str::<RawOperand>("section: '## A'\nelement: h7\nid_pattern: x")
+            crate::yaml::from_str::<RawOperand>("section: '## A'\nelement: h7\nid_pattern: x")
                 .is_err(),
             "an unknown element class is refused at load"
         );
@@ -1404,7 +1404,7 @@ mod tests {
     #[test]
     fn match_on_selects_line_or_name_and_defaults_to_line() {
         let rule =
-            |yaml: &str| compile_rule(serde_yaml_ng::from_str::<RawRule>(yaml).unwrap()).unwrap();
+            |yaml: &str| compile_rule(crate::yaml::from_str::<RawRule>(yaml).unwrap()).unwrap();
         let body = "## Members\n### REQ-1\n- **REQ-2**: x\n### Other\n";
         let count = |r: &Rule| match r {
             Rule::Count {
@@ -1434,17 +1434,17 @@ mod tests {
         let line = "section: '## Members'\nelement: h3\nmatch: '^### REQ-'\ncount: '>= 1'\n";
         assert_eq!(count(&rule(line)), 1);
         // An unknown value and a disjoint rule carrying it are refused.
-        assert!(serde_yaml_ng::from_str::<RawRule>(&format!("{base}match_on: heading\n")).is_err());
+        assert!(crate::yaml::from_str::<RawRule>(&format!("{base}match_on: heading\n")).is_err());
         let disjoint = "match_on: name\ndisjoint:\n  - {section: '## A', element: h3, id_pattern: '(x)'}\n  - {section: '## B', element: h3, id_pattern: '(x)'}\n";
-        assert!(compile_rule(serde_yaml_ng::from_str::<RawRule>(disjoint).unwrap()).is_err());
+        assert!(compile_rule(crate::yaml::from_str::<RawRule>(disjoint).unwrap()).is_err());
     }
 
     fn compiled(yaml: &str) -> Rule {
-        compile_rule(serde_yaml_ng::from_str::<RawRule>(yaml).unwrap()).unwrap()
+        compile_rule(crate::yaml::from_str::<RawRule>(yaml).unwrap()).unwrap()
     }
 
     fn refused(yaml: &str) -> bool {
-        serde_yaml_ng::from_str::<RawRule>(yaml)
+        crate::yaml::from_str::<RawRule>(yaml)
             .map_err(|e| e.to_string())
             .and_then(|r| compile_rule(r).map(|_| ()).map_err(|e| e.to_string()))
             .is_err()

@@ -1,0 +1,8 @@
+# #244: every YAML parse of file content goes through `crate::yaml::from_str`,
+# which refuses a flow-collection depth bomb before serde_yaml_ng's quadratic
+# scan. A direct call would skip that bound.
+disallowed-methods = [
+    { path = "serde_yaml_ng::from_str", reason = "use crate::yaml::from_str, which enforces the structural-nesting bound (#244)" },
+    { path = "serde_yaml_ng::from_slice", reason = "use crate::yaml::from_str, which enforces the structural-nesting bound (#244)" },
+    { path = "serde_yaml_ng::from_reader", reason = "use crate::yaml::from_str, which enforces the structural-nesting bound (#244)" },
+]

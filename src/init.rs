@@ -439,7 +439,7 @@ pub fn load_tombstones(project_root: &Path) -> Result<Option<LoadedManifest>, cr
             )))
         }
     };
-    let manifest: Manifest = serde_yaml_ng::from_str(&content)
+    let manifest: Manifest = crate::yaml::from_str(&content)
         .map_err(|e| crate::Error::Config(format!("cannot parse '{}': {e}", path.display())))?;
     let mut findings = Vec::new();
     for t in &manifest.demoted {
@@ -796,7 +796,7 @@ fn ensure_dirs(dir: &Path) -> Result<(), InitError> {
 
 fn read_manifest(path: &Path) -> Result<Manifest, InitError> {
     let content = std::fs::read_to_string(path).map_err(|e| io_err(path, &e))?;
-    serde_yaml_ng::from_str(&content).map_err(|e| InitError::ManifestParse {
+    crate::yaml::from_str(&content).map_err(|e| InitError::ManifestParse {
         path: path.to_string_lossy().into_owned(),
         error: e.to_string(),
     })

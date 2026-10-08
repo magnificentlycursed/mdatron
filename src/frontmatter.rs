@@ -32,10 +32,13 @@ pub fn parse(content: &str) -> Result<Option<(Value, &str)>, Error> {
     let yaml_str = &content[yaml_start..yaml_end];
     let body = content.get(body_start..).unwrap_or("");
 
+    // #244: `crate::yaml::from_str` applies the nesting bound before the
+    // parser's quadratic scan, so every caller — the governed walk, link/
+    // marker/pin targets through `body_of`, `.md` index sources — inherits it.
     let value: Value = if yaml_str.trim().is_empty() {
         Value::Mapping(Default::default())
     } else {
-        serde_yaml_ng::from_str(yaml_str)?
+        crate::yaml::from_str(yaml_str)?
     };
 
     Ok(Some((value, body)))
@@ -309,6 +312,28 @@ mod tests {
             result.is_err(),
             "malformed YAML between markers should return Err"
         );
+    }
+
+    // RED GATE (#244): a flow-collection depth bomb is refused by `parse`
+    // itself, before serde_yaml_ng sees it — every caller inherits the bound —
+    // and `body_of` then reads the whole file as body, as for any other
+    // unparseable frontmatter. At the bound exactly, the parser decides.
+    #[test]
+    fn deeply_nested_frontmatter_is_refused_before_parsing() {
+        let limit = crate::limits::SHIPPED.structural_nesting;
+        let nest = |d: usize| format!("---\nx: {}{}\n---\n# H\n", "[".repeat(d), "]".repeat(d));
+        let bomb = nest(limit + 1);
+        match parse(&bomb) {
+            Err(Error::NestingTooDeep { depth, limit: l }) => {
+                assert_eq!((depth, l), (limit + 1, limit));
+            }
+            other => panic!("expected NestingTooDeep; got {other:?}"),
+        }
+        assert_eq!(body_of(&bomb), bomb.as_str());
+        assert!(!matches!(
+            parse(&nest(limit)),
+            Err(Error::NestingTooDeep { .. })
+        ));
     }
 
     // Pins the parser's duplicate-key contract across dependency changes

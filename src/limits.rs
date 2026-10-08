@@ -103,8 +103,8 @@ impl Limits {
             LimitRow {
                 limit: "`structural-nesting-depth`",
                 shipped: fmt_count(self.structural_nesting),
-                surface: "flow-collection nesting in a governed file's frontmatter YAML (bracket bytes, quoted or not)",
-                on_exceedance: "`bound_exceeded`",
+                surface: "flow-collection nesting in any YAML mdatron parses — frontmatter, `.yaml` index sources, `.mdatron/` files — counted before parsing (bracket bytes, quoted or not)",
+                on_exceedance: "governed file: `bound_exceeded`; index source: `index_build`; `.mdatron/` file: its load error; link, marker or pin target: read as having no frontmatter",
             },
             LimitRow {
                 limit: "DSL expression depth",
@@ -417,6 +417,39 @@ fn try_lock_slot(path: &Path) -> std::io::Result<Option<InvocationSlot>> {
         .write(true)
         .open(path)?;
     Ok(Some(InvocationSlot { _file: file }))
+}
+
+/// Maximum flow-collection nesting depth (`[`/`{`) in a YAML text (#124,
+/// roast SHO1 depth-bomb). O(n) pre-scan: a compact deeply-nested collection is
+/// the cheapest way to drive quadratic YAML-parse blowup, and 256 is far beyond
+/// any legitimate frontmatter.
+pub fn max_flow_nesting(s: &str) -> usize {
+    let mut depth = 0usize;
+    let mut max = 0usize;
+    for b in s.bytes() {
+        match b {
+            b'[' | b'{' => {
+                depth += 1;
+                if depth > max {
+                    max = depth;
+                }
+            }
+            b']' | b'}' => depth = depth.saturating_sub(1),
+            _ => {}
+        }
+    }
+    max
+}
+
+/// Refuse YAML whose flow collections nest past [`SHIPPED`]'s
+/// `structural_nesting` BEFORE it is parsed (#244): the parser's own recursion
+/// guard fires only after a quadratic scan, so every YAML parse of committed
+/// content runs this first. `Err` carries the depth found.
+pub fn check_flow_nesting(yaml: &str) -> Result<(), usize> {
+    match max_flow_nesting(yaml) {
+        depth if depth > SHIPPED.structural_nesting => Err(depth),
+        _ => Ok(()),
+    }
 }
 
 #[cfg(test)]

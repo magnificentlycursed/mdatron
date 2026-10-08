@@ -115,7 +115,7 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedPins>, Error> {
         }
     };
     crate::format_version::check_input_format_version(&content, PINS_NAME, false)?;
-    let raw: RawPins = serde_yaml_ng::from_str(&content)
+    let raw: RawPins = crate::yaml::from_str(&content)
         .map_err(|e| Error::Config(format!("cannot parse '{}': {e}", path.display())))?;
 
     let mut pins = Vec::new();
@@ -360,7 +360,7 @@ pub fn update(project_root: &Path, dry_run: bool) -> Result<Vec<(String, String,
     // future-format pins.yaml is a legible refusal here too, never a silent
     // rewrite under a format this mdatron does not understand.
     crate::format_version::check_input_format_version(&content, PINS_NAME, false)?;
-    let mut raw: RawPins = serde_yaml_ng::from_str(&content)
+    let mut raw: RawPins = crate::yaml::from_str(&content)
         .map_err(|e| Error::Config(format!("cannot parse '{}': {e}", path.display())))?;
 
     let mut changed = Vec::new();
