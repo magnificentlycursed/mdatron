@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1305,
-        "tip_oid": "e931a18e50a65c047988453a0a3adbfc37377f10",
-        "prefix_sha256": "dc845e9ede14e2de23a12b45b301548509c4b3f08f8887ad518a698452ffb4a9"
+        "sequence": 1306,
+        "tip_oid": "daec2a59708a216fef8085b00ecc29dffd07f65f",
+        "prefix_sha256": "fe5caf62d9bfefb387e27562d26dcacf5fb561f7881847450d58f64f0d8c124f"
       },
       "IMWa": {
         "sequence": 2,
@@ -1889,11 +1889,12 @@
       "display_id": 228,
       "title": "key() with a Null index key aborts the whole run (E0080 eval, files_checked 0) — a bound frontmatter-less file makes a rule's key($self.field) lookup fail the pipeline (GH #73 defect 2, reproduced on 0.7.0)",
       "description": "Source: GH #73 defect 2 (vsdd-cli 0.7.0 adoption). REPRODUCED on the 0.7.0 binary 2026-10-06: route schema: doc binds docs/b.md (no frontmatter → empty mapping); pattern rule assert: $self.owner == \"x\" or defined(key(\"owners\", $self.owner)); verify → pipeline_status failed, files_checked 0, every family inactive, pipeline_error {E0080, kind eval, 'type mismatch: expected string (index key), got null'}; exit 2. The guard does not protect and the message names pattern+rule, not the file. src/dsl/expr.rs 'key' arm: a non-string key is TypeMismatch. DESIGN:131 says a missing field reads as Null. Proposed fix: key(name, Null) returns Null (the lookup-miss value; defined() then false), so Null propagates as everywhere else; a remaining eval error should name the file and be a per-file finding, not a whole-run abort (one hostile file must not deny verification of the rest — the #103 posture).",
-      "status": "open",
+      "status": "closed",
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-10-06T21:13:41.651511Z",
-      "updated_at": "2026-10-08T03:50:44.193120Z",
+      "updated_at": "2026-10-08T03:52:00.139403Z",
+      "closed_at": "2026-10-08T03:52:00.113607Z",
       "labels": [
         "bug"
       ],
