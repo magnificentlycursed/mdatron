@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1312,
-        "tip_oid": "beef0c5377a69ba850aa724389802c78882e9f80",
-        "prefix_sha256": "b18151bdbc7f338c4c9108ce664804d8e1fe1d4a380520ada71a3662a5804785"
+        "sequence": 1313,
+        "tip_oid": "09097a054a936617b26212dce54b523b50c1ff3c",
+        "prefix_sha256": "a338caa7f89799274aa92649edd876e33860ddfc08a32ecfda30f713b45a8d45"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 245,
-  "next_comment_id": 624,
+  "next_comment_id": 625,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -7538,7 +7538,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-10-07T01:37:15.316375Z",
-      "updated_at": "2026-10-08T04:29:53.574310Z",
+      "updated_at": "2026-10-08T16:10:10.996290Z",
       "labels": [
         "bug"
       ],
@@ -7551,6 +7551,15 @@
           "kind": "plan",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABASmg9klr+LYCpzz4lib5QX8lacP0tzgSLkp6LIgjR49WYRWVubtKwBRQB3LlWHxka12U7UA68GXqb6hKfPmgDBw=="
+        },
+        "527ee61c-f0cc-4738-afc1-bc27852b4f79": {
+          "display_id": 624,
+          "author": "79Ig",
+          "content": "Delivered in PR #76 (merged): the structural-nesting bound counts a governed file's frontmatter block only (frontmatter::yaml_block); body brackets no longer abort the run; deep frontmatter (LF/CRLF/BOM) still trips it. Follow-up #244.",
+          "created_at": "2026-10-08T16:10:10.958634Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAj1QsLH6M+bVbehLORGnd3dYG13gZ9U0GMmxs75E/tgTpdRNZV31rQa7B8tut5AMK0eb+8wY7btvCdvW0kcGvCQ=="
         },
         "8aca1e8a-db5a-4372-a5b6-c466a63d4d85": {
           "display_id": 623,
