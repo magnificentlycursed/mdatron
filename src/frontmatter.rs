@@ -118,8 +118,9 @@ fn fence_bounds(content: &str) -> Option<(usize, usize, usize)> {
 /// The frontmatter YAML substring (between the `---` markers), or `None` when
 /// there is no well-formed block. The substring's first line is file line 2
 /// (the opening `---` is line 1; a leading BOM sits on that same line, so line
-/// numbering is unaffected). Used by [`resolve_pointer_location`].
-fn yaml_block(content: &str) -> Option<&str> {
+/// numbering is unaffected). Used by [`resolve_pointer_location`] and by the
+/// verify walk's flow-nesting bound, which guards this block's YAML parse (#242).
+pub(crate) fn yaml_block(content: &str) -> Option<&str> {
     let content = strip_bom(content);
     let (yaml_start, yaml_end, _) = fence_bounds(content)?;
     Some(&content[yaml_start..yaml_end])

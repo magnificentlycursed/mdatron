@@ -103,7 +103,7 @@ impl Limits {
             LimitRow {
                 limit: "`structural-nesting-depth`",
                 shipped: fmt_count(self.structural_nesting),
-                surface: "flow-collection nesting in governed-body YAML",
+                surface: "flow-collection nesting in a governed file's frontmatter YAML (bracket bytes, quoted or not)",
                 on_exceedance: "`bound_exceeded`",
             },
             LimitRow {

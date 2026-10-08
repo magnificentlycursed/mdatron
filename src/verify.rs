@@ -857,11 +857,13 @@ fn run_inner(
         };
         match snapshot.capture(&project_root, &confined)? {
             crate::snapshot::Captured::Content(content) => {
-                // The nesting bound applies to bodies (their frontmatter is
-                // YAML-parsed per file); a non-UTF8 body is reported at the
-                // walk (E0003), never a whole-run abort (#103 security C).
-                if let Some(text) = content.text() {
-                    let nesting = max_flow_nesting(text);
+                // The nesting bound guards the per-file YAML parse, so it
+                // counts the frontmatter block only (#242): markdown body text
+                // is never YAML-parsed, and a body full of `[` must not abort
+                // the run. A non-UTF8 file is reported at the walk (E0003),
+                // never a whole-run abort (#103 security C).
+                if let Some(yaml) = content.text().and_then(frontmatter::yaml_block) {
+                    let nesting = max_flow_nesting(yaml);
                     if nesting > MAX_STRUCTURAL_NESTING {
                         return Err(VerifyError::BoundExceeded {
                             bound: "structural-nesting-depth".into(),
@@ -5544,18 +5546,55 @@ pattern:
             minimal_phase_primer_schema(),
         );
         proj.write(".mdatron/config.yaml", "file_globs:\n  - \"**/*.md\"\n");
-        let bomb = format!(
-            "---\nx: {}{}\n---\nbody\n",
-            "[".repeat(300),
-            "]".repeat(300)
-        );
-        proj.write("doc.md", &bomb);
-        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
-        match verify(&cfg) {
-            Err(VerifyError::BoundExceeded { bound, .. }) => {
-                assert_eq!(bound, "structural-nesting-depth")
+        // #242: the bound now counts the block `frontmatter::yaml_block` finds,
+        // so a BOM'd CRLF frontmatter (closing fence at EOF, no newline) must
+        // trip it exactly as an LF one does — the block and the YAML parse
+        // cannot drift apart unnoticed.
+        let nest = format!("x: {}{}", "[".repeat(300), "]".repeat(300));
+        for bomb in [
+            format!("---\n{nest}\n---\nbody\n"),
+            format!("\u{FEFF}---\r\n{nest}\r\n---"),
+        ] {
+            proj.write("doc.md", &bomb);
+            let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+            match verify(&cfg) {
+                Err(VerifyError::BoundExceeded { bound, .. }) => {
+                    assert_eq!(bound, "structural-nesting-depth")
+                }
+                other => {
+                    panic!("expected BoundExceeded(structural-nesting-depth); got {other:?}")
+                }
             }
-            other => panic!("expected BoundExceeded(structural-nesting-depth); got {other:?}"),
+        }
+    }
+
+    // RED GATE (#242, #215 round-3 cold review): the bound guards the YAML
+    // parse, so only the frontmatter block is counted. Markdown body text —
+    // 300 `<https://acme.dev/[>` autolinks, or bare `[` with no frontmatter at
+    // all — is never YAML-parsed and must not abort the run.
+    #[test]
+    fn unbalanced_brackets_in_a_body_do_not_trip_the_bound() {
+        let proj = TempProject::new("depth-body");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(".mdatron/config.yaml", "file_globs:\n  - \"**/*.md\"\n");
+        proj.write(
+            "links.md",
+            &format!(
+                "---\ntitle: t\n---\n{}\n",
+                "<https://acme.dev/[>\n".repeat(300)
+            ),
+        );
+        proj.write("bare.md", &"[".repeat(300));
+        proj.write(
+            "bom.md",
+            &format!("\u{FEFF}---\ntitle: t\n---\n{}\n", "[".repeat(300)),
+        );
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        if let Err(e) = verify(&cfg) {
+            panic!("body brackets must not abort the run: {e}");
         }
     }
 
