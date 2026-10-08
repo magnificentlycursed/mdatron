@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1337,
-        "tip_oid": "127b0c3d9b08bccd379049ddea7d0bde0351e068",
-        "prefix_sha256": "86a87095d952142466a141700ed018e03c8fa812016dd3b6171d62efa997558d"
+        "sequence": 1338,
+        "tip_oid": "c228a35e4d749d7139816f6f37629d19c71b2e1b",
+        "prefix_sha256": "226a760ae1ea75d2013f9483f631649a75f1432c43ee7d2972447e728ef24985"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 245,
-  "next_comment_id": 637,
+  "next_comment_id": 638,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -526,7 +526,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-10-06T21:18:28.631202Z",
-      "updated_at": "2026-10-08T21:05:59.784927Z",
+      "updated_at": "2026-10-08T21:51:05.867407Z",
       "labels": [
         "bug"
       ],
@@ -539,6 +539,15 @@
           "kind": "note",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAVCIAe1N8k1CzRmFYtp5C2AgjYBCHly8BMhcGx7Gkvjtc0wZWj58ycoxl5eREYZIkMXW2FW9sENXb+frdLElWCA=="
+        },
+        "9245d3d7-d597-4f55-b9cc-069294b29f79": {
+          "display_id": 637,
+          "author": "79Ig",
+          "content": "Delivered in PR #81 (merged): forward-only template refresh via RELEASED_TEMPLATE_HASHES (no manifest format change); unknown content kept and reported; E0060 page corrected.",
+          "created_at": "2026-10-08T21:51:05.830083Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA9V3GtRJxjmvlD53sbT89jnvYCKAcb3tC8DC3EAgVa9wkMzJb9pJ2PhTgJSK9mhlg8axX/KDBd45k1cFWbS03BA=="
         },
         "df70bb41-3a56-48a3-8add-926fa2c725fb": {
           "display_id": 634,
