@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1335,
-        "tip_oid": "fe1b2c6048a2cf9bb61d3d27ecbb8ac92119ea3b",
-        "prefix_sha256": "b88ef2c67e1cb0a779ffe7941864161a0096bc5add272031e58de0ad7346ba74"
+        "sequence": 1336,
+        "tip_oid": "5ae9e78ba7f860ea29f8f8781b0941d5f7383dfb",
+        "prefix_sha256": "45005984288a3a265e95509640f175857f4701fe71cfb699c01c53cd3ef7280c"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 245,
-  "next_comment_id": 635,
+  "next_comment_id": 636,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -4327,11 +4327,20 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-10-06T21:20:23.333104Z",
-      "updated_at": "2026-10-07T02:07:48.687555Z",
+      "updated_at": "2026-10-08T20:56:45.645051Z",
       "labels": [
         "docs"
       ],
       "comments": {
+        "63102440-f997-4b00-a9b2-de784ce2e23c": {
+          "display_id": 635,
+          "author": "79Ig",
+          "content": "E0060 page item (manifest 'records the version that deployed each file') is corrected in the #231 lane (feature/231-template-refresh).",
+          "created_at": "2026-10-08T20:56:45.608936Z",
+          "kind": "note",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA4Nalo1P18i0BrPiCtu7hSv18WuA8HzIyuL0uHMIcYk5rfCkpiAWFvB1LWfZXCWG8hPNS8zA16+13YeX8u47QBg=="
+        },
         "80b3ded7-153a-4e4c-ba83-a269aad583c9": {
           "display_id": 617,
           "author": "79Ig",
