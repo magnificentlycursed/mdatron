@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1324,
-        "tip_oid": "e7d9fac84946971ea08e536aeb0cba601260fb64",
-        "prefix_sha256": "388822cc4a87fea82b1d3aac03f32ad8df566eb40e76d476d0b582819d495a38"
+        "sequence": 1325,
+        "tip_oid": "3f45ad07b4dcaad951aebcf74238ad83d2271375",
+        "prefix_sha256": "1f7e2662f6482aebf0538a1987e667db030b7a0d8a8f5cbda7538b6401cb32dd"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 245,
-  "next_comment_id": 630,
+  "next_comment_id": 631,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -4002,7 +4002,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-10-06T21:15:36.000283Z",
-      "updated_at": "2026-10-08T19:16:32.935761Z",
+      "updated_at": "2026-10-08T19:19:42.709292Z",
       "labels": [
         "bug"
       ],
@@ -4015,6 +4015,15 @@
           "kind": "note",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAApjo1X7IHw9JGaR3c/2OftU0bh5UbzBtxSsCCCcBvqd+BjLmOVCATynQ0lwoh5k53BkJN39rISVoH+3lvOb4DA=="
+        },
+        "77176666-8305-48a0-8b02-b048b5cb377a": {
+          "display_id": 630,
+          "author": "79Ig",
+          "content": "Delivered in PR #78 (merged): per-rule W0058 rule-context-matches-nothing (two named causes; whole-tree config-driven only) and counted rule_dsl reasons incl. --changed.",
+          "created_at": "2026-10-08T19:19:42.667650Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAhuiB3yQiTtATCQmglC50BZCrA/a7xt13eL0ZFTYYjzazcZjWfdZlzWYB9qvKomQfcGz8KT8w3yggd7XVpiLZCw=="
         },
         "eb38d8c1-0648-49e3-bdf2-4374998f0048": {
           "display_id": 628,
