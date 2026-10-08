@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1322,
-        "tip_oid": "a944dba77bd8c47c1c8fd7e9fd9757cc98c3ea4f",
-        "prefix_sha256": "820ea2feff8ab0f10306ad91727aaa2bc280b600f3a4b4c0d56eebbde736faa6"
+        "sequence": 1323,
+        "tip_oid": "f464f911227eacb2e90b94e7a056d87da9773617",
+        "prefix_sha256": "d48763d6e5cd632f5bb748e0e6b1e19cea5dc3c0586c46661b53e0c9b53fd847"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 245,
-  "next_comment_id": 628,
+  "next_comment_id": 629,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -4002,10 +4002,21 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-10-06T21:15:36.000283Z",
-      "updated_at": "2026-10-06T21:16:27.368730Z",
+      "updated_at": "2026-10-08T19:10:07.317889Z",
       "labels": [
         "bug"
-      ]
+      ],
+      "comments": {
+        "eb38d8c1-0648-49e3-bdf2-4374998f0048": {
+          "display_id": 628,
+          "author": "79Ig",
+          "content": "Plan/implementation: per-rule context hits (FileVerdict.matched_rules); new W0058 rule-context-matches-nothing per dead rule at its pattern-file span (whole-tree config-driven gate, as W0054); rule_dsl reason counts matched rules, incl. the incremental scope. Red gate a_dead_rule_context_is_announced_beside_a_live_one. Docs: W0058 page, catalog, inputs.md patterns scope/codes, CHANGELOG.",
+          "created_at": "2026-10-08T19:10:07.272075Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAnGODrMKN0fKRr/J/+hGI6aWQSury8HIhYPIZDcRyT2dHfXmblxvUJt0zMOqQDxYT16tr9M/0chOxUMRyK2zWBQ=="
+        }
+      }
     },
     "6ccc5223-9a98-44ca-a398-17334578d0b4": {
       "uuid": "6ccc5223-9a98-44ca-a398-17334578d0b4",
