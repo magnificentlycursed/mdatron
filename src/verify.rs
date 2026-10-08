@@ -1662,8 +1662,11 @@ fn run_inner(
 
     // #203 F3: a `code_catalog_globs` list that reaches no walked file leaves
     // the catalog scan inert — the same fail-open class as a dead
-    // `vocabulary_globs` (W0043), announced at the config, whole-tree only.
-    if scope.is_none() && codecat_scoped && codecat_hits == 0 {
+    // `vocabulary_globs` (W0043), announced at the config, whole-tree only —
+    // and, like W0054/W0056/W0057, only when the jurisdiction came from the
+    // config (#241): an ad-hoc file set is not the scope the globs were
+    // written against.
+    if scope.is_none() && config.config_digest.is_some() && codecat_scoped && codecat_hits == 0 {
         findings.push(Finding {
             code: "MDATRON-W0055".into(),
             severity: Severity::Warning,
@@ -6822,6 +6825,45 @@ pattern:
     // can coexist with a walked archive that cites retired codes. Absent =
     // every walked file (prior behaviour); a scope reaching nothing is W0055-
     // loud at config.yaml and the family reports inert.
+    // RED GATE (#241): an ad-hoc `--files` run replaces the jurisdiction from
+    // the command line, so a catalog scope outside its glob is not dead —
+    // W0055 takes W0054/W0056/W0057's gate (config-driven whole-tree runs).
+    #[test]
+    fn dead_catalog_scope_is_not_reported_on_an_adhoc_files_run() {
+        let proj = TempProject::new("codecat-adhoc");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"**/*.md\"\ncode_catalog_globs:\n  - \"docs/**\"\n",
+        );
+        proj.write(
+            ".mdatron/code-catalogs.yaml",
+            "mdatron_format_version: 1\ncatalogs:\n- namespace: \"T-\"\n  comprehensive: true\n  codes: [\"E0001\"]\n",
+        );
+        proj.write("docs/live.md", "Live doc cites T-E0001.\n");
+        proj.write("archive/old.md", "Archive.\n");
+        let whole = verify_report(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        assert_eq!(
+            codes_of(&whole.findings, "MDATRON-W0055"),
+            0,
+            "{:?}",
+            whole.findings
+        );
+        let mut adhoc = VerifyConfig::from_project(&proj.0).unwrap();
+        adhoc.file_globs = vec!["archive/*.md".into()];
+        adhoc.config_digest = None;
+        let adhoc = verify_report(&adhoc).unwrap();
+        assert_eq!(
+            codes_of(&adhoc.findings, "MDATRON-W0055"),
+            0,
+            "{:?}",
+            adhoc.findings
+        );
+    }
+
     #[test]
     fn code_catalog_globs_scope_the_scan() {
         let seed = |label: &str, scope: &str| {
