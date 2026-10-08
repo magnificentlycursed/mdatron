@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1313,
-        "tip_oid": "09097a054a936617b26212dce54b523b50c1ff3c",
-        "prefix_sha256": "a338caa7f89799274aa92649edd876e33860ddfc08a32ecfda30f713b45a8d45"
+        "sequence": 1314,
+        "tip_oid": "83ad174f531e672baf7670d2a5b37b943a985ef1",
+        "prefix_sha256": "2a34315b7e867c43b29edbca9dd6a0c8397b48dc94371c4f7ff42e2c0ffd586f"
       },
       "IMWa": {
         "sequence": 2,
@@ -7534,11 +7534,12 @@
       "display_id": 242,
       "title": "A markdown body with ~300 unbalanced '[' (e.g. 300 '<https://acme.dev/[>' autolinks) aborts the whole verify run with E0080 'nests flow collections 300 deep' — the YAML nesting guard misfires on body text (found by the #215 round-3 cold review)",
       "description": "Source: #215 cold review round 3 (adversarial cluster), outside the #215 diff. src/verify.rs ~869-877: the flow-collection nesting bound meant for frontmatter YAML counts '[' in markdown body text, so a hostile or merely unusual body denies verification of the whole tree (exit 2) — the #103 posture says one file must not abort the run. Reproduce: a link-checked file with 300 '<https://acme.dev/[>' autolinks. Fix: apply max_flow_nesting to the frontmatter block only; add a red test.",
-      "status": "open",
+      "status": "closed",
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-10-07T01:37:15.316375Z",
-      "updated_at": "2026-10-08T16:10:10.996290Z",
+      "updated_at": "2026-10-08T16:11:32.251207Z",
+      "closed_at": "2026-10-08T16:11:32.216029Z",
       "labels": [
         "bug"
       ],
