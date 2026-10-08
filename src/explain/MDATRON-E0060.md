@@ -38,9 +38,15 @@ then apply the matching pattern:
   reviewed commit; fresh `mdatron init` deployments already ship the demoted
   shape. Other adopter data belongs in `.mdatron/schemas/` or
   `.mdatron/patterns/`, outside the managed partition.
-- **The engine defaults changed across an mdatron upgrade.** The manifest
-  records the version that deployed each file; restore the file to match the
-  manifest, or reinitialize in a clean tree to pick up new defaults.
+- **A template was edited, so an upgrade cannot refresh it.** The manifest
+  records each managed file's path and sha256, not the version that wrote it.
+  An unedited `*.example` template is refreshed forward when a newer mdatron
+  runs `init` (from an earlier version's content it knows), and from 0.8.0 on
+  left as recorded when an older one does (0.7.0 still moves it back); an
+  edited template is this drift. Restore
+  it to the recorded content (or delete it and re-run `init`), or copy it to
+  its real name — the `.example` files are documentation; the real file is
+  yours.
 
 The manifest never lists itself (a fixed point); its own integrity is anchored
 by repository commit review, not by the engine.

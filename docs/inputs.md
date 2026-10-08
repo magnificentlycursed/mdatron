@@ -6,8 +6,10 @@ the page `mdatron docs inputs` prints. `mdatron init` deploys the skeleton and
 an inert `*.example` template for each family file below (copy a template to
 its real name to activate that family; a tree initialized before the templates
 existed gains them on its next `init`, and a template you have not edited is
-refreshed to the running version's content, while an edited one is refused as
-drift and left alone). Two tests hold this page current: one
+refreshed to the running version's content — forward only from 0.8.0 on: a
+template whose content the running version does not know (a newer mdatron's)
+is kept as it is and reported — while an edited one is
+refused as drift and left alone). Two tests hold this page current: one
 loads every template through the real parser and cross-checks the keys listed
 here against the keys the template exercises; the other asks each strict
 parser directly — by feeding it an unknown key at every nesting level and

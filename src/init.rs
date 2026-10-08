@@ -56,6 +56,47 @@ pub const TEMPLATE_FILES: &[(&str, &str)] = &[
     ("links.yaml.example", LINKS_TEMPLATE),
 ];
 
+/// The sha256 of every template content an earlier mdatron shipped (#231),
+/// labelled with the release that shipped it, or `unreleased` for content that
+/// only ever lived on main. A refresh moves a template forward only from one of
+/// these: a recorded hash this binary does not know was written by a NEWER (or
+/// an unreleased) mdatron, or re-hashed by hand, and is left as recorded — so
+/// developers on mixed versions no longer ping-pong the committed bytes. A
+/// released version's bytes are kept in `tests/fixtures/init-templates/<version>/`
+/// and a test holds its hashes to them. When a template changes, ALWAYS add the
+/// hash it replaces (the `template_hashes_are_pinned` test says so); listing an
+/// unreleased hash is harmless. A template must never change back to content
+/// listed here, or the two versions would refresh each other again.
+const RELEASED_TEMPLATE_HASHES: &[(&str, &str, &str)] = &[
+    (
+        "0.7.0",
+        "routes.yaml.example",
+        "3b9112768d61b61b358ce49ea279581691a663488826c359f67ca3dbf64dcdba",
+    ),
+    (
+        "0.7.0",
+        "pins.yaml.example",
+        "d896b9c74b219041bea8670303654ad67db8b29e4736ffbde82d7bd25a3a5c6f",
+    ),
+    (
+        "0.7.0",
+        "vocabulary.yaml.example",
+        "c7d0a0d3f13018322f8b8b585c3b123c1f87f85fd3f1f0d26a2ef93571f93b25",
+    ),
+    (
+        "0.7.0",
+        "code-catalogs.yaml.example",
+        "b4083b0aa957019cf7397747032deb38292aab8384e68923ecf6d043bab5be6f",
+    ),
+];
+
+/// Whether `sha256` is a released, superseded version of template `path`.
+fn is_released_template(path: &str, sha256: &str) -> bool {
+    RELEASED_TEMPLATE_HASHES
+        .iter()
+        .any(|(_, p, h)| *p == path && *h == sha256)
+}
+
 /// The line that separates a template's header from its (commented) example
 /// body; a test strips the comment marker from the lines after it and runs the
 /// body through the real loader, so the documented shape is executable. Spelled
@@ -306,13 +347,18 @@ const MANIFEST_VERSION: u32 = 2;
 /// Outcome of a successful init run.
 #[derive(Debug, PartialEq, Eq)]
 pub enum InitOutcome {
-    /// First run, a repair of missing managed files, or a template refresh:
-    /// paths created, and templates rewritten to this version's content
-    /// (a managed template still byte-identical to what was recorded, whose
-    /// shipped content changed).
+    /// First run, a repair of missing managed files, a template refresh, or a
+    /// template kept as a newer version recorded it: paths created, templates
+    /// rewritten to this version's content (a managed template still
+    /// byte-identical to what was recorded, whose shipped content changed), and
+    /// templates left alone because this version does not know their content.
     Deployed {
         created: Vec<String>,
         refreshed: Vec<String>,
+        /// Unedited templates recorded with content this version does not
+        /// know — a newer (or unreleased) mdatron's — left as recorded, never
+        /// moved backwards (#231).
+        newer: Vec<String>,
     },
     /// Re-run on an intact, unmodified tree: nothing to do.
     AlreadyInitialized,
@@ -551,6 +597,7 @@ pub fn init(project_root: &Path) -> Result<InitOutcome, InitError> {
         let mut drifts = Vec::new();
         let mut missing: Vec<usize> = Vec::new();
         let mut stale: Vec<usize> = Vec::new();
+        let mut newer: Vec<String> = Vec::new();
         for (i, entry) in manifest.managed.iter().enumerate() {
             // The manifest is read from the tree, and it cannot hash itself
             // (fixed point) — so a hand-edit to it is not drift-caught. Hold its
@@ -579,9 +626,15 @@ pub fn init(project_root: &Path) -> Result<InitOutcome, InitError> {
                         });
                     } else if let Some(content) = template_content(&entry.path) {
                         // Untouched since recorded, but this version ships
-                        // different content: refresh below (never on drift).
+                        // different content: refresh below (never on drift) —
+                        // forward only (#231): from a released older version,
+                        // never over content this binary does not know.
                         if sha256_hex(content.as_bytes()) != entry.sha256 {
-                            stale.push(i);
+                            if is_released_template(&entry.path, &entry.sha256) {
+                                stale.push(i);
+                            } else {
+                                newer.push(format!(".mdatron/{}", entry.path));
+                            }
                         }
                     }
                 }
@@ -656,10 +709,14 @@ pub fn init(project_root: &Path) -> Result<InitOutcome, InitError> {
             write_manifest(&dir, &manifest)?;
         }
 
-        return if created.is_empty() && refreshed.is_empty() {
+        return if created.is_empty() && refreshed.is_empty() && newer.is_empty() {
             Ok(InitOutcome::AlreadyInitialized)
         } else {
-            Ok(InitOutcome::Deployed { created, refreshed })
+            Ok(InitOutcome::Deployed {
+                created,
+                refreshed,
+                newer,
+            })
         };
     }
 
@@ -668,6 +725,7 @@ pub fn init(project_root: &Path) -> Result<InitOutcome, InitError> {
     Ok(InitOutcome::Deployed {
         created,
         refreshed: Vec::new(),
+        newer: Vec::new(),
     })
 }
 
@@ -1068,31 +1126,50 @@ mod tests {
         assert_eq!(h, sha256_hex(b"mdatron"));
     }
 
-    // #207: an untouched managed template whose recorded content is an OLDER
-    // version is refreshed to this version's content and re-hashed; an edited
-    // one is drift, refused, and left byte-for-byte alone.
-    #[test]
-    fn init_refreshes_an_untouched_stale_template_and_refuses_an_edited_one() {
-        let root = temp_root("refresh");
-        init(&root).unwrap();
-        let dir = root.join(".mdatron");
-        let (name, current) = TEMPLATE_FILES[0];
-        let old = "# an older version of this template\n";
-        // Simulate a tree initialized by an older version: the file and its
-        // manifest hash both carry the old content.
-        std::fs::write(dir.join(name), old).unwrap();
+    /// Overwrite template `name` in an initialized tree with `bytes` and record
+    /// their hash, as the version that wrote them would have.
+    fn record_template(dir: &Path, name: &str, bytes: &str) {
+        std::fs::write(dir.join(name), bytes).unwrap();
         let mut manifest = read_manifest(&dir.join(MANIFEST_NAME)).unwrap();
         manifest
             .managed
             .iter_mut()
             .find(|e| e.path == name)
             .unwrap()
-            .sha256 = sha256_hex(old.as_bytes());
-        write_manifest(&dir, &manifest).unwrap();
+            .sha256 = sha256_hex(bytes.as_bytes());
+        write_manifest(dir, &manifest).unwrap();
+    }
+
+    fn released_template(version: &str, name: &str) -> String {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/fixtures/init-templates")
+            .join(version)
+            .join(name);
+        std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()))
+    }
+
+    // #207, #231: an untouched template recorded by a RELEASED older version
+    // (0.7.0's actual routes template) is refreshed to this version's content
+    // and re-hashed; an edited one is drift, refused, and left alone.
+    #[test]
+    fn init_refreshes_an_untouched_released_template_and_refuses_an_edited_one() {
+        let root = temp_root("refresh");
+        init(&root).unwrap();
+        let dir = root.join(".mdatron");
+        let name = "routes.yaml.example";
+        let current = template_content(name).unwrap();
+        record_template(&dir, name, &released_template("0.7.0", name));
 
         match init(&root).unwrap() {
-            InitOutcome::Deployed { created, refreshed } => {
-                assert!(created.is_empty(), "{created:?}");
+            InitOutcome::Deployed {
+                created,
+                refreshed,
+                newer,
+            } => {
+                assert!(
+                    created.is_empty() && newer.is_empty(),
+                    "{created:?} {newer:?}"
+                );
                 assert_eq!(refreshed, vec![format!(".mdatron/{name}")]);
             }
             other => panic!("expected a refresh, got {other:?}"),
@@ -1107,5 +1184,101 @@ mod tests {
         assert!(matches!(init(&root), Err(InitError::Drift(_))));
         assert_eq!(std::fs::read_to_string(dir.join(name)).unwrap(), edited);
         let _ = std::fs::remove_dir_all(&root);
+    }
+
+    // RED GATE (#231, GH #73 defect 4): an untouched template whose recorded
+    // content this version does not know — a NEWER mdatron wrote it — is left
+    // as recorded and reported, never moved back to this version's content,
+    // so developers on mixed versions stop ping-ponging the committed bytes.
+    #[test]
+    fn init_never_moves_a_newer_template_back() {
+        let root = temp_root("refresh-newer");
+        init(&root).unwrap();
+        let dir = root.join(".mdatron");
+        let name = "routes.yaml.example";
+        let newer_bytes = "# the routes template a newer mdatron ships\n";
+        record_template(&dir, name, newer_bytes);
+        let manifest_before = std::fs::read(dir.join(MANIFEST_NAME)).unwrap();
+
+        match init(&root).unwrap() {
+            InitOutcome::Deployed {
+                created,
+                refreshed,
+                newer,
+            } => {
+                assert!(
+                    created.is_empty() && refreshed.is_empty(),
+                    "{created:?} {refreshed:?}"
+                );
+                assert_eq!(newer, vec![format!(".mdatron/{name}")]);
+            }
+            other => panic!("expected the newer template kept and reported, got {other:?}"),
+        }
+        assert_eq!(
+            std::fs::read_to_string(dir.join(name)).unwrap(),
+            newer_bytes
+        );
+        assert_eq!(
+            std::fs::read(dir.join(MANIFEST_NAME)).unwrap(),
+            manifest_before
+        );
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    // #231: each recorded released hash is the hash of that release's actual
+    // template bytes (the committed fixtures). A template unchanged since that
+    // release has the same hash today; harmless, as a refresh needs the
+    // recorded hash to differ from the current content first.
+    #[test]
+    fn released_template_hashes_match_their_fixtures() {
+        for (version, name, hash) in RELEASED_TEMPLATE_HASHES {
+            if *version == "unreleased" {
+                continue;
+            }
+            assert_eq!(
+                sha256_hex(released_template(version, name).as_bytes()),
+                *hash,
+                "{version} {name}"
+            );
+        }
+    }
+
+    // #231 tripwire: the shipped templates' hashes, pinned. Changing a template
+    // fails here: add the hash it replaces to RELEASED_TEMPLATE_HASHES —
+    // labelled with the release that shipped it (and its bytes under
+    // tests/fixtures/init-templates/<version>/), or `unreleased` — so the next
+    // version refreshes it forward, then update this pin.
+    #[test]
+    fn template_hashes_are_pinned() {
+        let pinned = [
+            (
+                "routes.yaml.example",
+                "e4d23d6eaa46e7a9b13766ba8e1dcedf925926bfe0ccece0f3721b468b617d4e",
+            ),
+            (
+                "pins.yaml.example",
+                "d896b9c74b219041bea8670303654ad67db8b29e4736ffbde82d7bd25a3a5c6f",
+            ),
+            (
+                "vocabulary.yaml.example",
+                "c7d0a0d3f13018322f8b8b585c3b123c1f87f85fd3f1f0d26a2ef93571f93b25",
+            ),
+            (
+                "code-catalogs.yaml.example",
+                "b4083b0aa957019cf7397747032deb38292aab8384e68923ecf6d043bab5be6f",
+            ),
+            (
+                "links.yaml.example",
+                "b11549e96b4fe8c2c411dc4b0445e79b9a07c22e722120547f843b578359054f",
+            ),
+        ];
+        assert_eq!(pinned.len(), TEMPLATE_FILES.len());
+        for (name, hash) in pinned {
+            assert_eq!(
+                sha256_hex(template_content(name).unwrap().as_bytes()),
+                hash,
+                "{name} changed: add the hash it replaces to RELEASED_TEMPLATE_HASHES (see the comment)"
+            );
+        }
     }
 }

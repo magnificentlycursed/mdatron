@@ -637,7 +637,11 @@ fn cmd_init(project_root: Option<PathBuf>, quiet: bool) -> ExitCode {
     let root = canonical_project_root(root);
 
     match init(&root) {
-        Ok(InitOutcome::Deployed { created, refreshed }) => {
+        Ok(InitOutcome::Deployed {
+            created,
+            refreshed,
+            newer,
+        }) => {
             if !quiet {
                 if !created.is_empty() {
                     eprintln!(
@@ -658,6 +662,15 @@ fn cmd_init(project_root: Option<PathBuf>, quiet: bool) -> ExitCode {
                 }
                 for p in &refreshed {
                     eprintln!("  ~ {}", stderr_safe(p, &[]));
+                }
+                if !newer.is_empty() {
+                    eprintln!(
+                        "mdatron init: kept {} template(s) whose content this version does not know (a newer or unreleased mdatron's, or re-hashed by hand) — delete one and re-run init to take this version's",
+                        newer.len()
+                    );
+                }
+                for p in &newer {
+                    eprintln!("  = {}", stderr_safe(p, &[]));
                 }
             }
             ExitCode::SUCCESS

@@ -11,3 +11,6 @@ docs/limits.md text eol=lf
 # The standards-pack examples are compared byte for byte against the cookbook
 # pages, finding fingerprints included; LF on every checkout (#181).
 examples/** text eol=lf
+# The released init templates are hash fixtures (#231): their sha256 must equal
+# the hashes src/init.rs records for that release, so keep them LF everywhere.
+tests/fixtures/init-templates/** text eol=lf
