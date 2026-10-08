@@ -166,6 +166,17 @@ pub(crate) fn non_fenced_lines(body: &str) -> Vec<(usize, &str)> {
     out
 }
 
+/// The CommonMark parser every body-scanning pass uses, with GitHub's footnote
+/// syntax (#243): without it a footnote definition whose body is one token —
+/// `[^1]: [fn](https://…)`, `[^1]: notes.md` — parsed as a REFERENCE
+/// definition, and each `[^1]` became a link to that text (a false `E0110`).
+/// With it the footnote body is ordinary inline content, so a link inside it
+/// is found like any other. ONE constructor, so the slug and link passes never
+/// disagree about what a footnote is.
+fn parser(body: &str) -> pulldown_cmark::Parser<'_> {
+    pulldown_cmark::Parser::new_ext(body, pulldown_cmark::Options::ENABLE_FOOTNOTES)
+}
+
 /// The set of GitHub heading-anchor slugs of `body`, via a CommonMark parse
 /// (#155). Covers ATX **and setext** headings (both are heading events), applies
 /// GitHub's duplicate-heading `-N` disambiguation (the first "Foo" is `foo`, the
@@ -175,16 +186,27 @@ pub(crate) fn non_fenced_lines(body: &str) -> Vec<(usize, &str)> {
 /// rather than the old fence-line heuristic. Adding an anchor only ever REMOVES a
 /// dead-anchor false positive, so the set is deliberately generous.
 pub(crate) fn heading_slugs(body: &str) -> HashSet<String> {
-    use pulldown_cmark::{Event, Parser, Tag, TagEnd};
+    use pulldown_cmark::{Event, Tag, TagEnd};
     let mut slugs = HashSet::new();
     let mut counts: HashMap<String, u32> = HashMap::new();
     let mut in_heading = false;
     let mut text = String::new();
-    for event in Parser::new(body) {
+    // The heading text as GitHub renders it with its footnote markers (#243
+    // review): a reference renders as its ordinal (`# Title[^1]` → `title1`).
+    // The bare form and a label form are kept too — the set is generous.
+    let mut rendered = String::new();
+    let mut labelled = String::new();
+    // GitHub numbers footnotes by first reference; each further reference to
+    // the same label gets `fnref-<label>-<k>`.
+    let mut ordinals: HashMap<String, usize> = HashMap::new();
+    let mut ref_counts: HashMap<String, usize> = HashMap::new();
+    for event in parser(body) {
         match event {
             Event::Start(Tag::Heading { .. }) => {
                 in_heading = true;
                 text.clear();
+                rendered.clear();
+                labelled.clear();
             }
             Event::End(TagEnd::Heading(_)) => {
                 in_heading = false;
@@ -193,17 +215,52 @@ pub(crate) fn heading_slugs(body: &str) -> HashSet<String> {
                     // GitHub gives the first occurrence the bare slug and appends
                     // `-1`, `-2`, … to each subsequent repeat of the same slug.
                     let n = counts.entry(base.clone()).or_insert(0);
-                    let slug = if *n == 0 {
-                        base.clone()
+                    let suffix = if *n == 0 {
+                        String::new()
                     } else {
-                        format!("{base}-{n}")
+                        format!("-{n}")
                     };
                     *n += 1;
-                    slugs.insert(slug);
+                    for variant in [&text, &rendered, &labelled] {
+                        let slug = slugify(variant);
+                        if !slug.is_empty() {
+                            slugs.insert(format!("{slug}{suffix}"));
+                        }
+                    }
                 }
             }
             // Heading text and inline `code` within it both contribute to the slug.
-            Event::Text(t) | Event::Code(t) if in_heading => text.push_str(&t),
+            Event::Text(t) | Event::Code(t) if in_heading => {
+                text.push_str(&t);
+                rendered.push_str(&t);
+                labelled.push_str(&t);
+            }
+            // GitHub's footnote anchors (#243 review): the definition
+            // (`fn-<label>`), each reference (`fnref-<label>`, `-2`, …) and the
+            // footnotes section, with and without the `user-content-` prefix.
+            Event::FootnoteReference(label) => {
+                let next = ordinals.len() + 1;
+                let ordinal = *ordinals.entry(label.to_string()).or_insert(next);
+                let k = ref_counts.entry(label.to_string()).or_insert(0);
+                *k += 1;
+                let id = if *k == 1 {
+                    format!("fnref-{label}")
+                } else {
+                    format!("fnref-{label}-{k}")
+                };
+                slugs.insert(format!("user-content-{id}"));
+                slugs.insert(id);
+                if in_heading {
+                    rendered.push_str(&ordinal.to_string());
+                    labelled.push_str(&label);
+                }
+            }
+            Event::Start(Tag::FootnoteDefinition(label)) => {
+                for id in [format!("fn-{label}"), "footnote-label".to_string()] {
+                    slugs.insert(format!("user-content-{id}"));
+                    slugs.insert(id);
+                }
+            }
             // Explicit HTML anchors are valid targets wherever they appear.
             Event::Html(h) | Event::InlineHtml(h) => insert_html_anchors(&h, &mut slugs),
             _ => {}
@@ -286,9 +343,9 @@ pub(crate) struct BodyLink {
 /// `mailto:` — so it is given its scheme here, and the caller's external
 /// filter sees every autolink as the absolute destination it renders as.
 pub(crate) fn body_links(body: &str) -> Vec<BodyLink> {
-    use pulldown_cmark::{Event, LinkType, Parser, Tag};
+    use pulldown_cmark::{Event, LinkType, Tag};
     let mut out = Vec::new();
-    for (event, range) in Parser::new(body).into_offset_iter() {
+    for (event, range) in parser(body).into_offset_iter() {
         let dest = match event {
             Event::Start(Tag::Link {
                 link_type: LinkType::Email,
@@ -1044,5 +1101,49 @@ Not `[code](nope.md)` and\n\
             !dests.iter().any(|d| d.contains("nope")),
             "code-span and fenced links are excluded structurally; got {dests:?}"
         );
+    }
+
+    // RED GATE (#243): a GFM footnote definition is not a reference
+    // definition. Without the footnotes extension `[^1]: [fn](https://…)` was
+    // read as one, the text `[fn](https://…)` became a "destination" and a
+    // `[^1]` reference a link to it (a false E0110); the link INSIDE the
+    // footnote body is the real destination, and a footnote's heading-like
+    // body text never shifts the heading slugs.
+    #[test]
+    fn footnote_definitions_are_footnotes_not_reference_links() {
+        // (footnote body, the destinations a renderer links)
+        for (def, want) in [
+            ("[fn](https://acme.dev/x)", vec!["https://acme.dev/x"]),
+            ("notes.md", vec![]),
+            ("see [rel](b.md)", vec!["b.md"]),
+        ] {
+            let body = format!("Claimed.[^1]\n\n[^1]: {def}\n\n# Real\n");
+            let dests: Vec<String> = body_links(&body).into_iter().map(|l| l.dest).collect();
+            assert_eq!(dests, want, "{def}");
+            assert!(heading_slugs(&body).contains("real"), "{def}");
+        }
+    }
+
+    // #243 review: a heading holding a footnote reference keeps the slug
+    // GitHub renders (the ordinal) beside the bare one, and GitHub's footnote
+    // anchors resolve — before, `#fn-1` and `#title1` were dead anchors.
+    #[test]
+    fn footnote_anchors_and_footnoted_headings_resolve() {
+        let body = "# Title[^note]\n\nText.[^note] More.[^2]\n\n[^note]: a\n[^2]: b\n";
+        let slugs = heading_slugs(body);
+        for want in [
+            "title",
+            "title1",
+            "titlenote",
+            "fn-note",
+            "user-content-fn-note",
+            "fnref-note",
+            "fnref-note-2",
+            "user-content-fnref-2",
+            "footnote-label",
+        ] {
+            assert!(slugs.contains(want), "{want}: {slugs:?}");
+        }
+        assert!(!heading_slugs("# Plain\n").contains("footnote-label"));
     }
 }
