@@ -13,6 +13,8 @@ tracker: "#155"
 
 **Pinned version:** `^0.13.4` (resolves to 0.13.4) with `default-features = false` — the default `getopts`/`html` features exist only for the crate's bundled `pulldown-cmark` example binary (an arg-parsing CLI) and its HTML renderer, neither of which the link family builds. Dropping them removes three crates from the tree (`getopts`, `unicode-width`, `pulldown-cmark-escape`) and leaves the full event-parser API (`Parser`, `Event`, `Tag`, `TagEnd`, `LinkType`) intact — those types live in `lib.rs` unconditionally; only the `html` rendering module is feature-gated.
 
+**Parse options:** one extension, `Options::ENABLE_FOOTNOTES` (GitHub's footnote syntax, #243), set in the single parser constructor every body-scanning pass shares (`markup::parser`). Without it a footnote definition whose body is one token (`[^1]: [fn](https://…)`, `[^1]: notes.md`) parses as a reference definition and each `[^1]` as a link to that text — a false dead link on GFM corpora. No other extension is enabled.
+
 ## Why this dependency
 
 The link-check family has to recognise CommonMark link constructs to find and resolve link targets — and getting this right requires a real CommonMark event stream, not a scanner:
