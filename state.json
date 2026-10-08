@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1336,
-        "tip_oid": "5ae9e78ba7f860ea29f8f8781b0941d5f7383dfb",
-        "prefix_sha256": "45005984288a3a265e95509640f175857f4701fe71cfb699c01c53cd3ef7280c"
+        "sequence": 1337,
+        "tip_oid": "127b0c3d9b08bccd379049ddea7d0bde0351e068",
+        "prefix_sha256": "86a87095d952142466a141700ed018e03c8fa812016dd3b6171d62efa997558d"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 245,
-  "next_comment_id": 636,
+  "next_comment_id": 637,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -526,11 +526,20 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-10-06T21:18:28.631202Z",
-      "updated_at": "2026-10-08T20:55:25.805112Z",
+      "updated_at": "2026-10-08T21:05:59.784927Z",
       "labels": [
         "bug"
       ],
       "comments": {
+        "6c05b75e-990a-4619-8633-ceece7a95b47": {
+          "display_id": 636,
+          "author": "79Ig",
+          "content": "PR opened (34ec5156 + review fixes). Review: no blocker/major; minors fixed (unknown-content wording, always record replaced hash incl. 'unreleased', from-0.8.0 caveat in docs).",
+          "created_at": "2026-10-08T21:05:59.750605Z",
+          "kind": "note",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAVCIAe1N8k1CzRmFYtp5C2AgjYBCHly8BMhcGx7Gkvjtc0wZWj58ycoxl5eREYZIkMXW2FW9sENXb+frdLElWCA=="
+        },
         "df70bb41-3a56-48a3-8add-926fa2c725fb": {
           "display_id": 634,
           "author": "79Ig",
