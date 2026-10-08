@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1330,
-        "tip_oid": "f64fbde6c6d842822cd885000f2bb1bcc4f9dd8b",
-        "prefix_sha256": "8e35769f710d67f1e99c1784054ace5d017f04a28a97d20ef2fe60cdfd1a1e2c"
+        "sequence": 1331,
+        "tip_oid": "44395d21267ba32746f4035803f4d92939482e36",
+        "prefix_sha256": "7321b20861f9918319af510c57b043b230e5672a12dcee02ee465f4fd03afa6a"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 245,
-  "next_comment_id": 633,
+  "next_comment_id": 634,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -1074,7 +1074,7 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-10-07T01:38:59.984976Z",
-      "updated_at": "2026-10-08T19:36:01.291234Z",
+      "updated_at": "2026-10-08T19:39:40.491027Z",
       "labels": [
         "bug"
       ],
@@ -1096,6 +1096,15 @@
           "kind": "note",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAJS78ok9mZT9ObQGtcqAkeWtU3FMaxHjP1UYkKk2s5QIB0NCTAV82CO8F8vkdeCF0M4CzgBNvKr/mF6F8uuh3CA=="
+        },
+        "cff70fe5-0fc0-4771-8bd6-485c045c2122": {
+          "display_id": 633,
+          "author": "79Ig",
+          "content": "Delivered in PR #80 (merged): body passes parse GFM footnotes (one shared constructor); footnote links checked/exported; GitHub footnote anchors and footnoted-heading slugs resolve.",
+          "created_at": "2026-10-08T19:39:40.450329Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAYKKiOfKfCv1W9kn51ZQ1jvlruxuPDJw3kosamVyyqh4Q129zPKPcsGy4KA4LO/WpkyvxCZMrs8p/1qkFGsw1DA=="
         }
       }
     },
