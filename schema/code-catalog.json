@@ -64,5 +64,6 @@
   "MDATRON-W0054": "route-glob-matches-nothing",
   "MDATRON-W0055": "code-catalog-scope-matches-nothing",
   "MDATRON-W0056": "link-register-inert",
-  "MDATRON-W0057": "link-register-entry-unused"
+  "MDATRON-W0057": "link-register-entry-unused",
+  "MDATRON-W0058": "rule-context-matches-nothing"
 }

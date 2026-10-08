@@ -1184,6 +1184,12 @@ fn run_inner(
     // declared class) can only be known for files this pass READ, so under an
     // incremental scope they do not decide `inert` (see the families block).
     let mut rule_context_hits = 0usize;
+    // Per rule, by (pattern, rule) position: did its context match a file this
+    // pass read? (#229 — the aggregate above hid a dead rule beside a live one.)
+    let mut rule_matched: Vec<Vec<bool>> = patterns
+        .iter()
+        .map(|pf| vec![false; pf.pattern.rules.len()])
+        .collect();
     let mut schema_bound_hits = 0usize;
     let mut files_checked: u32 = 0;
     // #110: does any walked file declare a schema_class that routed to neither a
@@ -1314,7 +1320,10 @@ fn run_inner(
             &mut findings,
         )?;
         any_unvalidated_schema_class |= verdict.unvalidated_schema_class;
-        rule_context_hits += usize::from(verdict.rule_context_matched);
+        rule_context_hits += usize::from(!verdict.matched_rules.is_empty());
+        for (p, r) in verdict.matched_rules {
+            rule_matched[p][r] = true;
+        }
         schema_bound_hits += usize::from(verdict.schema_bound);
         // A validated file (#105): the audit signal counts files the per-file
         // checks actually ran on, not files that produced findings.
@@ -1573,6 +1582,52 @@ fn run_inner(
         }
     }
 
+    // #229 (GH #73 defect 1): a rule whose context matched no walked file
+    // checks nothing — W0054's posture for a dead route, per rule, because one
+    // live rule kept the lane `active` while another beside it was dead.
+    // Whole-tree, config-driven runs only, for the same reasons as W0054.
+    if scope.is_none() && config.config_digest.is_some() {
+        let empty: Vec<Location> = Vec::new();
+        for ((pf, rule_locs), hits) in patterns
+            .iter()
+            .zip(rule_locations.iter().chain(std::iter::repeat(&empty)))
+            .zip(&rule_matched)
+        {
+            for (rule_idx, rule) in pf.pattern.rules.iter().enumerate() {
+                if hits[rule_idx] {
+                    continue;
+                }
+                let region = |label: &str, content: String| QuotedRegion {
+                    platform_variant: false,
+                    label: label.into(),
+                    content,
+                };
+                findings.push(Finding {
+                    code: "MDATRON-W0058".into(),
+                    severity: Severity::Warning,
+                    summary: "rule-context-matches-nothing".into(),
+                    message: "a pattern rule's context matched no walked file, so the \
+                              rule checked nothing — a mistyped class or glob would pass \
+                              silently as if every file conformed"
+                        .into(),
+                    help: Some(
+                        "correct the context to the schema_class or path glob of the \
+                         files the rule should check, or remove the rule if those files \
+                         are gone"
+                            .into(),
+                    ),
+                    location: rule_location(rule_locs, rule_idx, &config.patterns_dir),
+                    explain_ref: Some("MDATRON-W0058".into()),
+                    quoted: vec![
+                        region("pattern", pf.pattern.id.clone()),
+                        region("rule", rule.id.clone()),
+                        region("context", context_text(&rule.context)),
+                    ],
+                });
+            }
+        }
+    }
+
     // #203 F3: a `code_catalog_globs` list that reaches no walked file leaves
     // the catalog scan inert — the same fail-open class as a dead
     // `vocabulary_globs` (W0043), announced at the config, whole-tree only.
@@ -1645,6 +1700,13 @@ fn run_inner(
     // route key that activates the family; `inert` = supplied but reached no
     // walked file this pass (#204 R5 — every route-attached family now
     // distinguishes it, not only vocabulary).
+    let rules_total: usize = rule_matched.iter().map(Vec::len).sum();
+    let rules_total_n = if rules_total == 1 {
+        "1 rule".to_string()
+    } else {
+        format!("{rules_total} rules")
+    };
+    let rules_matched: usize = rule_matched.iter().flatten().filter(|&&m| m).count();
     let families = Families {
         schema: if !schemas_supplied {
             FamilyActivity::inactive("no schema files in .mdatron/schemas/")
@@ -1737,18 +1799,24 @@ fn run_inner(
         } else {
             FamilyActivity::active("a route supplies section_rules")
         },
+        // #229: the reason counts the rules whose context matched, so a dead
+        // rule beside a live one is legible here too (W0058 names it).
         rule_dsl: if !patterns_supplied {
             FamilyActivity::inactive("no pattern files in .mdatron/patterns/")
         } else if scope.is_some() {
-            FamilyActivity::active(
-                ".mdatron/patterns/ supplied; rules ran over the incremental scope",
-            )
+            FamilyActivity::active(format!(
+                ".mdatron/patterns/ supplied; rules ran over the incremental scope \
+                 ({rules_matched} of {rules_total_n} matched a file in it)"
+            ))
         } else if rule_context_hits == 0 {
             FamilyActivity::inert(
                 ".mdatron/patterns/ supplied but no rule's context matched a walked file",
             )
         } else {
-            FamilyActivity::active(".mdatron/patterns/ supplied; rules ran")
+            FamilyActivity::active(format!(
+                ".mdatron/patterns/ supplied; rules ran \
+                 ({rules_matched} of {rules_total_n} matched a walked file)"
+            ))
         },
     };
 
@@ -2463,6 +2531,20 @@ fn validate_rule_field_refs(
         }
     }
     Ok(())
+}
+
+/// A rule's `context` as its pattern file spells it, for W0058's quoted region.
+fn context_text(context: &ContextSelector) -> String {
+    match context {
+        ContextSelector::Bare(s) => s.clone(),
+        ContextSelector::Combined { schema_class, path } => {
+            let parts: Vec<String> = [("schema_class", schema_class), ("path", path)]
+                .into_iter()
+                .filter_map(|(k, v)| v.as_ref().map(|v| format!("{k}: {v}")))
+                .collect();
+            format!("{{{}}}", parts.join(", "))
+        }
+    }
 }
 
 /// The schema_class a rule's context statically binds `$self` to: a bare
@@ -3455,16 +3537,19 @@ fn verify_file(
         registry,
         path,
     };
-    let mut any_context_matched = false;
-    for pf in patterns {
-        for rule in &pf.pattern.rules {
+    // Which rules' contexts matched, by (pattern, rule) position (#229): the
+    // run counts them per rule, so one dead rule is not hidden by a live one.
+    let mut matched_rules: Vec<(usize, usize)> = Vec::new();
+    for (pf_idx, pf) in patterns.iter().enumerate() {
+        for (rule_idx, rule) in pf.pattern.rules.iter().enumerate() {
             if !context_matches(&rule.context, schema_class_opt.as_deref(), rel_path) {
                 continue;
             }
-            any_context_matched = true;
+            matched_rules.push((pf_idx, rule_idx));
             verify_rule(pf, rule, &rule_ctx, findings)?;
         }
     }
+    let any_context_matched = !matched_rules.is_empty();
 
     // #106 (audit signal, #104 item 3): a file that DECLARES a schema_class
     // which matches no schema AND no rule context was silently unvalidated —
@@ -3515,7 +3600,7 @@ fn verify_file(
     }
     Ok(FileVerdict {
         unvalidated_schema_class,
-        rule_context_matched: any_context_matched,
+        matched_rules,
         schema_bound: schema_matched,
     })
 }
@@ -3525,9 +3610,9 @@ struct FileVerdict {
     /// The file declares a `schema_class` that no schema and no rule context
     /// validated (feeds W0047 when the schemas dir is missing).
     unvalidated_schema_class: bool,
-    /// At least one pattern rule's `context` matched this file (feeds the
-    /// `rule_dsl` activity: active vs inert).
-    rule_context_matched: bool,
+    /// The (pattern, rule) positions whose `context` matched this file (feeds
+    /// the `rule_dsl` activity and the per-rule W0058, #229).
+    matched_rules: Vec<(usize, usize)>,
     /// The file's declared `schema_class` was served by a schema (feeds the
     /// schema family's activity: active vs inert).
     schema_bound: bool,
@@ -3537,7 +3622,7 @@ impl FileVerdict {
     /// Nothing to report: the file was skipped before either signal could arise.
     const NONE: Self = Self {
         unvalidated_schema_class: false,
-        rule_context_matched: false,
+        matched_rules: Vec::new(),
         schema_bound: false,
     };
 }
@@ -6508,6 +6593,78 @@ pattern:
         active.write(".mdatron/patterns/t.yaml", &pattern("phase-primer"));
         let fam = link_families(&active);
         assert_eq!(state_of(&fam.rule_dsl), "active", "{:?}", fam.rule_dsl);
+    }
+
+    // RED GATE (#229, GH #73 defect 1): the lane's activity was aggregate — one
+    // live pattern hid a dead one (active, healthy reason, no warning). Each
+    // rule whose context matched no walked file is W0058 on a config-driven
+    // whole-tree run (never under --changed or --files), and the reason counts
+    // the rules that matched, incremental runs included.
+    #[test]
+    fn a_dead_rule_context_is_announced_beside_a_live_one() {
+        let proj = TempProject::new("dsl-dead-rule");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(".mdatron/config.yaml", "file_globs:\n  - \"**/*.md\"\n");
+        proj.write(
+            "doc.md",
+            "---\nschema_class: phase-primer\nphase: phase-1a\nrelevant_domains: [se]\n---\nbody\n",
+        );
+        let pattern = |id: &str, context: &str| {
+            format!(
+                "pattern:\n  id: {id}\n  rules:\n    - id: r\n      context: {context}\n      assert: \"true\"\n      code: T-E0001\n      message: m\n"
+            )
+        };
+        proj.write(
+            ".mdatron/patterns/live.yaml",
+            &pattern("live", "phase-primer"),
+        );
+        proj.write(
+            ".mdatron/patterns/dead.yaml",
+            &pattern("dead", "other-class"),
+        );
+        let reason = |a: &crate::output::FamilyActivity| match a {
+            crate::output::FamilyActivity::Active { reason }
+            | crate::output::FamilyActivity::Inert { reason }
+            | crate::output::FamilyActivity::Inactive { reason } => reason.clone(),
+        };
+
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let whole = verify_report(&cfg).unwrap();
+        let w: Vec<_> = whole
+            .findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-W0058")
+            .collect();
+        assert_eq!(w.len(), 1, "{:?}", whole.findings);
+        assert!(w[0].location.file.ends_with("dead.yaml"), "{w:?}");
+        assert!(
+            w[0].quoted
+                .iter()
+                .any(|q| q.label == "pattern" && q.content == "dead"),
+            "{w:?}"
+        );
+        assert_eq!(state_of(&whole.families.rule_dsl), "active");
+        assert!(
+            reason(&whole.families.rule_dsl).contains("1 of 2 rules"),
+            "{:?}",
+            whole.families.rule_dsl
+        );
+
+        let inc = verify_incremental(&cfg, &proj.0.join("doc.md")).unwrap();
+        assert_eq!(codes_of(&inc.report.findings, "MDATRON-W0058"), 0);
+        let r = reason(&inc.report.families.rule_dsl);
+        assert!(
+            r.contains("incremental") && r.contains("1 of 2 rules"),
+            "{r}"
+        );
+
+        let mut adhoc = VerifyConfig::new(&proj.0);
+        adhoc.file_globs = vec!["doc.md".into()];
+        let adhoc = verify_report(&adhoc).unwrap();
+        assert_eq!(codes_of(&adhoc.findings, "MDATRON-W0058"), 0);
     }
 
     // #204 R5: a route-attached opt-in (citations, links, marker_rules,

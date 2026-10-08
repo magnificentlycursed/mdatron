@@ -326,5 +326,7 @@ Keys: `mdatron_dsl_version`, `pattern`, `id`, `description`, `keys`, `name`, `so
   `expression`) are accepted and inert (`W0052`).
 
 Activation: the directory holds at least one pattern file. Scope: every walked
-file whose `schema_class` a rule's `context` selects. Codes: `E0021`, `E0022`,
-`E0023`, `W0050`, `W0052`, and the adopter's own rule codes.
+file a rule's `context` selects — by the `schema_class` it declares or a route
+binds with `schema:`, or by path glob; a rule whose context selects no walked
+file warns (`W0058`, whole-tree runs only). Codes: `E0021`, `E0022`, `E0023`,
+`W0050`, `W0052`, `W0058`, and the adopter's own rule codes.
