@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1348,
-        "tip_oid": "65ed96381bdfea4401480d83aa180fa477d58523",
-        "prefix_sha256": "1d59fcf144ec1ef957cc51372761ffabbfce815f235f8ff51136b467ada21d4a"
+        "sequence": 1349,
+        "tip_oid": "e069918b9377cd38cdd3a7d6121221374abefde4",
+        "prefix_sha256": "11661e3e3dbd1ce9e14b7f99089623989718f34ecb7a2e1cc7d187611d595e4c"
       },
       "IMWa": {
         "sequence": 2,
@@ -7556,7 +7556,10 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-10-08T22:25:26.442591Z",
-      "updated_at": "2026-10-08T22:25:26.442591Z"
+      "updated_at": "2026-10-08T22:26:29.794813Z",
+      "labels": [
+        "bug"
+      ]
     },
     "c5dc858e-4a6e-4662-9360-2aac4b0c176d": {
       "uuid": "c5dc858e-4a6e-4662-9360-2aac4b0c176d",
