@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1340,
-        "tip_oid": "6ed32b410584c92ab463764ec969728277fc2a53",
-        "prefix_sha256": "141ae02dfcc150a23c090f39f1768fbb43c888edf4c421c4ec36694e6d6533bc"
+        "sequence": 1341,
+        "tip_oid": "6f05a5ae7c84aae48a217e285b771c49349f8cb9",
+        "prefix_sha256": "ccf1f0247920fe57135babbb578184eac58cd394d131994620340f14e623e491"
       },
       "IMWa": {
         "sequence": 2,
@@ -280,6 +280,10 @@
     "194": {
       "agent_id": "79Ig",
       "claimed_at": "2026-09-20T02:46:06.091580Z"
+    },
+    "241": {
+      "agent_id": "79Ig",
+      "claimed_at": "2026-10-08T21:55:10.056883Z"
     }
   },
   "issues": {
