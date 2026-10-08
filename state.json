@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1317,
-        "tip_oid": "defac64061b02a3851e3fb98d65f9b4e94d03872",
-        "prefix_sha256": "e56812650d991c0d7082f746db0fc47179cb5e8d6f7157731bc7f3c9c56accc4"
+        "sequence": 1318,
+        "tip_oid": "57710309e3724dfc904d42a78497bd95004a51ee",
+        "prefix_sha256": "b79d80cef9db6348d9b18fb7c7256328a42cf0d3dc928bf536b5510de6be9b2d"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 245,
-  "next_comment_id": 626,
+  "next_comment_id": 627,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -3659,11 +3659,20 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-10-08T04:26:17.382685Z",
-      "updated_at": "2026-10-08T16:29:57.500978Z",
+      "updated_at": "2026-10-08T16:44:58.770980Z",
       "labels": [
         "bug"
       ],
       "comments": {
+        "dddc4bda-a95a-4549-8618-4a01e639c14d": {
+          "display_id": 626,
+          "author": "79Ig",
+          "content": "PR #77 opened (34bd609d + 7152cebe). Cold review major (.mdatron/ governance YAML unguarded: config.yaml 100k deep 45s, clean) brought into scope: crate::yaml::from_str is the single guarded entry point, all 28 sites routed, clippy.toml disallows direct serde_yaml_ng parsing. Block-style nesting measured linear. Error-variant SemVer note not needed (lib is not a public API).",
+          "created_at": "2026-10-08T16:44:58.728985Z",
+          "kind": "note",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA7dwOUr4gTJwzvnzZaEhBaA3bHNL2lGINVCh/P0UkbNtXYMEZHMdXY6lj8IB1Y+y32n2QpPbRFZ3OXJvQjofyDQ=="
+        },
         "efc1dfbd-f497-410e-8faf-3777ff78485b": {
           "display_id": 625,
           "author": "79Ig",
