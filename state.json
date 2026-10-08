@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1323,
-        "tip_oid": "f464f911227eacb2e90b94e7a056d87da9773617",
-        "prefix_sha256": "d48763d6e5cd632f5bb748e0e6b1e19cea5dc3c0586c46661b53e0c9b53fd847"
+        "sequence": 1324,
+        "tip_oid": "e7d9fac84946971ea08e536aeb0cba601260fb64",
+        "prefix_sha256": "388822cc4a87fea82b1d3aac03f32ad8df566eb40e76d476d0b582819d495a38"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 245,
-  "next_comment_id": 629,
+  "next_comment_id": 630,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -4002,11 +4002,20 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-10-06T21:15:36.000283Z",
-      "updated_at": "2026-10-08T19:10:07.317889Z",
+      "updated_at": "2026-10-08T19:16:32.935761Z",
       "labels": [
         "bug"
       ],
       "comments": {
+        "4fbf008c-f3c9-498d-9a81-33f0a0c52ff6": {
+          "display_id": 629,
+          "author": "79Ig",
+          "content": "PR #78 opened (20885333 + review fixes). Cold review major fixed: W0058 distinguishes 'matched no walked file' from 'selected N files, none evaluable' via pre-read selection from path + route schema: binding. Incremental reason reworded ('rules evaluated'). Docs: W0058 page, dsl-reference context selectors, inputs.md, DESIGN:24, CHANGELOG.",
+          "created_at": "2026-10-08T19:16:32.891167Z",
+          "kind": "note",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAApjo1X7IHw9JGaR3c/2OftU0bh5UbzBtxSsCCCcBvqd+BjLmOVCATynQ0lwoh5k53BkJN39rISVoH+3lvOb4DA=="
+        },
         "eb38d8c1-0648-49e3-bdf2-4374998f0048": {
           "display_id": 628,
           "author": "79Ig",
