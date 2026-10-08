@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1316,
-        "tip_oid": "8eaaf8417a2b20ac1a7a8db1f54c30b0a991ce8d",
-        "prefix_sha256": "e223f01ab7f48d04d0de7bf24878568aa230eb779ef02e18772339f9bcb9c893"
+        "sequence": 1317,
+        "tip_oid": "defac64061b02a3851e3fb98d65f9b4e94d03872",
+        "prefix_sha256": "e56812650d991c0d7082f746db0fc47179cb5e8d6f7157731bc7f3c9c56accc4"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 245,
-  "next_comment_id": 625,
+  "next_comment_id": 626,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -3659,10 +3659,21 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-10-08T04:26:17.382685Z",
-      "updated_at": "2026-10-08T04:27:54.674232Z",
+      "updated_at": "2026-10-08T16:29:57.500978Z",
       "labels": [
         "bug"
-      ]
+      ],
+      "comments": {
+        "efc1dfbd-f497-410e-8faf-3777ff78485b": {
+          "display_id": 625,
+          "author": "79Ig",
+          "content": "Plan/implementation: one enforcement point. limits::check_flow_nesting (max_flow_nesting moved beside the limit, re-exported from verify) runs inside frontmatter::parse before serde (Error::NestingTooDeep), so body_of callers (link/marker/pin targets) and .md index sources inherit it; .yaml index sources prescan whole content (IndexError::Parse -> index_build). Outcomes: governed file bound_exceeded (walk, unchanged), index source index_build naming depth (verified e2e), target read as no frontmatter. Red gates proven with the check disabled (link-target test 206s debug vs 0.25s). Not in scope: .mdatron/ config YAML (config, routes, vocab, pins, links register, manifest, patterns) is parsed without the pre-scan; governance data, reviewed — noted for the operator.",
+          "created_at": "2026-10-08T16:29:57.462452Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAILZIGEkeQ42dEa7XRUGsiYJCS/s7WpDmOPrVdkKqpoWjlbdsacPaVoP4osuc5fz5DQcrwyZwurgxlEoMKe69CA=="
+        }
+      }
     },
     "62801e0e-b352-49b3-90f4-c6ef253fad34": {
       "uuid": "62801e0e-b352-49b3-90f4-c6ef253fad34",
