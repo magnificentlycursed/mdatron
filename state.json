@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1346,
-        "tip_oid": "163208530341f7f9fba58df79ab471bf3af85852",
-        "prefix_sha256": "c504fa64211fe26b49e226384cad09738430e40f9fae732f5256e1aad46c1f47"
+        "sequence": 1347,
+        "tip_oid": "c582439a9d00bcce87373d739ce7ca18054cef3a",
+        "prefix_sha256": "57aa37d796e9822d5ae91aef7edee4fe1f7896f3e18c37eb56c2b7abd50f139e"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 245,
-  "next_comment_id": 640,
+  "next_comment_id": 641,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -4752,7 +4752,18 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-10-06T21:17:29.478949Z",
-      "updated_at": "2026-10-06T21:17:29.478949Z"
+      "updated_at": "2026-10-08T22:24:21.755323Z",
+      "comments": {
+        "0e26a0f2-a9b6-48b2-ba55-c95ae44be6d8": {
+          "display_id": 640,
+          "author": "79Ig",
+          "content": "Operator ruling 2026-10-08: option (a), verify reports E0060 — DESIGN:111 'drift in them is refused' + 'enforces exactly what a single snapshot can show' (drift is snapshot-visible; the git-diff recipe is for what a snapshot cannot show) + DESIGN:60 no silent degradation (manifest is in inputs lineage). No line-ending normalization in this lane (one definition of drift for init and verify); CRLF filed separately. Implementation: init::entry_state shared; load_manifest emits drift; red gate verify_reports_managed_template_drift.",
+          "created_at": "2026-10-08T22:24:21.717183Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAFkUUcVG6Zd9NmZWZQpU5VDMKFXjsqo98QD2OrV0flH3UUiS5P84xMNVTS1Wmip6MJtEm4lnswwI/6EPD6OWZAA=="
+        }
+      }
     },
     "7f91651e-0b4e-4a0d-aa3e-567f6ebaea4a": {
       "uuid": "7f91651e-0b4e-4a0d-aa3e-567f6ebaea4a",
