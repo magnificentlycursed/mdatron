@@ -71,6 +71,7 @@ const E0113: &str = include_str!("MDATRON-E0113.md");
 const E0114: &str = include_str!("MDATRON-E0114.md");
 const E0021: &str = include_str!("MDATRON-E0021.md");
 const E0022: &str = include_str!("MDATRON-E0022.md");
+const E0023: &str = include_str!("MDATRON-E0023.md");
 const W0050: &str = include_str!("MDATRON-W0050.md");
 const E0120: &str = include_str!("MDATRON-E0120.md");
 const E0121: &str = include_str!("MDATRON-E0121.md");
@@ -152,6 +153,7 @@ pub fn lookup(code: &str) -> Option<&'static str> {
         "MDATRON-E0094" => Some(E0094),
         "MDATRON-E0021" => Some(E0021),
         "MDATRON-E0022" => Some(E0022),
+        "MDATRON-E0023" => Some(E0023),
         "MDATRON-W0050" => Some(W0050),
         "MDATRON-E0100" => Some(E0100),
         "MDATRON-E0101" => Some(E0101),
@@ -505,7 +507,10 @@ pub const MIGRATION_NOTES: &[(&str, &str)] = &[
          finding is `MDATRON-E0081` (reference-target-not-captured) and E0080 \
          is only ever the did-not-run failure. If you saw E0080 as a finding \
          with 'never captured into the run snapshot' in its message, see \
-         `mdatron explain MDATRON-E0081`.",
+         `mdatron explain MDATRON-E0081`. Through 0.7.0 a rule expression \
+         that failed to evaluate on one file also failed the pipeline here \
+         (`kind` `eval`); from 0.8.0 that is the per-file finding \
+         `MDATRON-E0023` (rule-evaluation-failed) and the run completes.",
     ),
     (
         "MDATRON-E0093",

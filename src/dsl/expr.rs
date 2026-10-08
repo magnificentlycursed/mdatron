@@ -334,6 +334,64 @@ pub fn evaluate(expr: &Expr, ctx: &EvalContext) -> Result<Value, EvalError> {
     }
 }
 
+// ── Load-time static check ─────────────────────────────────────────────────────
+
+/// Every builtin `call_function` dispatches, with its arity. Kept beside the
+/// dispatch so a new builtin is added to both (a unit test holds them together).
+const BUILTINS: &[(&str, usize)] = &[
+    ("count", 1),
+    ("len", 1),
+    ("defined", 1),
+    ("union", 2),
+    ("intersect", 2),
+    ("difference", 2),
+    ("concat", 2),
+    ("join", 2),
+    ("key", 2),
+];
+
+/// The first evaluation error `expr` raises whatever the file's data (#228): an
+/// unknown function, a builtin called with the wrong number of arguments, or a
+/// binding nothing in `bound` (the earlier `let:` names) or an enclosing
+/// quantifier defines. Such a rule is wrong for every file, so it is refused at
+/// load once rather than reported as an `E0023` on every file it selects.
+pub fn static_defect(expr: &Expr, bound: &[String]) -> Option<EvalError> {
+    match expr {
+        Expr::Lit(_) => None,
+        Expr::Var(VarRef::Binding(name)) => {
+            (!bound.contains(name)).then(|| EvalError::UndefinedBinding(name.clone()))
+        }
+        Expr::Var(_) => None,
+        Expr::Field(inner, _) | Expr::Not(inner) => static_defect(inner, bound),
+        Expr::Eq(a, b)
+        | Expr::Ne(a, b)
+        | Expr::And(a, b)
+        | Expr::Or(a, b)
+        | Expr::In(a, b)
+        | Expr::NotIn(a, b) => static_defect(a, bound).or_else(|| static_defect(b, bound)),
+        Expr::Call(name, args) => {
+            let Some(&(_, expected)) = BUILTINS.iter().find(|(n, _)| n == name) else {
+                return Some(EvalError::UnknownFunction(name.clone()));
+            };
+            if args.len() != expected {
+                return Some(EvalError::ArityMismatch {
+                    name: name.clone(),
+                    expected,
+                    got: args.len(),
+                });
+            }
+            args.iter().find_map(|a| static_defect(a, bound))
+        }
+        Expr::Every(binding, coll, pred)
+        | Expr::Some_(binding, coll, pred)
+        | Expr::Filter(binding, coll, pred) => static_defect(coll, bound).or_else(|| {
+            let mut inner = bound.to_vec();
+            inner.push(binding.clone());
+            static_defect(pred, &inner)
+        }),
+    }
+}
+
 // ── Standard library dispatch ──────────────────────────────────────────────────
 
 fn call_function(name: &str, args: &[Expr], ctx: &EvalContext) -> Result<Value, EvalError> {
@@ -422,6 +480,9 @@ fn call_function(name: &str, args: &[Expr], ctx: &EvalContext) -> Result<Value, 
             let key_value = evaluate(&args[1], ctx)?;
             let key_str = match key_value {
                 Value::Str(s) => s,
+                // A Null key is an absent field (DESIGN: a missing field reads
+                // as Null) — a lookup miss, not a type error (#228).
+                Value::Null => return Ok(Value::Null),
                 other => {
                     return Err(EvalError::TypeMismatch {
                         expected: "string (index key)",
@@ -1163,6 +1224,109 @@ mod tests {
         )
         .unwrap();
         assert_eq!(result, Value::Null);
+    }
+
+    // RED GATE (#228): a Null key (an absent field, e.g. `$self.owner` on a
+    // frontmatter-less file) is a lookup miss, not a type error — it returns
+    // Null like any other miss, so `defined(key(...))` is false and the rule
+    // fails as its own finding instead of aborting the run.
+    #[test]
+    fn key_with_null_key_returns_null() {
+        use super::super::index::IndexRegistry;
+        let registry = IndexRegistry::new();
+        let cv = null_ctx();
+        let context = EvalContext::new(&cv.0, &cv.1, &cv.2).with_indices(&registry);
+        let result = evaluate(
+            &Expr::Call(
+                "key".into(),
+                vec![Expr::Lit(s("owners")), Expr::Lit(Value::Null)],
+            ),
+            &context,
+        )
+        .unwrap();
+        assert_eq!(result, Value::Null);
+    }
+
+    // #228: only Null is widened — a present non-string key is still a type
+    // error (the rule is wrong, not the file's data absent).
+    #[test]
+    fn key_with_non_string_key_still_errors() {
+        use super::super::index::IndexRegistry;
+        let registry = IndexRegistry::new();
+        let cv = null_ctx();
+        let context = EvalContext::new(&cv.0, &cv.1, &cv.2).with_indices(&registry);
+        let result = evaluate(
+            &Expr::Call(
+                "key".into(),
+                vec![Expr::Lit(s("owners")), Expr::Lit(Value::Int(7))],
+            ),
+            &context,
+        );
+        assert!(
+            matches!(result, Err(EvalError::TypeMismatch { .. })),
+            "{result:?}"
+        );
+    }
+
+    // ── static_defect (#228) ────────────────────────────────────────────────
+
+    fn parsed(src: &str) -> Expr {
+        super::super::parse_expression(src).unwrap()
+    }
+
+    #[test]
+    fn static_defect_refuses_data_independent_errors() {
+        assert!(matches!(
+            static_defect(&parsed("definedd($self.x)"), &[]),
+            Some(EvalError::UnknownFunction(n)) if n == "definedd"
+        ));
+        assert!(matches!(
+            static_defect(&parsed("count($self.a, $self.b)"), &[]),
+            Some(EvalError::ArityMismatch {
+                expected: 1,
+                got: 2,
+                ..
+            })
+        ));
+        assert!(matches!(
+            static_defect(&parsed("$n == 1"), &[]),
+            Some(EvalError::UndefinedBinding(n)) if n == "n"
+        ));
+        // Nested inside a quantifier's collection and predicate alike.
+        assert!(static_defect(&parsed("every(t in $self.tags, nope(t))"), &[]).is_some());
+    }
+
+    #[test]
+    fn static_defect_accepts_bound_names_and_data_dependent_shapes() {
+        assert_eq!(static_defect(&parsed("$n == 1"), &["n".into()]), None);
+        assert_eq!(
+            static_defect(&parsed("every(t in $self.tags, t != \"x\")"), &[]),
+            None,
+            "a quantifier binds its variable in the predicate"
+        );
+        // A type error depends on the data, so it is left to evaluation.
+        assert_eq!(static_defect(&parsed("\"x\" in $self.tags"), &[]), None);
+    }
+
+    // BUILTINS is the dispatch's arity table: every entry is dispatched (never
+    // UnknownFunction) at that arity (never ArityMismatch).
+    #[test]
+    fn builtins_table_matches_the_dispatch() {
+        use super::super::index::IndexRegistry;
+        let registry = IndexRegistry::new();
+        let cv = null_ctx();
+        let context = EvalContext::new(&cv.0, &cv.1, &cv.2).with_indices(&registry);
+        for &(name, arity) in BUILTINS {
+            let args = vec![Expr::Lit(s("v")); arity];
+            let result = evaluate(&Expr::Call(name.into(), args), &context);
+            assert!(
+                !matches!(
+                    result,
+                    Err(EvalError::UnknownFunction(_) | EvalError::ArityMismatch { .. })
+                ),
+                "{name}/{arity}: {result:?}"
+            );
+        }
     }
 
     #[test]

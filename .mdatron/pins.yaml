@@ -5,7 +5,7 @@ mdatron_format_version: 1
 pins:
 - governed_by: DESIGN.md
   file: src/codes.rs
-  sha256: deb2ec901a2d3695cdb08031c645df9b21db6145e952de72ea45a35478cd721d
+  sha256: 34fdf4eb59b351f5243f6b893ea4f08cb086562f45f2d15db0022150c8bb62c3
 - governed_by: DESIGN.md
   file: .mdatron/manifest.yaml
   sha256: eb3cefe1f7ce16f0a1fbeb28dac394acd829e5a6fb2a280e0f72796703b77421

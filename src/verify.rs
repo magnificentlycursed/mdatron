@@ -28,8 +28,8 @@ use thiserror::Error;
 
 use crate::diagnostic::{Finding, Location, QuotedRegion, Severity};
 use crate::dsl::{
-    evaluate, parse_expression, parse_pattern_file, ContextSelector, EvalContext, EvalError, Expr,
-    IndexError, IndexRegistry, PatternFile, Rule, Value, VarRef,
+    evaluate, parse_expression, parse_pattern_file, static_defect, ContextSelector, EvalContext,
+    Expr, IndexError, IndexRegistry, PatternFile, Rule, Value, VarRef,
 };
 use crate::frontmatter;
 use crate::schema::{FieldPathStatus, Schema};
@@ -142,9 +142,7 @@ pub enum VerifyError {
     #[error("index build error: {0}")]
     IndexBuild(#[from] IndexError),
 
-    #[error(
-        "expression parse error in pattern '{pattern_id}' rule '{rule_id}' ({field}): {error}"
-    )]
+    #[error("invalid expression in pattern '{pattern_id}' rule '{rule_id}' ({field}): {error}")]
     ExprParse {
         pattern_id: String,
         rule_id: String,
@@ -152,13 +150,9 @@ pub enum VerifyError {
         error: String,
     },
 
-    #[error("expression evaluation error in pattern '{pattern_id}' rule '{rule_id}': {error}")]
-    Eval {
-        pattern_id: String,
-        rule_id: String,
-        error: EvalError,
-    },
-
+    // No `Eval` variant: since #228 an expression that does not evaluate on a
+    // file is the per-file finding `MDATRON-E0023`, not a pipeline failure (the
+    // envelope schema keeps `kind: "eval"` as a value 0.7.0 emitted).
     #[error("glob error: {0}")]
     Glob(String),
 
@@ -221,7 +215,6 @@ impl VerifyError {
             VerifyError::PatternLoad { .. } => "pattern_load",
             VerifyError::IndexBuild(_) => "index_build",
             VerifyError::ExprParse { .. } => "expr_parse",
-            VerifyError::Eval { .. } => "eval",
             VerifyError::Glob(_) => "glob",
             VerifyError::Config(_) => "config",
             VerifyError::Frontmatter { .. } => "frontmatter",
@@ -2409,15 +2402,47 @@ fn validate_rule_field_refs(
             // path raises, just at load (Cedar's validate-before-deploy) —
             // and before the char-boundary fix, this very call PANICKED on a
             // multibyte typo (exit 101, empty envelope) instead of erroring.
+            //
+            // #228: an expression that would fail on EVERY file (an unknown
+            // function, a wrong arity, an undefined binding) is refused here
+            // too, once, rather than reported as an E0023 on each file the
+            // rule selects. `bound` grows in evaluation order, so a `let:`
+            // sees only the bindings before it.
             let mut exprs = Vec::new();
+            let mut bound: Vec<String> = Vec::new();
             for (field, src) in sources {
-                let expr = parse_expression(src).map_err(|e| VerifyError::ExprParse {
+                let refused = |error: String| VerifyError::ExprParse {
                     pattern_id: pf.pattern.id.clone(),
                     rule_id: rule.id.clone(),
-                    field,
-                    error: e.message,
-                })?;
+                    field: field.clone(),
+                    error,
+                };
+                let expr = parse_expression(src).map_err(|e| refused(e.message))?;
+                if let Some(defect) = static_defect(&expr, &bound) {
+                    return Err(refused(defect.to_string()));
+                }
+                if let Some(name) = field.strip_prefix("let.") {
+                    bound.push(name.to_string());
+                }
                 exprs.push(expr);
+            }
+            // #228 round 2: the message's `{{expr}}` placeholders get the same
+            // parse and static check (every `let:` is in scope by then). They
+            // are only rendered when the rule fails, so unchecked here a
+            // defect would surface on some runs and ship silently on others.
+            // Validation only: the field-ref and comparison checks below cover
+            // what the rule decides on, not what its message displays.
+            for src in message_placeholders(&rule.message) {
+                let refused = |error: String| VerifyError::ExprParse {
+                    pattern_id: pf.pattern.id.clone(),
+                    rule_id: rule.id.clone(),
+                    field: "message".into(),
+                    error: format!("interpolation '{src}': {error}"),
+                };
+                let expr = parse_expression(src).map_err(|e| refused(e.message))?;
+                if let Some(defect) = static_defect(&expr, &bound) {
+                    return Err(refused(defect.to_string()));
+                }
             }
             // The schema-dependent checks stay behind the guard: a path-glob
             // context binds $self to whatever the matched files route to (not
@@ -3550,21 +3575,31 @@ fn verify_rule(
     let mut ctx =
         EvalContext::new(rc.self_value, rc.file_value, rc.project_value).with_indices(rc.registry);
 
-    // Evaluate let bindings in declared order (BTreeMap iterates by key — not strictly the
-    // declared order, but stable; for v0.1.x this is acceptable).
+    // An expression that does not evaluate on THIS file is an E0023 finding on
+    // it (#228): the rule neither passes nor fails here, and the run goes on —
+    // one file must not deny verification of the rest. A parse error is a
+    // defect in the rule itself and still fails the pipeline.
+    let unevaluable = |field: &str, error: String| rule_eval_finding(pf, rule, rc, field, error);
+
+    // Evaluate let bindings in declared order (`let_bindings` is a Vec, #89) —
+    // the order the load-time `static_defect` scope check assumes.
     for (name, expr_str) in &rule.let_bindings {
+        let field = format!("let.{name}");
         let expr = parse_expression(expr_str).map_err(|e| VerifyError::ExprParse {
             pattern_id: pf.pattern.id.clone(),
             rule_id: rule.id.clone(),
-            field: format!("let.{name}"),
+            field: field.clone(),
             error: e.message,
         })?;
-        let value = evaluate(&expr, &ctx).map_err(|e| VerifyError::Eval {
-            pattern_id: pf.pattern.id.clone(),
-            rule_id: rule.id.clone(),
-            error: e,
-        })?;
-        ctx.bindings.insert(name.clone(), value);
+        match evaluate(&expr, &ctx) {
+            Ok(value) => {
+                ctx.bindings.insert(name.clone(), value);
+            }
+            Err(e) => {
+                findings.push(unevaluable(&field, e.to_string()));
+                return Ok(());
+            }
+        }
     }
 
     let assert_expr = parse_expression(&rule.assert).map_err(|e| VerifyError::ExprParse {
@@ -3573,21 +3608,29 @@ fn verify_rule(
         field: "assert".into(),
         error: e.message,
     })?;
-    let result = evaluate(&assert_expr, &ctx).map_err(|e| VerifyError::Eval {
-        pattern_id: pf.pattern.id.clone(),
-        rule_id: rule.id.clone(),
-        error: e,
-    })?;
+    let result = match evaluate(&assert_expr, &ctx) {
+        Ok(v) => v,
+        Err(e) => {
+            findings.push(unevaluable("assert", e.to_string()));
+            return Ok(());
+        }
+    };
 
     let passed = matches!(result, Value::Bool(true));
     if !passed {
-        let (message, quoted) =
+        let (message, quoted, eval_errors) =
             interpolate_message(&rule.message, &ctx).map_err(|e| VerifyError::ExprParse {
                 pattern_id: pf.pattern.id.clone(),
                 rule_id: rule.id.clone(),
                 field: "message".into(),
                 error: e,
             })?;
+        // The rule failed: its finding is reported whatever its message could
+        // render, so a gate keyed on the rule's code never misses it; each
+        // `{{expr}}` that did not evaluate adds an E0023 beside it.
+        for e in eval_errors {
+            findings.push(unevaluable("message", e));
+        }
         findings.push(Finding {
             code: rule.code.clone(),
             severity: Severity::Error,
@@ -3604,6 +3647,56 @@ fn verify_rule(
         });
     }
     Ok(())
+}
+
+/// `MDATRON-E0023` (#228): `rule` could not be evaluated on the file in `rc`.
+/// The pattern and rule ids, the failing field (`assert`, `let.<name>`, or
+/// `message`) and the evaluator's error all carry adopter-derived text (ids,
+/// binding and function names), so they ride quoted regions, not the message.
+fn rule_eval_finding(
+    pf: &PatternFile,
+    rule: &Rule,
+    rc: &RuleContext,
+    field: &str,
+    error: String,
+) -> Finding {
+    let region = |label: &str, content: String| QuotedRegion {
+        platform_variant: false,
+        label: label.into(),
+        content,
+    };
+    // A message expression fails only after the rule has failed, and that
+    // finding is still reported; elsewhere the rule reached no verdict.
+    let message = if field == "message" {
+        "a pattern rule failed on this file, but an expression in its message \
+         could not be evaluated; the rule's finding shows it as [unrenderable]"
+    } else {
+        "a pattern rule could not be evaluated on this file, so it neither \
+         passed nor failed here"
+    };
+    Finding {
+        code: "MDATRON-E0023".into(),
+        severity: Severity::Error,
+        summary: "rule-evaluation-failed".into(),
+        message: message.into(),
+        help: Some(
+            "guard a possibly-absent field with defined() before using it, or \
+             correct the rule; `mdatron explain MDATRON-E0023` lists the causes"
+                .into(),
+        ),
+        location: Location {
+            file: rc.path.to_path_buf(),
+            line: 1,
+            column: 0,
+        },
+        explain_ref: Some("MDATRON-E0023".into()),
+        quoted: vec![
+            region("pattern", pf.pattern.id.clone()),
+            region("rule", rule.id.clone()),
+            region("in", field.to_string()),
+            region("error", error),
+        ],
+    }
 }
 
 // ── Context-selector matching ──────────────────────────────────────────────────
@@ -3657,12 +3750,36 @@ fn glob_matches(pattern: &str, path: &Path) -> bool {
 
 // ── Message interpolation ──────────────────────────────────────────────────────
 
+/// What a `{{expr}}` that does not evaluate on this file renders as (#228).
+const UNRENDERABLE: &str = "[unrenderable]";
+
+/// The trimmed `{{expr}}` sources of a `message:` template, as
+/// [`interpolate_message`] finds them: each `{{` up to the first `}}` after it
+/// (an unclosed `{{` is literal text). For the load-time check (#228).
+fn message_placeholders(template: &str) -> Vec<&str> {
+    let mut out = Vec::new();
+    let mut rest = template;
+    while let Some(open) = rest.find("{{") {
+        let after = &rest[open + 2..];
+        let Some(close) = after.find("}}") else {
+            break;
+        };
+        out.push(after[..close].trim());
+        rest = &after[close + 2..];
+    }
+    out
+}
+
+/// Render a rule's `message:` template: the text, its quoted value regions, and
+/// the evaluation error of each `{{expr}}` that rendered as [`UNRENDERABLE`]. A
+/// `{{expr}}` that does not parse is a defect in the rule itself, the `Err`.
 fn interpolate_message(
     template: &str,
     ctx: &EvalContext,
-) -> Result<(String, Vec<QuotedRegion>), String> {
+) -> Result<(String, Vec<QuotedRegion>, Vec<String>), String> {
     let mut out = String::new();
     let mut quoted = Vec::new();
+    let mut eval_errors = Vec::new();
     let bytes = template.as_bytes();
     let mut i = 0;
     while i < bytes.len() {
@@ -3673,8 +3790,18 @@ fn interpolate_message(
                 let expr_str = template[expr_start..expr_end].trim();
                 let expr = parse_expression(expr_str)
                     .map_err(|e| format!("interpolation '{expr_str}': {}", e.message))?;
-                let value = evaluate(&expr, ctx)
-                    .map_err(|e| format!("interpolation '{expr_str}' eval: {e}"))?;
+                let value = match evaluate(&expr, ctx) {
+                    Ok(value) => value,
+                    Err(e) => {
+                        // #228: the rule's verdict stands; only this value is
+                        // lost. A fixed engine marker takes its place and the
+                        // error is handed back for the E0023 beside the finding.
+                        eval_errors.push(format!("interpolation '{expr_str}': {e}"));
+                        out.push_str(UNRENDERABLE);
+                        i = expr_end + 2;
+                        continue;
+                    }
+                };
                 // The interpolated value is adopter document content. Keep it out
                 // of the engine message — an inline value is a forgeable marking
                 // (DESIGN § Agents are the first consumer). The message carries a `[see: <label>]`
@@ -3728,7 +3855,7 @@ fn interpolate_message(
         }
         i += ch.len_utf8();
     }
-    Ok((out, quoted))
+    Ok((out, quoted, eval_errors))
 }
 
 fn format_value(v: &Value) -> String {
@@ -3928,7 +4055,7 @@ mod tests {
         proj.write("doc.md", "---\nschema_class: other\n---\n");
         let err = format!("{}", verify(&VerifyConfig::new(&proj.0)).unwrap_err());
         assert!(
-            err.contains("parse error"),
+            err.contains("invalid expression"),
             "a bounded parse diagnostic, never a panic; got {err}"
         );
     }
@@ -3958,7 +4085,7 @@ mod tests {
         proj.write("doc.md", "---\nschema_class: doc\n---\n");
         let err = format!("{}", verify(&VerifyConfig::new(&proj.0)).unwrap_err());
         assert!(
-            err.contains("parse error"),
+            err.contains("invalid expression"),
             "an unparseable glob-context rule must refuse at load even with \
              no matching file; got {err}"
         );
@@ -10317,7 +10444,7 @@ pattern:
         let file_v = Value::Null;
         let project_v = Value::Null;
         let ctx = EvalContext::new(&self_v, &file_v, &project_v);
-        let (message, quoted) = interpolate_message("got phase: {{$self.phase}}", &ctx).unwrap();
+        let (message, quoted, _) = interpolate_message("got phase: {{$self.phase}}", &ctx).unwrap();
         // The value stays out-of-line (DESIGN § Agents are the first consumer — never inline); the message
         // carries a `[see: <label>]` cross-reference to the labeled quoted block
         // (#116, vsdd ruling on item 8 part 1). The label drops the `$self.`
@@ -10349,7 +10476,7 @@ pattern:
         let ctx = EvalContext::new(&self_v, &file_v, &project_v);
         // First and third reference the same expr; the second is a different expr
         // whose base label ("status") collides.
-        let (message, quoted) = interpolate_message(
+        let (message, quoted, _) = interpolate_message(
             "a {{$self.status}} b {{$self.nested.status}} c {{$self.status}}",
             &ctx,
         )
@@ -10383,7 +10510,7 @@ pattern:
         let file_v = Value::Null;
         let project_v = Value::Null;
         let ctx = EvalContext::new(&self_v, &file_v, &project_v);
-        let (message, quoted) = interpolate_message("domains: {{$self.domains}}", &ctx).unwrap();
+        let (message, quoted, _) = interpolate_message("domains: {{$self.domains}}", &ctx).unwrap();
         assert_eq!(message, "domains: [see: domains]");
         assert_eq!(quoted.len(), 1);
         assert_eq!(quoted[0].label, "domains");
@@ -10396,7 +10523,8 @@ pattern:
         let file_v = Value::Null;
         let project_v = Value::Null;
         let ctx = EvalContext::new(&self_v, &file_v, &project_v);
-        let (message, quoted) = interpolate_message("no interpolation markers here", &ctx).unwrap();
+        let (message, quoted, _) =
+            interpolate_message("no interpolation markers here", &ctx).unwrap();
         assert_eq!(message, "no interpolation markers here");
         assert!(quoted.is_empty());
     }
@@ -10410,7 +10538,7 @@ pattern:
         let file_v = Value::Null;
         let project_v = Value::Null;
         let ctx = EvalContext::new(&self_v, &file_v, &project_v);
-        let (message, _) = interpolate_message("é is {{$self.x}} — ok", &ctx).unwrap();
+        let (message, _, _) = interpolate_message("é is {{$self.x}} — ok", &ctx).unwrap();
         assert_eq!(message, "é is [see: x] — ok");
         assert!(
             !message.contains('Ã') && !message.contains('\u{0080}'),
@@ -10428,7 +10556,7 @@ pattern:
         let file_v = Value::Null;
         let project_v = Value::Null;
         let ctx = EvalContext::new(&self_v, &file_v, &project_v);
-        let (message, _) = interpolate_message("bad \u{1b}[31m here\u{2028}too", &ctx).unwrap();
+        let (message, _, _) = interpolate_message("bad \u{1b}[31m here\u{2028}too", &ctx).unwrap();
         assert!(
             !message.contains('\u{1b}') && !message.contains('\u{2028}'),
             "no raw control/separator byte: {message:?}"
@@ -11396,6 +11524,197 @@ pattern:
             c.contains(&"T-E0001".to_string()),
             "the rule ran on the bound file: {c:?}"
         );
+    }
+
+    // RED GATE (#228, GH #73 defect 2): a route-bound file with no frontmatter
+    // reads `$self.owner` as Null; the guarded `key()` lookup must not abort the
+    // run — the rule fails as its own finding on that file, and the run still
+    // checks the other file.
+    #[test]
+    fn null_key_lookup_on_a_frontmatterless_route_file_does_not_abort() {
+        let proj = skills_project("key-null", "  schema: skill\n");
+        proj.write("owners.yaml", "alice: {}\n");
+        proj.write(
+            ".mdatron/patterns/p.yaml",
+            "mdatron_dsl_version: 1\npattern:\n  id: own\n  keys:\n    - name: owners\n      \
+             source: owners.yaml\n      select: $\n      indexed_by: $key\n  rules:\n    \
+             - id: r\n      context: skill\n      \
+             assert: '$self.owner == \"x\" or defined(key(\"owners\", $self.owner))'\n      \
+             code: T-E0001\n      message: m\n",
+        );
+        proj.write(".claude/skills/a/SKILL.md", "# no frontmatter at all\n");
+        proj.write(
+            ".claude/skills/b/SKILL.md",
+            "---\nname: b\ndescription: d\nowner: alice\n---\n",
+        );
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap())
+            .expect("a Null index key must not abort the run");
+        let rule_hits: Vec<_> = findings.iter().filter(|f| f.code == "T-E0001").collect();
+        assert_eq!(rule_hits.len(), 1, "{findings:?}");
+        assert!(
+            rule_hits[0]
+                .location
+                .file
+                .ends_with(".claude/skills/a/SKILL.md"),
+            "{rule_hits:?}"
+        );
+    }
+
+    // RED GATE (#228): a rule that cannot be evaluated on one file is an
+    // E0023 finding ON THAT FILE — not a whole-run abort. The rule neither
+    // passes nor fails there (its own code is not emitted), and every other
+    // rule and file is still checked: one file cannot deny verification of
+    // the rest.
+    #[test]
+    fn eval_error_is_a_per_file_finding_and_the_run_continues() {
+        let proj = TempProject::new("eval-per-file");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write(
+            ".mdatron/patterns/p.yaml",
+            "mdatron_dsl_version: 1\npattern:\n  id: p\n  rules:\n    - id: r1\n      \
+             context: \"docs/*.md\"\n      assert: '\"x\" in $self.tags'\n      \
+             code: T-E0001\n      message: m1\n    - id: r2\n      \
+             context: \"docs/*.md\"\n      assert: '$self.title == \"t\"'\n      \
+             code: T-E0002\n      message: m2\n",
+        );
+        proj.write("docs/a.md", "---\ntitle: t\n---\n# a\n");
+        proj.write("docs/b.md", "---\ntitle: u\ntags: [x]\n---\n# b\n");
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap())
+            .expect("an evaluation error must not abort the run");
+
+        let e0023: Vec<_> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0023")
+            .collect();
+        assert_eq!(e0023.len(), 1, "{findings:?}");
+        let hit = e0023[0];
+        assert!(hit.location.file.ends_with("docs/a.md"), "{hit:?}");
+        assert_eq!(hit.severity, Severity::Error);
+        let quoted = |label: &str| {
+            hit.quoted
+                .iter()
+                .find(|q| q.label == label)
+                .map(|q| q.content.clone())
+        };
+        assert_eq!(quoted("pattern").as_deref(), Some("p"), "{hit:?}");
+        assert_eq!(quoted("rule").as_deref(), Some("r1"), "{hit:?}");
+        assert!(
+            quoted("error").is_some_and(|e| e.contains("array")),
+            "{hit:?}"
+        );
+
+        assert_eq!(
+            codes_of(&findings, "T-E0001"),
+            0,
+            "the unevaluable rule neither passes nor fails: {findings:?}"
+        );
+        let r2: Vec<_> = findings.iter().filter(|f| f.code == "T-E0002").collect();
+        assert_eq!(r2.len(), 1, "the other rule still ran: {findings:?}");
+        assert!(r2[0].location.file.ends_with("docs/b.md"), "{r2:?}");
+    }
+
+    // #228: a `let:` binding that cannot be evaluated is the same E0023 — the
+    // rule's assert never runs on that file.
+    #[test]
+    fn let_binding_eval_error_is_a_per_file_finding() {
+        let proj = TempProject::new("eval-let");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write(
+            ".mdatron/patterns/p.yaml",
+            "mdatron_dsl_version: 1\npattern:\n  id: p\n  rules:\n    - id: r\n      \
+             context: \"docs/*.md\"\n      let:\n        n: 'count($self.absent)'\n      \
+             assert: '$n == 0'\n      code: T-E0001\n      message: m\n",
+        );
+        proj.write("docs/a.md", "---\ntitle: t\n---\n# a\n");
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap())
+            .expect("an evaluation error must not abort the run");
+        assert_eq!(codes_of(&findings, "MDATRON-E0023"), 1, "{findings:?}");
+        assert_eq!(codes_of(&findings, "T-E0001"), 0, "{findings:?}");
+    }
+
+    // #228 cold review F1: a message `{{expr}}` that does not evaluate comes
+    // AFTER the rule's verdict — the rule's own finding is still reported (the
+    // value shown as [unrenderable]), with an E0023 beside it.
+    #[test]
+    fn message_eval_error_keeps_the_rules_finding() {
+        let proj = TempProject::new("eval-message");
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write(
+            ".mdatron/patterns/p.yaml",
+            "mdatron_dsl_version: 1\npattern:\n  id: p\n  rules:\n    - id: r\n      \
+             context: \"docs/*.md\"\n      assert: \"false\"\n      \
+             code: T-E0001\n      message: 'n={{count($self.absent)}} t={{$self.title}}'\n",
+        );
+        proj.write("docs/a.md", "---\ntitle: t\n---\n# a\n");
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        let rule: Vec<_> = findings.iter().filter(|f| f.code == "T-E0001").collect();
+        assert_eq!(rule.len(), 1, "the verdict is not lost: {findings:?}");
+        assert!(
+            rule[0]
+                .message
+                .starts_with("n=[unrenderable] t=[see: title]"),
+            "{:?}",
+            rule[0].message
+        );
+        let e0023: Vec<_> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0023")
+            .collect();
+        assert_eq!(e0023.len(), 1, "{findings:?}");
+        assert!(
+            e0023[0]
+                .quoted
+                .iter()
+                .any(|q| q.label == "in" && q.content == "message"),
+            "{e0023:?}"
+        );
+    }
+
+    // #228 cold review F2: an error no file's data can cause (an unknown
+    // function, a wrong arity, an undefined binding) is refused ONCE at load —
+    // even when the rule selects no file — not as an E0023 on every file.
+    #[test]
+    fn data_independent_rule_defects_are_refused_at_load() {
+        // (assert, message, expected text): the message placeholders are
+        // checked too (round 2), though a message renders only on failure.
+        for (assert, message, needle) in [
+            ("definedd($self.title)", "m", "unknown function"),
+            ("count($self.a, $self.b)", "m", "arity"),
+            ("$nope == 1", "m", "undefined binding"),
+            ("true", "{{definedd($self.x)}}", "unknown function"),
+            ("true", "{{$typo}}", "undefined binding"),
+            ("true", "{{ ( }}", "interpolation"),
+        ] {
+            let proj = TempProject::new("eval-static");
+            proj.write(
+                ".mdatron/config.yaml",
+                "file_globs:\n  - \"docs/**/*.md\"\n",
+            );
+            proj.write(
+                ".mdatron/patterns/p.yaml",
+                &format!(
+                    "mdatron_dsl_version: 1\npattern:\n  id: p\n  rules:\n    - id: r\n      \
+                     context: \"nothing/*.md\"\n      assert: '{assert}'\n      \
+                     code: T-E0001\n      message: '{message}'\n"
+                ),
+            );
+            proj.write("docs/a.md", "---\ntitle: t\n---\n# a\n");
+            match verify(&VerifyConfig::from_project(&proj.0).unwrap()) {
+                Err(e @ VerifyError::ExprParse { .. }) => {
+                    assert!(e.to_string().contains(needle), "{assert}: {e}")
+                }
+                other => panic!("{assert}: expected a load-time refusal, got {other:?}"),
+            }
+        }
     }
 
     // RED GATE (#209): name_equals_dir — equal is clean; a different value, an
