@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1347,
-        "tip_oid": "c582439a9d00bcce87373d739ce7ca18054cef3a",
-        "prefix_sha256": "57aa37d796e9822d5ae91aef7edee4fe1f7896f3e18c37eb56c2b7abd50f139e"
+        "sequence": 1348,
+        "tip_oid": "65ed96381bdfea4401480d83aa180fa477d58523",
+        "prefix_sha256": "1d59fcf144ec1ef957cc51372761ffabbfce815f235f8ff51136b467ada21d4a"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 245,
+  "next_display_id": 246,
   "next_comment_id": 641,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -215,6 +215,7 @@
     "c1771947-9855-4b6e-aca7-b6e8d5d3000a": 139,
     "c19c5caa-1166-4cad-be76-506a2166d22c": 98,
     "c279283e-4eda-48c4-b703-b7843fd1bec0": 182,
+    "c3719d16-ec01-44f8-ac08-90aaf2434567": 245,
     "c5dc858e-4a6e-4662-9360-2aac4b0c176d": 18,
     "c6a307a0-8d76-4f7f-8b36-f94187f13dd5": 163,
     "c74b05b5-cbf8-4202-9d82-b30690ac1423": 242,
@@ -7545,6 +7546,17 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAVFRX/g3nav2lI6p+OfqK9ivV86l118XUE/2UPNgUIGa/pE/p44yaW/uONb3bmcg93hUo6Cf/xcxLxmFvmaHqCQ=="
         }
       }
+    },
+    "c3719d16-ec01-44f8-ac08-90aaf2434567": {
+      "uuid": "c3719d16-ec01-44f8-ac08-90aaf2434567",
+      "display_id": 245,
+      "title": "Managed templates drift on CRLF-rewriting checkouts (Windows core.autocrlf): init refuses and, since #230, verify fails with E0060 though nobody edited the file — decide normalization or a documented/deployed .gitattributes pin",
+      "description": "Split out of #230 (operator ruling 2026-10-08: one byte-level definition of drift for init and verify in that lane). The manifest records sha256 over the bytes init wrote (LF); a Windows clone with core.autocrlf=true checks the committed .mdatron/*.example files out as CRLF, so their hash differs: init refuses (pre-existing, noted by the #231 review) and verify now reports E0060 on every run. Options: (a) compare line-ending-normalized bytes for managed templates (one definition still — change entry_state); (b) init deploys or documents a .gitattributes line pinning .mdatron/*.example (and manifest.yaml) to eol=lf; (c) document only. This repo's own .gitattributes does not pin .mdatron/ either (its Windows CI test only counts walked files, so CI is green). Consider pins.yaml section/whole-file pins: same CRLF exposure, decide consistently.",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-10-08T22:25:26.442591Z",
+      "updated_at": "2026-10-08T22:25:26.442591Z"
     },
     "c5dc858e-4a6e-4662-9360-2aac4b0c176d": {
       "uuid": "c5dc858e-4a6e-4662-9360-2aac4b0c176d",
