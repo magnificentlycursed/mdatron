@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1341,
-        "tip_oid": "6f05a5ae7c84aae48a217e285b771c49349f8cb9",
-        "prefix_sha256": "ccf1f0247920fe57135babbb578184eac58cd394d131994620340f14e623e491"
+        "sequence": 1342,
+        "tip_oid": "5e4c72afe88edd9174420caef756081235927a0d",
+        "prefix_sha256": "dc0826aada689441ac924b817ec754a4ee13bf67bd06ed4c8ae62bbf55dff1e0"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 245,
-  "next_comment_id": 638,
+  "next_comment_id": 639,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -8500,7 +8500,18 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-10-06T21:46:03.656357Z",
-      "updated_at": "2026-10-06T21:46:03.656357Z"
+      "updated_at": "2026-10-08T22:02:31.637841Z",
+      "comments": {
+        "053f33d3-53e8-46ee-9edd-29bd7ccf3493": {
+          "display_id": 638,
+          "author": "79Ig",
+          "content": "Plan/result of investigation: CLI not affected (--files uses VerifyConfig::new, code_catalog_globs empty); library callers were. Gate aligned with W0054/W0056/W0057 (config_digest.is_some()); red gate in library shape; W0055 page + CHANGELOG. PR opened.",
+          "created_at": "2026-10-08T22:02:31.600661Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAzrMbZktSn31CEx0ysHY3yOWJQx6RmrK18exGAPGBlnEeIvaRaQU/1uZFVB4OOcIxTm9HrsdFXSsFkrbKVSUtDQ=="
+        }
+      }
     },
     "df97fa67-a0e9-46f5-b742-43663606453b": {
       "uuid": "df97fa67-a0e9-46f5-b742-43663606453b",
