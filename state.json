@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1325,
-        "tip_oid": "3f45ad07b4dcaad951aebcf74238ad83d2271375",
-        "prefix_sha256": "1f7e2662f6482aebf0538a1987e667db030b7a0d8a8f5cbda7538b6401cb32dd"
+        "sequence": 1326,
+        "tip_oid": "255771e68eb3a1fa93ed23a7524dbf40fd6ef93f",
+        "prefix_sha256": "54923181360d552fcd73864d641a7cb05a63a7ac3e43ac36401569fb8b5b0229"
       },
       "IMWa": {
         "sequence": 2,
@@ -3998,11 +3998,12 @@
       "display_id": 229,
       "title": "rule_dsl activity is aggregate: a pattern file whose every context matches no walked file is invisible (no dead-context warning), and --changed reports active before consulting hits (GH #73 defect 1)",
       "description": "Source: GH #73 defect 1. Confirmed by reading src/verify.rs ~1705-1717: rule_context_hits is summed over all patterns; one dead pattern among two leaves rule_dsl active with the healthy reason; under --changed the lane is active with no hit count consulted. Every other dead scope has a warning (W0054/W0043/W0051/W0055). Raise: a warning per rule (or pattern file) whose context matched no walked file on a whole-tree run; 'N of M rules matched a file' in the reason (or a per-pattern map); a distinct reason/state for the incremental case.",
-      "status": "open",
+      "status": "closed",
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-10-06T21:15:36.000283Z",
-      "updated_at": "2026-10-08T19:19:42.709292Z",
+      "updated_at": "2026-10-08T19:21:04.301849Z",
+      "closed_at": "2026-10-08T19:21:04.277931Z",
       "labels": [
         "bug"
       ],
