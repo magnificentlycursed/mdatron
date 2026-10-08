@@ -456,8 +456,9 @@ struct DemotionTombstone {
     owner: String,
 }
 
-/// The init manifest as `verify` reads it: its standing demotion tombstones
-/// rendered as findings, plus the digest of the bytes read (input lineage).
+/// The init manifest as `verify` reads it: its managed-file drift (`E0060`,
+/// #230) and its standing demotion tombstones rendered as findings, plus the
+/// digest of the bytes read (input lineage).
 pub struct LoadedManifest {
     pub findings: Vec<Finding>,
     pub digest: String,
@@ -473,7 +474,14 @@ pub struct LoadedManifest {
 /// `None` (a tree that never ran `init`); a manifest that does not parse is a
 /// config error — the file is engine-managed, so a parse failure is a defect,
 /// never something to skip silently.
-pub fn load_tombstones(project_root: &Path) -> Result<Option<LoadedManifest>, crate::Error> {
+///
+/// Drift (#230, DESIGN § Validation is data-driven, governance data is
+/// governed: "drift in them is refused"): every managed file whose bytes no
+/// longer hash to the recorded sha256 is `MDATRON-E0060`, decided by the same
+/// [`entry_state`] `init` refuses on — a snapshot shows it, so the gate
+/// reports it rather than leaving it to an `init`-then-diff recipe. A missing
+/// managed file is not drift (`init` repairs it).
+pub fn load_manifest(project_root: &Path) -> Result<Option<LoadedManifest>, crate::Error> {
     let path = project_root.join(".mdatron").join(MANIFEST_NAME);
     let content = match std::fs::read_to_string(&path) {
         Ok(c) => c,
@@ -487,7 +495,16 @@ pub fn load_tombstones(project_root: &Path) -> Result<Option<LoadedManifest>, cr
     };
     let manifest: Manifest = crate::yaml::from_str(&content)
         .map_err(|e| crate::Error::Config(format!("cannot parse '{}': {e}", path.display())))?;
-    let mut findings = Vec::new();
+    let dir = project_root.join(".mdatron");
+    let mut drifts = Vec::new();
+    for entry in &manifest.managed {
+        match entry_state(&dir, &path, entry) {
+            Ok(EntryState::Drifted(d)) => drifts.push(d),
+            Ok(EntryState::Intact | EntryState::Missing) => {}
+            Err(e) => return Err(crate::Error::Config(e.to_string())),
+        }
+    }
+    let mut findings = drift_findings(project_root, &drifts);
     for t in &manifest.demoted {
         // The same confinement the managed[] half of this file gets (round-2
         // m13): a demoted path escaping .mdatron/ is a manifest-integrity
@@ -599,36 +616,15 @@ pub fn init(project_root: &Path) -> Result<InitOutcome, InitError> {
         let mut stale: Vec<usize> = Vec::new();
         let mut newer: Vec<String> = Vec::new();
         for (i, entry) in manifest.managed.iter().enumerate() {
-            // The manifest is read from the tree, and it cannot hash itself
-            // (fixed point) — so a hand-edit to it is not drift-caught. Hold its
-            // managed paths to the same confinement contract as any governed
-            // path (DESIGN.md § Nine check families): a path escaping .mdatron/
-            // is a manifest-integrity failure — refuse, read nothing outside the
-            // partition.
-            let confined = confine_lexically(Path::new(&entry.path)).map_err(|v| {
-                InitError::ManifestParse {
-                    path: manifest_path.to_string_lossy().into_owned(),
-                    error: format!(
-                        "managed path '{}' escapes the .mdatron/ partition ({v:?})",
-                        entry.path
-                    ),
-                }
-            })?;
-            let p = dir.join(confined.as_path());
-            match std::fs::read(&p) {
-                Ok(bytes) => {
-                    let actual = sha256_hex(&bytes);
-                    if actual != entry.sha256 {
-                        drifts.push(Drift {
-                            file: entry.path.clone(),
-                            expected_sha256: entry.sha256.clone(),
-                            actual_sha256: actual,
-                        });
-                    } else if let Some(content) = template_content(&entry.path) {
-                        // Untouched since recorded, but this version ships
-                        // different content: refresh below (never on drift) —
-                        // forward only (#231): from a released older version,
-                        // never over content this binary does not know.
+            match entry_state(&dir, &manifest_path, entry)? {
+                EntryState::Drifted(d) => drifts.push(d),
+                EntryState::Missing => missing.push(i),
+                EntryState::Intact => {
+                    // Untouched since recorded, but this version ships
+                    // different content: refresh below (never on drift) —
+                    // forward only (#231): from a released older version,
+                    // never over content this binary does not know.
+                    if let Some(content) = template_content(&entry.path) {
                         if sha256_hex(content.as_bytes()) != entry.sha256 {
                             if is_released_template(&entry.path, &entry.sha256) {
                                 stale.push(i);
@@ -638,8 +634,6 @@ pub fn init(project_root: &Path) -> Result<InitOutcome, InitError> {
                         }
                     }
                 }
-                Err(e) if e.kind() == std::io::ErrorKind::NotFound => missing.push(i),
-                Err(e) => return Err(io_err(&p, &e)),
             }
         }
         // Drift is a governance refusal — never write over a hand-modified
@@ -850,6 +844,56 @@ fn ensure_dirs(dir: &Path) -> Result<(), InitError> {
         }
     }
     Ok(())
+}
+
+/// One managed entry against the tree, decided once for `init` and `verify`
+/// alike (#230): the same bytes against the same recorded hash, so the two
+/// commands can never disagree about what drifted.
+enum EntryState {
+    /// The file's bytes hash to the recorded sha256.
+    Intact,
+    /// The file exists with other content: a hand change (`E0060`).
+    Drifted(Drift),
+    /// The file is absent (`init` repairs it; not drift).
+    Missing,
+}
+
+/// Decide `entry`'s state under `dir` (`.mdatron/`). The manifest is read from
+/// the tree and cannot hash itself (fixed point), so a hand-edit to it is not
+/// drift-caught; its managed paths are held to the same confinement contract
+/// as any governed path (DESIGN.md § Nine check families): a path escaping
+/// `.mdatron/` is a manifest-integrity failure — refused, nothing outside the
+/// partition read.
+fn entry_state(
+    dir: &Path,
+    manifest_path: &Path,
+    entry: &ManagedEntry,
+) -> Result<EntryState, InitError> {
+    let confined =
+        confine_lexically(Path::new(&entry.path)).map_err(|v| InitError::ManifestParse {
+            path: manifest_path.to_string_lossy().into_owned(),
+            error: format!(
+                "managed path '{}' escapes the .mdatron/ partition ({v:?})",
+                entry.path
+            ),
+        })?;
+    let p = dir.join(confined.as_path());
+    match std::fs::read(&p) {
+        Ok(bytes) => {
+            let actual = sha256_hex(&bytes);
+            Ok(if actual == entry.sha256 {
+                EntryState::Intact
+            } else {
+                EntryState::Drifted(Drift {
+                    file: entry.path.clone(),
+                    expected_sha256: entry.sha256.clone(),
+                    actual_sha256: actual,
+                })
+            })
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(EntryState::Missing),
+        Err(e) => Err(io_err(&p, &e)),
+    }
 }
 
 fn read_manifest(path: &Path) -> Result<Manifest, InitError> {

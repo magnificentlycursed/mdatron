@@ -589,10 +589,11 @@ fn run_inner(
         Err(e) => return Err(VerifyError::Config(e.to_string())),
     };
 
-    // The init manifest's demotion tombstones (#204 R3): the second carrier of
-    // the standing L0001 lint beside pins.yaml's unpinned[]; absent = a tree
-    // that never ran `init`.
-    let manifest = match crate::init::load_tombstones(&project_root) {
+    // The init manifest (absent = a tree that never ran `init`): its managed-file
+    // drift, E0060 by the same check `init` refuses on (#230), and its demotion
+    // tombstones (#204 R3), the second carrier of the standing L0001 lint beside
+    // pins.yaml's unpinned[].
+    let manifest = match crate::init::load_manifest(&project_root) {
         Ok(m) => m,
         Err(e) => return Err(VerifyError::Config(e.to_string())),
     };
@@ -6415,6 +6416,53 @@ pattern:
             crate::output::FamilyActivity::Inert { .. } => "inert",
             crate::output::FamilyActivity::Inactive { .. } => "inactive",
         }
+    }
+
+    // RED GATE (#230, GH #73 defect 3): verify reports managed-file drift as
+    // E0060 — the same verdict `init` refuses on — so a CI running only verify
+    // sees an edited template. Unedited is clean; under --changed the finding
+    // follows the template (a change under .mdatron/ runs the whole tree).
+    #[test]
+    fn verify_reports_managed_template_drift() {
+        let proj = TempProject::new("verify-drift");
+        crate::init::init(&proj.0).unwrap();
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write("docs/a.md", "# a\n");
+        let cfg = VerifyConfig::from_project(&proj.0).unwrap();
+        let clean = verify_report(&cfg).unwrap();
+        assert_eq!(
+            codes_of(&clean.findings, "MDATRON-E0060"),
+            0,
+            "{:?}",
+            clean.findings
+        );
+
+        let tpl = proj.0.join(".mdatron/routes.yaml.example");
+        let edited = format!("{}# my note\n", std::fs::read_to_string(&tpl).unwrap());
+        std::fs::write(&tpl, edited).unwrap();
+        let drifted = verify_report(&cfg).unwrap();
+        let e: Vec<_> = drifted
+            .findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0060")
+            .collect();
+        assert_eq!(e.len(), 1, "{:?}", drifted.findings);
+        assert_eq!(
+            e[0].location.file,
+            Path::new(".mdatron/routes.yaml.example")
+        );
+        assert!(matches!(
+            crate::init::init(&proj.0),
+            Err(crate::init::InitError::Drift(_))
+        ));
+
+        let inc = verify_incremental(&cfg, &proj.0.join("docs/a.md")).unwrap();
+        assert_eq!(codes_of(&inc.report.findings, "MDATRON-E0060"), 0);
+        let inc = verify_incremental(&cfg, &tpl).unwrap();
+        assert_eq!(codes_of(&inc.report.findings, "MDATRON-E0060"), 1);
     }
 
     // #204 D1: `coinage_globs` scopes the bold-introduced-term check inside

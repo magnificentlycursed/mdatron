@@ -296,7 +296,8 @@ edit by hand, except to add a demotion tombstone in a reviewed commit.
 Keys: `version`, `managed`, `path`, `sha256`, `demoted`, `reason`, `owner`.
 
 - `managed` — entries of `path` (relative to `.mdatron/`) and `sha256`; a
-  managed file whose content drifted is refused by `mdatron init` (`E0060`).
+  managed file whose content drifted is `E0060` — refused by `mdatron init` and
+  reported by `mdatron verify` (one shared check, so the two always agree).
 - `demoted` — tombstones of `path`, `reason`, `owner` for entries removed from
   the managed partition; a justified tombstone lints `L0001` on every
   whole-tree run, an unjustified one is `W0042`.
