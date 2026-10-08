@@ -13,8 +13,10 @@ clean, so a mistyped or stale glob is indistinguishable from "no code token is
 cited anywhere". This is the code-catalog counterpart of `MDATRON-W0043` (a
 dead `vocabulary_globs` scope) and `W0046` (a dead `file_globs` entry): a scope
 that governs nothing is announced, never silently tolerated. It is reported once,
-at the config, and only on a whole-tree run — an incremental (`--changed`) run
-sees just part of the tree. The envelope's `families.code_catalog` reports
+at the config, and only on a whole-tree run whose jurisdiction came from
+`config.yaml` — an incremental (`--changed`) run sees just part of the tree,
+and an ad-hoc `--files` run replaces the jurisdiction from the command line, so
+a scope outside its glob is not dead. The envelope's `families.code_catalog` reports
 `inert` for the same reason.
 
 `code_catalog_globs` is a scope list separate from `file_globs`; an *empty* (or
