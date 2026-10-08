@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1302,
-        "tip_oid": "234dc896b7079fe9ac71625658401d9a41932ca1",
-        "prefix_sha256": "7f0c7f2f16aa734a867e62b469290654449e57e8a7600b3c6fd6126b4fa24fca"
+        "sequence": 1303,
+        "tip_oid": "620d56c261748613821573db1983c6b08054452a",
+        "prefix_sha256": "2d9563a5ed63c76a759946c7c5582e94f41ae64505df61687a0a0c446b26bd0c"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 244,
-  "next_comment_id": 619,
+  "next_comment_id": 620,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -1893,10 +1893,21 @@
       "priority": "high",
       "created_by": "79Ig",
       "created_at": "2026-10-06T21:13:41.651511Z",
-      "updated_at": "2026-10-06T21:14:32.425037Z",
+      "updated_at": "2026-10-08T03:19:36.044576Z",
       "labels": [
         "bug"
-      ]
+      ],
+      "comments": {
+        "8e3e4ca7-bc43-4224-aa5a-d37f2b09fd72": {
+          "display_id": 619,
+          "author": "79Ig",
+          "content": "Plan (operator rulings 2026-10-07): (1) key(index, Null) returns Null, the lookup-miss value, matching the DSL-wide rule that an absent field reads as Null (DESIGN:131; the load-time E0021 gate covers the typo-vacuity concern the old guard-first wording protected); non-string non-null keys stay a TypeMismatch. (2) Eval errors become per-file findings in this lane: new MDATRON-E0023 rule-evaluation-failed (E0020-29 DSL range), error/exit 1, on the evaluated file, covering assert, let: bindings and message {{expr}}; the rule reaches no verdict there and the run continues. Parse errors still abort (expr_parse). VerifyError::Eval removed; schema keeps kind 'eval' for 0.7.0 envelopes. New code folds into the pending envelope 3.2.0 MINOR at the 0.8.0 cut. Red gates: expr key_with_null_key_returns_null; verify null_key_lookup_on_a_frontmatterless_route_file_does_not_abort, eval_error_is_a_per_file_finding_and_the_run_continues, let_binding_eval_error_is_a_per_file_finding; output_format e2e flipped to exit 1 + E0023. Standing docs: dsl-reference Evaluation semantics (also corrects the false non-boolean-assert claim), E0080 page + migration note, E0023 page, codes.rs (re-pinned), DESIGN:24, CHANGELOG Fixed.",
+          "created_at": "2026-10-08T03:19:36.009085Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAQrSUvzHIIxHj9Gt7nkXzdFAXJVRowjJc9aBDXTIrMXnRV7ZSOBl84o2ncg+/7OI+bO7Zh4D9tY9fEGVjiLC9Bw=="
+        }
+      }
     },
     "2b207fbe-b656-4cc1-8c3a-db693dfb36ff": {
       "uuid": "2b207fbe-b656-4cc1-8c3a-db693dfb36ff",
