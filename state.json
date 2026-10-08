@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1338,
-        "tip_oid": "c228a35e4d749d7139816f6f37629d19c71b2e1b",
-        "prefix_sha256": "226a760ae1ea75d2013f9483f631649a75f1432c43ee7d2972447e728ef24985"
+        "sequence": 1339,
+        "tip_oid": "adf35a03fbe6234d23a5bbf5c1e06a9976b23dcc",
+        "prefix_sha256": "96008a697b14fc363956412d4018cce7a8fa9b0604415d7db2cec055cff9a645"
       },
       "IMWa": {
         "sequence": 2,
@@ -522,11 +522,12 @@
       "display_id": 231,
       "title": "init template refresh is bidirectional: an older mdatron rewrites an unedited template recorded by a newer one to its own older content (mixed developer versions ping-pong committed bytes) (GH #73 defect 4)",
       "description": "Source: GH #73 defect 4. Confirmed by reading src/init.rs ~544-550: an untouched managed template whose recorded hash differs from the running version's shipped content is refreshed to the running version, in either direction. Proposed: record the engine version (or a monotonic template revision) per managed entry in manifest.yaml and refuse/skip a refresh that would move backwards, naming the direction. Doing so also makes the E0060 page's claim true (see the GH #73 doc-defects issue).",
-      "status": "open",
+      "status": "closed",
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-10-06T21:18:28.631202Z",
-      "updated_at": "2026-10-08T21:51:05.867407Z",
+      "updated_at": "2026-10-08T21:52:27.948248Z",
+      "closed_at": "2026-10-08T21:52:27.926468Z",
       "labels": [
         "bug"
       ],
