@@ -180,27 +180,9 @@ pub const MAX_FILE_BYTES: usize = crate::limits::SHIPPED.per_file_bytes;
 pub const MAX_AGGREGATE_BYTES: usize = crate::limits::SHIPPED.aggregate_bytes;
 pub const MAX_STRUCTURAL_NESTING: usize = crate::limits::SHIPPED.structural_nesting;
 
-/// Maximum flow-collection nesting depth (`[`/`{`) in a governed file (#124,
-/// roast SHO1 depth-bomb). O(n) pre-scan: a compact deeply-nested collection is
-/// the cheapest way to drive quadratic YAML-parse blowup, and 256 is far beyond
-/// any legitimate frontmatter.
-pub fn max_flow_nesting(s: &str) -> usize {
-    let mut depth = 0usize;
-    let mut max = 0usize;
-    for b in s.bytes() {
-        match b {
-            b'[' | b'{' => {
-                depth += 1;
-                if depth > max {
-                    max = depth;
-                }
-            }
-            b']' | b'}' => depth = depth.saturating_sub(1),
-            _ => {}
-        }
-    }
-    max
-}
+// The flow-nesting pre-scan lives with the limit it enforces (#244: every
+// YAML parse of file content shares it, not just the governed walk).
+pub use crate::limits::max_flow_nesting;
 
 impl VerifyError {
     /// A stable failure-class discriminator for the envelope's
@@ -7256,6 +7238,36 @@ pattern:
         assert!(
             findings.iter().all(|f| !f.code.starts_with("MDATRON-E011")),
             "no opt-in, no link findings; got {findings:?}"
+        );
+    }
+
+    // RED GATE (#244, the #242 cold review): a link TARGET's frontmatter is
+    // YAML-parsed outside the governed walk (frontmatter::body_of). A 100k-deep
+    // flow collection there cost ~29s on the release binary, quadratic in depth,
+    // and the run still read clean; the bound now refuses it before the parse,
+    // the target reads as having no frontmatter, and its heading still resolves.
+    #[test]
+    fn deeply_nested_link_target_frontmatter_is_refused_before_parsing() {
+        let proj = link_project("depth-target", "See [t](../t.md#h).\n");
+        let depth = 100_000;
+        proj.write(
+            "t.md",
+            &format!(
+                "---\nx: {}{}\n---\n# H\n",
+                "[".repeat(depth),
+                "]".repeat(depth)
+            ),
+        );
+        let started = std::time::Instant::now();
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        let took = started.elapsed();
+        assert!(
+            took < std::time::Duration::from_secs(20),
+            "the bomb must be refused before the quadratic parse; took {took:?}"
+        );
+        assert!(
+            findings.iter().all(|f| !f.code.starts_with("MDATRON-E011")),
+            "the target's heading still resolves; got {findings:?}"
         );
     }
 

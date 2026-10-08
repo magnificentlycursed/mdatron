@@ -17,6 +17,11 @@ pub enum Error {
     #[error("yaml parse error: {0}")]
     Yaml(#[from] serde_yaml_ng::Error),
 
+    /// The YAML was refused before parsing: its flow collections nest past the
+    /// declared structural-nesting bound (#244).
+    #[error("yaml refused: flow collections nest {depth} deep (limit {limit})")]
+    NestingTooDeep { depth: usize, limit: usize },
+
     #[error("json error: {0}")]
     Json(#[from] serde_json::Error),
 

@@ -770,6 +770,15 @@ fn parse_file_to_value(path: &Path, content: &str) -> Result<Value, IndexError> 
 
     match ext.as_str() {
         "yaml" | "yml" => {
+            // #244: refuse a flow-collection depth bomb before the parser's
+            // quadratic scan (the `.md` arm inherits this from frontmatter).
+            crate::limits::check_flow_nesting(content).map_err(|depth| IndexError::Parse {
+                path: escape_path_text(&path.to_string_lossy()),
+                error: format!(
+                    "flow collections nest {depth} deep (limit {})",
+                    crate::limits::SHIPPED.structural_nesting
+                ),
+            })?;
             let yaml: serde_yaml_ng::Value =
                 serde_yaml_ng::from_str(content).map_err(|e| IndexError::Parse {
                     path: escape_path_text(&path.to_string_lossy()),
@@ -1492,6 +1501,28 @@ mod tests {
         let d = decl("bad", "bad.yaml", "$", "$key");
         let err = IndexRegistry::build(temp.path(), &[d]).unwrap_err();
         assert!(matches!(err, IndexError::Parse { .. }));
+    }
+
+    // RED GATE (#244): a `.yaml` index source — and a `.md` one's frontmatter —
+    // nesting past the structural bound is refused BEFORE the parser's
+    // quadratic scan, as the index-source parse error naming the depth.
+    #[test]
+    fn deeply_nested_index_source_is_refused_before_parsing() {
+        let bomb = format!("{}{}", "[".repeat(300), "]".repeat(300));
+        for (file, content) in [
+            ("deep.yaml", format!("x: {bomb}\n")),
+            ("deep.md", format!("---\nx: {bomb}\n---\n")),
+        ] {
+            let temp = TempDir::new("deep-source");
+            temp.write(file, &content);
+            let d = decl("deep", file, "$", "$key");
+            match IndexRegistry::build(temp.path(), &[d]) {
+                Err(IndexError::Parse { error, .. }) => {
+                    assert!(error.contains("nest 300 deep"), "{file}: {error}")
+                }
+                other => panic!("{file}: expected a refusal; got {other:?}"),
+            }
+        }
     }
 
     // ── Multi-decl registry ─────────────────────────────────────────────────
