@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1343,
-        "tip_oid": "2e5d5c656a417188218f6d2f93dcd19127b8a8ba",
-        "prefix_sha256": "916200536ac42c2681194ce1d6d1d11520657a4f5c4973a112fe530c48c4fec3"
+        "sequence": 1344,
+        "tip_oid": "dcfe23d11344b01f1b462c12169627b0472812cc",
+        "prefix_sha256": "f9d834e0410622c26358009c947f29af8228aed64f88df6d7e5c1f1fd83df02c"
       },
       "IMWa": {
         "sequence": 2,
@@ -8496,11 +8496,12 @@
       "display_id": 241,
       "title": "W0055 (code-catalog scope matches nothing) fires on an ad-hoc --files run, unlike W0054/W0056/W0057 which require a config-driven whole-tree run; align the gate",
       "description": "Source: #215 cold review round 1 (adversarial cluster, noted as pre-existing). src/verify.rs: W0055 is gated on scope.is_none() && codecat_scoped && codecat_hits == 0 — an ad-hoc --files run whose glob excludes the catalog scope reports a dead scope that the whole-tree run does not. Gate on config.config_digest.is_some() like W0054, and say so on the W0055 page.",
-      "status": "open",
+      "status": "closed",
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-10-06T21:46:03.656357Z",
-      "updated_at": "2026-10-08T22:06:14.159419Z",
+      "updated_at": "2026-10-08T22:07:44.072812Z",
+      "closed_at": "2026-10-08T22:07:44.047574Z",
       "comments": {
         "053f33d3-53e8-46ee-9edd-29bd7ccf3493": {
           "display_id": 638,
