@@ -19,10 +19,12 @@ Either way every other rule and file in the run is still checked. The quoted
 regions name the `pattern`, the `rule`, where the expression sits (`in`:
 `assert`, `let.<name>`, or `message`), and the evaluator's `error`.
 
-Evaluation errors here depend on the data. A rule that is wrong for every file
-— an unknown function, the wrong number of arguments, a binding no `let:` or
-quantifier defines — is refused once when the patterns load, as
-`MDATRON-E0080` (`kind` `expr_parse`), whether or not it selects any file.
+An unknown function, the wrong number of arguments, or a binding no `let:` or
+quantifier defines — in the `assert`, a `let:`, or a message `{{expr}}` — is
+refused once when the patterns load, as `MDATRON-E0080` (`kind` `expr_parse`),
+whether or not the rule selects any file. Type errors are left to evaluation and
+reported here, including one between literals that fails on every file alike
+(`count("x")`, `not "a"`).
 
 The usual causes:
 

@@ -142,9 +142,7 @@ pub enum VerifyError {
     #[error("index build error: {0}")]
     IndexBuild(#[from] IndexError),
 
-    #[error(
-        "expression parse error in pattern '{pattern_id}' rule '{rule_id}' ({field}): {error}"
-    )]
+    #[error("invalid expression in pattern '{pattern_id}' rule '{rule_id}' ({field}): {error}")]
     ExprParse {
         pattern_id: String,
         rule_id: String,
@@ -2428,6 +2426,24 @@ fn validate_rule_field_refs(
                 }
                 exprs.push(expr);
             }
+            // #228 round 2: the message's `{{expr}}` placeholders get the same
+            // parse and static check (every `let:` is in scope by then). They
+            // are only rendered when the rule fails, so unchecked here a
+            // defect would surface on some runs and ship silently on others.
+            // Validation only: the field-ref and comparison checks below cover
+            // what the rule decides on, not what its message displays.
+            for src in message_placeholders(&rule.message) {
+                let refused = |error: String| VerifyError::ExprParse {
+                    pattern_id: pf.pattern.id.clone(),
+                    rule_id: rule.id.clone(),
+                    field: "message".into(),
+                    error: format!("interpolation '{src}': {error}"),
+                };
+                let expr = parse_expression(src).map_err(|e| refused(e.message))?;
+                if let Some(defect) = static_defect(&expr, &bound) {
+                    return Err(refused(defect.to_string()));
+                }
+            }
             // The schema-dependent checks stay behind the guard: a path-glob
             // context binds $self to whatever the matched files route to (not
             // knowable at load), so field-ref and comparison validation would
@@ -3565,8 +3581,8 @@ fn verify_rule(
     // defect in the rule itself and still fails the pipeline.
     let unevaluable = |field: &str, error: String| rule_eval_finding(pf, rule, rc, field, error);
 
-    // Evaluate let bindings in declared order (BTreeMap iterates by key — not strictly the
-    // declared order, but stable; for v0.1.x this is acceptable).
+    // Evaluate let bindings in declared order (`let_bindings` is a Vec, #89) —
+    // the order the load-time `static_defect` scope check assumes.
     for (name, expr_str) in &rule.let_bindings {
         let field = format!("let.{name}");
         let expr = parse_expression(expr_str).map_err(|e| VerifyError::ExprParse {
@@ -3736,6 +3752,23 @@ fn glob_matches(pattern: &str, path: &Path) -> bool {
 
 /// What a `{{expr}}` that does not evaluate on this file renders as (#228).
 const UNRENDERABLE: &str = "[unrenderable]";
+
+/// The trimmed `{{expr}}` sources of a `message:` template, as
+/// [`interpolate_message`] finds them: each `{{` up to the first `}}` after it
+/// (an unclosed `{{` is literal text). For the load-time check (#228).
+fn message_placeholders(template: &str) -> Vec<&str> {
+    let mut out = Vec::new();
+    let mut rest = template;
+    while let Some(open) = rest.find("{{") {
+        let after = &rest[open + 2..];
+        let Some(close) = after.find("}}") else {
+            break;
+        };
+        out.push(after[..close].trim());
+        rest = &after[close + 2..];
+    }
+    out
+}
 
 /// Render a rule's `message:` template: the text, its quoted value regions, and
 /// the evaluation error of each `{{expr}}` that rendered as [`UNRENDERABLE`]. A
@@ -4022,7 +4055,7 @@ mod tests {
         proj.write("doc.md", "---\nschema_class: other\n---\n");
         let err = format!("{}", verify(&VerifyConfig::new(&proj.0)).unwrap_err());
         assert!(
-            err.contains("parse error"),
+            err.contains("invalid expression"),
             "a bounded parse diagnostic, never a panic; got {err}"
         );
     }
@@ -4052,7 +4085,7 @@ mod tests {
         proj.write("doc.md", "---\nschema_class: doc\n---\n");
         let err = format!("{}", verify(&VerifyConfig::new(&proj.0)).unwrap_err());
         assert!(
-            err.contains("parse error"),
+            err.contains("invalid expression"),
             "an unparseable glob-context rule must refuse at load even with \
              no matching file; got {err}"
         );
@@ -11651,10 +11684,15 @@ pattern:
     // even when the rule selects no file — not as an E0023 on every file.
     #[test]
     fn data_independent_rule_defects_are_refused_at_load() {
-        for (assert, needle) in [
-            ("definedd($self.title)", "unknown function"),
-            ("count($self.a, $self.b)", "arity"),
-            ("$nope == 1", "undefined binding"),
+        // (assert, message, expected text): the message placeholders are
+        // checked too (round 2), though a message renders only on failure.
+        for (assert, message, needle) in [
+            ("definedd($self.title)", "m", "unknown function"),
+            ("count($self.a, $self.b)", "m", "arity"),
+            ("$nope == 1", "m", "undefined binding"),
+            ("true", "{{definedd($self.x)}}", "unknown function"),
+            ("true", "{{$typo}}", "undefined binding"),
+            ("true", "{{ ( }}", "interpolation"),
         ] {
             let proj = TempProject::new("eval-static");
             proj.write(
@@ -11666,7 +11704,7 @@ pattern:
                 &format!(
                     "mdatron_dsl_version: 1\npattern:\n  id: p\n  rules:\n    - id: r\n      \
                      context: \"nothing/*.md\"\n      assert: '{assert}'\n      \
-                     code: T-E0001\n      message: m\n"
+                     code: T-E0001\n      message: '{message}'\n"
                 ),
             );
             proj.write("docs/a.md", "---\ntitle: t\n---\n# a\n");

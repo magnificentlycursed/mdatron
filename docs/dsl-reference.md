@@ -181,9 +181,10 @@ DSL pending the body-content falsifiability gate (see `DESIGN.md`
 | `join(arr, sep)` | Join array elements into one string with separator. |
 | `key(index, k)` | Cross-file index lookup, see below. Miss returns `Null`. |
 
-All functions check arity and types at evaluation; a mismatch is the
-finding `MDATRON-E0023` on the file being evaluated, naming the pattern and
-rule (see Evaluation semantics below).
+A call to an unknown function, or with the wrong number of arguments, is
+refused when the patterns load. Argument types are checked at evaluation: a
+mismatch is the finding `MDATRON-E0023` on the file being evaluated, naming
+the pattern and rule (see Evaluation semantics below).
 
 ## Cross-file indices (`keys:`)
 
@@ -240,18 +241,19 @@ assert: every(id in $self.pairs_with, defined(key("entries", $id)))
   field must be present.
 - An assert passes only when it evaluates to `true`; any other value, a
   non-boolean one included, fails the rule and reports its `code`.
-- An evaluation error that depends on the file's data (a type mismatch, such as
-  `Null` where an array or a boolean is needed) is the finding `MDATRON-E0023`
+- A type error at evaluation (such as `Null` where an array or a boolean is
+  needed — or, between literals, `count("x")`) is the finding `MDATRON-E0023`
   on the file it occurred on — naming the pattern, the rule, and where the
   expression sits. In an `assert` or `let:` the rule reaches no verdict there:
   not a pass and not its own code. In a message `{{expr}}` the rule has already
   failed: its finding is reported with the value shown as `[unrenderable]`,
   and the `E0023` sits beside it. The rest of the run is unaffected. (Through
   0.7.0 any evaluation error aborted the run as `MDATRON-E0080`.)
-- An expression that does not parse, or that fails whatever the data — an
-  unknown function, a wrong number of arguments, a binding no `let:` or
-  quantifier defines — is refused when the patterns load, as a pipeline failure,
-  whether or not the rule selects any file.
+- An expression — in the `assert`, a `let:`, or a message `{{expr}}` — that
+  does not parse, or that names an unknown function, passes a function the
+  wrong number of arguments, or uses a binding no `let:` or quantifier defines,
+  is refused when the patterns load, as a pipeline failure, whether or not the
+  rule selects any file.
 
 ## Messages
 
