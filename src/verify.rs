@@ -1190,6 +1190,12 @@ fn run_inner(
         .iter()
         .map(|pf| vec![false; pf.pattern.rules.len()])
         .collect();
+    // ...and how many walked files each rule's context selected from the path
+    // and route binding alone, before any read (#229 review).
+    let mut rule_selected: Vec<Vec<usize>> = patterns
+        .iter()
+        .map(|pf| vec![0; pf.pattern.rules.len()])
+        .collect();
     let mut schema_bound_hits = 0usize;
     let mut files_checked: u32 = 0;
     // #110: does any walked file declare a schema_class that routed to neither a
@@ -1229,6 +1235,15 @@ fn run_inner(
             import_enabled = crate::route::imports_enabled(routes, rel);
             marker_rules = crate::route::marker_rules_for(routes, rel);
             section_rules = crate::route::section_rules_for(routes, rel);
+        }
+        // #229 review: which rules SELECT this file before it is read — by
+        // path glob or the route's `schema:` binding — so a rule whose files
+        // are all skipped below (no frontmatter, E0001, unreadable) is told
+        // apart from one whose context matched nothing (W0058's two senses).
+        for (pf, selected) in patterns.iter().zip(rule_selected.iter_mut()) {
+            for (rule, n) in pf.pattern.rules.iter().zip(selected.iter_mut()) {
+                *n += usize::from(context_matches(&rule.context, binding.schema, rel));
+            }
         }
         // Vocabulary scope (#97): empty globs = every walked file. Coinage
         // applies inside `coinage_globs` (empty = wherever the register applies).
@@ -1588,15 +1603,40 @@ fn run_inner(
     // Whole-tree, config-driven runs only, for the same reasons as W0054.
     if scope.is_none() && config.config_digest.is_some() {
         let empty: Vec<Location> = Vec::new();
-        for ((pf, rule_locs), hits) in patterns
+        for (((pf, rule_locs), hits), selected) in patterns
             .iter()
             .zip(rule_locations.iter().chain(std::iter::repeat(&empty)))
             .zip(&rule_matched)
+            .zip(&rule_selected)
         {
             for (rule_idx, rule) in pf.pattern.rules.iter().enumerate() {
                 if hits[rule_idx] {
                     continue;
                 }
+                // Selected but never evaluated: the context is right, the
+                // files are not evaluable — say so, not "correct the context".
+                let (message, help) = match selected[rule_idx] {
+                    0 => (
+                        "a pattern rule's context matched no walked file, so the \
+                         rule checked nothing — a mistyped class or glob would pass \
+                         silently as if every file conformed"
+                            .to_string(),
+                        "correct the context to the schema_class or path glob of the \
+                         files the rule should check, or remove the rule if those \
+                         files are gone",
+                    ),
+                    n => (
+                        format!(
+                            "a pattern rule's context selected {n} walked {}, but none \
+                             could be evaluated (no frontmatter, unparseable \
+                             frontmatter, or unreadable), so the rule checked nothing",
+                            if n == 1 { "file" } else { "files" }
+                        ),
+                        "give the selected files frontmatter (or bind them with a \
+                         route's `schema:`, which evaluates a file without one as an \
+                         empty mapping), or fix the errors already reported on them",
+                    ),
+                };
                 let region = |label: &str, content: String| QuotedRegion {
                     platform_variant: false,
                     label: label.into(),
@@ -1606,16 +1646,8 @@ fn run_inner(
                     code: "MDATRON-W0058".into(),
                     severity: Severity::Warning,
                     summary: "rule-context-matches-nothing".into(),
-                    message: "a pattern rule's context matched no walked file, so the \
-                              rule checked nothing — a mistyped class or glob would pass \
-                              silently as if every file conformed"
-                        .into(),
-                    help: Some(
-                        "correct the context to the schema_class or path glob of the \
-                         files the rule should check, or remove the rule if those files \
-                         are gone"
-                            .into(),
-                    ),
+                    message,
+                    help: Some(help.into()),
                     location: rule_location(rule_locs, rule_idx, &config.patterns_dir),
                     explain_ref: Some("MDATRON-W0058".into()),
                     quoted: vec![
@@ -1805,8 +1837,8 @@ fn run_inner(
             FamilyActivity::inactive("no pattern files in .mdatron/patterns/")
         } else if scope.is_some() {
             FamilyActivity::active(format!(
-                ".mdatron/patterns/ supplied; rules ran over the incremental scope \
-                 ({rules_matched} of {rules_total_n} matched a file in it)"
+                ".mdatron/patterns/ supplied; rules evaluated over the incremental \
+                 scope ({rules_matched} of {rules_total_n} matched a file in it)"
             ))
         } else if rule_context_hits == 0 {
             FamilyActivity::inert(
@@ -6665,6 +6697,51 @@ pattern:
         adhoc.file_globs = vec!["doc.md".into()];
         let adhoc = verify_report(&adhoc).unwrap();
         assert_eq!(codes_of(&adhoc.findings, "MDATRON-W0058"), 0);
+    }
+
+    // #229 cold review: a context that DOES select files whose rules can never
+    // run — no frontmatter, unparseable frontmatter — is W0058 with the true
+    // cause, not "matched no walked file … correct the context".
+    #[test]
+    fn w0058_names_selected_but_unevaluable_files() {
+        let proj = TempProject::new("dsl-unevaluable");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(".mdatron/config.yaml", "file_globs:\n  - \"**/*.md\"\n");
+        let pattern = |id: &str, context: &str| {
+            format!(
+                "pattern:\n  id: {id}\n  rules:\n    - id: r\n      context: \"{context}\"\n      assert: \"true\"\n      code: T-E0001\n      message: m\n"
+            )
+        };
+        proj.write(
+            ".mdatron/patterns/prose.yaml",
+            &pattern("prose", "prose/*.md"),
+        );
+        proj.write(
+            ".mdatron/patterns/broken.yaml",
+            &pattern("broken", "broken/*.md"),
+        );
+        proj.write(
+            ".mdatron/patterns/typo.yaml",
+            &pattern("typo", "nowhere/*.md"),
+        );
+        proj.write("prose/a.md", "# no frontmatter\n");
+        proj.write("broken/b.md", "---\n: : :\n---\n");
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        let message_for = |file: &str| {
+            findings
+                .iter()
+                .find(|f| f.code == "MDATRON-W0058" && f.location.file.ends_with(file))
+                .map(|f| f.message.clone())
+                .unwrap_or_else(|| panic!("no W0058 at {file}: {findings:?}"))
+        };
+        for file in ["prose.yaml", "broken.yaml"] {
+            let m = message_for(file);
+            assert!(m.contains("selected 1 walked file"), "{file}: {m}");
+        }
+        assert!(message_for("typo.yaml").contains("matched no walked file"));
     }
 
     // #204 R5: a route-attached opt-in (citations, links, marker_rules,

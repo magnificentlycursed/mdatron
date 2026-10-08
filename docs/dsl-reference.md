@@ -40,7 +40,8 @@ with the rule's `code` and `message` at that file.
 ## Context selectors
 
 - `context: blog` — bare string without glob metacharacters or `/`: matches
-  files whose frontmatter `schema_class` equals it.
+  files whose frontmatter `schema_class` equals it, or that a route binds to
+  that class with `schema:`.
 - `context: "docs/**/*.md"` — bare string with `*`, `?`, or `/`: a path glob
   relative to the project root.
 - Object form, both constraints optional and ANDed:
@@ -50,6 +51,12 @@ with the rule's `code` and `message` at that file.
     schema_class: review-entry
     path: "review-log/**/*.md"
   ```
+
+A rule runs only on files that have frontmatter (or that a route binds with
+`schema:`, which evaluates a file without frontmatter as an empty mapping): a
+path-glob context over prose files with no frontmatter checks nothing. A rule
+whose context selected no file the rule could evaluate is warned on a
+whole-tree run (`MDATRON-W0058`).
 
 ## Variables
 
