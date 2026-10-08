@@ -20,7 +20,9 @@
 /// - `MDATRON-E0010` — `E0019` Path-confinement violations (E0012 ratified as-is)
 /// - `MDATRON-E0020` — `E0029` DSL evaluation failures; `E0021` rule
 ///   field-reference validation (undeclared `$self` field under a closed
-///   schema, hard-gated at load, #156)
+///   schema, hard-gated at load, #156); `E0023` rule-evaluation-failed — a
+///   FINDING (exit 1) for a rule that could not be evaluated on one file,
+///   split out of the `E0080` pipeline failure in 0.8.0 (#228)
 /// - `MDATRON-E0030` — `E0039` Route family (was delegate protocol, retired);
 ///   route-bound schema `E0033`/`E0034` (#208), `name_equals_dir` `E0035` (#209),
 ///   `max_bytes` `E0036` (#216), `requires_sibling` `E0037` (#221)

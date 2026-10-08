@@ -1047,7 +1047,6 @@ fn pipeline_error_finding(e: &VerifyError, roots: &[&Path]) -> Finding {
         VerifyError::PatternLoad { .. } => "a pattern file failed to load",
         VerifyError::IndexBuild(_) => "a cross-file index failed to build",
         VerifyError::ExprParse { .. } => "a pattern rule expression failed to parse",
-        VerifyError::Eval { .. } => "a pattern rule expression failed to evaluate",
         VerifyError::Glob(_) => "a configured glob pattern is invalid",
         VerifyError::Config(_) => "the run could not be configured",
         VerifyError::Frontmatter { .. } => "a file's frontmatter failed to parse",

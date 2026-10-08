@@ -7,6 +7,7 @@
   "MDATRON-E0012": "symlinked-component-refused",
   "MDATRON-E0021": "undeclared-field-reference",
   "MDATRON-E0022": "comparison-type-mismatch",
+  "MDATRON-E0023": "rule-evaluation-failed",
   "MDATRON-E0030": "unrouted-file",
   "MDATRON-E0031": "governing-document-absent",
   "MDATRON-E0032": "route-conflict",

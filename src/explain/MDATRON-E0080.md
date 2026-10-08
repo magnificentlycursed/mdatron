@@ -34,9 +34,11 @@ sense so a machine consumer need not parse prose:
 `kind` is one of: `config` (jurisdiction/config load), `io` (a read failed),
 `schema_load`, `pattern_load`, `glob` (a bad `file_globs` pattern),
 `frontmatter`, `index_build`, `expr_parse` (a rule expression failed to parse —
-including an over-deep expression past the declared DSL expression-depth limit, see `mdatron docs limits`), `eval` (a rule
-expression), and `bound_exceeded` (a declared input resource bound — per-file or
-aggregate byte size, or structural nesting depth — was exceeded). The
+including an over-deep expression past the declared DSL expression-depth limit, see `mdatron docs limits` — or, from 0.8.0, would fail on every file: an unknown function, a wrong number of arguments, an undefined binding), and `bound_exceeded` (a declared input resource bound — per-file or
+aggregate byte size, or structural nesting depth — was exceeded). Through
+0.7.0 `kind` could also be `eval`, a rule expression that failed to evaluate;
+since 0.8.0 that is the per-file finding `MDATRON-E0023` and the run completes.
+The schema still lists `eval` so an envelope 0.7.0 wrote stays valid. The
 object is present only when `pipeline_status` is `failed`, and — unlike the
 stderr `= note:` — it survives `--quiet`, so `--json --quiet` (the CI mode)
 receives the reason in-band.
@@ -85,6 +87,8 @@ apply the matching corrective pattern below.
 
 - MDATRON-E0081 — a reference target the run never captured: a FINDING at
   exit `1`, reported under this code through 0.6.0
+- MDATRON-E0023 — a rule that could not be evaluated on a file: a FINDING at
+  exit `1`, reported under this code (`kind` `eval`) through 0.7.0
 - MDATRON-E0070 — project root could not be resolved (fires before pipeline
   orchestration)
 - MDATRON-E0001 / E0050 — per-file diagnostics that emit when the pipeline

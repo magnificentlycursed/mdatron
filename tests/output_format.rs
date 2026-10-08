@@ -410,11 +410,12 @@ fn finding_fingerprints_survive_line_churn_across_runs() {
 
 // GH #52 lane-B review B5: the `in` array-only narrowing, driven END-TO-END
 // through the binary (parse → verify → envelope): a refused haystack (`"x" in
-// $self.<absent>` — a Null right side) surfaces as the E0080 eval pipeline
-// error in the envelope, kind "eval", exit 2 — the loud surface the reference
-// documents, never the silent `false` it used to be.
+// $self.<absent>` — a Null right side) is loud, never the silent `false` it
+// used to be. Through 0.7.0 it aborted the run (E0080, kind "eval", exit 2);
+// since #228 it is an `MDATRON-E0023` finding on the file (exit 1), and the
+// run completes.
 #[test]
-fn refused_in_haystack_is_an_eval_pipeline_error_end_to_end() {
+fn refused_in_haystack_is_a_rule_evaluation_finding_end_to_end() {
     let proj = TempProject::new("in-null-e2e");
     proj.write(
         ".mdatron/patterns/p.yaml",
@@ -426,17 +427,19 @@ fn refused_in_haystack_is_an_eval_pipeline_error_end_to_end() {
     let out = run_verify_json(&proj);
     assert_eq!(
         out.status.code(),
-        Some(2),
-        "a refused haystack is a loud pipeline failure; stderr={:?}",
+        Some(1),
+        "a refused haystack is an error finding; stderr={:?}",
         String::from_utf8_lossy(&out.stderr)
     );
     let env = parse_output(&out);
-    assert_eq!(env["pipeline_status"], "failed");
-    assert_eq!(env["pipeline_error"]["code"], "MDATRON-E0080");
-    assert_eq!(
-        env["pipeline_error"]["kind"], "eval",
-        "the eval failure class rides the envelope; got {env}"
-    );
+    assert!(env.get("pipeline_error").is_none(), "{env}");
+    let codes: Vec<&str> = env["findings"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|f| f["code"].as_str().unwrap())
+        .collect();
+    assert_eq!(codes, vec!["MDATRON-E0023"], "{env}");
 }
 
 // ── #185 L1: contract hygiene (post-0.6.0; envelope 3.0.0 is a live contract) ──

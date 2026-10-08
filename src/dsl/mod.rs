@@ -20,7 +20,7 @@ pub mod index;
 pub mod parser;
 pub mod types;
 
-pub use expr::{evaluate, EvalContext, EvalError, Expr, Value, VarRef};
+pub use expr::{evaluate, static_defect, EvalContext, EvalError, Expr, Value, VarRef};
 pub use expr_parser::{parse_expression, ParseError as ExprParseError};
 pub(crate) use index::resolve_source;
 pub use index::{DegradedSource, Index, IndexError, IndexRegistry};

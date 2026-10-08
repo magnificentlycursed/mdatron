@@ -327,4 +327,4 @@ Keys: `mdatron_dsl_version`, `pattern`, `id`, `description`, `keys`, `name`, `so
 
 Activation: the directory holds at least one pattern file. Scope: every walked
 file whose `schema_class` a rule's `context` selects. Codes: `E0021`, `E0022`,
-`W0050`, `W0052`, and the adopter's own rule codes.
+`E0023`, `W0050`, `W0052`, and the adopter's own rule codes.

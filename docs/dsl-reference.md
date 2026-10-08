@@ -181,8 +181,9 @@ DSL pending the body-content falsifiability gate (see `DESIGN.md`
 | `join(arr, sep)` | Join array elements into one string with separator. |
 | `key(index, k)` | Cross-file index lookup, see below. Miss returns `Null`. |
 
-All functions check arity and types at evaluation; a mismatch is a loud
-pipeline error naming the pattern and rule.
+All functions check arity and types at evaluation; a mismatch is the
+finding `MDATRON-E0023` on the file being evaluated, naming the pattern and
+rule (see Evaluation semantics below).
 
 ## Cross-file indices (`keys:`)
 
@@ -227,12 +228,30 @@ assert: every(id in $self.pairs_with, defined(key("entries", $id)))
   guard, as is `$self.f == "" or <uses $self.f>`.
 - `x in coll` requires `coll` to evaluate to an array; a `Null` or non-array
   right side is an evaluation error — guard with `defined()` first.
-- Quantifier collections (`every`/`some`) must likewise be arrays; iterating a
-  possibly-absent field needs a `defined()` guard.
-- `key(index, k)` requires `k` to be a string; a `Null` key is an evaluation
-  error — guard first. A lookup MISS (string key, no entry) returns `Null`.
-- An evaluation error (type mismatch, arity, non-boolean assert) is a loud
-  pipeline failure naming the pattern and rule — not a finding and not a pass.
+- A quantifier (`every`/`some`/`filter`) over a `Null` collection — an absent
+  field — iterates nothing: `every` is `true`, `some` is `false`, `filter` is
+  `[]`. Any other non-array collection is an evaluation error.
+- `key(index, k)` returns `Null` on a lookup MISS — a string key with no
+  entry, or a `Null` key (an absent field), which names no entry. Any other
+  non-string key is an evaluation error. (Through 0.7.0 a `Null` key was an
+  evaluation error too.) So a negated lookup — `not defined(key("banned",
+  $self.owner))`, `key("owners", $self.owner).retired != true` — passes on a
+  file without the key field; guard with `defined($self.owner) and …` when the
+  field must be present.
+- An assert passes only when it evaluates to `true`; any other value, a
+  non-boolean one included, fails the rule and reports its `code`.
+- An evaluation error that depends on the file's data (a type mismatch, such as
+  `Null` where an array or a boolean is needed) is the finding `MDATRON-E0023`
+  on the file it occurred on — naming the pattern, the rule, and where the
+  expression sits. In an `assert` or `let:` the rule reaches no verdict there:
+  not a pass and not its own code. In a message `{{expr}}` the rule has already
+  failed: its finding is reported with the value shown as `[unrenderable]`,
+  and the `E0023` sits beside it. The rest of the run is unaffected. (Through
+  0.7.0 any evaluation error aborted the run as `MDATRON-E0080`.)
+- An expression that does not parse, or that fails whatever the data — an
+  unknown function, a wrong number of arguments, a binding no `let:` or
+  quantifier defines — is refused when the patterns load, as a pipeline failure,
+  whether or not the rule selects any file.
 
 ## Messages
 
