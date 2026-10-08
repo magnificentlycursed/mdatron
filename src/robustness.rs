@@ -740,7 +740,7 @@ fn frontmatter_value() -> impl Strategy<Value = Option<Yaml>> {
         Some("other: 12"),
         Some("{}"),
     ])
-    .prop_map(|yaml| yaml.map(|y| serde_yaml_ng::from_str::<Yaml>(y).unwrap()))
+    .prop_map(|yaml| yaml.map(|y| crate::yaml::from_str::<Yaml>(y).unwrap()))
 }
 
 /// A body offset draw (L4 round 3, MAJOR-1/2). Three times in four it is the
@@ -978,7 +978,7 @@ fn drive_snapshot_backed_scanners(
         },
     ]);
     let policy = crate::links::Policy::compile(
-        serde_yaml_ng::from_str(
+        crate::yaml::from_str(
             "schemes: [https]\nhosts: [acme.dev, '*.acme.dev']\nforbid_query: ['^utm_']",
         )
         .unwrap(),
@@ -1106,7 +1106,7 @@ fn seed_hostile_classes_never_panic_the_body_scanners() {
             yaml_map(vec![("element", ystr("line")), ("match", ystr("."))]),
         ]),
     )]);
-    let fm: Yaml = serde_yaml_ng::from_str("latency_ms: 12").unwrap();
+    let fm: Yaml = crate::yaml::from_str("latency_ms: 12").unwrap();
     for body in SEEDS {
         for with_prefix in [false, true] {
             let body = if with_prefix {
@@ -1225,7 +1225,7 @@ fn reach_section_rules_count_and_disjoint_arms() {
 
 #[test]
 fn reach_vocabulary_reserved_anti_pattern_label_and_numeric_arms() {
-    let fm: Yaml = serde_yaml_ng::from_str("latency_ms: 13").unwrap();
+    let fm: Yaml = crate::yaml::from_str("latency_ms: 13").unwrap();
     let f = drive_vocabulary_scan(
         "Layer 1 is very good; ZZZZZ-9 names it; latency is 12 ms.\n",
         0,

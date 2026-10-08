@@ -103,8 +103,8 @@ impl Limits {
             LimitRow {
                 limit: "`structural-nesting-depth`",
                 shipped: fmt_count(self.structural_nesting),
-                surface: "flow-collection nesting in frontmatter YAML and `.yaml` index sources, counted before parsing (bracket bytes, quoted or not)",
-                on_exceedance: "governed file: `bound_exceeded`; index source: `index_build`; link, marker or pin target: read as having no frontmatter",
+                surface: "flow-collection nesting in any YAML mdatron parses — frontmatter, `.yaml` index sources, `.mdatron/` files — counted before parsing (bracket bytes, quoted or not)",
+                on_exceedance: "governed file: `bound_exceeded`; index source: `index_build`; `.mdatron/` file: its load error; link, marker or pin target: read as having no frontmatter",
             },
             LimitRow {
                 limit: "DSL expression depth",

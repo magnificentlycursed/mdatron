@@ -219,7 +219,7 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
         }
     };
     crate::format_version::check_input_format_version(&content, ROUTES_NAME, false)?;
-    let raw: RawTable = serde_yaml_ng::from_str(&content)
+    let raw: RawTable = crate::yaml::from_str(&content)
         .map_err(|e| Error::Config(format!("cannot parse '{}': {e}", path.display())))?;
 
     let mut routes = Vec::new();

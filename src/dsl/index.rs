@@ -770,17 +770,10 @@ fn parse_file_to_value(path: &Path, content: &str) -> Result<Value, IndexError> 
 
     match ext.as_str() {
         "yaml" | "yml" => {
-            // #244: refuse a flow-collection depth bomb before the parser's
-            // quadratic scan (the `.md` arm inherits this from frontmatter).
-            crate::limits::check_flow_nesting(content).map_err(|depth| IndexError::Parse {
-                path: escape_path_text(&path.to_string_lossy()),
-                error: format!(
-                    "flow collections nest {depth} deep (limit {})",
-                    crate::limits::SHIPPED.structural_nesting
-                ),
-            })?;
+            // #244: `crate::yaml::from_str` refuses a flow-collection depth
+            // bomb before the parser's quadratic scan.
             let yaml: serde_yaml_ng::Value =
-                serde_yaml_ng::from_str(content).map_err(|e| IndexError::Parse {
+                crate::yaml::from_str(content).map_err(|e| IndexError::Parse {
                     path: escape_path_text(&path.to_string_lossy()),
                     error: e.to_string(),
                 })?;
@@ -1511,6 +1504,7 @@ mod tests {
         let bomb = format!("{}{}", "[".repeat(300), "]".repeat(300));
         for (file, content) in [
             ("deep.yaml", format!("x: {bomb}\n")),
+            ("deep.yml", format!("x: {bomb}\n")),
             ("deep.md", format!("---\nx: {bomb}\n---\n")),
         ] {
             let temp = TempDir::new("deep-source");

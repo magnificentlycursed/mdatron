@@ -79,6 +79,8 @@ pub mod snapshot;
 pub mod verify;
 #[doc(hidden)]
 pub mod vocab;
+#[doc(hidden)]
+pub mod yaml;
 
 // Never-panic properties over the crate-private body-text scanners (#193):
 // test-only, in-crate because the scanners are pub(crate); CI's

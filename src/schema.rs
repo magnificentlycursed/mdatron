@@ -379,7 +379,7 @@ mod tests {
     use serde_json::json;
 
     fn yaml(s: &str) -> YamlValue {
-        serde_yaml_ng::from_str(s).unwrap()
+        crate::yaml::from_str(s).unwrap()
     }
 
     // #156: the type/enum accessors are conservative — a single concrete type

@@ -169,7 +169,7 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedVocab>, Error> {
         }
     };
     crate::format_version::check_input_format_version(&content, VOCAB_NAME, false)?;
-    let raw: RawVocab = serde_yaml_ng::from_str(&content)
+    let raw: RawVocab = crate::yaml::from_str(&content)
         .map_err(|e| Error::Config(format!("cannot parse '{}': {e}", path.display())))?;
 
     let compile = |p: &str, what: &str| {

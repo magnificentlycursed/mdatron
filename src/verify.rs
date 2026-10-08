@@ -7271,6 +7271,33 @@ pattern:
         );
     }
 
+    // RED GATE (#244 cold review): the `.mdatron/` governance files go through
+    // the same bound — a 100k-deep `config.yaml` cost 45 s and read CLEAN. Each
+    // is refused as a load error naming the depth, before the parse.
+    #[test]
+    fn deeply_nested_governance_yaml_is_refused_before_parsing() {
+        let bomb = format!("x: {}{}\n", "[".repeat(300), "]".repeat(300));
+        for (file, base) in [
+            (
+                ".mdatron/config.yaml",
+                "file_globs:\n  - \"docs/**/*.md\"\n",
+            ),
+            (
+                ".mdatron/routes.yaml",
+                "routes:\n- files: \"docs/**/*.md\"\n  governed_by: GOVERNING.md\n",
+            ),
+            (".mdatron/patterns/p.yaml", "mdatron_dsl_version: 1\n"),
+        ] {
+            let proj = link_project("depth-governance", "prose\n");
+            proj.write(file, &format!("{base}{bomb}"));
+            let err = VerifyConfig::from_project(&proj.0)
+                .map_err(|e| e.to_string())
+                .and_then(|cfg| verify(&cfg).map(|_| ()).map_err(|e| e.to_string()))
+                .expect_err(file);
+            assert!(err.contains("nest 300 deep"), "{file}: {err}");
+        }
+    }
+
     // RED GATE (#145): the link family reports active exactly when a route opts
     // in with links: true, inactive otherwise (falsifiable audit signal).
     #[test]

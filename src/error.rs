@@ -29,6 +29,17 @@ pub enum Error {
     Config(String),
 }
 
+impl From<crate::yaml::YamlError> for Error {
+    fn from(e: crate::yaml::YamlError) -> Self {
+        match e {
+            crate::yaml::YamlError::TooDeep { depth, limit } => {
+                Error::NestingTooDeep { depth, limit }
+            }
+            crate::yaml::YamlError::Parse(e) => Error::Yaml(e),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

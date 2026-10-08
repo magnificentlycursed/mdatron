@@ -71,7 +71,7 @@ pub fn load(project_root: &Path) -> Result<Option<ProjectConfig>, Error> {
             )))
         }
     };
-    let mut cfg: ProjectConfig = serde_yaml_ng::from_str(&content)
+    let mut cfg: ProjectConfig = crate::yaml::from_str(&content)
         .map_err(|e| Error::Config(format!("cannot parse '{}': {e}", path.display())))?;
     // #176 input lineage: digest the SAME bytes this load read (no re-read).
     cfg.digest = crate::init::sha256_hex(content.as_bytes());

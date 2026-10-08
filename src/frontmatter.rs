@@ -32,17 +32,13 @@ pub fn parse(content: &str) -> Result<Option<(Value, &str)>, Error> {
     let yaml_str = &content[yaml_start..yaml_end];
     let body = content.get(body_start..).unwrap_or("");
 
-    // #244: every caller — the governed walk, link/marker/pin targets through
-    // `body_of`, `.md` index sources — gets the nesting bound before the
-    // parser's quadratic scan, not just the walk.
-    crate::limits::check_flow_nesting(yaml_str).map_err(|depth| Error::NestingTooDeep {
-        depth,
-        limit: crate::limits::SHIPPED.structural_nesting,
-    })?;
+    // #244: `crate::yaml::from_str` applies the nesting bound before the
+    // parser's quadratic scan, so every caller — the governed walk, link/
+    // marker/pin targets through `body_of`, `.md` index sources — inherits it.
     let value: Value = if yaml_str.trim().is_empty() {
         Value::Mapping(Default::default())
     } else {
-        serde_yaml_ng::from_str(yaml_str)?
+        crate::yaml::from_str(yaml_str)?
     };
 
     Ok(Some((value, body)))
