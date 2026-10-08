@@ -41,8 +41,9 @@ then apply the matching pattern:
 - **A template was edited, so an upgrade cannot refresh it.** The manifest
   records each managed file's path and sha256, not the version that wrote it.
   An unedited `*.example` template is refreshed forward when a newer mdatron
-  runs `init` (from a released version's content it knows), and left as
-  recorded when an older one does; an edited template is this drift. Restore
+  runs `init` (from an earlier version's content it knows), and from 0.8.0 on
+  left as recorded when an older one does (0.7.0 still moves it back); an
+  edited template is this drift. Restore
   it to the recorded content (or delete it and re-run `init`), or copy it to
   its real name — the `.example` files are documentation; the real file is
   yours.

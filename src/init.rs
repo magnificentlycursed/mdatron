@@ -56,14 +56,17 @@ pub const TEMPLATE_FILES: &[(&str, &str)] = &[
     ("links.yaml.example", LINKS_TEMPLATE),
 ];
 
-/// The sha256 of every template content a RELEASED mdatron shipped before this
-/// one (#231). A refresh moves a template forward only from one of these: a
-/// recorded hash this binary does not know was written by a NEWER mdatron (or
-/// is otherwise foreign) and is left as recorded — so developers on mixed
-/// versions no longer ping-pong the committed bytes. The released bytes are
-/// kept in `tests/fixtures/init-templates/<version>/`, and a test holds these
-/// hashes to them. When a template changes after a release, add the released
-/// content's hash here (the `template_hashes_are_pinned` test says so).
+/// The sha256 of every template content an earlier mdatron shipped (#231),
+/// labelled with the release that shipped it, or `unreleased` for content that
+/// only ever lived on main. A refresh moves a template forward only from one of
+/// these: a recorded hash this binary does not know was written by a NEWER (or
+/// an unreleased) mdatron, or re-hashed by hand, and is left as recorded — so
+/// developers on mixed versions no longer ping-pong the committed bytes. A
+/// released version's bytes are kept in `tests/fixtures/init-templates/<version>/`
+/// and a test holds its hashes to them. When a template changes, ALWAYS add the
+/// hash it replaces (the `template_hashes_are_pinned` test says so); listing an
+/// unreleased hash is harmless. A template must never change back to content
+/// listed here, or the two versions would refresh each other again.
 const RELEASED_TEMPLATE_HASHES: &[(&str, &str, &str)] = &[
     (
         "0.7.0",
@@ -344,16 +347,17 @@ const MANIFEST_VERSION: u32 = 2;
 /// Outcome of a successful init run.
 #[derive(Debug, PartialEq, Eq)]
 pub enum InitOutcome {
-    /// First run, a repair of missing managed files, or a template refresh:
-    /// paths created, and templates rewritten to this version's content
-    /// (a managed template still byte-identical to what was recorded, whose
-    /// shipped content changed).
+    /// First run, a repair of missing managed files, a template refresh, or a
+    /// template kept as a newer version recorded it: paths created, templates
+    /// rewritten to this version's content (a managed template still
+    /// byte-identical to what was recorded, whose shipped content changed), and
+    /// templates left alone because this version does not know their content.
     Deployed {
         created: Vec<String>,
         refreshed: Vec<String>,
         /// Unedited templates recorded with content this version does not
-        /// know — a newer mdatron's — left as recorded, never moved backwards
-        /// (#231).
+        /// know — a newer (or unreleased) mdatron's — left as recorded, never
+        /// moved backwards (#231).
         newer: Vec<String>,
     },
     /// Re-run on an intact, unmodified tree: nothing to do.
@@ -1228,6 +1232,9 @@ mod tests {
     #[test]
     fn released_template_hashes_match_their_fixtures() {
         for (version, name, hash) in RELEASED_TEMPLATE_HASHES {
+            if *version == "unreleased" {
+                continue;
+            }
             assert_eq!(
                 sha256_hex(released_template(version, name).as_bytes()),
                 *hash,
@@ -1237,10 +1244,10 @@ mod tests {
     }
 
     // #231 tripwire: the shipped templates' hashes, pinned. Changing a template
-    // fails here: if the previous content shipped in a release, add its hash
-    // to RELEASED_TEMPLATE_HASHES (and its bytes under
-    // tests/fixtures/init-templates/<version>/) so the next version refreshes
-    // it forward, then update this pin.
+    // fails here: add the hash it replaces to RELEASED_TEMPLATE_HASHES —
+    // labelled with the release that shipped it (and its bytes under
+    // tests/fixtures/init-templates/<version>/), or `unreleased` — so the next
+    // version refreshes it forward, then update this pin.
     #[test]
     fn template_hashes_are_pinned() {
         let pinned = [
@@ -1270,7 +1277,7 @@ mod tests {
             assert_eq!(
                 sha256_hex(template_content(name).unwrap().as_bytes()),
                 hash,
-                "{name} changed: record the released hash it replaces (see the comment)"
+                "{name} changed: add the hash it replaces to RELEASED_TEMPLATE_HASHES (see the comment)"
             );
         }
     }

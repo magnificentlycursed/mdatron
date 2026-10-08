@@ -72,8 +72,8 @@ and one inert `*.example` template per family file (`routes`, `pins`,
 scope, and codes — copy one to its real name to activate that family, or read
 `mdatron docs inputs` (a tree initialized before a template existed gains it
 on its next `mdatron init`, which also refreshes any template you have not
-edited to the running version's content — forward only: an older mdatron
-leaves a template a newer one recorded as it is):
+edited to the running version's content — forward only from 0.8.0 on: an
+older mdatron leaves a template a newer one recorded as it is):
 
 ```
 mkdir my-typed-docs && cd my-typed-docs

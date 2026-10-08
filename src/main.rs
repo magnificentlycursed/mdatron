@@ -665,7 +665,7 @@ fn cmd_init(project_root: Option<PathBuf>, quiet: bool) -> ExitCode {
                 }
                 if !newer.is_empty() {
                     eprintln!(
-                        "mdatron init: kept {} template(s) as recorded by a newer mdatron (not moved back to this version's content)",
+                        "mdatron init: kept {} template(s) whose content this version does not know (a newer or unreleased mdatron's, or re-hashed by hand) — delete one and re-run init to take this version's",
                         newer.len()
                     );
                 }
