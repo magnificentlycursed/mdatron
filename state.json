@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1328,
-        "tip_oid": "3667e0ee433b1d3f30a61229dfa66a1097b48c24",
-        "prefix_sha256": "b7f74e43a652c20492eef0cad6154887c1e762f529843ecc2ffb4f4baf982e9f"
+        "sequence": 1329,
+        "tip_oid": "1179a9f1b1f965fc9522987d7cdc279f842652b3",
+        "prefix_sha256": "28a96bf1c0b4056af74d8ceb40d9f451867aa92f1900a1e43350a305d32b8b2e"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 245,
-  "next_comment_id": 631,
+  "next_comment_id": 632,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -1074,10 +1074,21 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-10-07T01:38:59.984976Z",
-      "updated_at": "2026-10-07T01:39:49.775071Z",
+      "updated_at": "2026-10-08T19:32:20.318622Z",
       "labels": [
         "bug"
-      ]
+      ],
+      "comments": {
+        "1c2843dd-2a2f-4dbc-8c82-5cf2e0ee5db2": {
+          "display_id": 631,
+          "author": "79Ig",
+          "content": "Plan: one shared CommonMark constructor markup::parser with Options::ENABLE_FOOTNOTES (GFM syntax) for both body passes (heading_slugs, body_links). Probe confirmed the trigger is a one-token footnote body ([^1]: [fn](https://...) -> false dest '[fn](https://...)'; [^1]: notes.md -> false relative link); prose bodies were unaffected. Red gate footnote_definitions_are_footnotes_not_reference_links. Docs: pulldown-cmark dependency note (parse options), CHANGELOG Fixed.",
+          "created_at": "2026-10-08T19:32:20.282524Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAI7VuUAEqtu91+ZHnKawjQ+NmKB1taGXCj+yCutah4bzP0ktlf8z+lrfJOjQ06ryI2RyBufQm/SGXbfUpkLqhBA=="
+        }
+      }
     },
     "1ea10de4-469c-46f7-95d6-001d6263913c": {
       "uuid": "1ea10de4-469c-46f7-95d6-001d6263913c",
