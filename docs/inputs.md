@@ -152,7 +152,9 @@ Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `cit
     at most `max_bytes` bytes, `E0125` at its heading; with `per: paragraph`,
     each paragraph in the section, or in the whole body when no `section` is
     given, must, `E0126` at its first line. A paragraph is a run of adjacent
-    non-blank lines that are not headings, outside fenced code. Bytes are
+    non-blank lines that are not headings, outside fenced code (by lines, not
+    CommonMark blocks: consecutive list items are one paragraph); a span
+    includes its trailing blank lines. Bytes are
     counted as checked out (CRLF included), like the route's `max_bytes`; a
     bound of 0, and a span budget with no `section` (use the route's
     `max_bytes`), are refused at load.

@@ -9,7 +9,9 @@
 A section rule on the route claiming this file sets `max_bytes` with
 `per: paragraph`, and this paragraph is larger. A paragraph is a run of
 adjacent non-blank lines that are not headings, outside fenced code: a blank
-line, a heading or a fence ends it. Its size runs from the start of its first
+line, a heading or a fence ends it. The definition is by lines, not CommonMark
+blocks: consecutive list items or blockquote lines with no blank line between
+them are one paragraph, and so are a table and an indented code block. Its size runs from the start of its first
 line to the end of its last, inner line breaks included. The rule covers its
 `section`, or the whole document body when it names none. The size and the
 budget are in the message; the finding is located at the paragraph's first

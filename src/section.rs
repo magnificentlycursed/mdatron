@@ -933,15 +933,21 @@ fn rule_spans<'a>(body: &'a str, section: Option<&str>) -> Option<Vec<&'a str>> 
 /// the first line's start to the last line's end (inner newlines included).
 fn paragraphs(span: &str, sectioned: bool) -> Vec<(usize, usize, &str)> {
     let mut out = Vec::new();
-    // (start offset, end offset of the last line, first line)
-    let mut open: Option<(usize, usize, &str)> = None;
+    // (start offset, end of the last line's text, end of its raw line — past
+    // a CRLF's `\r` — and the first line). `element_lines` yields lines with
+    // their line ending already trimmed, so adjacency and length are judged
+    // on the raw ends: a CRLF file's next line starts at raw end + 1 too, and
+    // an inner `\r\n` counts (#253 review: a CRLF file had read as one
+    // paragraph per line).
+    let mut open: Option<(usize, usize, usize, &str)> = None;
     for (offset, line) in element_lines(span, sectioned) {
-        let text = line.strip_suffix('\r').unwrap_or(line);
-        let breaks = text.trim().is_empty() || atx_heading(text).is_some();
+        let breaks = line.trim().is_empty() || atx_heading(line).is_some();
+        let text_end = offset + line.len();
+        let raw_end = text_end + usize::from(span[text_end..].starts_with('\r'));
         // A line not directly after the previous one (a fence or the span's
         // own heading lay between) starts a new paragraph too.
-        let adjacent = open.is_some_and(|(_, end, _)| offset == end + 1);
-        if let Some((start, end, first)) = open {
+        let adjacent = open.is_some_and(|(_, _, prev_raw, _)| offset == prev_raw + 1);
+        if let Some((start, end, _, first)) = open {
             if breaks || !adjacent {
                 out.push((start, end - start, first));
                 open = None;
@@ -951,11 +957,11 @@ fn paragraphs(span: &str, sectioned: bool) -> Vec<(usize, usize, &str)> {
             continue;
         }
         open = Some(match open {
-            Some((start, _, first)) => (start, offset + line.len(), first),
-            None => (offset, offset + line.len(), text),
+            Some((start, _, _, first)) => (start, text_end, raw_end, first),
+            None => (offset, text_end, raw_end, line),
         });
     }
-    if let Some((start, end, first)) = open {
+    if let Some((start, end, _, first)) = open {
         out.push((start, end - start, first));
     }
     out
@@ -1154,6 +1160,19 @@ mod tests {
             .quoted
             .iter()
             .any(|q| q.label == "first line" && q.content.starts_with("aaaa")));
+
+        // CRLF (#253 review): lines are still one paragraph, and the inner
+        // `\r\n` counts — 21 + 2 + 10 = 33 bytes.
+        let crlf = "aaaaaaaaaa bbbbbbbbbb\r\ncccccccccc\r\n\r\nshort\r\n";
+        let mut f = Vec::new();
+        let rule = budget("max_bytes: 32\nper: paragraph\n").unwrap();
+        check_file(&[&rule], Path::new("c.md"), crlf, 0, &mut f);
+        assert_eq!(f.len(), 1, "{f:?}");
+        assert!(f[0].message.contains("33 bytes"), "{:?}", f[0].message);
+        let rule = budget("max_bytes: 33\nper: paragraph\n").unwrap();
+        let mut f = Vec::new();
+        check_file(&[&rule], Path::new("c.md"), crlf, 0, &mut f);
+        assert!(f.is_empty(), "{f:?}");
 
         // A missing section is E0122, as for every other shape.
         let f = check(budget("section: \"## Gone\"\nmax_bytes: 10\n").unwrap());

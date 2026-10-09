@@ -9,7 +9,7 @@
 A section rule on the route claiming this file sets `max_bytes` for a
 `section`, and the section is larger. The section is measured as an injector
 reads it: from its heading line through every line before the next heading of
-the same or a higher level, subsections included. The size and the budget are
+the same or a higher level, subsections and trailing blank lines included. The size and the budget are
 in the message; the finding is located at the section's heading, and a
 duplicated heading is measured span by span.
 
