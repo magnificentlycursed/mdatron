@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1350,
-        "tip_oid": "e53cbe7e326ae57f4be242854e7f982ef5db57cd",
-        "prefix_sha256": "9d19fdb876707a0ce2355309b4ef699f672dbd4327ca1d25cb88a019a41e99f2"
+        "sequence": 1351,
+        "tip_oid": "375486103b3bbf355366f2b764ed9ede3ec9fa81",
+        "prefix_sha256": "f920a7744c46a0f6270be6f75bb16b3ec7757b493c736f952dcb95efad3cff54"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 246,
-  "next_comment_id": 642,
+  "next_comment_id": 643,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -4753,7 +4753,7 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-10-06T21:17:29.478949Z",
-      "updated_at": "2026-10-08T22:36:09.008775Z",
+      "updated_at": "2026-10-09T00:27:51.326929Z",
       "comments": {
         "0e26a0f2-a9b6-48b2-ba55-c95ae44be6d8": {
           "display_id": 640,
@@ -4763,6 +4763,15 @@
           "kind": "plan",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAFkUUcVG6Zd9NmZWZQpU5VDMKFXjsqo98QD2OrV0flH3UUiS5P84xMNVTS1Wmip6MJtEm4lnswwI/6EPD6OWZAA=="
+        },
+        "4c1dcf48-ea0c-4839-9a12-0fee63f68541": {
+          "display_id": 642,
+          "author": "79Ig",
+          "content": "Delivered in PR #83 (merged): verify reports managed drift as E0060 via init's shared entry_state; managed files read no-follow/bounded (E0012/E0003 per-file). CRLF follow-up #245.",
+          "created_at": "2026-10-09T00:27:51.187088Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAblUCjQV5Axwp5jSAF8THXTTVIttKoN0WQwmGGUcucVq1zWv/7mRGhapRECU+9j0XgDwsxoDO57X9NlryX1FCCw=="
         },
         "81326fd4-2a90-472d-84a8-07fa50ca8eec": {
           "display_id": 641,
