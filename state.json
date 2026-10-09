@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1365,
-        "tip_oid": "368daae2451edaaee16c507626201242f13cbd5e",
-        "prefix_sha256": "d05ade3300c0110ca2eea571c250e6ec4351616cae3121b387ee5923b20d0671"
+        "sequence": 1366,
+        "tip_oid": "813ee56b6a42439f7f17ae960d67faee7ddd8021",
+        "prefix_sha256": "4f0cbd4f09d2a533e618f61de39e014010bc60e71276dc7fb29d5120f1c5994c"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 246,
-  "next_comment_id": 649,
+  "next_comment_id": 650,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -7636,10 +7636,21 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-10-08T22:25:26.442591Z",
-      "updated_at": "2026-10-08T22:26:29.794813Z",
+      "updated_at": "2026-10-09T03:06:23.030138Z",
       "labels": [
         "bug"
-      ]
+      ],
+      "comments": {
+        "f92c4b5f-f6cc-4687-a351-057c53a86d8a": {
+          "display_id": 649,
+          "author": "79Ig",
+          "content": "Operator 2026-10-08: option (b). init seeds .mdatron/.gitattributes (*.example, manifest.yaml, itself: text eol=lf); a seed (adopter-owned, not hashed); this repo gains it; no normalization. PR #85.",
+          "created_at": "2026-10-09T03:06:22.993394Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAsKKAxFY/6vbYEbG8sslKh1RYHJfiVxVPhNmg24UyGkFI0MWTUKOak/OXI+NKov1Yt03tHru+6eXMtbmO1AJYBA=="
+        }
+      }
     },
     "c5dc858e-4a6e-4662-9360-2aac4b0c176d": {
       "uuid": "c5dc858e-4a6e-4662-9360-2aac4b0c176d",
