@@ -17,9 +17,12 @@ silently overwrite your edit or trust a changed engine-owned file, and
 read the manifest for its tombstones and lineage digest alone.) A missing
 managed file is not drift: `init` restores it.
 
-The comparison is of bytes: a checkout that rewrites line endings (Git's
-`core.autocrlf` on Windows) changes the hash of a committed template and reads
-as drift.
+The comparison is of bytes, so a checkout that rewrites line endings (Git's
+`core.autocrlf` on Windows) would change a committed template's hash. From
+0.8.0, `init` seeds `.mdatron/.gitattributes`, which pins the templates and the
+manifest to LF on every checkout. A clone checked out before that file existed
+keeps its CRLF copies until they are checked out again: delete them and run
+`git checkout -- .mdatron/` (Git then applies the new attributes), or re-clone.
 
 This is a governance guardrail, not a corruption check: the managed files are
 the engine's own configuration surface. Adopter-authored data — your schemas in

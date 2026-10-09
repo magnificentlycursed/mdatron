@@ -40,7 +40,27 @@ file_globs:
 
 /// Files the engine seeds at init, relative to `.mdatron/`: written when
 /// absent, never overwritten, never hashed — adopter-owned once deployed.
-const SEED_FILES: &[(&str, &str)] = &[("config.yaml", DEFAULT_CONFIG)];
+const SEED_FILES: &[(&str, &str)] = &[
+    ("config.yaml", DEFAULT_CONFIG),
+    (".gitattributes", GITATTRIBUTES_SEED),
+];
+
+/// `.mdatron/.gitattributes` (#245): the files mdatron compares byte for byte
+/// against a recorded sha256 are pinned to LF, so a Windows checkout with
+/// `core.autocrlf` does not rewrite an untouched template into `E0060` drift.
+/// Git reads a `.gitattributes` in each directory, so this scopes to
+/// `.mdatron/` without touching the adopter's own. A SEED: adopter-owned,
+/// never hashed or refused, re-created only when absent.
+const GITATTRIBUTES_SEED: &str = "\
+# Written by `mdatron init`; yours to edit (it is not a managed file).
+# mdatron compares the files it manages byte for byte against the sha256 in
+# manifest.yaml, so a checkout that rewrites line endings (Git's core.autocrlf
+# on Windows) would make an untouched template read as drift (MDATRON-E0060).
+# These lines keep them LF on every checkout.
+*.example text eol=lf
+manifest.yaml text eol=lf
+.gitattributes text eol=lf
+";
 
 /// Inert templates the engine deploys at init as MANAGED files (#203 F4, GH #56
 /// finding 4): one per family input file, fully commented, each header stating
@@ -1276,6 +1296,52 @@ mod tests {
             .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()));
         // Deterministic across calls.
         assert_eq!(h, sha256_hex(b"mdatron"));
+    }
+
+    // RED GATE (#245): init seeds `.mdatron/.gitattributes` pinning the hashed
+    // files to LF — deployed on a first run, gained by an older tree on its
+    // next init, and adopter-owned (an edit is neither refused nor rewritten).
+    // Git itself confirms the attribute applies to every managed file.
+    #[test]
+    fn init_seeds_a_gitattributes_that_pins_managed_files_to_lf() {
+        let root = temp_root("gitattributes");
+        init(&root).unwrap();
+        let dir = root.join(".mdatron");
+        let attrs = dir.join(".gitattributes");
+        assert_eq!(std::fs::read_to_string(&attrs).unwrap(), GITATTRIBUTES_SEED);
+
+        // Git applies eol=lf to the manifest and every template (skipped where
+        // git is not installed).
+        let git = |args: &[&str]| {
+            std::process::Command::new("git")
+                .args(args)
+                .current_dir(&root)
+                .output()
+        };
+        if git(&["init", "-q"]).is_ok_and(|o| o.status.success()) {
+            let mut paths = vec![".mdatron/manifest.yaml".to_string()];
+            paths.extend(TEMPLATE_FILES.iter().map(|(n, _)| format!(".mdatron/{n}")));
+            for p in paths {
+                let out = git(&["check-attr", "eol", "--", &p]).unwrap();
+                let line = String::from_utf8_lossy(&out.stdout);
+                assert!(line.trim_end().ends_with("eol: lf"), "{p}: {line}");
+            }
+        }
+
+        // An older tree (no seed) gains it on its next init.
+        std::fs::remove_file(&attrs).unwrap();
+        match init(&root).unwrap() {
+            InitOutcome::Deployed { created, .. } => {
+                assert_eq!(created, vec![".mdatron/.gitattributes".to_string()])
+            }
+            other => panic!("expected the seed re-created, got {other:?}"),
+        }
+        // Adopter-owned: an edit is kept, and init stays a no-op.
+        let edited = format!("{GITATTRIBUTES_SEED}*.json text eol=lf\n");
+        std::fs::write(&attrs, &edited).unwrap();
+        assert_eq!(init(&root).unwrap(), InitOutcome::AlreadyInitialized);
+        assert_eq!(std::fs::read_to_string(&attrs).unwrap(), edited);
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     /// Overwrite template `name` in an initialized tree with `bytes` and record
