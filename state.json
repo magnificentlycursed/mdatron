@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1356,
-        "tip_oid": "25920a430553c7dfbd829b691c7a8beb910d6147",
-        "prefix_sha256": "86956908b046099f5aa8457400a11cd1854e4dd51c84cea0d08873985a7df6e3"
+        "sequence": 1357,
+        "tip_oid": "33fb0768b9c18a2da025715c8a1c3d621a97ecf3",
+        "prefix_sha256": "df0cbee5cf839134ea3b0388355abff2c8c9bab15686338a8db1fe27de42dd07"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 246,
-  "next_comment_id": 645,
+  "next_comment_id": 646,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -774,10 +774,21 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-10-06T21:23:29.337626Z",
-      "updated_at": "2026-10-06T21:24:20.478778Z",
+      "updated_at": "2026-10-09T00:44:32.015832Z",
       "labels": [
         "docs"
-      ]
+      ],
+      "comments": {
+        "94540636-92f6-436a-b8db-c6a913e65c70": {
+          "display_id": 645,
+          "author": "79Ig",
+          "content": "Batched docs PR opened (feature/232-docs-batch): see PR for this issue's item(s).",
+          "created_at": "2026-10-09T00:44:31.974617Z",
+          "kind": "note",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABActrSJ733iDwTFiLrQ4/ysd9ZH8hUnePMB/r8vuPmrXjTwpWZasemuMsjFOoV+LdYAUGqhblNVBLw42wQ5WHRBQ=="
+        }
+      }
     },
     "18184292-e0ea-4575-b33b-ff82e1ed6c2d": {
       "uuid": "18184292-e0ea-4575-b33b-ff82e1ed6c2d",
