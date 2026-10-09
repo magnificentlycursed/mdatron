@@ -12,7 +12,8 @@
 //! Opt-in per route (`generated: true`), like the link and citation families.
 //! `from` is root-relative and confined like every adopter path. The region is
 //! the bytes after the opening marker's line and before the closing marker's
-//! line; a marker inside fenced code is example text, not a marker. The
+//! line. A marker starts at column 0: an indented one (an indented code
+//! block, a list item) and one inside fenced code are text, not markers. The
 //! engine checks equality only — it never generates (the operator ruling of
 //! 2026-10-08: no built-in renderer).
 //!
@@ -29,6 +30,9 @@ use crate::diagnostic::{Finding, Location, QuotedRegion, Severity};
 use crate::markup::non_fenced_lines;
 use crate::snapshot::{Captured, Snapshot};
 
+/// What makes a line an opening marker (well-formed or not); the space keeps
+/// a future `<!-- mdatron:generated-by … -->` from reading as one.
+const OPEN_MARK: &str = "<!-- mdatron:generated ";
 const OPEN_PREFIX: &str = "<!-- mdatron:generated from=\"";
 const OPEN_SUFFIX: &str = "\" -->";
 const CLOSE: &str = "<!-- /mdatron:generated -->";
@@ -53,8 +57,12 @@ pub(crate) fn markers(body: &str) -> Vec<Marker<'_>> {
     // (from, opening offset, region start)
     let mut open: Option<(&str, usize, usize)> = None;
     for (offset, line) in non_fenced_lines(body) {
-        let trimmed = line.trim();
-        if trimmed.starts_with("<!-- mdatron:generated") {
+        // A marker starts at column 0 (#252 review): an indented line may be
+        // an indented code block showing the syntax, and an indented region
+        // could never equal an unindented source anyway. Trailing
+        // whitespace is tolerated.
+        let trimmed = line.trim_end();
+        if trimmed.starts_with(OPEN_MARK) {
             if let Some((_, at, _)) = open {
                 out.push(Marker::Malformed {
                     at,
@@ -265,6 +273,8 @@ mod tests {
                     ```\n\
                     <!-- /mdatron:generated -->\n\
                     <!-- mdatron:generated from=\"\" -->\n\
+                    \u{20}\u{20}\u{20}\u{20}<!-- mdatron:generated from=\"indented.md\" -->\n\
+                    <!-- mdatron:generated-by tool -->\n\
                     <!-- mdatron:generated from=\"a.md\" -->\n\
                     <!-- mdatron:generated from=\"b.md\" -->\n";
         let m = markers(body);

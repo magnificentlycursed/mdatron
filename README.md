@@ -432,7 +432,8 @@ corpora simply don't opt in.
 `<!-- /mdatron:generated -->` region in its files must equal the root-relative
 `from` file byte for byte: a table or a block your own generator writes cannot
 drift from its source unnoticed (`E0064` stale, `E0065` source missing,
-`E0066` malformed marker). mdatron compares; it never generates.
+`E0066` malformed marker). Markers start at column 0; one that is indented or
+inside fenced code is text. mdatron compares; it never generates.
 
 **Links** — route-attached: the opt-in exists only on a route in `routes.yaml`, so
 writing that route puts every walked file under the closed world (see

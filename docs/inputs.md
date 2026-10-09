@@ -75,7 +75,8 @@ Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `cit
   `<!-- mdatron:generated from="<path>" -->` … `<!-- /mdatron:generated -->`
   region in the claimed files must equal the root-relative `from` file byte
   for byte: `E0064` when it differs, `E0065` when the source is missing,
-  `E0066` for a malformed marker; a marker in fenced code is an example; under
+  `E0066` for a malformed marker; a marker starts at column 0, so an indented
+  one or one in fenced code is text, not a marker; under
   `--changed`, a changed source alone does not re-check the documents that
   embed it — a whole-tree run does), `link_root: true` (resolve
   `/root-relative` links; needs `links`), `marker_rules`, `section_rules`, `schema` (bind every claimed file

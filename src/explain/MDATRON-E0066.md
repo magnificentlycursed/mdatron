@@ -18,7 +18,10 @@ in it is checked. A generated region is the bytes between a marker pair:
 `from` is root-relative and confined to the governed tree. The region is
 everything after the opening marker's line and before the closing marker's
 line, so a source that ends in a newline is pasted with its newline. A marker
-inside fenced code is an example, not a marker. mdatron only compares: the
+must start at column 0: an indented one (inside a list item, or an indented
+code block showing the syntax) and one inside fenced code are text, not
+markers. One at column 0 inside a multi-line HTML comment is still read as a
+marker, so keep examples of the syntax in fenced code. mdatron only compares: the
 project's own generator writes the source file, and the region must match it.
 
 A marker here is malformed, so there is no region to check. The message says
