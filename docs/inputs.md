@@ -135,7 +135,8 @@ Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `cit
     or `name`): how many elements match, `E0120`;
   - an every rule (`element`, `every`; optional `match_on`): each element of
     the class must match the `every` pattern, `E0123` per element that does
-    not;
+    not — a section with no element of the class passes, so pair it with a
+    count rule when at least one must exist;
   - an order rule (`order`: two or more items of `element`, `match`, optional
     `match_on`): an element matching an earlier item must not follow one
     matching a later item, `E0124`; an item nothing matches is not a

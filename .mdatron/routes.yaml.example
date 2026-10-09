@@ -68,6 +68,8 @@
 #   - section: "## Links"
 #     element: list-item
 #     every: "^- \\[[^\\]]+\\]\\([^)]+\\)"   # every item is a link
+#                      # (a section with NO list item passes: pair it with a
+#                      # count rule when at least one item must exist)
 #   - section: "## Requirements"
 #     order:           # elements matching an earlier item come first
 #     - element: blockquote
