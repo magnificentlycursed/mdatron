@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1383,
-        "tip_oid": "a4001f9d46502cae9fdb74512b3ac5ff22780c4b",
-        "prefix_sha256": "96767eab37eedbf757e54425368ee450849bf4619c01df7a4dc4b4b3760a0b61"
+        "sequence": 1384,
+        "tip_oid": "7a7eea29c6aa9140bbc6d4fd095e677c83c31bad",
+        "prefix_sha256": "75b686dc5a86ad21758cc6092fa9231c916d787ef6210fddffb6c002badc91b5"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 253,
+  "next_display_id": 254,
   "next_comment_id": 651,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -216,6 +216,7 @@
     "c0c1830e-4e87-4ae9-b8fe-0a7d8701f1be": 7,
     "c1771947-9855-4b6e-aca7-b6e8d5d3000a": 139,
     "c19c5caa-1166-4cad-be76-506a2166d22c": 98,
+    "c241c3d9-61e9-465e-a959-b69658527bb9": 253,
     "c279283e-4eda-48c4-b703-b7843fd1bec0": 182,
     "c3719d16-ec01-44f8-ac08-90aaf2434567": 245,
     "c5dc858e-4a6e-4662-9360-2aac4b0c176d": 18,
@@ -7608,6 +7609,17 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAg5TCk4rTGqpemCEHVnuVDObSdJEy9swMWj+UehUF8yXEqIxK7Sv676susKOeZy1u737vFrRUoIuM+CWKaikfDQ=="
         }
       }
+    },
+    "c241c3d9-61e9-465e-a959-b69658527bb9": {
+      "uuid": "c241c3d9-61e9-465e-a959-b69658527bb9",
+      "display_id": 253,
+      "title": "max_bytes per section and per paragraph (not only per file), plus a report of sections over an injection budget (GH #79 item 8)",
+      "description": "Source: GH #79 (vsdd-cli roadmap feedback, 2026-10-08), item 8. Observed: Thermite 6,000-token spec budget in CI; crosslink injects at most three 8,000-char pages; Palimpsest exposition budgets. Extends route max_bytes (#216). Related: #222 item 4 (CLAUDE.md size guidance).",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-10-09T04:38:37.862324Z",
+      "updated_at": "2026-10-09T04:38:37.862324Z"
     },
     "c279283e-4eda-48c4-b703-b7843fd1bec0": {
       "uuid": "c279283e-4eda-48c4-b703-b7843fd1bec0",
