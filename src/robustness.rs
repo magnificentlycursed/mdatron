@@ -673,6 +673,19 @@ fn rule_case() -> impl Strategy<Value = (String, Yaml)> {
                 ]),
             ),
         ]));
+        // The budget shape (#253): a small bound, so the over-budget path runs;
+        // a span budget needs a section, so the whole-document form is always
+        // per paragraph.
+        let budget_rule = (optional_section(), 1..64u64, prop::bool::weighted(0.3)).prop_map(
+            move |(s, max, per_paragraph)| {
+                let per_paragraph = per_paragraph || s.is_none();
+                let mut pairs = vec![("max_bytes", Yaml::Number(max.into()))];
+                if per_paragraph {
+                    pairs.push(("per", ystr("paragraph")));
+                }
+                with_section(s, pairs)
+            },
+        );
         let whole_document_count =
             (shape_element_pick(), match_pick(), count_pick()).prop_map(|(e, m, c)| {
                 yaml_map(vec![
@@ -689,8 +702,9 @@ fn rule_case() -> impl Strategy<Value = (String, Yaml)> {
                 2 => coherent_rule,
                 3 => every_rule,
                 2 => order_rule,
-                2 => coherent_order,
+                3 => coherent_order,
                 1 => whole_document_count,
+                2 => budget_rule,
             ],
         )
     })
@@ -1286,7 +1300,8 @@ fn reach_strategy_section_rules_hit_the_count_and_disjoint_arms() {
     use std::cell::Cell;
     let (compiled, e0120, e0121, e0122) = (Cell::new(0), Cell::new(0), Cell::new(0), Cell::new(0));
     let (e0123, e0124) = (Cell::new(0), Cell::new(0));
-    count_over_strategy(section_input(), 512, |((body, rule), off)| {
+    let (e0125, e0126) = (Cell::new(0), Cell::new(0));
+    count_over_strategy(section_input(), 768, |((body, rule), off)| {
         if let Some(f) = drive_section_rule(&rule, &body, offset_in(&body, &off)) {
             compiled.set(compiled.get() + 1);
             // Tallied per CASE, not per finding: one every rule over one body
@@ -1302,6 +1317,8 @@ fn reach_strategy_section_rules_hit_the_count_and_disjoint_arms() {
                     "MDATRON-E0122" => e0122.set(e0122.get() + 1),
                     "MDATRON-E0123" => e0123.set(e0123.get() + 1),
                     "MDATRON-E0124" => e0124.set(e0124.get() + 1),
+                    "MDATRON-E0125" => e0125.set(e0125.get() + 1),
+                    "MDATRON-E0126" => e0126.set(e0126.get() + 1),
                     _ => {}
                 }
             }
@@ -1309,11 +1326,14 @@ fn reach_strategy_section_rules_hit_the_count_and_disjoint_arms() {
     });
     let (compiled, e0120, e0121, e0122) = (compiled.get(), e0120.get(), e0121.get(), e0122.get());
     let (e0123, e0124) = (e0123.get(), e0124.get());
-    eprintln!("section rules over 512 cases: compiled {compiled}, E0120 {e0120}, E0121 {e0121}, E0122 {e0122}");
-    eprintln!("section rules over 512 cases: E0123 {e0123}, E0124 {e0124}");
+    let (e0125, e0126) = (e0125.get(), e0126.get());
+    eprintln!("section rules over 768 cases: compiled {compiled}, E0120 {e0120}, E0121 {e0121}, E0122 {e0122}");
+    eprintln!(
+        "section rules over 768 cases: E0123 {e0123}, E0124 {e0124}, E0125 {e0125}, E0126 {e0126}"
+    );
     assert!(
-        compiled >= 256,
-        "most generated rules must compile (got {compiled}/512)"
+        compiled >= 384,
+        "most generated rules must compile (got {compiled}/768)"
     );
     assert!(
         e0120 >= 15,
@@ -1334,6 +1354,15 @@ fn reach_strategy_section_rules_hit_the_count_and_disjoint_arms() {
     assert!(
         e0124 >= 8,
         "the order arm must find out-of-order elements sometimes (E0124 {e0124})"
+    );
+    // #253: the budget arm's small bounds put both findings in reach.
+    assert!(
+        e0125 >= 8,
+        "the budget arm must find over-budget sections sometimes (E0125 {e0125})"
+    );
+    assert!(
+        e0126 >= 8,
+        "the budget arm must find over-budget paragraphs sometimes (E0126 {e0126})"
     );
 }
 

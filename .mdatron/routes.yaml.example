@@ -19,7 +19,8 @@
 # CODES       E0030 E0031 E0032 W0041 W0053 W0054; per opt-in E0100 E0101
 #             W0048 E0081 (citations), E0110 E0111 E0115 E0116 E0117 W0048
 #             E0081 (links), E0118 (link_policy), E0112 E0114 W0048 E0081
-#             (markers), E0120 E0121 E0122 E0123 E0124 (section rules),
+#             (markers), E0120 E0121 E0122 E0123 E0124 E0125 E0126
+#             (section rules),
 #             E0033 E0034 (schema), E0035 (name_equals_dir), E0036
 #             (max_bytes), E0037 (requires_sibling);
 #             E0010 E0011 E0012 on paths.
@@ -78,6 +79,10 @@
 #       match: "."
 #     - element: h3
 #       match: "."
+#   - section: "## Overview"
+#     max_bytes: 4096  # the section, subsections included, fits the budget
+#   - max_bytes: 1200
+#     per: paragraph   # no paragraph anywhere in the file over 1200 bytes
 #   - disjoint:
 #     - section: "## Requirements"
 #       element: h3

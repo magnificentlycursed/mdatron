@@ -606,6 +606,9 @@ by the line's own prefix, and a line inside a fenced code block is not one
 element of the class to match its `every` pattern (`E0123` for each that does
 not). An **order** rule lists items of `element` and `match`; an element
 matching an earlier item must not follow one matching a later item (`E0124`);
+a **budget** rule bounds a section's bytes (`max_bytes`, `E0125`) or each
+paragraph's (`max_bytes` with `per: paragraph`, `E0126`) — for readers that
+inject a section or a page only up to a size;
 an element belongs to the first item it matches. A section's own heading
 line is its container, never one of its elements.
 On a count, every or order rule `section` is optional: without it the rule

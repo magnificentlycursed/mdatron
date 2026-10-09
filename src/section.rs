@@ -37,6 +37,14 @@
 //!   asserts sequence only: an item nothing matches is not a violation
 //!   (presence is a count rule's job).
 //!
+//! - **Budget** `{ section, max_bytes }` / `{ section?, max_bytes, per: paragraph }`
+//!   (#253) — every span of the section (its heading line through its nested
+//!   subsections, what an injector reads) must fit in `max_bytes`, else
+//!   `MDATRON-E0125`; with `per: paragraph`, each paragraph — a run of adjacent
+//!   non-blank, non-heading lines outside code fences — in the section (or the
+//!   whole body) must fit, else `MDATRON-E0126` at the paragraph's first line.
+//!   Bytes are counted as checked out, like the route's per-file `max_bytes`.
+//!
 //! On a count, every or order rule `section` is optional (#217/#218): absent,
 //! the rule evaluates over the whole document body — so "the file is not
 //! empty" is a count of `line` elements, with no heading to anchor on.
@@ -88,6 +96,22 @@ pub(crate) struct RawRule {
     order: Option<Vec<RawOrderItem>>,
     #[serde(default)]
     disjoint: Option<Vec<RawOperand>>,
+    /// The byte budget of a section span, or of each paragraph (#253).
+    #[serde(default)]
+    max_bytes: Option<usize>,
+    /// What `max_bytes` bounds: absent = each span of the section; `paragraph`
+    /// = each paragraph in the scope (#253).
+    #[serde(default)]
+    per: Option<BudgetUnit>,
+}
+
+/// What a budget rule's `max_bytes` bounds (#253).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum BudgetUnit {
+    /// Each paragraph: a run of adjacent non-blank, non-heading lines outside
+    /// code fences.
+    Paragraph,
 }
 
 /// One step of an `order` rule: the elements of `element` matching `match`.
@@ -149,6 +173,13 @@ pub enum Rule {
     Disjoint {
         a: Operand,
         b: Operand,
+    },
+    /// `per: None` bounds each span of `section` (required then); `per:
+    /// Some(Paragraph)` each paragraph of the section, or of the body.
+    Budget {
+        section: Option<String>,
+        max: usize,
+        per: Option<BudgetUnit>,
     },
 }
 
@@ -307,6 +338,46 @@ pub(crate) fn compile_rule(r: RawRule) -> Result<Rule, Error> {
         }
         Ok(s)
     };
+    if r.per.is_some() && r.max_bytes.is_none() {
+        return Err(Error::Config(
+            "a section-rule with `per` needs `max_bytes`; `per` says what the budget bounds".into(),
+        ));
+    }
+    if let Some(max) = r.max_bytes {
+        if r.element.is_some()
+            || r.match_pattern.is_some()
+            || r.count.is_some()
+            || r.match_on.is_some()
+            || r.every.is_some()
+            || r.order.is_some()
+            || r.disjoint.is_some()
+        {
+            return Err(Error::Config(
+                "a section-rule with `max_bytes` takes only `section` and `per` beside it; \
+                 a budget bounds bytes, it does not match elements"
+                    .into(),
+            ));
+        }
+        if max == 0 {
+            return Err(Error::Config(
+                "a section-rule `max_bytes` of 0 would refuse every section and paragraph; \
+                 give the budget the reader actually has"
+                    .into(),
+            ));
+        }
+        if r.section.is_none() && r.per.is_none() {
+            return Err(Error::Config(
+                "a section-rule `max_bytes` with no `section` and no `per: paragraph` would \
+                 bound the whole body; bound the whole file with the route's own `max_bytes`"
+                    .into(),
+            ));
+        }
+        return Ok(Rule::Budget {
+            section: optional_section(r.section)?,
+            max,
+            per: r.per,
+        });
+    }
     if let Some(items) = r.order {
         if r.element.is_some()
             || r.match_pattern.is_some()
@@ -685,6 +756,62 @@ pub fn check_file(
                     }
                 }
             }
+            Rule::Budget { section, max, per } => {
+                let Some(spans) = rule_spans(body, section.as_deref()) else {
+                    findings.push(section_finding(
+                        path,
+                        content,
+                        1,
+                        "MDATRON-E0122",
+                        "section-not-found",
+                        "no heading in this document matches the section rule's \
+                         section spec (matching is exact on level and text), so \
+                         its byte budget cannot be evaluated",
+                        with_section(section, vec![quoted("max_bytes", &max.to_string())]),
+                    ));
+                    continue;
+                };
+                for span in spans {
+                    match per {
+                        None => {
+                            if span.len() > *max {
+                                findings.push(section_finding(
+                                    path,
+                                    content,
+                                    lines.line_of(abs_offset(body_offset, body, span, 0)),
+                                    "MDATRON-E0125",
+                                    "section-over-byte-budget",
+                                    &format!(
+                                        "this section is {} bytes, over the rule's budget of \
+                                         {max} bytes (its heading through its subsections)",
+                                        span.len()
+                                    ),
+                                    with_section(section, Vec::new()),
+                                ));
+                            }
+                        }
+                        Some(BudgetUnit::Paragraph) => {
+                            for (offset, len, first) in paragraphs(span, section.is_some()) {
+                                if len <= *max {
+                                    continue;
+                                }
+                                findings.push(section_finding(
+                                    path,
+                                    content,
+                                    lines.line_of(abs_offset(body_offset, body, span, offset)),
+                                    "MDATRON-E0126",
+                                    "paragraph-over-byte-budget",
+                                    &format!(
+                                        "this paragraph is {len} bytes, over the rule's \
+                                         per-paragraph budget of {max} bytes"
+                                    ),
+                                    with_section(section, vec![quoted("first line", first)]),
+                                ));
+                            }
+                        }
+                    }
+                }
+            }
             Rule::Disjoint { a, b } => {
                 // GH #48 finding 1 (fail-open): a renamed/absent operand section
                 // used to yield an empty id set, and empty-vs-empty is disjoint —
@@ -798,6 +925,46 @@ fn rule_spans<'a>(body: &'a str, section: Option<&str>) -> Option<Vec<&'a str>> 
             (!spans.is_empty()).then_some(spans)
         }
     }
+}
+
+/// The paragraphs of one span (#253): runs of adjacent non-blank lines that are
+/// not headings, outside code fences, as `(offset, byte length, first line)`.
+/// A blank line, a heading, or a fence ends a paragraph; the length runs from
+/// the first line's start to the last line's end (inner newlines included).
+fn paragraphs(span: &str, sectioned: bool) -> Vec<(usize, usize, &str)> {
+    let mut out = Vec::new();
+    // (start offset, end of the last line's text, end of its raw line — past
+    // a CRLF's `\r` — and the first line). `element_lines` yields lines with
+    // their line ending already trimmed, so adjacency and length are judged
+    // on the raw ends: a CRLF file's next line starts at raw end + 1 too, and
+    // an inner `\r\n` counts (#253 review: a CRLF file had read as one
+    // paragraph per line).
+    let mut open: Option<(usize, usize, usize, &str)> = None;
+    for (offset, line) in element_lines(span, sectioned) {
+        let breaks = line.trim().is_empty() || atx_heading(line).is_some();
+        let text_end = offset + line.len();
+        let raw_end = text_end + usize::from(span[text_end..].starts_with('\r'));
+        // A line not directly after the previous one (a fence or the span's
+        // own heading lay between) starts a new paragraph too.
+        let adjacent = open.is_some_and(|(_, _, prev_raw, _)| offset == prev_raw + 1);
+        if let Some((start, end, _, first)) = open {
+            if breaks || !adjacent {
+                out.push((start, end - start, first));
+                open = None;
+            }
+        }
+        if breaks {
+            continue;
+        }
+        open = Some(match open {
+            Some((start, _, _, first)) => (start, text_end, raw_end, first),
+            None => (offset, text_end, raw_end, line),
+        });
+    }
+    if let Some((start, end, _, first)) = open {
+        out.push((start, end - start, first));
+    }
+    out
 }
 
 /// The candidate element lines of one span, with their byte offsets in it. A
@@ -953,6 +1120,77 @@ mod tests {
 
     fn rx(p: &str) -> regex_lite::Regex {
         regex_lite::Regex::new(p).unwrap()
+    }
+
+    fn budget(yaml: &str) -> Result<Rule, Error> {
+        compile_rule(crate::yaml::from_str::<RawRule>(yaml).unwrap())
+    }
+
+    // RED GATE (#253, GH #79 item 8): a section's span — heading through its
+    // subsections — over `max_bytes` is E0125 at its heading; each paragraph
+    // over a `per: paragraph` budget is E0126 at its first line. Fences,
+    // headings and blank lines end a paragraph.
+    #[test]
+    fn budget_rules_bound_sections_and_paragraphs() {
+        let body = "# Doc\n\n## Intro\nshort.\n\n## Long\naaaaaaaaaa bbbbbbbbbb\n\
+                    cccccccccc dddddddddd\n\n```\nnot a paragraph line at all, long long\n```\n\
+                    tail\n### Sub\nsub text\n";
+        let check = |rule: Rule| {
+            let mut f = Vec::new();
+            check_file(&[&rule], Path::new("d.md"), body, 0, &mut f);
+            f
+        };
+        let f = check(budget("section: \"## Long\"\nmax_bytes: 40\n").unwrap());
+        assert_eq!(f.len(), 1, "{f:?}");
+        assert_eq!(
+            (f[0].code.as_str(), f[0].location.line),
+            ("MDATRON-E0125", 6)
+        );
+        assert!(check(budget("section: \"## Intro\"\nmax_bytes: 40\n").unwrap()).is_empty());
+
+        let f = check(budget("max_bytes: 30\nper: paragraph\n").unwrap());
+        let hits: Vec<(&str, u32)> = f
+            .iter()
+            .map(|x| (x.code.as_str(), x.location.line))
+            .collect();
+        // Only the two-line paragraph (43 bytes) is over 30; the fenced line,
+        // the headings and the short paragraphs are not.
+        assert_eq!(hits, vec![("MDATRON-E0126", 7)], "{f:?}");
+        assert!(f[0]
+            .quoted
+            .iter()
+            .any(|q| q.label == "first line" && q.content.starts_with("aaaa")));
+
+        // CRLF (#253 review): lines are still one paragraph, and the inner
+        // `\r\n` counts — 21 + 2 + 10 = 33 bytes.
+        let crlf = "aaaaaaaaaa bbbbbbbbbb\r\ncccccccccc\r\n\r\nshort\r\n";
+        let mut f = Vec::new();
+        let rule = budget("max_bytes: 32\nper: paragraph\n").unwrap();
+        check_file(&[&rule], Path::new("c.md"), crlf, 0, &mut f);
+        assert_eq!(f.len(), 1, "{f:?}");
+        assert!(f[0].message.contains("33 bytes"), "{:?}", f[0].message);
+        let rule = budget("max_bytes: 33\nper: paragraph\n").unwrap();
+        let mut f = Vec::new();
+        check_file(&[&rule], Path::new("c.md"), crlf, 0, &mut f);
+        assert!(f.is_empty(), "{f:?}");
+
+        // A missing section is E0122, as for every other shape.
+        let f = check(budget("section: \"## Gone\"\nmax_bytes: 10\n").unwrap());
+        assert_eq!(f[0].code, "MDATRON-E0122");
+    }
+
+    #[test]
+    fn budget_rules_are_validated_at_load() {
+        for bad in [
+            "section: \"## A\"\nmax_bytes: 0\n",
+            "max_bytes: 100\n",
+            "per: paragraph\nsection: \"## A\"\n",
+            "section: \"## A\"\nmax_bytes: 10\nelement: line\n",
+            "section: \"## A\"\nmax_bytes: 10\ncount: \">= 1\"\n",
+        ] {
+            assert!(budget(bad).is_err(), "{bad:?}");
+        }
+        assert!(budget("max_bytes: 100\nper: paragraph\n").is_ok());
     }
 
     #[test]
@@ -1182,6 +1420,8 @@ mod tests {
             match_pattern: Some(r"^### .*$".into()),
             count: Some(">= 1".into()),
             disjoint: None,
+            max_bytes: None,
+            per: None,
         };
         let err = match compile_rule(raw) {
             Err(e) => e,
@@ -1209,6 +1449,8 @@ mod tests {
             match_pattern: Some(r"^### .*$".into()),
             count: Some(">= 1".into()),
             disjoint: None,
+            max_bytes: None,
+            per: None,
         };
         let err = match compile_rule(raw) {
             Err(e) => e,
@@ -1231,6 +1473,8 @@ mod tests {
             every: None,
 
             order: None,
+            max_bytes: None,
+            per: None,
             section: None,
             element: None,
             match_pattern: None,

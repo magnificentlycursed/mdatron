@@ -46,6 +46,8 @@
   "MDATRON-E0122": "section-not-found",
   "MDATRON-E0123": "section-element-mismatch",
   "MDATRON-E0124": "section-order-violation",
+  "MDATRON-E0125": "section-over-byte-budget",
+  "MDATRON-E0126": "paragraph-over-byte-budget",
   "MDATRON-L0001": "governance-weakening-standing",
   "MDATRON-W0040": "governed-file-has-no-frontmatter",
   "MDATRON-W0041": "name-underivable",
