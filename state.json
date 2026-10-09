@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1389,
-        "tip_oid": "611f16960108c9ff4f1587ef97a3a7bfbca76f39",
-        "prefix_sha256": "dc86167d18ea7980a07ee9d4c26aa8e991f82d9ee1fe042c03f26d313a9ed9cc"
+        "sequence": 1390,
+        "tip_oid": "d13e660c68c37e13e795679454a4cb2e39d98914",
+        "prefix_sha256": "27e124502315a93dcc9abd5b6dd663b83bdf9d093e8b7245ab855612b0bf874e"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 256,
+  "next_display_id": 257,
   "next_comment_id": 651,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -132,6 +132,7 @@
     "685a5139-6347-4bf4-abd8-ce9c7ac48024": 117,
     "688e0ef3-333c-422b-96dc-d0295a1ff25c": 184,
     "69b33517-946c-45ba-9287-c1231028d5ec": 47,
+    "6a9a0ad9-2887-4d6f-a5c7-312c992b7de4": 256,
     "6bc6fdb6-8969-4fde-bb66-09531efa127b": 229,
     "6ccc5223-9a98-44ca-a398-17334578d0b4": 194,
     "6ff449c7-dfad-4094-938e-a2193382a8ed": 236,
@@ -4094,6 +4095,17 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAQFNCtigAEAU87v1aRohby8wvki8owBG0I2OhLn3xa2NU2Ur0X1xYwimOO2fxXvJj2cAd6sWr14j21TQQVAcKDQ=="
         }
       }
+    },
+    "6a9a0ad9-2887-4d6f-a5c7-312c992b7de4": {
+      "uuid": "6a9a0ad9-2887-4d6f-a5c7-312c992b7de4",
+      "display_id": 256,
+      "title": "Verify a second checkout: a documented recipe (or a --root plus --file-globs form) for running mdatron over another branch's checkout in CI, e.g. a crosslink knowledge branch (GH #79 item 11)",
+      "description": "Source: GH #79 (vsdd-cli roadmap feedback, 2026-10-08), item 11; extends the GH #73 Claude Code rules-file recipe raise. Observed: vsdd-cli published 27 knowledge pages with a provenance convention nothing checks, because the engine walks the working tree only. Ask: a recipe for a second-branch checkout with its own jurisdiction and routes, or a CLI form making it one command. Related: #222 item 1 (rules recipe).",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-10-09T05:08:59.749590Z",
+      "updated_at": "2026-10-09T05:08:59.749590Z"
     },
     "6bc6fdb6-8969-4fde-bb66-09531efa127b": {
       "uuid": "6bc6fdb6-8969-4fde-bb66-09531efa127b",
