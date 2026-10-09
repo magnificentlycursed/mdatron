@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1403,
-        "tip_oid": "37cf3da0e499264d573a9ebf4c65af2c24735586",
-        "prefix_sha256": "5829cc270394840dac23bc242eade759c0e4ea80e919c7ddc82df7f0d36a8d6a"
+        "sequence": 1404,
+        "tip_oid": "fb638febe7f8765d8ed85d7194d066ced931c2ca",
+        "prefix_sha256": "a63a046e26b73b959dd4244d3fb15166336626f3ba6ed8eea388c374ba0cf9df"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 257,
-  "next_comment_id": 657,
+  "next_comment_id": 658,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -8308,10 +8308,21 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-10-09T04:36:14.805558Z",
-      "updated_at": "2026-10-09T04:37:23.223533Z",
+      "updated_at": "2026-10-09T22:29:32.984900Z",
       "labels": [
         "feature"
-      ]
+      ],
+      "comments": {
+        "3a95ac00-fbe6-4d5a-bc24-a00f72ffb5b3": {
+          "display_id": 657,
+          "author": "79Ig",
+          "content": "PR #88 opened (dbcf6c1d + review fixes 413b4a29: column-0 markers, spaced prefix). Merge after #87 (shared routes-template hash; will recompute). Review found no blocker/major; --changed observation explained by governance-edge dependents.",
+          "created_at": "2026-10-09T22:29:32.944782Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAGf1+eSVvkUceTua++Bj/lh79jBnIjpU7KjjvnY8ZzJ5i9kQ9x1dQw0FzsKySy+QS5ijTIUSvlNwMrZPZb/KtCg=="
+        }
+      }
     },
     "cc1c41ae-b96a-4d9a-b7f5-2608f7821b6a": {
       "uuid": "cc1c41ae-b96a-4d9a-b7f5-2608f7821b6a",
