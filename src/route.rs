@@ -338,6 +338,14 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
         // a separator or a traversal segment would make it a path, which is
         // a different (and unsupported) rule.
         if let Some(name) = &entry.requires_sibling {
+            // #235: `{stem}` is the one placeholder; any other brace is refused
+            // rather than looked for literally.
+            if name.replace(SIBLING_STEM, "").contains(['{', '}']) {
+                return Err(Error::Config(format!(
+                    "route requires_sibling '{name}' uses a placeholder other than \
+                     {SIBLING_STEM}, the claimed file's name without its final extension"
+                )));
+            }
             let ok = !name.trim().is_empty()
                 && !name.contains(['/', '\\'])
                 && !name.chars().any(char::is_control)
@@ -702,7 +710,12 @@ pub fn imports_enabled(routes: &[Route], rel: &Path) -> bool {
         .any(|r| r.links && r.imports && crate::globs::matches_path(&r.files, rel))
 }
 
-/// The file that must exist beside `rel`, per a route claiming it (#221).
+/// The `requires_sibling` placeholder for the claimed file's name without its
+/// final extension (#235).
+pub const SIBLING_STEM: &str = "{stem}";
+
+/// The file that must exist beside `rel`, per a route claiming it (#221); its
+/// name may hold [`SIBLING_STEM`] (#235).
 pub fn sibling_for<'a>(routes: &'a [Route], rel: &Path) -> Option<&'a str> {
     routes
         .iter()

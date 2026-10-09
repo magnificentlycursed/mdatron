@@ -2,7 +2,7 @@
 version: 2
 managed:
 - path: routes.yaml.example
-  sha256: 0e7dc66dae9c98ca285e5e7ffde03d25db727768b7a3a683ab2dd9705891edf3
+  sha256: b211889185b764b8e8c792853e6cb03dcc83d9330d2e36f0cefbf7a66389cd7e
 - path: pins.yaml.example
   sha256: d896b9c74b219041bea8670303654ad67db8b29e4736ffbde82d7bd25a3a5c6f
 - path: vocabulary.yaml.example

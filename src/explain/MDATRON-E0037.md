@@ -8,7 +8,10 @@
 
 The route claiming this file sets `requires_sibling: <name>`: a file of that
 name must exist in the same directory as every file the route claims, and
-this file's directory has none. The name is quoted beneath the diagnostic.
+this file's directory has none. The name may hold `{stem}` (from 0.8.0), the
+claimed file's name without its final extension, for a per-file sidecar:
+`{stem}.pipeline.json` beside `auth.md` means `auth.pipeline.json`. The name
+looked for — with `{stem}` expanded — is quoted beneath the diagnostic.
 Only a regular file counts, judged on the snapshot the run captured: a
 directory or a symlink in the sibling's place does not, and nor does a file
 created after the run read the tree.

@@ -115,6 +115,12 @@ const RELEASED_TEMPLATE_HASHES: &[(&str, &str, &str)] = &[
         "routes.yaml.example",
         "e4d23d6eaa46e7a9b13766ba8e1dcedf925926bfe0ccece0f3721b468b617d4e",
     ),
+    // ...and from #234 to #235 (the `{stem}` sidecar note).
+    (
+        "unreleased",
+        "routes.yaml.example",
+        "0e7dc66dae9c98ca285e5e7ffde03d25db727768b7a3a683ab2dd9705891edf3",
+    ),
 ];
 
 /// Whether `sha256` is a released, superseded version of template `path`.
@@ -171,6 +177,8 @@ const ROUTES_TEMPLATE: &str = r####"# routes.yaml.example — the route family. 
 #   name_equals_dir: name  # frontmatter `name` must equal the parent directory
 #   max_bytes: 32768       # the most bytes a claimed file may hold
 #   requires_sibling: CLAUDE.md  # must exist beside every claimed file
+#                                # ("{stem}.json": a per-file sidecar named
+#                                # after the file without its extension)
 #   naming: "^[a-z0-9-]+\\.md$"
 #   citations: true
 #   links: true
@@ -1474,7 +1482,7 @@ mod tests {
         let pinned = [
             (
                 "routes.yaml.example",
-                "0e7dc66dae9c98ca285e5e7ffde03d25db727768b7a3a683ab2dd9705891edf3",
+                "b211889185b764b8e8c792853e6cb03dcc83d9330d2e36f0cefbf7a66389cd7e",
             ),
             (
                 "pins.yaml.example",

@@ -38,6 +38,8 @@
 #   name_equals_dir: name  # frontmatter `name` must equal the parent directory
 #   max_bytes: 32768       # the most bytes a claimed file may hold
 #   requires_sibling: CLAUDE.md  # must exist beside every claimed file
+#                                # ("{stem}.json": a per-file sidecar named
+#                                # after the file without its extension)
 #   naming: "^[a-z0-9-]+\\.md$"
 #   citations: true
 #   links: true
