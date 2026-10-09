@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1381,
-        "tip_oid": "86676983dccea7c416534ff134c9ef978791db91",
-        "prefix_sha256": "b231d6fdaccb972369d8edb87eee68c4f55f72fc966325e1a920734f0eef42b5"
+        "sequence": 1382,
+        "tip_oid": "1ca788930a7b7371fe3b6aaad4312a07fa3a73a9",
+        "prefix_sha256": "0da025bcbf76329cfaecaf51e2bb49c580e70df09ba06e94538920fc674aa795"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 252,
+  "next_display_id": 253,
   "next_comment_id": 651,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -225,6 +225,7 @@
     "ca00d2d1-8e37-4109-8c35-24b6950cd6e2": 156,
     "ca04fb0c-6c95-4f52-ab78-d7a1c0b05bf9": 36,
     "ca2e6c21-f9fd-4751-9ca4-24ef840c72e0": 103,
+    "cb5c51ee-a731-4ace-92b3-e121ecd7f1e4": 252,
     "cc1c41ae-b96a-4d9a-b7f5-2608f7821b6a": 4,
     "cd29ff68-de48-4a6e-98c3-a03b0a4a6dca": 59,
     "ce6b2f18-6264-4777-9e10-b5d3454ffc62": 141,
@@ -8188,6 +8189,17 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAnRGByDhcESoJ6LWZwrMI4TV8TIjBJIeWhQWLDXtIfPK3ZhK/2bwcCYwUv4g8iA/KlProJF6A+u8LfPUiyq0SBQ=="
         }
       }
+    },
+    "cb5c51ee-a731-4ace-92b3-e121ecd7f1e4": {
+      "uuid": "cb5c51ee-a731-4ace-92b3-e121ecd7f1e4",
+      "display_id": 252,
+      "title": "Generated regions: a marker pair delimiting a region whose bytes must equal a named committed file or the rendering of a named data file (GH #79 item 7)",
+      "description": "Source: GH #79 (vsdd-cli roadmap feedback, 2026-10-08), item 7. Observed: Thermite registry-generated tables in marked regions, CI fails when stale; OpenClaudia capability matrix 'do not edit by hand'. Today expressible only as a section pin against a hand copy. Relates to the marker and pin families and to item 1's generated views.",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-10-09T04:36:14.805558Z",
+      "updated_at": "2026-10-09T04:36:14.805558Z"
     },
     "cc1c41ae-b96a-4d9a-b7f5-2608f7821b6a": {
       "uuid": "cc1c41ae-b96a-4d9a-b7f5-2608f7821b6a",
