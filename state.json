@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1375,
-        "tip_oid": "74f0588cf8f45d925ff236cd399e8bb2066827b4",
-        "prefix_sha256": "2b9aa749b0ef161861abca07b9d37ede9f6fddcdcabfbfdd107d7c3e8c1bb603"
+        "sequence": 1376,
+        "tip_oid": "62ebd37b6b047622329d2e8b9a2cda3754512538",
+        "prefix_sha256": "013f505848718fe0da522bbe62974920c56f117e74dab410d7906f9dcb5c004c"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 249,
+  "next_display_id": 250,
   "next_comment_id": 651,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -257,6 +257,7 @@
     "eddd10af-f936-439c-9ead-0f9d6b9832b3": 28,
     "ee671da2-071b-4656-bf74-6259586911d8": 162,
     "f00730f0-5883-4ad4-9ae0-9a665b2baa0b": 100,
+    "f0f27e79-e986-4846-ad98-68cefef02db7": 249,
     "f15408fb-30ae-4167-bcce-abcfc26b7bc1": 192,
     "f187546d-64e0-4da8-9b7c-6f1023106726": 119,
     "f21336ca-f031-48da-ab68-018e700d4db1": 181,
@@ -9328,6 +9329,17 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA7Hv9pAD+LIyEFDT4jZ8ncmz/9kzZJOCBhC0YhA8QnMwEVkNxolrk4ukCjwLuw3VMhcCOxZ4rre30prOftlVNCQ=="
         }
       }
+    },
+    "f0f27e79-e986-4846-ad98-68cefef02db7": {
+      "uuid": "f0f27e79-e986-4846-ad98-68cefef02db7",
+      "display_id": 249,
+      "title": "Vocabulary register policies beyond forbidden: per-pattern density thresholds (per 1000 words), an intentional-exception kind with a required reason reported as allowed, profile inheritance, and a corpus density report (GH #79 item 4)",
+      "description": "Source: GH #79 (vsdd-cli roadmap feedback, 2026-10-08), item 4; extends the GH #73 register raise. Observed: Palimpsest lint platform (forbidden/report/watch density/intentional; versioned inheriting profiles; content-hash-versioned catalogues; analyzer failure is an error). Related: #192 (term lifecycle in adopter registries) — design together.",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-10-09T04:26:40.357832Z",
+      "updated_at": "2026-10-09T04:26:40.357832Z"
     },
     "f15408fb-30ae-4167-bcce-abcfc26b7bc1": {
       "uuid": "f15408fb-30ae-4167-bcce-abcfc26b7bc1",
