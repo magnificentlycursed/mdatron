@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1406,
-        "tip_oid": "fb0dd5a4ff512857803d02fc2d244ca94b3abf55",
-        "prefix_sha256": "8c507d038f7c2d5ffac02a1589d0580e040b4690766ca64eaa81dd97f1fba522"
+        "sequence": 1407,
+        "tip_oid": "2e994c16ed1f2c019ae434824e42a8739b0e4e62",
+        "prefix_sha256": "118fa30c9927205b1da24c2340d07a5f23b09f5f975c7d5ded4802257c41fe7c"
       },
       "IMWa": {
         "sequence": 2,
@@ -7698,11 +7698,12 @@
       "display_id": 253,
       "title": "max_bytes per section and per paragraph (not only per file), plus a report of sections over an injection budget (GH #79 item 8)",
       "description": "Source: GH #79 (vsdd-cli roadmap feedback, 2026-10-08), item 8. Observed: Thermite 6,000-token spec budget in CI; crosslink injects at most three 8,000-char pages; Palimpsest exposition budgets. Extends route max_bytes (#216). Related: #222 item 4 (CLAUDE.md size guidance).",
-      "status": "open",
+      "status": "closed",
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-10-09T04:38:37.862324Z",
-      "updated_at": "2026-10-09T22:52:30.710958Z",
+      "updated_at": "2026-10-09T22:54:16.165888Z",
+      "closed_at": "2026-10-09T22:54:16.129683Z",
       "labels": [
         "feature"
       ],
