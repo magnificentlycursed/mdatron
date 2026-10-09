@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1354,
-        "tip_oid": "a03ddbe6242533922703b7cc9492d1bba59443b4",
-        "prefix_sha256": "073274cbaa4b36de21ce6ae414117a2f8478a02f27141eba09124e7fa1c3a443"
+        "sequence": 1355,
+        "tip_oid": "8c82dc5637a55d17004ffd4d80b91ae301015f91",
+        "prefix_sha256": "196621c2999eca4a6e50c2f6083a4b5483e944bed1e4f253fcdcd5b02788ddb0"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 246,
-  "next_comment_id": 643,
+  "next_comment_id": 644,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -4347,7 +4347,7 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-10-06T21:20:23.333104Z",
-      "updated_at": "2026-10-08T20:56:45.645051Z",
+      "updated_at": "2026-10-09T00:41:29.676911Z",
       "labels": [
         "docs"
       ],
@@ -4369,6 +4369,15 @@
           "kind": "decision",
           "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA4lj9pSjr5ODnKms0a7fbPnBo4p1hhib4zX99jnDtPzKM6gCEjspzgwuSspKGnTlpUtPzAw/fx5ZX7xybhqJwDw=="
+        },
+        "ae7beb77-ce64-4037-98b6-28ba5f3cbd19": {
+          "display_id": 643,
+          "author": "79Ig",
+          "content": "Batched docs PR opened (feature/232-docs-batch): see PR for this issue's item(s).",
+          "created_at": "2026-10-09T00:41:29.603288Z",
+          "kind": "note",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABActrSJ733iDwTFiLrQ4/ysd9ZH8hUnePMB/r8vuPmrXjTwpWZasemuMsjFOoV+LdYAUGqhblNVBLw42wQ5WHRBQ=="
         }
       }
     },
