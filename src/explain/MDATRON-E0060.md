@@ -8,10 +8,18 @@
 
 A file that `mdatron init` deploys and manages was modified after
 initialization. The managed partition is the set of engine-owned files listed
-in `.mdatron/manifest.yaml` with their sha256 content hashes (`DESIGN.md` § Validation is data-driven, governance data is governed). On a re-run, `mdatron init` recomputes each
-managed file's hash and compares it to the manifest; a mismatch is drift, and
-`init` refuses rather than silently overwrite your edit or trust a changed
-engine-owned file.
+in `.mdatron/manifest.yaml` with their sha256 content hashes (`DESIGN.md` § Validation is data-driven, governance data is governed). Both commands recompute each
+managed file's hash and compare it to the manifest, by one shared check, so
+they always agree: a mismatch is drift. `mdatron init` refuses rather than
+silently overwrite your edit or trust a changed engine-owned file, and
+`mdatron verify` reports it as this finding (exit `1`) — so a CI that runs only
+`verify` sees an edited template. (Through 0.7.0 only `init` checked; `verify`
+read the manifest for its tombstones and lineage digest alone.) A missing
+managed file is not drift: `init` restores it.
+
+The comparison is of bytes: a checkout that rewrites line endings (Git's
+`core.autocrlf` on Windows) changes the hash of a committed template and reads
+as drift.
 
 This is a governance guardrail, not a corruption check: the managed files are
 the engine's own configuration surface. Adopter-authored data — your schemas in
@@ -20,7 +28,8 @@ manifest and is never guarded or touched by `init`.
 
 ## How to fix
 
-Read the `= note:` line for the drifted file and its recorded-vs-found hashes,
+Read the `= file:`, `= recorded:` and `= found:` lines for the drifted file and
+its recorded-vs-found hashes,
 then apply the matching pattern:
 
 - **You edited a `*.example` template.** The templates `init` deploys are

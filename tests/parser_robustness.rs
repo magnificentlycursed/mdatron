@@ -519,7 +519,7 @@ fn prop_loaders_never_panic() {
                 std::fs::write(root.join(".mdatron").join(name), &bytes).unwrap();
             }
             let _ = mdatron::config::load(root);
-            let _ = mdatron::init::load_tombstones(root);
+            let _ = mdatron::init::load_manifest(root);
             let _ = mdatron::route::load(root);
             let _ = mdatron::pin::load(root);
             let _ = mdatron::vocab::load(root);
