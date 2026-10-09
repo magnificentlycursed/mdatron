@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1369,
-        "tip_oid": "18aff8412b4027109fc997cdc28600a4a2d7cdb6",
-        "prefix_sha256": "795941ea560e386892324cee166c5c9dbcfbff1e734cbe74216a7928e7f2947d"
+        "sequence": 1370,
+        "tip_oid": "f7e3932687df03733044f8a8c13387533fb9bcf0",
+        "prefix_sha256": "891f27fb2ca1c7883083c10c2f5047c156e976b180741b4d8d1f0bcbf4556071"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 246,
+  "next_display_id": 247,
   "next_comment_id": 651,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -62,6 +62,7 @@
     "2456d20a-0560-437f-81a0-2d54a1b96d80": 65,
     "262c8f3f-bab5-4796-b735-b24d9bf01ac9": 123,
     "266badfe-b56b-409e-9f46-bdb0954f3adf": 203,
+    "26e49d46-8b2b-4165-ba66-c106ac5eb9d2": 246,
     "272af72b-940d-48f4-ac72-61f5e1dd11ed": 218,
     "277a179b-fdda-44e7-a79b-f9e096e12789": 124,
     "27c148a2-87df-4d35-8f22-46b99666de3f": 130,
@@ -1596,6 +1597,17 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAqWMbrx5hvNM448er7Poxhsqo228czU+k/zxTm2JJhCE0wQLwMO8dF3JE5GEAyZqrLth9KdJ3zA+wZHRxCDlmBQ=="
         }
       }
+    },
+    "26e49d46-8b2b-4165-ba66-c106ac5eb9d2": {
+      "uuid": "26e49d46-8b2b-4165-ba66-c106ac5eb9d2",
+      "display_id": 246,
+      "title": "Requirements registry family: a registry data file validated against a status policy it declares, typed evidence resolution (file / symbol-in-file / issue state via a supplied oracle), and generated markdown views kept equal to the registry's rendering (GH #79 item 1)",
+      "description": "Source: GH #79 (vsdd-cli roadmap feedback, 2026-10-08), item 1. Observed: Thermite .design/reqs/registry.toml (524 reqs, status policy, owner, typed evidence, named generated views, CI checker); Peritus obligations file + traceability table. Ask: a family validating a registry file against a status policy declared in the file, resolving typed evidence, and checking marked generated regions equal the registry rendering. Largest raise; overlaps item 7 (generated regions) and item 10 (decision records cite registry ids). Scope note: the registry is data (TOML/YAML) — check against the ratified scope (typed markdown; bare-YAML carriers declined in #66) before design.",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-10-09T04:19:40.410058Z",
+      "updated_at": "2026-10-09T04:19:40.410058Z"
     },
     "272af72b-940d-48f4-ac72-61f5e1dd11ed": {
       "uuid": "272af72b-940d-48f4-ac72-61f5e1dd11ed",
