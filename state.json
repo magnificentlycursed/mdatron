@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1371,
-        "tip_oid": "4c8a955b579c4254622d0368eb9cc3a7dfc86c13",
-        "prefix_sha256": "38648976abd6f7182badbbac3f4a84ac36e424e3a87cb6aced3f11963af68e5c"
+        "sequence": 1372,
+        "tip_oid": "1c1ae11a6c1d682b205e9eff821c1f8ebaec7420",
+        "prefix_sha256": "bf110b218b39f68169e37b1a3cdb59e31b5ddfed749247a9a4d865eb419c7f2c"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 247,
+  "next_display_id": 248,
   "next_comment_id": 651,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -231,6 +231,7 @@
     "d2bcf2cb-f611-4a11-bc88-00a0ace5e037": 101,
     "d5e5f80a-4501-486b-bf8b-f79376b9bee5": 202,
     "d6a9a419-11bd-4e47-bbfc-1cd8940f61a1": 107,
+    "d70258f5-e1d9-41bc-a384-1d73772276ea": 247,
     "dc7c4aa3-af1b-41be-87dd-2a778fcd6c8d": 43,
     "de7bc45b-bc77-4954-b74e-7c8b9b68c96e": 206,
     "decfc009-3573-4782-ba16-6d89f8898711": 191,
@@ -8496,6 +8497,17 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAdbJMtQ2dl0X+aU7C3PlbRS46t/BrdM6sCiNqDuYCBz6syzXOHnClmBuBtgR6qxvVxEnCBonwH6B+XG3OeRFHAQ=="
         }
       }
+    },
+    "d70258f5-e1d9-41bc-a384-1d73772276ea": {
+      "uuid": "d70258f5-e1d9-41bc-a384-1d73772276ea",
+      "display_id": 247,
+      "title": "Pins over governed code files: a design document pinned to the digest of the non-markdown files it describes, stale when they change (GH #79 item 2) — SCOPE RULING REQUIRED",
+      "description": "Source: GH #79 (vsdd-cli roadmap feedback, 2026-10-08), item 2. Observed: Thermite routed design docs carry audited-content-sha256 over governed code; CI fails when code changes under the doc; cleared by re-pin or amendment. Ask: the pin family accepts a governed file set including non-markdown files. SCOPE RULING REQUIRED before design: pinning code makes source files a governed subject, pushing against the ratified 'conformance engine for typed markdown' scope (#66). Operator to rule.",
+      "status": "open",
+      "priority": "medium",
+      "created_by": "79Ig",
+      "created_at": "2026-10-09T04:21:58.590186Z",
+      "updated_at": "2026-10-09T04:21:58.590186Z"
     },
     "dc7c4aa3-af1b-41be-87dd-2a778fcd6c8d": {
       "uuid": "dc7c4aa3-af1b-41be-87dd-2a778fcd6c8d",
