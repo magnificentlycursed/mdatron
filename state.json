@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1366,
-        "tip_oid": "813ee56b6a42439f7f17ae960d67faee7ddd8021",
-        "prefix_sha256": "4f0cbd4f09d2a533e618f61de39e014010bc60e71276dc7fb29d5120f1c5994c"
+        "sequence": 1367,
+        "tip_oid": "53515e70fb33877ddc31e92b643077683fc5af7b",
+        "prefix_sha256": "9b0934d3483e93284d285c6c8c59fa7dcf733492161f56bef8fa83e6888cf4aa"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 246,
-  "next_comment_id": 650,
+  "next_comment_id": 651,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -7636,11 +7636,20 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-10-08T22:25:26.442591Z",
-      "updated_at": "2026-10-09T03:06:23.030138Z",
+      "updated_at": "2026-10-09T03:55:36.081532Z",
       "labels": [
         "bug"
       ],
       "comments": {
+        "a0254218-96ca-4a28-b68f-aad6a14deab1": {
+          "display_id": 650,
+          "author": "79Ig",
+          "content": "Delivered in PR #85 (merged): init seeds .mdatron/.gitattributes pinning hashed files to LF; this repo gains it.",
+          "created_at": "2026-10-09T03:55:36.045748Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAn2PAWAi5uEk90j5afa9aTBpoPoRcVv1zTnpUWW8gys6JZ5Fapp7q8N566QYBkTxBQOdBy9ZqSErmfEc2x27CCw=="
+        },
         "f92c4b5f-f6cc-4687-a351-057c53a86d8a": {
           "display_id": 649,
           "author": "79Ig",
