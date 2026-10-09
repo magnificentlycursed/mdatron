@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1394,
-        "tip_oid": "ce4b0e147f8a139557249bd0d749296bd12a3b23",
-        "prefix_sha256": "c925921361e8770b9f3686b1b38e884f186203b79680064aab3906d1567f0d98"
+        "sequence": 1395,
+        "tip_oid": "22fb8ca2e05949fd29cfffb8fa9529880b1b17fe",
+        "prefix_sha256": "f5e5e1bea495752acf9d46fccaf2a2be80898d343557b67974f99d9d9a8761e9"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 257,
-  "next_comment_id": 653,
+  "next_comment_id": 654,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -3329,7 +3329,18 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-10-06T21:25:16.804523Z",
-      "updated_at": "2026-10-06T21:25:16.804523Z"
+      "updated_at": "2026-10-09T06:31:11.610427Z",
+      "comments": {
+        "efd07c22-18a9-44b4-ad08-330422481aeb": {
+          "display_id": 653,
+          "author": "79Ig",
+          "content": "Implemented: {stem} placeholder (file name without final extension) expanded in sibling_candidate (capture + check); other placeholders refused at load; red gate requires_sibling_expands_the_stem. PR opened.",
+          "created_at": "2026-10-09T06:31:11.574110Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA62GIFC4zA9qzOe//cPIB29zYZKlBd7XySknTgu2IeTh1Lvn6mXAaF6kJ7YQELpNQ7k2it3CNtxgaxvBuR65zCA=="
+        }
+      }
     },
     "5036a175-b563-417b-bc1a-aca16891ec5f": {
       "uuid": "5036a175-b563-417b-bc1a-aca16891ec5f",
