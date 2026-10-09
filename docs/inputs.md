@@ -64,15 +64,22 @@ Activation: `verify` refuses without it. Codes: `W0040`, `W0043`, `W0046`,
 The route family — the closed-world allowlist over the walked files, and the
 gateway to the citation, link, marker, and section families.
 
-Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `citations`, `links`, `link_root`, `marker_rules`, `pattern`, `element`, `target_doc`, `target_section`, `section_rules`, `section`, `match`, `match_on`, `count`, `disjoint`, `id_pattern`, `schema`, `name_equals_dir`, `max_bytes`, `every`, `order`, `imports`, `requires_sibling`, `link_policy`, `schemes`, `hosts`, `forbid_query`.
+Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `citations`, `links`, `generated`, `link_root`, `marker_rules`, `pattern`, `element`, `target_doc`, `target_section`, `section_rules`, `section`, `match`, `match_on`, `count`, `disjoint`, `id_pattern`, `schema`, `name_equals_dir`, `max_bytes`, `every`, `order`, `imports`, `requires_sibling`, `link_policy`, `schemes`, `hosts`, `forbid_query`.
 
 - Per route — required: `files` (root-relative glob; `*` matches within one
   path segment and `**` crosses any number of them — the one glob dialect
   every adopter glob uses, see `config.yaml`),
   `governed_by` (a document that must open inside the governed tree, `E0031`).
   Optional: `naming` (a filename grammar, `W0041`), `citations: true`,
-  `links: true`, `link_root: true` (resolve `/root-relative` links; needs
-  `links`), `marker_rules`, `section_rules`, `schema` (bind every claimed file
+  `links: true`, `generated: true` (each
+  `<!-- mdatron:generated from="<path>" -->` … `<!-- /mdatron:generated -->`
+  region in the claimed files must equal the root-relative `from` file byte
+  for byte: `E0064` when it differs, `E0065` when the source is missing,
+  `E0066` for a malformed marker; a marker starts at column 0, so an indented
+  one or one in fenced code is text, not a marker; under
+  `--changed`, a changed source alone does not re-check the documents that
+  embed it — a whole-tree run does), `link_root: true` (resolve
+  `/root-relative` links; needs `links`), `marker_rules`, `section_rules`, `schema` (bind every claimed file
   to `.mdatron/schemas/<class>.json` and to rules with `context: <class>`,
   without the file carrying `schema_class` — for formats whose frontmatter you
   do not own; a disagreeing `schema_class` is `E0033`, a class nothing serves
@@ -188,6 +195,7 @@ then on every walked file must be claimed by exactly one route. Scope: every
 walked file. Codes: `E0030`, `E0031`, `E0032`, `E0036`, `E0037`, `W0041`, `W0053`, `W0054`; per
 opt-in `E0100`/`E0101`/`W0048`/`E0081` (citations), `E0110`/`E0111`/`E0115`/
 `E0116`/`E0117`/`W0048`/`E0081` (links), `E0118` (link_policy),
+`E0064`/`E0065`/`E0066`/`W0048`/`E0081` (generated),
 `E0112`/`E0114`/`W0048`/`E0081` (markers),
 `E0120`/`E0121`/`E0122`/`E0123`/`E0124` (section rules).
 

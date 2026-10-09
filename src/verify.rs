@@ -670,6 +670,12 @@ fn run_inner(
         .as_ref()
         .map(|r| r.routes.iter().any(|x| x.links))
         .unwrap_or(false);
+    // #252: generated regions report under the pin family (content equality
+    // against a named file).
+    let generated_supplied = routes
+        .as_ref()
+        .map(|r| r.routes.iter().any(|x| x.generated))
+        .unwrap_or(false);
     let marker_supplied = routes
         .as_ref()
         .map(|r| r.routes.iter().any(|x| !x.marker_rules.is_empty()))
@@ -1107,6 +1113,9 @@ fn run_inner(
                 if crate::route::imports_enabled(routes, rel) {
                     ts.extend(crate::link::import_targets(rel, content, body_offset));
                 }
+                if crate::route::generated_enabled(routes, rel) {
+                    ts.extend(crate::generated::targets(content, body_offset));
+                }
                 ts
             };
             for target in &prose_targets {
@@ -1150,6 +1159,7 @@ fn run_inner(
     // already reason. The same holds for the register's scope hits.
     let mut cite_cov = 0usize;
     let mut link_cov = 0usize;
+    let mut generated_cov = 0usize;
     let mut marker_cov = 0usize;
     let mut section_cov = 0usize;
     let mut vocab_scoped_hits = 0usize;
@@ -1167,6 +1177,7 @@ fn run_inner(
             }
             cite_cov += usize::from(crate::route::citations_enabled(routes, rel));
             link_cov += usize::from(crate::route::links_enabled(routes, rel));
+            generated_cov += usize::from(crate::route::generated_enabled(routes, rel));
             marker_cov += usize::from(!crate::route::marker_rules_for(routes, rel).is_empty());
             section_cov += usize::from(!crate::route::section_rules_for(routes, rel).is_empty());
         }
@@ -1218,6 +1229,7 @@ fn run_inner(
             }
         }
         let mut cite_enabled = false;
+        let mut generated_enabled = false;
         let mut link_enabled = false;
         let mut link_root = false;
         let mut import_enabled = false;
@@ -1231,6 +1243,7 @@ fn run_inner(
             };
             crate::route::check_file(routes, rel, path, &mut findings);
             cite_enabled = crate::route::citations_enabled(routes, rel);
+            generated_enabled = crate::route::generated_enabled(routes, rel);
             link_enabled = crate::route::links_enabled(routes, rel);
             link_root = crate::route::link_root_enabled(routes, rel);
             import_enabled = crate::route::imports_enabled(routes, rel);
@@ -1317,6 +1330,7 @@ fn run_inner(
             &project_root,
             &require,
             cite_enabled,
+            generated_enabled,
             &links,
             &marker_rules,
             if codecat_enabled {
@@ -1780,10 +1794,19 @@ fn run_inner(
         } else {
             FamilyActivity::inactive("no .mdatron/routes.yaml")
         },
-        pin: if pin_supplied {
-            FamilyActivity::active(".mdatron/pins.yaml supplied")
-        } else {
-            FamilyActivity::inactive("no .mdatron/pins.yaml")
+        // #252: a route's `generated: true` is the family's second input.
+        pin: match (pin_supplied, generated_supplied) {
+            (true, true) => FamilyActivity::active(
+                ".mdatron/pins.yaml supplied; a route opts in with generated: true",
+            ),
+            (true, false) => FamilyActivity::active(".mdatron/pins.yaml supplied"),
+            (false, true) if generated_cov == 0 => FamilyActivity::inert(
+                "a route opts in with generated: true but claims no walked file",
+            ),
+            (false, true) => FamilyActivity::active("a route opts in with generated: true"),
+            (false, false) => FamilyActivity::inactive(
+                "no .mdatron/pins.yaml and no route opts in with generated: true",
+            ),
         },
         vocabulary: if !vocab_supplied {
             FamilyActivity::inactive(
@@ -3247,6 +3270,7 @@ fn verify_file(
     project_root: &Path,
     require_frontmatter: &FileScope,
     cite_enabled: bool,
+    generated_enabled: bool,
     links: &crate::links::Context<'_>,
     marker_rules: &[&crate::route::MarkerRule],
     code_catalogs: &[crate::codecat::CodeCatalog],
@@ -3339,6 +3363,9 @@ fn verify_file(
             if cite_enabled {
                 crate::cite::check_file(snapshot, path, content, body_offset, findings);
             }
+            if generated_enabled {
+                crate::generated::check_file(snapshot, path, content, body_offset, findings);
+            }
             if links.enabled {
                 crate::link::check_file(
                     snapshot,
@@ -3420,6 +3447,10 @@ fn verify_file(
     if cite_enabled {
         let body_offset = content.len() - body_len;
         crate::cite::check_file(snapshot, path, content, body_offset, findings);
+    }
+    if generated_enabled {
+        let body_offset = content.len() - body_len;
+        crate::generated::check_file(snapshot, path, content, body_offset, findings);
     }
     if links.enabled {
         let body_offset = content.len() - body_len;
@@ -7705,6 +7736,75 @@ pattern:
                 .expect_err(file);
             assert!(err.contains("nest 300 deep"), "{file}: {err}");
         }
+    }
+
+    // RED GATE (#252, GH #79 item 7): a generated region must equal its
+    // source byte for byte — clean when it does, E0064 when edited, E0065 for
+    // a missing source, E0066 for an unclosed marker, E0011 for an escaping
+    // `from` — only on a route with `generated: true`; a marker in a fence is
+    // an example. The pin family reports the opt-in.
+    #[test]
+    fn generated_regions_must_equal_their_source() {
+        let proj = TempProject::new("generated");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(
+            ".mdatron/config.yaml",
+            "file_globs:\n  - \"docs/**/*.md\"\n",
+        );
+        proj.write("GOVERNING.md", "# gov\n");
+        proj.write(
+            ".mdatron/routes.yaml",
+            "routes:\n- files: \"docs/*.md\"\n  governed_by: GOVERNING.md\n  generated: true\n\
+             - files: \"docs/off/*.md\"\n  governed_by: GOVERNING.md\n",
+        );
+        proj.write("gen/table.md", "| a | b |\n|---|---|\n| 1 | 2 |\n");
+        let doc = |region: &str| {
+            format!(
+                "# Doc\n\n<!-- mdatron:generated from=\"gen/table.md\" -->\n{region}\
+                 <!-- /mdatron:generated -->\n\n```\n<!-- mdatron:generated from=\"x\" -->\n```\n"
+            )
+        };
+        proj.write("docs/a.md", &doc("| a | b |\n|---|---|\n| 1 | 2 |\n"));
+        proj.write(
+            "docs/off/b.md",
+            "<!-- mdatron:generated from=\"nope.md\" -->\n",
+        );
+        let report = verify_report(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        let ours = |f: &Vec<Finding>| {
+            f.iter()
+                .filter(|x| x.code.starts_with("MDATRON-E006") || x.code == "MDATRON-E0011")
+                .map(|x| (x.code.clone(), x.location.line))
+                .collect::<Vec<_>>()
+        };
+        assert!(ours(&report.findings).is_empty(), "{:?}", report.findings);
+        assert_eq!(
+            report.families.pin,
+            crate::output::FamilyActivity::active("a route opts in with generated: true")
+        );
+
+        proj.write("docs/a.md", &doc("| a | b |\n|---|---|\n| 1 | 3 |\n"));
+        proj.write(
+            "docs/c.md",
+            "<!-- mdatron:generated from=\"gen/gone.md\" -->\nx\n<!-- /mdatron:generated -->\n\
+             <!-- mdatron:generated from=\"../out.md\" -->\nx\n<!-- /mdatron:generated -->\n\
+             <!-- mdatron:generated from=\"gen/table.md\" -->\n",
+        );
+        let f = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        let mut got = ours(&f);
+        got.sort();
+        assert_eq!(
+            got,
+            vec![
+                ("MDATRON-E0011".to_string(), 4),
+                ("MDATRON-E0064".to_string(), 3),
+                ("MDATRON-E0065".to_string(), 1),
+                ("MDATRON-E0066".to_string(), 7),
+            ],
+            "{f:?}"
+        );
     }
 
     // RED GATE (#145): the link family reports active exactly when a route opts
