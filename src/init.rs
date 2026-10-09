@@ -121,6 +121,12 @@ const RELEASED_TEMPLATE_HASHES: &[(&str, &str, &str)] = &[
         "routes.yaml.example",
         "0e7dc66dae9c98ca285e5e7ffde03d25db727768b7a3a683ab2dd9705891edf3",
     ),
+    // ...and from #235 to #253 (the budget rule examples).
+    (
+        "unreleased",
+        "routes.yaml.example",
+        "b211889185b764b8e8c792853e6cb03dcc83d9330d2e36f0cefbf7a66389cd7e",
+    ),
 ];
 
 /// Whether `sha256` is a released, superseded version of template `path`.
@@ -158,7 +164,8 @@ const ROUTES_TEMPLATE: &str = r####"# routes.yaml.example — the route family. 
 # CODES       E0030 E0031 E0032 W0041 W0053 W0054; per opt-in E0100 E0101
 #             W0048 E0081 (citations), E0110 E0111 E0115 E0116 E0117 W0048
 #             E0081 (links), E0118 (link_policy), E0112 E0114 W0048 E0081
-#             (markers), E0120 E0121 E0122 E0123 E0124 (section rules),
+#             (markers), E0120 E0121 E0122 E0123 E0124 E0125 E0126
+#             (section rules),
 #             E0033 E0034 (schema), E0035 (name_equals_dir), E0036
 #             (max_bytes), E0037 (requires_sibling);
 #             E0010 E0011 E0012 on paths.
@@ -217,6 +224,10 @@ const ROUTES_TEMPLATE: &str = r####"# routes.yaml.example — the route family. 
 #       match: "."
 #     - element: h3
 #       match: "."
+#   - section: "## Overview"
+#     max_bytes: 4096  # the section, subsections included, fits the budget
+#   - max_bytes: 1200
+#     per: paragraph   # no paragraph anywhere in the file over 1200 bytes
 #   - disjoint:
 #     - section: "## Requirements"
 #       element: h3
@@ -1482,7 +1493,7 @@ mod tests {
         let pinned = [
             (
                 "routes.yaml.example",
-                "b211889185b764b8e8c792853e6cb03dcc83d9330d2e36f0cefbf7a66389cd7e",
+                "6f54ad2162983d970f7160f10c02ac2c604eca5dd78420e55ce7fa911c8efd7e",
             ),
             (
                 "pins.yaml.example",

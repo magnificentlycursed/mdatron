@@ -43,7 +43,8 @@
 ///   `E0117` malformed URL, `E0118` policy violation)
 /// - `MDATRON-E0120` — `E0129` Section-structural family (count/disjointness over
 ///   body sections: `E0120` section-count-violation, `E0121` section-ids-not-disjoint, #157;
-///   `E0123` section-element-mismatch, #213; `E0124` section-order-violation, #214)
+///   `E0123` section-element-mismatch, #213; `E0124` section-order-violation, #214;
+///   `E0125` section-over-byte-budget and `E0126` paragraph-over-byte-budget, #253)
 /// - `MDATRON-W0040` — `W0099` Configuration, governance, and family warnings
 /// - `MDATRON-L0001` — `L0099` Engine-level lints
 ///

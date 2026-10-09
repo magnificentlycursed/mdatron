@@ -64,7 +64,7 @@ Activation: `verify` refuses without it. Codes: `W0040`, `W0043`, `W0046`,
 The route family — the closed-world allowlist over the walked files, and the
 gateway to the citation, link, marker, and section families.
 
-Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `citations`, `links`, `link_root`, `marker_rules`, `pattern`, `element`, `target_doc`, `target_section`, `section_rules`, `section`, `match`, `match_on`, `count`, `disjoint`, `id_pattern`, `schema`, `name_equals_dir`, `max_bytes`, `every`, `order`, `imports`, `requires_sibling`, `link_policy`, `schemes`, `hosts`, `forbid_query`.
+Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `citations`, `links`, `link_root`, `marker_rules`, `pattern`, `element`, `target_doc`, `target_section`, `section_rules`, `section`, `match`, `match_on`, `count`, `disjoint`, `id_pattern`, `schema`, `name_equals_dir`, `max_bytes`, `every`, `order`, `per`, `imports`, `requires_sibling`, `link_policy`, `schemes`, `hosts`, `forbid_query`.
 
 - Per route — required: `files` (root-relative glob; `*` matches within one
   path segment and `**` crosses any number of them — the one glob dialect
@@ -146,7 +146,16 @@ Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `cit
     matching a later item, `E0124`; an item nothing matches is not a
     violation;
   - a `disjoint` rule (exactly two operands of `section`, `element`,
-    `id_pattern`), `E0121`.
+    `id_pattern`), `E0121`;
+  - a budget rule (`max_bytes`, optional `per: paragraph`): without `per`,
+    each span of `section` — its heading through its subsections — must hold
+    at most `max_bytes` bytes, `E0125` at its heading; with `per: paragraph`,
+    each paragraph in the section, or in the whole body when no `section` is
+    given, must, `E0126` at its first line. A paragraph is a run of adjacent
+    non-blank lines that are not headings, outside fenced code. Bytes are
+    counted as checked out (CRLF included), like the route's `max_bytes`; a
+    bound of 0, and a span budget with no `section` (use the route's
+    `max_bytes`), are refused at load.
 
   On a count, every or order rule `section` is optional: given, the rule
   covers that heading's span — from the heading through just before the next
@@ -189,7 +198,7 @@ walked file. Codes: `E0030`, `E0031`, `E0032`, `E0036`, `E0037`, `W0041`, `W0053
 opt-in `E0100`/`E0101`/`W0048`/`E0081` (citations), `E0110`/`E0111`/`E0115`/
 `E0116`/`E0117`/`W0048`/`E0081` (links), `E0118` (link_policy),
 `E0112`/`E0114`/`W0048`/`E0081` (markers),
-`E0120`/`E0121`/`E0122`/`E0123`/`E0124` (section rules).
+`E0120`/`E0121`/`E0122`/`E0123`/`E0124`/`E0125`/`E0126` (section rules).
 
 ## pins.yaml
 
