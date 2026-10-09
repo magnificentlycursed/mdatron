@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1401,
-        "tip_oid": "811ec9297e640f5535add764be2cfd77b9f25e6b",
-        "prefix_sha256": "a9fe7cd50015f903bc4bf651fd8bc989396ea456e79a167f5e6d638a3f50279e"
+        "sequence": 1402,
+        "tip_oid": "b4333c2590c8fe9087efc952becd587057feb6cc",
+        "prefix_sha256": "e1c15d8c17a90143cc805f5a6d1c0c5ba8a4992e447240db32a70f3734bec766"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 257,
-  "next_comment_id": 656,
+  "next_comment_id": 657,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -7698,10 +7698,21 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-10-09T04:38:37.862324Z",
-      "updated_at": "2026-10-09T04:39:47.037706Z",
+      "updated_at": "2026-10-09T21:06:07.738751Z",
       "labels": [
         "feature"
-      ]
+      ],
+      "comments": {
+        "ac7352af-0c74-4a1c-96fa-a557b79f8309": {
+          "display_id": 656,
+          "author": "79Ig",
+          "content": "PR #87 opened (41fc6b0f + review fixes). Review major fixed: CRLF paragraphs (raw-end adjacency, inner CRLF counted). Robustness: budget arm + reach floors for E0125/E0126 (768 cases). CI green.",
+          "created_at": "2026-10-09T21:06:07.672424Z",
+          "kind": "plan",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAYdzhuTi/vB/d4b61xRE+3fm5OfbfHvjROKxeDbUILAtAlQjD++StCANmREm/xlnloY81ccu0cYqSaw0Ob0ylCg=="
+        }
+      }
     },
     "c279283e-4eda-48c4-b703-b7843fd1bec0": {
       "uuid": "c279283e-4eda-48c4-b703-b7843fd1bec0",
