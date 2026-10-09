@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1351,
-        "tip_oid": "375486103b3bbf355366f2b764ed9ede3ec9fa81",
-        "prefix_sha256": "f920a7744c46a0f6270be6f75bb16b3ec7757b493c736f952dcb95efad3cff54"
+        "sequence": 1352,
+        "tip_oid": "8465f330ac10bbf93e3e7666c4578f2b2bbbb0c5",
+        "prefix_sha256": "9b23080fb49a6b880551700a3ef9080d49dd9c93b76f769264a48392bb4ab306"
       },
       "IMWa": {
         "sequence": 2,
@@ -4749,11 +4749,12 @@
       "display_id": 230,
       "title": "verify never checks managed-template drift — only init does, although manifest.yaml is digested into inputs; decide: verify emits E0060 on managed drift, or document the 'init && git diff --exit-code -- .mdatron/' recipe (GH #73 defect 3)",
       "description": "Source: GH #73 defect 3. Confirmed by reading: verify loads only the manifest's tombstones (src/verify.rs ~612 load_tombstones); hash comparison lives in init (src/init.rs ~534-560). A CI running only verify cannot see an edited or stale template. Options for the operator: (a) verify compares managed hashes and reports E0060 (manifest is governance data; verify is the gate) — behaviour change for adopters who edited a template (init already refuses them); (b) document the init-then-diff recipe (what vsdd-cli adopted) in README/inputs.md. Note CI self-validation here already runs init then verify.",
-      "status": "open",
+      "status": "closed",
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-10-06T21:17:29.478949Z",
-      "updated_at": "2026-10-09T00:27:51.326929Z",
+      "updated_at": "2026-10-09T00:29:44.604539Z",
+      "closed_at": "2026-10-09T00:29:44.580698Z",
       "comments": {
         "0e26a0f2-a9b6-48b2-ba55-c95ae44be6d8": {
           "display_id": 640,
