@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1358,
-        "tip_oid": "3b5692ea17e95a5394a319a71511062358e6eeec",
-        "prefix_sha256": "19916fbdd83cfd7f5aa45ff5814694c85616ee4891baf340ae55ab8e9ae500ba"
+        "sequence": 1359,
+        "tip_oid": "7ebfb5b73f550b59df3b059192dfc75371906239",
+        "prefix_sha256": "d92257a8c662a4d9a5c313f3782e6b28a462e70abdbc04fa48d497b5224b6ad5"
       },
       "IMWa": {
         "sequence": 2,
@@ -4354,11 +4354,12 @@
       "display_id": 232,
       "title": "0.7.0 documentation defects from GH #73: E0060 page claims the manifest records the deploying version (it records path+sha256 only); the published 3.1.0 schema description still says 'via mdatron schema'; the 0.7.0 leak Fixed entry does not name the published property (pipeline_error.message root-relativized) that 0.6.0 violated",
       "description": "Source: GH #73 defects 5, 6, 8. Confirmed by reading: src/explain/MDATRON-E0060.md:41-42; schema/mdatron-output.schema.json:27 description ('via mdatron schema' — description-only text, no semantic change; decide whether a description edit on a published schema file is a PATCH or must wait for the next envelope bump; src/output.rs:72 doc comment too); CHANGELOG 0.7.0 entry (released sections are immutable — carry the clarification as a note in the 0.8.0 notes instead). If the template-refresh issue records a version per managed entry, the E0060 sentence becomes true rather than needing removal.",
-      "status": "open",
+      "status": "closed",
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-10-06T21:20:23.333104Z",
-      "updated_at": "2026-10-09T01:57:57.760248Z",
+      "updated_at": "2026-10-09T01:59:28.748638Z",
+      "closed_at": "2026-10-09T01:59:28.723033Z",
       "labels": [
         "docs"
       ],
