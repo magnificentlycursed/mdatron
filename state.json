@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1391,
-        "tip_oid": "2caf0083c9cd84d446126d13925fe5def650316c",
-        "prefix_sha256": "f91c83ccbae9f2b52595488b2e5d66048f8550af40623146ca51a2fe0e4fbbe5"
+        "sequence": 1392,
+        "tip_oid": "a173c7b2311650dc5770b8c5c5fa9c2f4244982e",
+        "prefix_sha256": "1931a6c9046118edbd7b1b8bfe4ce0ce726d0bd19925d997feb9dd6fb251159a"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 257,
-  "next_comment_id": 651,
+  "next_comment_id": 652,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -8600,10 +8600,21 @@
       "priority": "medium",
       "created_by": "79Ig",
       "created_at": "2026-10-09T04:21:58.590186Z",
-      "updated_at": "2026-10-09T04:23:03.215502Z",
+      "updated_at": "2026-10-09T06:15:26.587008Z",
       "labels": [
         "feature"
-      ]
+      ],
+      "comments": {
+        "a76d6a5c-a317-4f4a-a3ef-101160847df6": {
+          "display_id": 651,
+          "author": "79Ig",
+          "content": "Operator 2026-10-08: scope ruling DEFERRED — revisit later; groups A–C first.",
+          "created_at": "2026-10-09T06:15:26.554497Z",
+          "kind": "note",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA2C+/VvPU19+Crz14Zh+S/9+ivj8v6PdjSrICJ/0cMqHmz17LYlYMVwl1XudCaFn/QZH4/2lkw4yB8HE8DGxzDg=="
+        }
+      }
     },
     "dc7c4aa3-af1b-41be-87dd-2a778fcd6c8d": {
       "uuid": "dc7c4aa3-af1b-41be-87dd-2a778fcd6c8d",
