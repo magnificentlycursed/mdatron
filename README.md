@@ -427,6 +427,13 @@ working-tree snapshot (uncommitted content counts; no git subprocess): a dead ci
 blocks (`E0100`), one past the target's end blocks (`E0101`). Historical
 corpora simply don't opt in.
 
+**Generated regions** — route-attached, like citations. Opt a route in with
+`generated: true` and every `<!-- mdatron:generated from="<path>" -->` …
+`<!-- /mdatron:generated -->` region in its files must equal the root-relative
+`from` file byte for byte: a table or a block your own generator writes cannot
+drift from its source unnoticed (`E0064` stale, `E0065` source missing,
+`E0066` malformed marker). mdatron compares; it never generates.
+
 **Links** — route-attached: the opt-in exists only on a route in `routes.yaml`, so
 writing that route puts every walked file under the closed world (see
 **Routes**). Data-less by default (the register below is optional); opt a route in with `links: true` and its files' inline

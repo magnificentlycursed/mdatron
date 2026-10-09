@@ -17,6 +17,10 @@ cases emit this finding:
   line range, a fragment-bearing link into a markdown target, or a marker
   reference cannot be resolved against bytes the engine cannot read as text.
 
+From 0.8.0 the first case also covers a generated region (`generated: true`
+on a route) whose source is over the input size budget: the region was not
+compared.
+
 In both cases only the target's existence was verified, and the finding fires
 **per reference** — never deduped, so every skipped check is visible.
 

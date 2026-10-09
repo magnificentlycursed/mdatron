@@ -29,7 +29,8 @@
 /// - `MDATRON-E0040` — `E0049` Schema load failures
 /// - `MDATRON-E0050` — `E0059` Frontmatter schema validation failures (v0.1.x)
 /// - `MDATRON-E0060` — `E0069` Pin family (content-hash pins + managed-manifest
-///   drift; section-scoped pins E0063, #146)
+///   drift; section-scoped pins E0063, #146; generated regions E0064 stale,
+///   E0065 source missing, E0066 malformed marker, #252)
 /// - `MDATRON-E0070` — `E0079` IO failures during verify (v0.1.x)
 /// - `MDATRON-E0080` — `E0089` Pipeline orchestration failures (v0.1.x); `E0081`
 ///   reference-target-not-captured — a FINDING (exit 1) for a pin/citation/link/

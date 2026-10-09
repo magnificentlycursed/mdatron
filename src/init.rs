@@ -121,6 +121,12 @@ const RELEASED_TEMPLATE_HASHES: &[(&str, &str, &str)] = &[
         "routes.yaml.example",
         "0e7dc66dae9c98ca285e5e7ffde03d25db727768b7a3a683ab2dd9705891edf3",
     ),
+    // ...and from #235 on (before the budget and generated-region examples).
+    (
+        "unreleased",
+        "routes.yaml.example",
+        "b211889185b764b8e8c792853e6cb03dcc83d9330d2e36f0cefbf7a66389cd7e",
+    ),
 ];
 
 /// Whether `sha256` is a released, superseded version of template `path`.
@@ -156,7 +162,8 @@ const ROUTES_TEMPLATE: &str = r####"# routes.yaml.example — the route family. 
 #                                   requires_sibling, link_policy
 #             file-level  — optional: mdatron_format_version (absent = 1)
 # CODES       E0030 E0031 E0032 W0041 W0053 W0054; per opt-in E0100 E0101
-#             W0048 E0081 (citations), E0110 E0111 E0115 E0116 E0117 W0048
+#             W0048 E0081 (citations), E0064 E0065 E0066 (generated),
+#             E0110 E0111 E0115 E0116 E0117 W0048
 #             E0081 (links), E0118 (link_policy), E0112 E0114 W0048 E0081
 #             (markers), E0120 E0121 E0122 E0123 E0124 (section rules),
 #             E0033 E0034 (schema), E0035 (name_equals_dir), E0036
@@ -181,6 +188,8 @@ const ROUTES_TEMPLATE: &str = r####"# routes.yaml.example — the route family. 
 #                                # after the file without its extension)
 #   naming: "^[a-z0-9-]+\\.md$"
 #   citations: true
+#   generated: true        # <!-- mdatron:generated from="…" --> regions
+#                          # must equal their source file
 #   links: true
 #   link_root: false
 #   imports: true          # resolve @path imports like relative links
@@ -1482,7 +1491,7 @@ mod tests {
         let pinned = [
             (
                 "routes.yaml.example",
-                "b211889185b764b8e8c792853e6cb03dcc83d9330d2e36f0cefbf7a66389cd7e",
+                "7fbf9756fbd11c42fc877ffee5ac2d4dead8c89f8896c7ecdad1e23adc0456b1",
             ),
             (
                 "pins.yaml.example",

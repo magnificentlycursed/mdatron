@@ -61,6 +61,10 @@ struct RawEntry {
     /// heading. Default off, so link-checking is an explicit choice.
     #[serde(default)]
     links: bool,
+    /// Opt this route's files into generated-region checking (#252): each
+    /// `<!-- mdatron:generated from="…" -->` region must equal its source.
+    #[serde(default)]
+    generated: bool,
     /// Opt this route's files into ROOT-RELATIVE link resolution (GH #37): a
     /// leading-slash link `/docs/x.md` resolves against the project root
     /// instead of being refused as an absolute path (`E0010`). Still confined —
@@ -169,6 +173,7 @@ pub struct Route {
     pub naming: Option<regex_lite::Regex>,
     pub citations: bool,
     pub links: bool,
+    pub generated: bool,
     pub link_root: bool,
     pub marker_rules: Vec<MarkerRule>,
     pub section_rules: Vec<crate::section::Rule>,
@@ -524,6 +529,7 @@ pub fn load(project_root: &Path) -> Result<Option<LoadedRoutes>, Error> {
             naming,
             citations: entry.citations,
             links: entry.links,
+            generated: entry.generated,
             link_root: entry.link_root,
             marker_rules,
             section_rules,
@@ -669,6 +675,14 @@ pub fn citations_enabled(routes: &[Route], rel: &Path) -> bool {
 }
 
 /// True when any route claiming `rel` opts it into body-link verification (#145).
+/// True when a route claiming `rel` opts it into generated-region checking
+/// (#252).
+pub fn generated_enabled(routes: &[Route], rel: &Path) -> bool {
+    routes
+        .iter()
+        .any(|r| r.generated && crate::globs::matches_path(&r.files, rel))
+}
+
 pub fn links_enabled(routes: &[Route], rel: &Path) -> bool {
     routes
         .iter()

@@ -267,6 +267,7 @@ mod tests {
             naming: None,
             citations: false,
             links: false,
+            generated: false,
             link_root: false,
             marker_rules: Vec::new(),
             section_rules: Vec::new(),
