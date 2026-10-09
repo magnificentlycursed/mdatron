@@ -147,7 +147,10 @@ currently `3.1.0`). The load-bearing fields for a machine consumer:
   lane (`rule_dsl`) as
   `{state, reason}` (`active` / `inert` / `inactive`), so "checked N, all
   clean" is distinguishable from "checked nothing"; the object is
-  forward-extensible, so a consumer must tolerate unknown family keys.
+  forward-extensible, so a consumer must tolerate unknown family keys. On a
+  failed pipeline every family reads `inactive` and `inputs` is `{}` (partial
+  lineage is deliberately not attested), so read an assertion such as
+  `families.link.state == "active"` together with `pipeline_status`.
 - `findings[].code` / `.severity` / `.location`; and `findings[].quoted[]`,
   which carries adopter-derived text marked `origin: "adopter"`, `trusted: false`
   so a consumer never mistakes document content for engine output.

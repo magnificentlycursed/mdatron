@@ -24,7 +24,7 @@
     "envelope_schema": {
       "type": "string",
       "const": "https://github.com/magnificentlycursed/mdatron/schema/mdatron-output/3.1.0",
-      "description": "The $id of the published schema this envelope was produced under, so a consumer can pin the exact contract without joining the version onto a URL template. An identifier, not a fetch target; the resolvable copy ships in the repo and via `mdatron schema`."
+      "description": "The $id of the published schema this envelope was produced under, so a consumer can pin the exact contract without joining the version onto a URL template. An identifier, not a fetch target; the resolvable copy ships in the repo and via `mdatron envelope-schema`."
     },
     "mdatron_version": {
       "type": "string",

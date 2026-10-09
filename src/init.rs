@@ -88,6 +88,13 @@ const RELEASED_TEMPLATE_HASHES: &[(&str, &str, &str)] = &[
         "code-catalogs.yaml.example",
         "b4083b0aa957019cf7397747032deb38292aab8384e68923ecf6d043bab5be6f",
     ),
+    // The routes template as main carried it from #215 to #234 (the every-rule
+    // vacuity note), never in a release.
+    (
+        "unreleased",
+        "routes.yaml.example",
+        "e4d23d6eaa46e7a9b13766ba8e1dcedf925926bfe0ccece0f3721b468b617d4e",
+    ),
 ];
 
 /// Whether `sha256` is a released, superseded version of template `path`.
@@ -174,6 +181,8 @@ const ROUTES_TEMPLATE: &str = r####"# routes.yaml.example — the route family. 
 #   - section: "## Links"
 #     element: list-item
 #     every: "^- \\[[^\\]]+\\]\\([^)]+\\)"   # every item is a link
+#                      # (a section with NO list item passes: pair it with a
+#                      # count rule when at least one item must exist)
 #   - section: "## Requirements"
 #     order:           # elements matching an earlier item come first
 #     - element: blockquote
@@ -1396,7 +1405,7 @@ mod tests {
         let pinned = [
             (
                 "routes.yaml.example",
-                "e4d23d6eaa46e7a9b13766ba8e1dcedf925926bfe0ccece0f3721b468b617d4e",
+                "0e7dc66dae9c98ca285e5e7ffde03d25db727768b7a3a683ab2dd9705891edf3",
             ),
             (
                 "pins.yaml.example",

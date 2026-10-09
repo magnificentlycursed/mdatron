@@ -69,7 +69,7 @@ pub const OUTPUT_VERSION: &str = "3.1.0";
 pub const ENVELOPE_SCHEMA_ID: &str =
     "https://github.com/magnificentlycursed/mdatron/schema/mdatron-output/3.1.0";
 
-/// The published output-envelope JSON Schema, embedded so `mdatron schema` can
+/// The published output-envelope JSON Schema, embedded so `mdatron envelope-schema` can
 /// print it to stdout for a binary-only (`cargo install`) consumer that has no
 /// repo checkout (#127, roast SHO10 / DataEng-1). Kept in lockstep with
 /// [`OUTPUT_VERSION`] by the contract-stability tripwires.

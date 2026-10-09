@@ -87,6 +87,23 @@ engine stays generic. This is the pattern mdatron's first downstream consumer
 uses, and every design decision in the envelope was made with a wrapper in
 mind.
 
+## How do I notice my own jurisdiction shrinking?
+
+Partly from the engine, partly not, by construction. A narrowing that leaves
+something behind is reported: a `file_globs` entry that matches no file
+(`MDATRON-W0046`), a route that claims nothing (`W0054`), a scope glob that
+reaches nothing (`W0043`, `W0051`, `W0055`), a rule whose context selects
+nothing (`W0058`) — run with `--deny-warnings` and any of them fails CI. A
+*consistent* narrowing — `file_globs`, routes and scopes shrunk together —
+is invisible to the engine: it checks the tree against the jurisdiction it is
+given, and a smaller jurisdiction checked clean is a clean result. What a
+consumer can watch: the envelope's `inputs["config.yaml"]` digest changes
+whenever the jurisdiction does (pin it, or diff it across runs);
+`summary.files_checked` is the count of files validated, so a trend shows a
+shrink; and `.mdatron/config.yaml` can itself be pinned in `pins.yaml` under a
+governing document, so changing it fails verification (`E0061`) until a
+reviewer re-pins.
+
 ## What are crosslink and vsdd?
 
 Development infrastructure and method, not parts of mdatron. mdatron is

@@ -33,6 +33,12 @@ so a renamed heading made the rule pass forever. The absence is now loud (the
 same posture as the pin family's `MDATRON-E0063`), and the count/disjointness
 verdict is not issued at all.
 
+The finding is **per rule**, not per heading: one absent section yields one
+`E0122` for each rule — and each disjoint operand — that names it. A renamed
+heading that three rules depend on reports three times, each quoting its own
+rule, so each finding says which check it disabled and keeps its own
+fingerprint. Fix the heading (or the spec) once and all of them clear.
+
 ## How to fix
 
 - **The heading was renamed or its level changed.** Update the rule's `section`
