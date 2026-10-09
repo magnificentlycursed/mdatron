@@ -8,4 +8,4 @@ pins:
   sha256: 34fdf4eb59b351f5243f6b893ea4f08cb086562f45f2d15db0022150c8bb62c3
 - governed_by: DESIGN.md
   file: .mdatron/manifest.yaml
-  sha256: eb3cefe1f7ce16f0a1fbeb28dac394acd829e5a6fb2a280e0f72796703b77421
+  sha256: ff1b69c60591debc93f689aa6504313d95379abc522b3240d6cbb07abb9182e4
