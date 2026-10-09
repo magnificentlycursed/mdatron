@@ -2,7 +2,8 @@
 
 Every file mdatron reads from `.mdatron/`, in one place: its shape, the keys it
 accepts, what activates it, what it scans, and the codes it can emit. This is
-the page `mdatron docs inputs` prints. `mdatron init` deploys the skeleton and
+the page `mdatron docs inputs` prints. `mdatron init` deploys the skeleton (with a
+seeded `.gitattributes` that keeps the files it hashes LF on every checkout) and
 an inert `*.example` template for each family file below (copy a template to
 its real name to activate that family; a tree initialized before the templates
 existed gains them on its next `init`, and a template you have not edited is

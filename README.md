@@ -66,7 +66,8 @@ mdatron --version
 
 Scaffold with `mdatron init`, which deploys the `.mdatron/` skeleton — the
 `schemas/` and `patterns/` directories, a seeded `config.yaml` (adopter-owned
-from then on), the init manifest (the record of the engine-managed partition),
+from then on), a seeded `.gitattributes` that keeps the files mdatron hashes
+LF on every checkout, the init manifest (the record of the engine-managed partition),
 and one inert `*.example` template per family file (`routes`, `pins`,
 `vocabulary`, `code-catalogs`, `links`) whose header states its activation rule, keys,
 scope, and codes — copy one to its real name to activate that family, or read

@@ -1,0 +1,8 @@
+# Written by `mdatron init`; yours to edit (it is not a managed file).
+# mdatron compares the files it manages byte for byte against the sha256 in
+# manifest.yaml, so a checkout that rewrites line endings (Git's core.autocrlf
+# on Windows) would make an untouched template read as drift (MDATRON-E0060).
+# These lines keep them LF on every checkout.
+*.example text eol=lf
+manifest.yaml text eol=lf
+.gitattributes text eol=lf
