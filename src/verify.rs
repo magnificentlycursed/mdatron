@@ -3152,7 +3152,21 @@ fn name_equals_dir_check(
 /// The path a `requires_sibling` names for `rel`: the file's own directory
 /// plus the sibling's name.
 fn sibling_candidate(rel: &Path, sibling: &str) -> PathBuf {
-    rel.parent().unwrap_or_else(|| Path::new("")).join(sibling)
+    rel.parent()
+        .unwrap_or_else(|| Path::new(""))
+        .join(sibling_name(rel, sibling))
+}
+
+/// The sibling's file name for claimed file `rel` (#235): `{stem}` in the
+/// route's `requires_sibling` is the claimed file's name without its final
+/// extension (`billing.v2.md` → `billing.v2`); a name without it is literal.
+/// The only placeholder — any other brace is refused when routes load.
+fn sibling_name(rel: &Path, sibling: &str) -> String {
+    let stem = rel
+        .file_stem()
+        .map(|s| s.to_string_lossy())
+        .unwrap_or_default();
+    sibling.replace(crate::route::SIBLING_STEM, &stem)
 }
 
 /// `E0037` (#221): the claiming route's `requires_sibling` names a file that
@@ -3198,7 +3212,7 @@ fn sibling_check(
         quoted: vec![QuotedRegion {
             platform_variant: false,
             label: "sibling".into(),
-            content: sibling.to_string(),
+            content: sibling_name(rel, sibling),
         }],
     });
 }
@@ -12338,6 +12352,61 @@ pattern:
             "  requires_sibling: ..\n",
         ] {
             let p = skills_project("sibling-bad", bad);
+            p.write(".claude/skills/a/SKILL.md", "# a\n");
+            assert!(
+                verify(&VerifyConfig::from_project(&p.0).unwrap()).is_err(),
+                "{bad:?}"
+            );
+        }
+    }
+
+    // RED GATE (#235, GH #73 raise 1): `requires_sibling` takes a `{stem}`
+    // placeholder — the claimed file's name without its final extension — so a
+    // design document can require its sidecar (`{stem}.pipeline.json` beside
+    // `{stem}.md`). The finding quotes the expanded name; any other
+    // placeholder, or a stray brace, is refused at load.
+    #[test]
+    fn requires_sibling_expands_the_stem() {
+        let proj = TempProject::new("sibling-stem");
+        proj.write(
+            ".mdatron/schemas/phase-primer.json",
+            minimal_phase_primer_schema(),
+        );
+        proj.write(".mdatron/config.yaml", "file_globs:\n  - \"design/*.md\"\n");
+        proj.write("GOVERNING.md", "# gov\n");
+        proj.write(
+            ".mdatron/routes.yaml",
+            "routes:\n- files: \"design/*.md\"\n  governed_by: GOVERNING.md\n  \
+             requires_sibling: \"{stem}.pipeline.json\"\n",
+        );
+        proj.write("design/auth.md", "# auth\n");
+        proj.write("design/auth.pipeline.json", "{}\n");
+        proj.write("design/billing.v2.md", "# billing\n");
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        let e0037: Vec<_> = findings
+            .iter()
+            .filter(|f| f.code == "MDATRON-E0037")
+            .collect();
+        assert_eq!(e0037.len(), 1, "{findings:?}");
+        assert!(e0037[0].location.file.ends_with("design/billing.v2.md"));
+        assert!(
+            e0037[0]
+                .quoted
+                .iter()
+                .any(|q| q.label == "sibling" && q.content == "billing.v2.pipeline.json"),
+            "the stem drops only the final extension: {e0037:?}"
+        );
+        proj.write("design/billing.v2.pipeline.json", "{}\n");
+        let findings = verify(&VerifyConfig::from_project(&proj.0).unwrap()).unwrap();
+        assert_eq!(codes_of(&findings, "MDATRON-E0037"), 0, "{findings:?}");
+
+        for bad in [
+            "  requires_sibling: \"{name}.json\"\n",
+            "  requires_sibling: \"{stem.json\"\n",
+            "  requires_sibling: \"stem}.json\"\n",
+            "  requires_sibling: \"{stem}/x.json\"\n",
+        ] {
+            let p = skills_project("sibling-stem-bad", bad);
             p.write(".claude/skills/a/SKILL.md", "# a\n");
             assert!(
                 verify(&VerifyConfig::from_project(&p.0).unwrap()).is_err(),

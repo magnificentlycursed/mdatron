@@ -91,7 +91,10 @@ Keys: `mdatron_format_version`, `routes`, `files`, `governed_by`, `naming`, `cit
   directory, is `E0110` with the label `import`; an absolute, `~` or URL-shaped
   import is not resolved; needs `links`), `requires_sibling` (a file name whose
   regular file must exist in the same directory as every claimed file,
-  `E0037`; a directory or a symlink there does not count), `link_policy`
+  `E0037`; a directory or a symlink there does not count; `{stem}` in the name
+  stands for the claimed file's name without its final extension, so
+  `{stem}.pipeline.json` beside `auth.md` is `auth.pipeline.json` — no other
+  placeholder is accepted), `link_policy`
   (what an absolute URL in the claimed files may be, `E0118` per clause
   broken: `schemes`, the schemes a link may use — a `//host` link has none
   and violates any list; `hosts`, the hosts an `http`, `https`, `ws`, `wss`, `ftp` or `//host`
