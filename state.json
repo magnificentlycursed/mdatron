@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1385,
-        "tip_oid": "8db30f188811b7dea5f9baf380dfef2dceeccc74",
-        "prefix_sha256": "af94ad515cfc12680ab4b49758a59509239381637878ee6656507b11fa4416f3"
+        "sequence": 1386,
+        "tip_oid": "1d4b5877ae3f4f4784d2685f48970f66e8da7606",
+        "prefix_sha256": "339724d48aadbaab3f42a34aedd3d4d1080d6dec299d90fb299600098ec52477"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 254,
+  "next_display_id": 255,
   "next_comment_id": 651,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -196,6 +196,7 @@
     "ac580493-5c18-4b2c-83b9-f9957ee8e229": 187,
     "ad262d4e-1a34-496d-9f64-802bc05ea4fd": 39,
     "ae2f415b-24e4-48b1-85ff-44033199129a": 20,
+    "b0623790-e2f3-4a6a-8f87-7f77a68e9497": 254,
     "b1c5d325-ab66-41f7-8346-5c3e4b117555": 61,
     "b262877d-d455-4042-be19-e65557f1b557": 233,
     "b527a823-f4d3-4fb4-bfe8-de996e714488": 131,
@@ -6520,6 +6521,17 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAGRThB0hwebIwis4iBUTYBZCMZ31XU6WFdQJXhg36PmnzJ5LT6fWsr7kme/y8pwjzCwrSXvj5aVpY4XtD+d3tDQ=="
         }
       }
+    },
+    "b0623790-e2f3-4a6a-8f87-7f77a68e9497": {
+      "uuid": "b0623790-e2f3-4a6a-8f87-7f77a68e9497",
+      "display_id": 254,
+      "title": "Define before use: a registered term's first occurrence in a governed document must be its definition, a registry link, or inside a section marked definitional (GH #79 item 9)",
+      "description": "Source: GH #79 (vsdd-cli roadmap feedback, 2026-10-08), item 9. Observed: Palimpsest 'information before terminology'; agent-skills prompt discipline; Thermite register standard. The vocabulary family knows the terms; the addition is first-occurrence position. Related: #192, item 4.",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-10-09T04:41:45.867077Z",
+      "updated_at": "2026-10-09T04:41:45.867077Z"
     },
     "b1c5d325-ab66-41f7-8346-5c3e4b117555": {
       "uuid": "b1c5d325-ab66-41f7-8346-5c3e4b117555",
