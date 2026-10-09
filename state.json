@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1361,
-        "tip_oid": "83bf5da650e7204440c1a8b45b86ec94528321ec",
-        "prefix_sha256": "93571f62e8bd6892da39f12c09e299567f5e9e099b790f5e07c24ffa0173c76e"
+        "sequence": 1362,
+        "tip_oid": "da0926315413a14212efd8bd9369e418189b5456",
+        "prefix_sha256": "242936b7ba9e918c9cb890b72cdf1437dbe2df387f2ff9d86a5a180fe8b2632a"
       },
       "IMWa": {
         "sequence": 2,
@@ -6501,11 +6501,12 @@
       "display_id": 233,
       "title": "One absent section yields one E0122 per rule and disjoint operand naming it; state the per-rule behaviour on the E0122 page (aggregating per (file, section) would change counts and fingerprints) (GH #73 defect 7)",
       "description": "Source: GH #73 defect 7. Confirmed: the llms.txt cookbook's renamed-h1 case shows two E0122 for '# Acme' (count + order rules); the E0122 page does not state the per-rule behaviour. Recommend documenting rather than aggregating (aggregation reshapes finding counts and fingerprints for existing adopters).",
-      "status": "open",
+      "status": "closed",
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-10-06T21:22:34.081163Z",
-      "updated_at": "2026-10-09T02:02:17.526095Z",
+      "updated_at": "2026-10-09T02:03:50.388160Z",
+      "closed_at": "2026-10-09T02:03:50.365810Z",
       "comments": {
         "0a4f57e5-ef92-4d13-ba7f-ce0055fc6cb1": {
           "display_id": 644,
