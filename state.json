@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1379,
-        "tip_oid": "34c5f13314fb21e0f771f16b7070dd128b45de61",
-        "prefix_sha256": "827f28a07c702608e7fe75020dbf1c4e7ffb8ad5be30413407db82e37a45dd5c"
+        "sequence": 1380,
+        "tip_oid": "db3c8e27938f3104dedc436c39f20e6aa256b389",
+        "prefix_sha256": "c6a8df3659a119036c7fd273af29c111712981c329806c4d1c873a3c1ea1f403"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 251,
+  "next_display_id": 252,
   "next_comment_id": 651,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -276,7 +276,8 @@
     "fd19315f-a56d-4b81-a131-e8a697a3a77b": 84,
     "fea9b536-a072-4342-afe0-0a87fe5ca8bd": 48,
     "feac2c79-d47f-49ea-907c-6d3068232dd7": 174,
-    "fed9ad06-769e-4cef-b2e3-be7041de17bc": 52
+    "fed9ad06-769e-4cef-b2e3-be7041de17bc": 52,
+    "ff87ccf3-11fc-4c5d-b194-02e110662ba3": 251
   },
   "locks": {
     "170": {
@@ -10262,6 +10263,17 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABA6S6LHig2bdxmigYZQr98to8x8U8fImx63OF+t3C57Dg52oAOasLjf/N5VhKXb3Y9Oycgcn30+rBEjfM2ucq+Aw=="
         }
       }
+    },
+    "ff87ccf3-11fc-4c5d-b194-02e110662ba3": {
+      "uuid": "ff87ccf3-11fc-4c5d-b194-02e110662ba3",
+      "display_id": 251,
+      "title": "Promise-shaped phrases must carry a resolvable companion (an issue handle via the oracle, or a registry id) in the same sentence or list item (GH #79 item 6)",
+      "description": "Source: GH #79 (vsdd-cli roadmap feedback, 2026-10-08), item 6. Observed: vsdd-cli 'pending/owed/lands in Slice N' sentences with no payoff location; Palimpsest promise ledger. Ask: a register rule class where a matched anti-pattern phrase requires a companion. Builds on the vocabulary family's anti-pattern matching; depends on item 1 (registry ids) and an issue oracle.",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-10-09T04:33:18.109888Z",
+      "updated_at": "2026-10-09T04:33:18.109888Z"
     }
   },
   "milestones": {
