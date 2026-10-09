@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1395,
-        "tip_oid": "22fb8ca2e05949fd29cfffb8fa9529880b1b17fe",
-        "prefix_sha256": "f5e5e1bea495752acf9d46fccaf2a2be80898d343557b67974f99d9d9a8761e9"
+        "sequence": 1396,
+        "tip_oid": "a3fa6e9e695133d0943b9bbcd645469c553cf9f8",
+        "prefix_sha256": "af25394e6380382863ad15e164550fec24c03483fe057d5a2dd071f2522da33c"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 257,
-  "next_comment_id": 654,
+  "next_comment_id": 655,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -3329,8 +3329,17 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-10-06T21:25:16.804523Z",
-      "updated_at": "2026-10-09T06:31:11.610427Z",
+      "updated_at": "2026-10-09T20:28:33.517494Z",
       "comments": {
+        "90de51dc-a6e5-41cc-a190-657392040baa": {
+          "display_id": 654,
+          "author": "79Ig",
+          "content": "Delivered in PR #86 (merged): requires_sibling {stem} placeholder.",
+          "created_at": "2026-10-09T20:28:33.478198Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABApFAfsRuUrxTPx7zYJwbJB4qUaBF7X9A9e1VmF15MLdP/XxvLzLVB8s4d6ldTucHEqOgLfQynjUjaEzcPS+htCw=="
+        },
         "efd07c22-18a9-44b4-ad08-330422481aeb": {
           "display_id": 653,
           "author": "79Ig",
