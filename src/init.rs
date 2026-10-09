@@ -1399,7 +1399,10 @@ mod tests {
     // fails here: add the hash it replaces to RELEASED_TEMPLATE_HASHES —
     // labelled with the release that shipped it (and its bytes under
     // tests/fixtures/init-templates/<version>/), or `unreleased` — so the next
-    // version refreshes it forward, then update this pin.
+    // version refreshes it forward, then update this pin. This repository
+    // commits its own `.mdatron/` templates, and CI's self-validation runs
+    // `init` before `verify`: also run `mdatron init --project-root .` and
+    // `mdatron pin --update` (manifest.yaml is pinned) and commit the result.
     #[test]
     fn template_hashes_are_pinned() {
         let pinned = [
@@ -1429,7 +1432,7 @@ mod tests {
             assert_eq!(
                 sha256_hex(template_content(name).unwrap().as_bytes()),
                 hash,
-                "{name} changed: add the hash it replaces to RELEASED_TEMPLATE_HASHES (see the comment)"
+                "{name} changed: add the hash it replaces to RELEASED_TEMPLATE_HASHES, then refresh this repo's own copy (`mdatron init --project-root .`, `mdatron pin --update`) — see the comment"
             );
         }
     }
