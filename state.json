@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1398,
-        "tip_oid": "957e0329d217c300a03b1b4bf3e681986a1cc13a",
-        "prefix_sha256": "4395ad02051c63084fdbfcb36280a46cbaaf27d87b365d392bdc2ca6621ecb76"
+        "sequence": 1399,
+        "tip_oid": "e8249b41f935316e6f807bf302dd5eab7b922e6e",
+        "prefix_sha256": "e92b494eedc8b4743995da6bddf7fe5a89b390919d78696898616726dfcdff8f"
       },
       "IMWa": {
         "sequence": 2,
@@ -25,7 +25,7 @@
     }
   },
   "next_display_id": 257,
-  "next_comment_id": 655,
+  "next_comment_id": 656,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
     "028e84f4-cfd0-45aa-8aee-b43ec885d803": 77,
@@ -3325,9 +3325,18 @@
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-10-06T21:25:16.804523Z",
-      "updated_at": "2026-10-09T20:30:25.652431Z",
+      "updated_at": "2026-10-09T20:39:09.282367Z",
       "closed_at": "2026-10-09T20:30:25.617462Z",
       "comments": {
+        "489cbcca-b70a-4761-9d73-d1bf7ebb3028": {
+          "display_id": 655,
+          "author": "79Ig",
+          "content": "Delivered in PR #86 (merged): requires_sibling {stem} placeholder.",
+          "created_at": "2026-10-09T20:39:08.905036Z",
+          "kind": "result",
+          "signed_by": "SHA256:u0VtJEsnHrvNPG5QQKKfDO+Rro/KT/xZqEvahzZTqEA",
+          "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABApFAfsRuUrxTPx7zYJwbJB4qUaBF7X9A9e1VmF15MLdP/XxvLzLVB8s4d6ldTucHEqOgLfQynjUjaEzcPS+htCw=="
+        },
         "90de51dc-a6e5-41cc-a190-657392040baa": {
           "display_id": 654,
           "author": "79Ig",
