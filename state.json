@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1396,
-        "tip_oid": "a3fa6e9e695133d0943b9bbcd645469c553cf9f8",
-        "prefix_sha256": "af25394e6380382863ad15e164550fec24c03483fe057d5a2dd071f2522da33c"
+        "sequence": 1397,
+        "tip_oid": "61be53d54f169d35007b6f6d7f614f6d59308b17",
+        "prefix_sha256": "1d5af0d5318b17ffbd6eed3015fa2098a54327abd9371b1689ca50a6a066d3aa"
       },
       "IMWa": {
         "sequence": 2,
@@ -3325,11 +3325,12 @@
       "display_id": 235,
       "title": "requires_sibling with a stem-derived name (e.g. '{stem}.pipeline.json' beside '{stem}.md'): the literal form cannot express design-document sidecars (GH #73 raise 1)",
       "description": "Source: GH #73 raise 1 (vsdd-cli design-document sidecars). The 0.7.0 key takes one literal file name (#221). Evaluate a template form with a {stem} placeholder (file name without its final extension) — the only variable a sibling check needs; keep the literal form as-is; load-time refusal of any other placeholder.",
-      "status": "open",
+      "status": "closed",
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-10-06T21:25:16.804523Z",
-      "updated_at": "2026-10-09T20:28:33.517494Z",
+      "updated_at": "2026-10-09T20:30:25.652431Z",
+      "closed_at": "2026-10-09T20:30:25.617462Z",
       "comments": {
         "90de51dc-a6e5-41cc-a190-657392040baa": {
           "display_id": 654,
