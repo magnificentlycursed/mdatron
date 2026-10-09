@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1363,
-        "tip_oid": "3c443fccb87d02bde37853f91f547bfb8a6ef17f",
-        "prefix_sha256": "17ad2ecf71ab565e9ec3faa8202e4bd2c87a72361319af040f6b59e3b1d06b30"
+        "sequence": 1364,
+        "tip_oid": "e5826ab99fa495af7c22ee5c3eec55f6eb05c757",
+        "prefix_sha256": "a60b5074eaeb7fc768630a86f82d8382e714ca044ef30f7055c3fc67d9a21ffd"
       },
       "IMWa": {
         "sequence": 2,
@@ -766,11 +766,12 @@
       "display_id": 234,
       "title": "Docs follow-ups from GH #73: say on the routes template and inputs.md that an every rule passes vacuously on an element-less section (pair it with a count rule); state for consumers that a failed pipeline reports every family inactive with inputs {} (read families with pipeline_status); FAQ entry on noticing one's own jurisdiction shrinking (W0054/W0051 under --deny-warnings; the inputs.config.yaml digest is what to pin)",
       "description": "Source: GH #73 guide items 3-4 and raise 6. Three small documentation additions: (1) every-rule vacuity sentence next to the every example in src/init.rs ROUTES_TEMPLATE and docs/inputs.md (explain E0123 already says it); (2) a consumer note in README § envelope / docs/inputs.md: failed pipeline → families all inactive, inputs {} (partial lineage deliberately not attested, #176); (3) docs/faq.md entry on a consistently shrunk jurisdiction being invisible by construction and what a consumer can pin or diff.",
-      "status": "open",
+      "status": "closed",
       "priority": "low",
       "created_by": "79Ig",
       "created_at": "2026-10-06T21:23:29.337626Z",
-      "updated_at": "2026-10-09T02:05:18.750769Z",
+      "updated_at": "2026-10-09T02:06:46.461648Z",
+      "closed_at": "2026-10-09T02:06:46.437325Z",
       "labels": [
         "docs"
       ],
