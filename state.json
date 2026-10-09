@@ -3,9 +3,9 @@
   "frontier": {
     "agents": {
       "79Ig": {
-        "sequence": 1387,
-        "tip_oid": "d07423e1958b6a7e418675c98f3a8b9eee250e59",
-        "prefix_sha256": "904638daa3b03bc49be95d0d93b0cf3fc37a2a37062dc85ee5748c298e232420"
+        "sequence": 1388,
+        "tip_oid": "b358a938254860ae618a932da6e4919486bd2ae9",
+        "prefix_sha256": "534cbc6fd0567f13ad5ab1dcc213fe7d7845bdd6760874885dafdfc8bc574c82"
       },
       "IMWa": {
         "sequence": 2,
@@ -24,7 +24,7 @@
       }
     }
   },
-  "next_display_id": 255,
+  "next_display_id": 256,
   "next_comment_id": 651,
   "display_id_map": {
     "018f5d8a-de4c-4cdd-a63a-66d9ebdfac95": 209,
@@ -153,6 +153,7 @@
     "7d3f3244-2166-4727-a6f5-233882cd4457": 49,
     "7da2ffa3-50d9-4735-9c51-8f05e9b10c57": 230,
     "7f91651e-0b4e-4a0d-aa3e-567f6ebaea4a": 24,
+    "81e5bd8f-4ace-458d-8262-5d010c6e92e5": 255,
     "81ede3c0-97f1-43d6-b336-5018865cf29a": 179,
     "82cb584a-cbc0-4ddd-9c36-0bd7a641a7a5": 114,
     "8368834a-bc3c-4500-a10a-7dad88e1c9ff": 94,
@@ -4885,6 +4886,17 @@
           "signature": "U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgOk7MLoVvSEPAWM9VkHKFnHq8O1iEkPSfqY7zLc4I28oAAAARY3Jvc3NsaW5rLWNvbW1lbnQAAAAAAAAABnNoYTUxMgAAAFMAAAALc3NoLWVkMjU1MTkAAABAxxmmTECpeD2Y1gIh0MMFRGhYNFX38zTXh3hzVNegRt56iWh9GCheg3xKLKxw4qQDi7XcbsoMJ0w00BHpwOt1BQ=="
         }
       }
+    },
+    "81e5bd8f-4ace-458d-8262-5d010c6e92e5": {
+      "uuid": "81e5bd8f-4ace-458d-8262-5d010c6e92e5",
+      "display_id": 255,
+      "title": "Decision-record family: required sections, closed status vocabulary, immutability once accepted (a content pin at acceptance), supersession both ways, introduced requirement ids resolving to the registry (GH #79 item 10)",
+      "description": "Source: GH #79 (vsdd-cli roadmap feedback, 2026-10-08), item 10. Observed: crucible (6 records), ExoMonad (17), Thermite RFCs gated by script. Possibly a standards-pack schema-and-rule bundle (#181 posture) over existing families plus items 1 and 5 rather than a new family — decide during design.",
+      "status": "open",
+      "priority": "low",
+      "created_by": "79Ig",
+      "created_at": "2026-10-09T05:00:56.276477Z",
+      "updated_at": "2026-10-09T05:00:56.276477Z"
     },
     "81ede3c0-97f1-43d6-b336-5018865cf29a": {
       "uuid": "81ede3c0-97f1-43d6-b336-5018865cf29a",
